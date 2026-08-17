@@ -1,0 +1,133 @@
+@page
+@model SmartAttendance.Web.Pages.Employees.EvaluationsModel
+
+@{
+    ViewData["Title"] = "متابعة تقييمات";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a href="/Employees">الموظفون</a>
+        <h1>متابعة تقييمات</h1>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="nxhs-alert">@Model.Message</div>
+    }
+
+    <form method="post" class="nxhs-panel zyp-editor">
+        <h3>إضافة نتيجة تقييم جديدة</h3>
+        <p class="zyp-hint">
+            الإدخال هنا بمصدر <b>«مباشر»</b>. حين يتكامل مودل إدارة الأداء تظهر نتائجه
+            بنفس القائمة بمصدر «إدارة الأداء» — شاشة واحدة لكل النتائج (نمط كيان).
+        </p>
+
+        <div class="zyp-editor-grid">
+            <label>
+                الموظف
+                <select asp-for="EmployeeId">
+                    <option value="0">اختر الموظف</option>
+                    @foreach (var option in Model.EmployeeOptions)
+                    {
+                        <option value="@option.Id">@option.Label</option>
+                    }
+                </select>
+            </label>
+            <label>
+                سنة التقييم
+                <input asp-for="EvalYear" type="number" min="2000" max="2100" />
+            </label>
+            <label>
+                من تاريخ — فارغ = بداية السنة
+                <input asp-for="FromDate" type="date" />
+            </label>
+            <label>
+                إلى تاريخ — فارغ = نهاية السنة
+                <input asp-for="ToDate" type="date" />
+            </label>
+            <label>
+                النتيجة كنسبة مئوية (0–100)
+                <input asp-for="ScorePercent" type="number" step="0.01" min="0" max="100" />
+            </label>
+            <label>
+                النتيجة كتقدير — اختياري
+                <input asp-for="Grade" placeholder="ممتاز · 4 · A" />
+            </label>
+            <label>
+                النتيجة بالكلمات — اختياري
+                <input asp-for="GradeText" placeholder="أداء يفوق التوقعات" />
+            </label>
+        </div>
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ النتيجة</button>
+        </footer>
+    </form>
+
+    <div class="nxhs-panel">
+        <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+            <input type="search" name="Search" value="@Model.Search" placeholder="بحث بالاسم أو الرقم" />
+            <select name="Year">
+                <option value="">كل السنوات</option>
+                @foreach (var year in Model.YearOptions)
+                {
+                    <option value="@year" selected="@(Model.Year == year ? "selected" : null)">@year</option>
+                }
+            </select>
+            <button type="submit">بحث</button>
+        </form>
+
+        <table class="zyp-table" style="width:100%">
+            <thead>
+                <tr>
+                    <th>الرقم</th>
+                    <th>الموظف</th>
+                    <th>السنة</th>
+                    <th>الفترة</th>
+                    <th>النتيجة %</th>
+                    <th>التقدير</th>
+                    <th>بالكلمات</th>
+                    <th>المصدر</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr><td colspan="9">لا توجد نتائج تقييم بعد.</td></tr>
+                }
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>@row.EmployeeNo</td>
+                        <td>
+                            <a href="/Employees/Profile?id=@row.EmployeeId">@row.EmployeeName</a>
+                            @if (!string.IsNullOrWhiteSpace(row.Position))
+                            {
+                                <small style="display:block;color:#64748b">@row.Position</small>
+                            }
+                        </td>
+                        <td>@row.EvalYear</td>
+                        <td>@row.FromDate.ToString("yyyy/MM/dd") — @row.ToDate.ToString("yyyy/MM/dd")</td>
+                        <td>@row.ScorePercent.ToString("0.##")</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.Grade) ? "—" : row.Grade)</td>
+                        <td>@(string.IsNullOrWhiteSpace(row.GradeText) ? "—" : row.GradeText)</td>
+                        <td>@row.Source</td>
+                        <td>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@row.Id"
+                                  data-zyconfirm="حذف نتيجة التقييم هذه؟" style="display:inline">
+                                <input type="hidden" name="Search" value="@Model.Search" />
+                                <input type="hidden" name="Year" value="@Model.Year" />
+                                <button type="submit" class="zyp-link-danger" style="background:none;border:none;color:#b42318;cursor:pointer">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

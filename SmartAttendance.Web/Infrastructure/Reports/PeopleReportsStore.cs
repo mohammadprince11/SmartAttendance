@@ -111,6 +111,39 @@ BEGIN
         (N'حالات المخالفات',                   N'violations', NULL,          N'refno,no,employee,category,title,eventdate,status,action', 1, 230);
 END;
 
+-- إكمال طقم تقارير كيان (دراسة 2026-08-15): أربعة مصادر كانت بلا تقرير نظام
+-- مزروع + تقرير الإجراءات التأديبية. زرع مستقل idempotent بنفس نمط att_* أدناه.
+IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'contracts', N'acknowledgments', N'tasks', N'updates'))
+BEGIN
+    INSERT INTO PeopleReports (Name, DatasetKey, FilterKey, ColumnsCsv, IsSystem, SortOrder, FilterColumnsCsv)
+    VALUES
+        (N'تحديثات عقود الموظفين',   N'contracts',       NULL, N'no,employee,contractno,contracttype,fromdate,todate,effectivedate,iscurrent', 1, 240, N'contracttype,iscurrent,effectivedate'),
+        (N'إقرارات الموظفين',        N'acknowledgments', NULL, N'no,employee,template,state,sentat,respondedat',                               1, 250, N'template,state,sentat'),
+        (N'مهام الموظفين',           N'tasks',           NULL, N'no,employee,process,title,assignee,duedate,state,completedat',                1, 260, N'process,assignee,state,duedate'),
+        (N'تقرير تعديلات الموظفين',  N'updates',         NULL, N'no,employee,section,field,oldvalue,newvalue,effectivedate,retroactive,state', 1, 270, N'section,field,state,effectivedate'),
+        (N'الإجراءات التأديبية',     N'violations',      NULL, N'refno,no,employee,category,title,eventdate,action,status',                    1, 280, N'category,status,eventdate');
+END;
+
+-- تقارير نظام الرواتب (مصدر pay_*) — نظير أهم تقارير كيان الـ70 (دراسة 2026-08-15)،
+-- بما فيها أزواج «الحركات» و«الحركات غير المحسوبة» (كاشفات الفاقد). زرع idempotent مستقل.
+IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'pay_lines', N'pay_tx', N'pay_loans', N'pay_allowances'))
+BEGIN
+    INSERT INTO PeopleReports (Name, DatasetKey, FilterKey, ColumnsCsv, IsSystem, SortOrder, FilterColumnsCsv)
+    VALUES
+        (N'تقرير رواتب الموظفين',              N'pay_lines',      NULL, N'batch,period,no,name,department,basic,allowances,gross,tax,gosi,otherded,net',   1, 400, N'batch,period,department,runstatus'),
+        (N'تقرير الرواتب التفصيلي',            N'pay_lines',      NULL, N'batch,period,runstatus,no,name,department,position,basic,allowances,gross,tax,gosi,otherded,net,workdays,absentdays', 1, 410, N'batch,period,department,position,runstatus'),
+        (N'ملخص إجمالي الرواتب',               N'pay_lines',      NULL, N'batch,period,department,gross,tax,gosi,otherded,net',                             1, 420, N'batch,period,department'),
+        (N'علاوات الموظفين',                   N'pay_allowances', NULL, N'no,name,item,amount,from,to,active',                                              1, 430, N'item,active'),
+        (N'حركات دخل الموظفين',                N'pay_tx',         N'Income', N'refno,no,name,item,period,amount,paymenttype,source,status,locked,calculated',     1, 440, N'txtype,item,period,status,source,calculated'),
+        (N'حركات الدخل غير المحسوبة',          N'pay_tx',         N'uncalculated', N'refno,no,name,txtype,item,period,amount,status,calculated',                       1, 445, N'txtype,item,period,calculated'),
+        (N'حركات خصومات الموظفين',             N'pay_tx',         N'Deduction', N'refno,no,name,item,period,amount,source,status,locked,calculated',                 1, 450, N'txtype,item,period,status,calculated'),
+        (N'حركات العمل الإضافي للموظفين',      N'pay_tx',         N'Overtime', N'refno,no,name,item,period,hours,amount,source,status,calculated',                  1, 460, N'txtype,period,status,calculated'),
+        (N'حركات تعديل أيام الراتب',           N'pay_tx',         N'SalaryDays', N'refno,no,name,item,period,days,amount,status,calculated',                          1, 470, N'txtype,period,status'),
+        (N'بدل إجازات الموظفين',               N'pay_tx',         N'LeaveEncashment', N'refno,no,name,item,period,days,amount,status,calculated',                          1, 480, N'txtype,period,status'),
+        (N'الحركات بأثر رجعي',                 N'pay_tx',         NULL, N'refno,no,name,txtype,item,period,amount,effectivedate,retroactive,status',         1, 485, N'txtype,period,retroactive'),
+        (N'تقرير أرصدة السلف والقروض',         N'pay_loans',      NULL, N'refno,no,name,department,loantype,amount,installments,monthly,start,paid,paidcount,remaining,status', 1, 490, N'loantype,status,department');
+END;
+
 -- تقارير نظام الحضور (مصدر att_*): زرع مستقل idempotent كي تظهر على قواعد بيانات
 -- قائمة سبق أن زُرعت بتقارير الأشخاص (كتلة IF NOT EXISTS أعلاه لا تعمل حينها).
 IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'att_daily', N'att_summary'))

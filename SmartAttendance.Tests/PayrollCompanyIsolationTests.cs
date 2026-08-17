@@ -131,7 +131,9 @@ public class PayrollCompanyIsolationTests
     /// </summary>
     [Theory]
     [InlineData("OnPostSetScopeAsync")]
+    [InlineData("OnPostPreflightAsync")]
     [InlineData("OnPostCalculateAsync")]
+    [InlineData("OnPostApproveAsync")]
     [InlineData("OnPostLockAsync")]
     [InlineData("OnPostIssueAsync")]
     [InlineData("OnPostSendAsync")]

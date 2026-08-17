@@ -164,6 +164,47 @@
         <div class="pr-alert err">@TempData["PayrollMissingCodes"]</div>
     }
 
+    @* بوابة فحص ما قبل المسير (نظير الشاشة الاعتراضية بكيان) *@
+    @if (Model.PreflightRunId is int preflightId && Model.PreflightRun != null)
+    {
+        <div class="pr-card" style="border-inline-start:4px solid var(--zy-warning,#d97706)">
+            <h3 style="margin-top:0">⚠️ حركات غير معتمدة بفترة الدفعة @Model.PreflightRun.Month/@Model.PreflightRun.Year</h3>
+            <p>
+                تم العثور على <b>@Model.PreflightDrafts.Count</b> حركة مسودّة داخل الراتب لموظفين ضمن نطاق هذه الدفعة —
+                <b>لن يشملها الاحتساب</b> ما لم تُعتمد أولاً. اعتمدها من شاشة الحركات ثم عد، أو انتقل إلى الاحتساب عن علم.
+            </p>
+            <div class="zhr-table-responsive">
+                <table class="zhr-table">
+                    <thead><tr><th>المرجع</th><th>الموظف</th><th>النوع</th><th>العنصر</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in Model.PreflightDrafts.Take(50))
+                        {
+                            <tr>
+                                <td>@d.ReferenceNo</td>
+                                <td>@d.EmployeeNo — @d.EmployeeName</td>
+                                <td>@PayrollTransactionStore.TypeLabel(d.TxType)</td>
+                                <td>@d.ItemName</td>
+                                <td>@d.Amount.ToString("#,0.##")</td>
+                                <td>@d.StatusText</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (Model.PreflightDrafts.Count > 50)
+            {
+                <p class="mass-hint">يُعرض أول 50 من @Model.PreflightDrafts.Count.</p>
+            }
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <a class="pr-mi" href="/Payroll/Transactions?year=@Model.PreflightRun.Year&month=@Model.PreflightRun.Month&status=Draft">فتح الحركات المسودّة للاعتماد</a>
+                <form method="post" asp-page-handler="Calculate" style="display:inline">
+                    <input type="hidden" name="id" value="@preflightId" />
+                    <button class="pr-mi" type="submit" data-zyconfirm="المتابعة ستحتسب الدفعة بدون الحركات المسودّة المعروضة. متأكد؟">انتقل إلى الاحتساب بدونها</button>
+                </form>
+            </div>
+        </div>
+    }
+
     <div class="pr-card">
         @if (Model.Runs.Count == 0)
         {
@@ -210,7 +251,7 @@
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
                                         <button type="button" class="pr-mi" onclick="prScopeEdit(@run.Id, '@run.ScopeMode')">النطاق</button>
-                                        <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
+                                        <form method="post" asp-page-handler="Preflight"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" title="يفحص الحركات المسودّة بالفترة قبل الاحتساب">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
                                     }
                                     @if (run.Status == "Calculated")
                                     {
@@ -218,7 +259,19 @@
                                     }
                                     @if (run.Status == "Locked")
                                     {
-                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="اعتماد للصرف؟">اعتماد</button></form>
+                                        @if (Model.RequireCommitteeApproval && !run.IsApproved)
+                                        {
+                                            <form method="post" asp-page-handler="Approve" style="display:inline-flex;gap:4px;align-items:center">
+                                                <input type="hidden" name="id" value="@run.Id" />
+                                                <input type="text" name="note" placeholder="ملاحظة اللجنة (اختياري)" style="width:150px;font-size:11px" />
+                                                <button class="pr-mi" type="submit" data-zyconfirm="اعتماد اللجنة لهذه الدفعة؟ يفتح باب الإصدار.">اعتماد اللجنة</button>
+                                            </form>
+                                        }
+                                        @if (run.IsApproved)
+                                        {
+                                            <span class="pr-yn yes" title="@run.ApprovalNote">✓ لجنة: @run.ApprovedBy</span>
+                                        }
+                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="اعتماد للصرف؟" title="@(Model.RequireCommitteeApproval && !run.IsApproved ? "يتطلب اعتماد اللجنة أولاً" : "")">إصدار</button></form>
                                         <form method="post" asp-page-handler="Unlock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="إلغاء قفل الدفعة؟ ستعود قابلة للتعديل والاحتساب.">إلغاء القفل</button></form>
                                     }
                                     @if (run.Status == "Issued")

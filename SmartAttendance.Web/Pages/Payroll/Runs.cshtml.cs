@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -67,6 +68,9 @@ public class RunsModel : PageModel
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var all = await PayrollRunStore.ListRunsAsync(_db, scope);
+
+        RequireCommitteeApproval = bool.TryParse(
+            await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
 
         var companyQuery = _db.Companies.AsNoTracking()
             .Where(company => company.IsActive && !company.IsDeleted);
@@ -259,10 +263,57 @@ public class RunsModel : PageModel
         return (mode, ids, null);
     }
 
+    /// <summary>
+    /// بوابة فحص ما قبل المسير (نظير كيان): زر «احتساب» يمرّ من هنا أولاً. إن وُجدت
+    /// حركات مسودّة بفترة الدفعة ستفوت الاحتساب بصمت، تُعرض الشاشة الاعتراضية
+    /// بقائمتها وخيارَي «اعتمد ثم احتسب» أو «انتقل إلى الاحتساب» عن علم. لا مسودّات
+    /// ⟹ الاحتساب مباشرة كما كان — صفر احتكاك بالمسار السالك.
+    /// </summary>
+    public async Task<IActionResult> OnPostPreflightAsync(int id)
+    {
+        List<PayrollTransactionStore.Transaction> drafts = new();
+        PayrollRunStore.PayrollRun? run = null;
+        var gate = await ActAsync(id, async () =>
+        {
+            // البوابة نفسها — الفحص يعمل على دفعة فيمرّ من حارس النطاق كبقية المعالجات.
+            var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+            run = await PayrollRunStore.GetRunAsync(_db, id);
+            if (run is null) return (false, "الدفعة غير موجودة.");
+            drafts = await PayrollTransactionStore.PreflightDraftsAsync(_db, scope, run.Year, run.Month, id);
+            return drafts.Count == 0
+                ? await PayrollRunStore.CalculateWithGuardAsync(_db, id, User?.Identity?.Name ?? "system")
+                : (true, string.Empty);
+        });
+
+        if (run is null || drafts.Count == 0)
+            return gate;
+
+        // مسودّات موجودة ⟹ الشاشة الاعتراضية بدل إعادة التوجيه.
+        TempData.Remove("PayrollMessage");
+        TempData.Remove("PayrollOk");
+        PreflightRunId = id;
+        PreflightRun = run;
+        PreflightDrafts = drafts;
+        await OnGetAsync();
+        return Page();
+    }
+
+    /// <summary>الدفعة قيد الفحص المسبق (null = لا شاشة اعتراضية).</summary>
+    public int? PreflightRunId { get; set; }
+    public PayrollRunStore.PayrollRun? PreflightRun { get; set; }
+    public List<PayrollTransactionStore.Transaction> PreflightDrafts { get; set; } = new();
+
     public async Task<IActionResult> OnPostCalculateAsync(int id) =>
         await ActAsync(id, () => PayrollRunStore.CalculateWithGuardAsync(_db, id, User?.Identity?.Name ?? "system"));
 
     public async Task<IActionResult> OnPostLockAsync(int id) => await ActAsync(id, () => PayrollRunStore.LockAsync(_db, id));
+
+    /// <summary>اعتماد اللجنة (نظير كيان) — على الدفعة المقفلة، قبل الإصدار.</summary>
+    public async Task<IActionResult> OnPostApproveAsync(int id, string? note) =>
+        await ActAsync(id, () => PayrollRunStore.ApproveAsync(_db, id, User?.Identity?.Name ?? "system", note));
+
+    /// <summary>هل تشترط التهيئة اعتماد لجنة قبل الإصدار؟ (لإظهار الزر والشارة).</summary>
+    public bool RequireCommitteeApproval { get; set; }
     public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(id, () => PayrollRunStore.IssueAsync(_db, id));
     public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(id, () => PayrollRunStore.SendPayslipsAsync(_db, id));
     public async Task<IActionResult> OnPostReopenAsync(int id) => await ActAsync(id, () => PayrollRunStore.ReopenAsync(_db, id));

@@ -1,0 +1,84 @@
+@page
+@model SmartAttendance.Web.Pages.Payroll.TransactionsAuditorModel
+
+@{
+    ViewData["Title"] = "مدقق حركات الرواتب";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a href="/Payroll/Runs">الرواتب</a>
+        <h1>مدقق حركات الرواتب</h1>
+    </header>
+
+    <form method="get" class="nxhs-panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label style="display:flex;gap:4px;align-items:center;margin:0">السنة <input type="number" name="Year" value="@Model.Year" style="width:90px" placeholder="الكل" /></label>
+        <label style="display:flex;gap:4px;align-items:center;margin:0">الشهر <input type="number" name="Month" min="1" max="12" value="@Model.Month" style="width:70px" placeholder="الكل" /></label>
+        <button type="submit">تدقيق</button>
+        <span class="zyp-hint" style="margin:0">قراءة فقط — يكشف المكرر والصفري والسالب والإضافي المفرط والاقتطاع فوق الأساسي والمسودّات بفترات مقفلة.</span>
+    </form>
+
+    <div class="nxhs-panel">
+        <h3>ملخص حسب القاعدة</h3>
+        @if (Model.ByRule.Count == 0)
+        {
+            <p>لا حالات مشبوهة ضمن النطاق — الحركات نظيفة.</p>
+        }
+        else
+        {
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                @foreach (var kv in Model.ByRule)
+                {
+                    <div style="border:1px solid var(--zy-border,#e2e8f0);border-radius:10px;padding:8px 14px"><span>@kv.Key</span><b style="display:block;font-size:20px">@kv.Value</b></div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="nxhs-panel">
+        <h3>حسب الموظف</h3>
+        <table class="zyp-table" style="width:100%">
+            <thead><tr><th>الرمز</th><th>اسم الموظف</th><th>عدد الحالات</th><th></th></tr></thead>
+            <tbody>
+                @if (Model.Summary.Count == 0)
+                {
+                    <tr><td colspan="4">لا توجد نتائج.</td></tr>
+                }
+                @foreach (var s in Model.Summary)
+                {
+                    <tr>
+                        <td>@s.EmployeeNo</td>
+                        <td>@s.EmployeeName</td>
+                        <td><b>@s.Cases</b></td>
+                        <td><a asp-page="./TransactionsAuditor" asp-route-Year="@Model.Year" asp-route-Month="@Model.Month" asp-route-EmployeeId="@s.EmployeeId">التفصيل</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.EmployeeId is > 0 || Model.Findings.Count > 0)
+    {
+        <div class="nxhs-panel">
+            <h3>التفصيل @(Model.EmployeeId is > 0 ? "— موظف محدد" : "")</h3>
+            <table class="zyp-table" style="width:100%">
+                <thead><tr><th>الموظف</th><th>القاعدة</th><th>التفصيل</th><th>المرجع</th><th>المبلغ</th></tr></thead>
+                <tbody>
+                    @foreach (var f in Model.Findings.Take(500))
+                    {
+                        <tr>
+                            <td>@f.EmployeeNo — @f.EmployeeName</td>
+                            <td><b>@f.Rule</b></td>
+                            <td>@f.Detail</td>
+                            <td>@f.ReferenceNo</td>
+                            <td>@f.Amount.ToString("#,0.##")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

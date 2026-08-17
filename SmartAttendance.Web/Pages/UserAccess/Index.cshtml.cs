@@ -40,10 +40,83 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? EditSystemUserId { get; set; }
 
+    /// <summary>يفتح نموذج الإنشاء معبّأً بموظفٍ بلا حساب (اسم المستخدم = كوده).</summary>
+    [BindProperty(SupportsGet = true)]
+    public int? CreateEmployeeId { get; set; }
+
+    /// <summary>يأمر الواجهة بفتح سلايد الإنشاء (لصفوف «بلا حساب»).</summary>
+    public bool OpenCreate { get; set; }
+
     [BindProperty]
     public IdentityInputModel Input { get; set; } = new();
 
+    [BindProperty]
+    public int[] SelectedLoginIds { get; set; } = Array.Empty<int>();
+
+    [BindProperty]
+    public string? BulkPassword { get; set; }
+
+    [BindProperty]
+    public string? BulkConfirmPassword { get; set; }
+
+    [BindProperty]
+    public bool BulkKickSessions { get; set; }
+
+    /// <summary>أكواد موظفين ملصوقة (مسافة/سطر/فاصلة) — من لا حساب له يُنشأ له «Employee».</summary>
+    [BindProperty]
+    public string? BulkEmployeeCodes { get; set; }
+
+    /// <summary>أكواد موظفين مُحدَّدين من صفوف «بلا حساب» — تُعامَل كالأكواد الملصوقة.</summary>
+    [BindProperty]
+    public string[] SelectedEmployeeCodes { get; set; } = Array.Empty<string>();
+
+    /// <summary>إنشاء حساب «Employee» لكل موظف فعّال بلا حساب (اسم المستخدم = كوده).</summary>
+    [BindProperty]
+    public bool BulkAllNoAccount { get; set; }
+
+    /// <summary>إجبار تغيير كلمة المرور عند أول دخول (افتراضي: نعم).</summary>
+    [BindProperty]
+    public bool BulkForceChange { get; set; } = true;
+
+    /// <summary>هوية الدخول الحاليّة — يخفي الجدول خانتها من التحديد الجماعيّ.</summary>
+    public int CurrentLoginId { get; set; }
+
+    /// <summary>إجمالي حسابات الدخول المطابقة للبحث (لحساب عدد الصفحات).</summary>
+    public int AccountsTotal { get; set; }
+
+    /// <summary>عدد صفوف الحسابات المعروضة فعلاً في هذه الصفحة.</summary>
+    public int AccountsShown { get; set; }
+
+    public const int PageSize = 25;
+
+    /// <summary>
+    /// رقم الصفحة الحاليّة (1‑based)، يُضبَط ضمن [1، TotalPages]. الاسم <c>PageIndex</c>
+    /// عمداً: <c>Page</c> محجوزٌ لدالّة <c>PageModel.Page()</c> فتسميته هكذا تكسر الربط.
+    /// معامل الرابط <c>pg</c>.
+    /// </summary>
+    [BindProperty(SupportsGet = true, Name = "pg")]
+    public int PageIndex { get; set; } = 1;
+
+    /// <summary>إجمالي الصفحات = سقف(AccountsTotal / 25)، بحدٍّ أدنى 1.</summary>
+    public int TotalPages { get; set; } = 1;
+
+    /// <summary>إجمالي الموظفين الفعّالين بلا حساب دخول (لعرض «يوجد المزيد»).</summary>
+    public int NoAccountTotal { get; set; }
+
+    /// <summary>عدد صفوف «بلا حساب» المعروضة فعلاً (محدودة بـ200).</summary>
+    public int NoAccountShown { get; set; }
+
     public List<IdentityRow> Identities { get; set; } = new();
+
+    /// <summary>الأدوار المخصّصة الفعّالة (من AccessRoles) — تُعرَض كاختيارٍ متعدّد بالمحرّر.</summary>
+    public List<AccessRoleStore.AccessRole> AccessRoleOptions { get; set; } = new();
+
+    /// <summary>الأدوار المخصّصة المختارة عند الحفظ (تُسنَد لهوية SystemUser).</summary>
+    [BindProperty]
+    public int[] SelectedAccessRoleIds { get; set; } = Array.Empty<int>();
+
+    /// <summary>SystemUserId ← قائمة معرّفات أدواره المخصّصة (لتعليم الصفّ عند التعديل).</summary>
+    public Dictionary<int, List<int>> AssignedRolesByUser { get; set; } = new();
 
     public List<EmployeeOption> Employees { get; set; } = new();
 
@@ -100,6 +173,29 @@ public class IndexModel : PageModel
                 PageError = "تعذر العثور على الحساب المطلوب.";
             }
         }
+        else if (CreateEmployeeId.HasValue && CreateEmployeeId.Value > 0)
+        {
+            var employee = await GetEmployeeAsync(CreateEmployeeId.Value);
+
+            if (employee != null)
+            {
+                Input = new IdentityInputModel
+                {
+                    EmployeeId = employee.Id,
+                    FullName = employee.FullName,
+                    UserName = employee.EmployeeNo,
+                    CompatibilityRole = "Employee",
+                    IsActive = true
+                };
+                SelectedEmployeeCode = employee.EmployeeNo;
+                SelectedEmployeeName = employee.FullName;
+                OpenCreate = true;
+            }
+            else
+            {
+                PageError = "تعذر العثور على الموظف المطلوب.";
+            }
+        }
 
         return Page();
     }
@@ -114,6 +210,20 @@ public class IndexModel : PageModel
         }
 
         NormalizeInput();
+
+        // منسدلة «الدور» قد تحمل دوراً مخصّصاً بصيغة "access:{id}": نفكّه فيصير الدور
+        // الخشِن «موظف» (افتراض آمن) ويُسنَد الدور المخصّص لهوية SystemUser.
+        if (Input.CompatibilityRole.StartsWith("access:", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(Input.CompatibilityRole["access:".Length..], out var accessRoleId) &&
+            accessRoleId > 0)
+        {
+            SelectedAccessRoleIds = new[] { accessRoleId };
+            Input.CompatibilityRole = "Employee";
+        }
+        else
+        {
+            SelectedAccessRoleIds = Array.Empty<int>();
+        }
 
         var validationError = await ValidateInputAsync();
 
@@ -291,6 +401,15 @@ public class IndexModel : PageModel
                     displayName,
                     systemRole,
                     actor);
+            }
+
+            // الأدوار المخصّصة (AccessRoles): نضبط أدوار هذه الهوية على المختار.
+            if (systemUserId > 0)
+            {
+                await AccessRoleStore.ReplaceUserRolesAsync(
+                    _dbContext,
+                    systemUserId,
+                    SelectedAccessRoleIds ?? Array.Empty<int>());
             }
 
             await WriteAuditAsync(
@@ -527,8 +646,447 @@ WHERE Id = @SystemUserId;
             });
     }
 
+    /// <summary>
+    /// إعادة تعيينٍ جماعيّة لكلمة المرور: كلمةٌ مؤقّتةٌ واحدة تُهاش لكلّ حسابٍ بملحٍ
+    /// مستقلّ، مع رفع وسم «إجبار التغيير» فيُجبَر كلٌّ على تعيين كلمته عند أوّل دخول.
+    /// طرد الجلسات الحاليّة اختياريّ (BulkKickSessions). كلٌّ بمعاملةٍ واحدة، وسطرُ
+    /// تدقيقٍ لكلّ حساب. الحساب الشخصيّ للأدمن مُستثنى (لا يُعاد تعيينه أثناء الاستخدام).
+    /// </summary>
+    public async Task<IActionResult> OnPostBulkResetPasswordAsync()
+    {
+        await LoginDatabase.EnsureCreatedAsync(_dbContext);
+
+        if (!IsAdministrator())
+        {
+            return Forbid();
+        }
+
+        var password = BulkPassword ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return await FailAsync("كلمة المرور المؤقّتة مطلوبة.");
+        }
+
+        if (password.Length < 8)
+        {
+            return await FailAsync("كلمة المرور المؤقّتة يجب ألا تقل عن 8 أحرف.");
+        }
+
+        if (!string.Equals(password, BulkConfirmPassword, StringComparison.Ordinal))
+        {
+            return await FailAsync("كلمة المرور المؤقّتة وتأكيدها غير متطابقين.");
+        }
+
+        // أكواد ملصوقة: نحلّها إلى موظفين، فمن له حساب يُضاف لمجموعة إعادة التعيين
+        // ومن لا حساب له يُنشأ له «Employee» (اسم المستخدم = كوده).
+        var pastedCodes = ParseEmployeeCodes(BulkEmployeeCodes);
+        var checkedCodes = (SelectedEmployeeCodes ?? Array.Empty<string>())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim());
+        var allCodes = pastedCodes
+            .Concat(checkedCodes)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var (matched, unknownCodes) = await ResolvePastedCodesAsync(allCodes);
+
+        var toCreate = matched
+            .Where(m => !m.LoginId.HasValue)
+            .Select(m => (m.EmployeeId, m.Code))
+            .ToList();
+
+        // «إنشاء حساب للجميع»: نضمّ كل موظف فعّال بلا حساب (بلا تكرار مع الملصوق).
+        if (BulkAllNoAccount)
+        {
+            var seen = new HashSet<int>(toCreate.Select(t => t.EmployeeId));
+            foreach (var (empId, code) in await LoadAllNoAccountEmployeesAsync())
+            {
+                if (seen.Add(empId))
+                {
+                    toCreate.Add((empId, code));
+                }
+            }
+        }
+
+        var loginIdsFromCodes = matched
+            .Where(m => m.LoginId.HasValue)
+            .Select(m => m.LoginId!.Value);
+
+        var plan = BulkPasswordResetPlanner.Build(
+            SelectedLoginIds.Concat(loginIdsFromCodes),
+            GetCurrentLoginId());
+
+        if (plan.Apply.Count == 0 && toCreate.Count == 0)
+        {
+            if (unknownCodes.Count > 0)
+            {
+                return await FailAsync(
+                    "لم يُطابَق أيٌّ من الأكواد الملصوقة موظفاً له حساب أو قابلاً للإنشاء: "
+                    + string.Join("، ", unknownCodes.Take(20)));
+            }
+
+            return await FailAsync(
+                plan.SkippedSelf.Count > 0
+                    ? "لا يمكن إعادة تعيين كلمة مرور حسابك الشخصي أثناء استخدامه. اختر حسابات أخرى."
+                    : "لم تُحدَّد أي حسابات ولم تُلصق أكواد صالحة.");
+        }
+
+        await EnsureSqlSetOptionsAsync();
+
+        var actor = User.Identity?.Name ?? "System";
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var conflictCodes = new List<string>();
+
+        await using var transaction =
+            await _dbContext.Database.BeginTransactionAsync(
+                HttpContext.RequestAborted);
+
+        try
+        {
+            var applied = 0;
+            var created = 0;
+
+            foreach (var loginId in plan.Apply)
+            {
+                var username = await GetLoginUsernameAsync(loginId);
+
+                if (string.IsNullOrWhiteSpace(username))
+                {
+                    continue;
+                }
+
+                var salt = SimplePasswordHasher.CreateSalt();
+                var hash = SimplePasswordHasher.HashPassword(password, salt);
+
+                await HrmsDatabase.ExecuteAsync(
+                    _dbContext,
+                    """
+UPDATE AppLoginUsers
+SET PasswordHash = @PasswordHash,
+    PasswordSalt = @PasswordSalt,
+    PasswordChangedAt = SYSUTCDATETIME(),
+    MustChangePassword = @MustChange,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @LoginId;
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                        HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                        HrmsDatabase.AddParameter(command, "@MustChange", BulkForceChange);
+                        HrmsDatabase.AddParameter(command, "@LoginId", loginId);
+                    });
+
+                await HrmsDatabase.ExecuteAsync(
+                    _dbContext,
+                    """
+INSERT INTO AuditLogs
+(EntityName, EntityId, Action, NewValues, UserName, IpAddress)
+VALUES
+('UnifiedIdentity', @EntityId, 'Bulk Reset Password', @NewValues, @Actor, @IpAddress);
+""",
+                    command =>
+                    {
+                        HrmsDatabase.AddParameter(command, "@EntityId", $"{loginId}:0");
+                        HrmsDatabase.AddParameter(
+                            command,
+                            "@NewValues",
+                            HrmsDatabase.JsonLine(
+                                ("LoginId", loginId),
+                                ("TargetUserName", username),
+                                ("PasswordChanged", true),
+                                ("MustChangePassword", BulkForceChange),
+                                ("SessionsKicked", BulkKickSessions)));
+                        HrmsDatabase.AddParameter(command, "@Actor", actor);
+                        HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
+                    });
+
+                if (BulkKickSessions)
+                {
+                    // تبديل الختم يطرد الجلسات/التوكنات الحاليّة، ويُبطل الكاش ضمناً.
+                    await AccountSecurityStore.BumpStampAsync(
+                        _dbContext,
+                        _cache,
+                        loginId,
+                        "Password reset in bulk by an administrator",
+                        actor);
+                }
+                else
+                {
+                    // بلا طرد: نُبطل الكاش فقط كي يُرى وسم الإجبار فوراً عند دخولهم.
+                    AccountSecurityStore.InvalidateCache(_cache, username);
+                }
+
+                applied++;
+            }
+
+            // إنشاء حسابات «Employee» للأكواد التي لا حساب لها (اسم المستخدم = الكود).
+            //
+            // ⚠️ أداء: PBKDF2 بـ210 آلاف تكرار = ~65ms للهاش الواحد. آلاف الموظفين
+            // × ذلك = دقائق تتجاوز مهلة البروكسي (~100 ثانية) فتنهار العملية. الكلمة
+            // المؤقّتة واحدة للجميع، فنهاشها مرّة ونعيد استخدامها — والملح المستقلّ
+            // يعود لكلٍّ لحظة تغييره كلمته أول دخول (لذا يبقى «إجبار التغيير» مهمّاً).
+            var createSalt = SimplePasswordHasher.CreateSalt();
+            var createHash = SimplePasswordHasher.HashPassword(password, createSalt);
+
+            foreach (var (employeeId, code) in toCreate)
+            {
+                // اسم المستخدم = الكود؛ إن كان مأخوذاً مسبقاً لحسابٍ آخر نتخطّاه بأمان.
+                if (await UsernameExistsAsync(code))
+                {
+                    conflictCodes.Add(code);
+                    continue;
+                }
+
+                await CreateEmployeeLoginAsync(
+                    code,
+                    employeeId,
+                    createHash,
+                    createSalt,
+                    actor,
+                    ipAddress);
+
+                // حسابٌ جديد بلا جلسة قائمة؛ إبطال الكاش احتياطاً باسمه (الكود).
+                AccountSecurityStore.InvalidateCache(_cache, code);
+
+                created++;
+            }
+
+            await transaction.CommitAsync(HttpContext.RequestAborted);
+
+            var kickNote = BulkKickSessions && applied > 0
+                ? " وطُردت جلساتهم الحاليّة"
+                : string.Empty;
+            var createdNote = created > 0
+                ? $"، وأُنشئ {created} حساب «موظف» جديد"
+                : string.Empty;
+            var skipNote = plan.SkippedSelf.Count > 0
+                ? " (استُثني حسابك الشخصي)"
+                : string.Empty;
+            var unknownNote = unknownCodes.Count > 0
+                ? $" · أكواد غير مطابقة ({unknownCodes.Count}): {string.Join("، ", unknownCodes.Take(20))}"
+                : string.Empty;
+            var conflictNote = conflictCodes.Count > 0
+                ? $" · أكواد اسمها مأخوذ مسبقاً ({conflictCodes.Count}): {string.Join("، ", conflictCodes.Take(20))}"
+                : string.Empty;
+
+            SuccessMessage =
+                $"تمت إعادة تعيين كلمة المرور المؤقّتة لـ{applied} حساب{createdNote}، " +
+                $"وسيُطلب منهم تغييرها عند الدخول التالي{kickNote}.{skipNote}{unknownNote}{conflictNote}";
+
+            return RedirectToPage(
+                "./Index",
+                new
+                {
+                    Search,
+                    Status
+                });
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(HttpContext.RequestAborted);
+
+            return await FailAsync(
+                "تعذر إتمام إعادة التعيين الجماعيّة بسبب تعارض في البيانات.");
+        }
+    }
+
+    private async Task<string?> GetLoginUsernameAsync(int loginId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            "SELECT TOP 1 Username FROM AppLoginUsers WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", loginId),
+            reader => HrmsDatabase.GetString(reader, "Username"));
+
+        return rows.FirstOrDefault();
+    }
+
+    /// <summary>يفصل الأكواد الملصوقة على المسافات والأسطر والفواصل، منزوعة المكرّر.</summary>
+    private static List<string> ParseEmployeeCodes(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return new List<string>();
+        }
+
+        return raw
+            .Split(new[] { ' ', '\t', '\r', '\n', ',', ';', '،' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(2000)
+            .ToList();
+    }
+
+    /// <summary>
+    /// يحلّ الأكواد الملصوقة إلى موظفين وحساب الدخول المرتبط بكلٍّ إن وُجد. الأكواد
+    /// تُمرَّر كمعاملات (لا حقن)، ويُعاد ما لم يُطابَق موظفاً كـ«غير معروف».
+    /// </summary>
+    private async Task<(List<(int EmployeeId, string Code, int? LoginId)> Matched,
+        List<string> Unknown)> ResolvePastedCodesAsync(List<string> codes)
+    {
+        var matched = new List<(int, string, int?)>();
+
+        if (codes.Count == 0)
+        {
+            return (matched, new List<string>());
+        }
+
+        var paramNames = codes.Select((_, i) => $"@c{i}").ToList();
+
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            $"""
+SELECT e.EmployeeNo AS Code, e.Id AS EmployeeId,
+       ISNULL(lu.Id, 0) AS LoginId
+FROM Employees e
+OUTER APPLY
+(
+    SELECT TOP 1 Id
+    FROM AppLoginUsers
+    WHERE EmployeeId = e.Id
+    ORDER BY Id
+) lu
+WHERE e.IsDeleted = 0
+  AND e.EmployeeNo IN ({string.Join(", ", paramNames)});
+""",
+            command =>
+            {
+                for (var i = 0; i < codes.Count; i++)
+                {
+                    HrmsDatabase.AddParameter(command, paramNames[i], codes[i]);
+                }
+            },
+            reader => new
+            {
+                Code = HrmsDatabase.GetString(reader, "Code"),
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                LoginId = HrmsDatabase.GetInt(reader, "LoginId")
+            });
+
+        foreach (var row in rows)
+        {
+            matched.Add((
+                row.EmployeeId,
+                row.Code,
+                row.LoginId > 0 ? row.LoginId : null));
+        }
+
+        var foundCodes = new HashSet<string>(
+            rows.Select(r => r.Code),
+            StringComparer.OrdinalIgnoreCase);
+
+        var unknown = codes
+            .Where(c => !foundCodes.Contains(c))
+            .ToList();
+
+        return (matched, unknown);
+    }
+
+    private async Task<bool> UsernameExistsAsync(string username)
+    {
+        var count = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT COUNT(*) FROM AppLoginUsers WHERE Username = @Username;",
+            command => HrmsDatabase.AddParameter(command, "@Username", username));
+
+        return count > 0;
+    }
+
+    private async Task<int> CreateEmployeeLoginAsync(
+        string code,
+        int employeeId,
+        string hash,
+        string salt,
+        string actor,
+        string? ipAddress)
+    {
+        var loginId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+INSERT INTO AppLoginUsers
+(EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive,
+ PasswordChangedAt, MustChangePassword, CreatedAt)
+VALUES
+(@EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1,
+ SYSUTCDATETIME(), @MustChange, SYSUTCDATETIME());
+
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@Username", code);
+                HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                HrmsDatabase.AddParameter(command, "@MustChange", BulkForceChange);
+            });
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO AuditLogs
+(EntityName, EntityId, Action, NewValues, UserName, IpAddress)
+VALUES
+('UnifiedIdentity', @EntityId, 'Bulk Create Employee Login', @NewValues, @Actor, @IpAddress);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EntityId", $"{loginId}:0");
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@NewValues",
+                    HrmsDatabase.JsonLine(
+                        ("LoginId", loginId),
+                        ("EmployeeId", employeeId),
+                        ("UserName", code),
+                        ("Role", "Employee"),
+                        ("MustChangePassword", BulkForceChange)));
+                HrmsDatabase.AddParameter(command, "@Actor", actor);
+                HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
+            });
+
+        return loginId;
+    }
+
+    /// <summary>كل موظف فعّال غير محذوف بلا أي حساب دخول أو هوية صلاحيات (بلا حدّ).</summary>
+    private async Task<List<(int EmployeeId, string Code)>> LoadAllNoAccountEmployeesAsync()
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT e.Id AS EmployeeId, e.EmployeeNo
+FROM Employees e
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND NULLIF(LTRIM(RTRIM(e.EmployeeNo)), '') IS NOT NULL
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM AppLoginUsers u WHERE u.EmployeeId = e.Id
+  )
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM SystemUsers su
+      WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
+  )
+ORDER BY e.EmployeeNo;
+""",
+            null,
+            reader => new
+            {
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                Code = HrmsDatabase.GetString(reader, "EmployeeNo")
+            });
+
+        return rows
+            .Select(r => (r.EmployeeId, r.Code))
+            .ToList();
+    }
+
     private async Task LoadAsync()
     {
+        CurrentLoginId = GetCurrentLoginId();
+
         Employees = await LoadEmployeesAsync();
 
         // المنتقي لا يحمّل قائمة — صفٌّ واحد للموظف المرتبط إن وُجد.
@@ -538,45 +1096,19 @@ WHERE Id = @SystemUserId;
         SelectedEmployeeCode = identity?.Code;
         SelectedEmployeeName = identity?.Name;
 
+        // البحث والترقيم يتمّان داخل SQL (LoadIdentityRowsAsync) فلا فلترة بالذاكرة
+        // هنا — وإلا لَقصّت الصفحةَ الحاليّة (25 صفّاً) فظهر أقلّ من المتوقّع.
         Identities = await LoadIdentityRowsAsync();
 
-        if (!string.IsNullOrWhiteSpace(Search))
-        {
-            var normalizedSearch = Search.Trim();
-
-            Identities = Identities
-                .Where(x =>
-                    x.UserName.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.DisplayName.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.EmployeeNo.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.EmployeeName.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.CompatibilityRole.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    x.SystemRoleLabel.Contains(
-                        normalizedSearch,
-                        StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        if (!string.IsNullOrWhiteSpace(Status) &&
-            Enum.TryParse<IdentityLinkStatus>(
-                Status,
-                true,
-                out var parsedStatus))
-        {
-            Identities = Identities
-                .Where(x => x.LinkStatus == parsedStatus)
-                .ToList();
-        }
+        // الأدوار المخصّصة (تجربة): قائمة الاختيار + الأدوار المُسنَدة لكل صفٍّ ظاهر.
+        AccessRoleOptions = await AccessRoleStore.ListActiveAsync(_dbContext);
+        var systemUserIds = Identities
+            .Where(x => x.SystemUserId > 0)
+            .Select(x => x.SystemUserId)
+            .ToList();
+        AssignedRolesByUser = await AccessRoleStore.GetRolesForUsersAsync(
+            _dbContext,
+            systemUserIds);
     }
 
     private async Task<bool> LoadEditorAsync(
@@ -736,6 +1268,8 @@ WHERE Id = @SystemUserId;
         PageError = message;
         Input.Password = null;
         Input.ConfirmPassword = null;
+        BulkPassword = null;
+        BulkConfirmPassword = null;
         await LoadAsync();
         return Page();
     }
@@ -1110,8 +1644,35 @@ VALUES
 
     private async Task<List<IdentityRow>> LoadIdentityRowsAsync()
     {
-        var rows = await HrmsDatabase.QueryAsync(
+        // ⚠️ أداء: بعد إنشاء آلاف حسابات «موظف» صارت القائمة تُصيّر آلاف الصفوف
+        // (رد بميغابايتات يُجمّد كل فتحة، بما فيها التعديل). نحدّها بـTOP 300 وندفع
+        // البحث إلى SQL؛ ومحرّر التعديل يُحمَّل مستقلّاً بالمعرّف فيفتح ولو لم يكن
+        // الصفّ ضمن المعروضين.
+        var hasSearch = !string.IsNullOrWhiteSpace(Search);
+        var searchTerm = hasSearch ? "%" + Search!.Trim() + "%" : null;
+
+        AccountsTotal = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
+            "SELECT COUNT(*) FROM AppLoginUsers u " +
+            "LEFT JOIN Employees e ON e.Id = u.EmployeeId" +
+            (hasSearch
+                ? " WHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
+                  "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)"
+                : string.Empty) + ";",
+            command =>
+            {
+                if (hasSearch)
+                {
+                    HrmsDatabase.AddParameter(command, "@Term", searchTerm);
+                }
+            });
+
+        TotalPages = Math.Max(1, (AccountsTotal + PageSize - 1) / PageSize);
+        if (PageIndex < 1) PageIndex = 1;
+        if (PageIndex > TotalPages) PageIndex = TotalPages;
+        var skip = (PageIndex - 1) * PageSize;
+
+        var loginSql =
             """
 SELECT
     u.Id AS LoginId,
@@ -1177,9 +1738,25 @@ OUTER APPLY
         END,
         sx.Id
 ) su
-ORDER BY u.IsActive DESC, u.Username;
-""",
-            null,
+""" +
+            (hasSearch
+                ? "\nWHERE (u.Username LIKE @Term OR e.FullName LIKE @Term " +
+                  "OR e.EmployeeNo LIKE @Term OR u.Role LIKE @Term)"
+                : string.Empty) +
+            "\nORDER BY u.IsActive DESC, u.Username" +
+            "\nOFFSET @Skip ROWS FETCH NEXT 25 ROWS ONLY;";
+
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            loginSql,
+            command =>
+            {
+                if (hasSearch)
+                {
+                    HrmsDatabase.AddParameter(command, "@Term", searchTerm);
+                }
+                HrmsDatabase.AddParameter(command, "@Skip", skip);
+            },
             reader => new IdentityRow
             {
                 LoginId = HrmsDatabase.GetInt(
@@ -1223,6 +1800,9 @@ ORDER BY u.IsActive DESC, u.Username;
                 Email = HrmsDatabase.GetString(
                     reader,
                     "SystemEmail"),
+                Notes = HrmsDatabase.GetString(
+                    reader,
+                    "SystemNotes"),
                 CompatibilityRole = HrmsDatabase.GetString(
                     reader,
                     "CompatibilityRole"),
@@ -1257,10 +1837,16 @@ ORDER BY u.IsActive DESC, u.Username;
             row.LinkStatus = ResolveLoginRowStatus(row);
         }
 
+        AccountsShown = rows.Count;
+
+        // صفوف «هويّة صلاحيات فقط» و«بلا حساب» تظهر بالصفحة الأولى فقط كي تبقى بقيّة
+        // الصفحات ترقيماً نقيّاً لحسابات الدخول (25 لكلّ صفحة).
+        if (PageIndex <= 1)
+        {
         var systemOnlyRows = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
-SELECT
+SELECT TOP (25)
     su.Id AS SystemUserId,
     ISNULL(su.EmployeeId, 0) AS EmployeeId,
     su.FullName,
@@ -1324,6 +1910,9 @@ ORDER BY su.IsActive DESC, su.FullName;
                 Email = HrmsDatabase.GetString(
                     reader,
                     "Email"),
+                Notes = HrmsDatabase.GetString(
+                    reader,
+                    "Notes"),
                 CompatibilityRole = MapCompatibilityRole(
                     HrmsDatabase.GetInt(
                         reader,
@@ -1347,6 +1936,85 @@ ORDER BY su.IsActive DESC, su.FullName;
             });
 
         rows.AddRange(systemOnlyRows);
+
+        // موظفون فعّالون بلا أي حساب دخول أو هوية صلاحيات — يظهرون كصفوف «بلا حساب»
+        // قابلة للتحديد، فتحديدها + كلمة مؤقّتة يُنشئ لكلٍّ حساب «Employee» (اسم=الكود).
+        //
+        // ⚠️ أداء: القائمة قد تحوي آلاف الموظفين بلا حساب — عرضهم كلهم يُنشئ DOM
+        // بميغابايتات ويُجمّد الصفحة. لذا نحدّها بـ TOP 200 ونفلترها بالبحث في SQL،
+        // فالعيّنة تظهر افتراضياً والبحث بالاسم/الكود يجد البقية، واللصق للدفعات.
+        var noAccountSql =
+            """
+SELECT TOP (25)
+    e.Id AS EmployeeId,
+    e.EmployeeNo,
+    e.FullName,
+    e.IsActive
+FROM Employees e
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM AppLoginUsers u WHERE u.EmployeeId = e.Id
+  )
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM SystemUsers su
+      WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
+  )
+""" +
+            (hasSearch
+                ? "  AND (e.EmployeeNo LIKE @Term OR e.FullName LIKE @Term)\n"
+                : string.Empty) +
+            "ORDER BY e.EmployeeNo, e.FullName;";
+
+        NoAccountTotal = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+SELECT COUNT(*)
+FROM Employees e
+WHERE e.IsDeleted = 0
+  AND e.IsActive = 1
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM AppLoginUsers u WHERE u.EmployeeId = e.Id
+  )
+  AND NOT EXISTS
+  (
+      SELECT 1 FROM SystemUsers su
+      WHERE su.EmployeeId = e.Id AND su.IsDeleted = 0
+  );
+""");
+
+        var noAccountRows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            noAccountSql,
+            command =>
+            {
+                if (hasSearch)
+                {
+                    HrmsDatabase.AddParameter(command, "@Term", "%" + Search!.Trim() + "%");
+                }
+            },
+            reader => new IdentityRow
+            {
+                LoginId = 0,
+                SystemUserId = 0,
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                UserName = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                DisplayName = HrmsDatabase.GetString(reader, "FullName"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                CompatibilityRole = "Employee",
+                SystemRole = 3,
+                IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
+                SystemIsActive = false,
+                LinkStatus = IdentityLinkStatus.NoAccount
+            });
+
+        NoAccountShown = noAccountRows.Count;
+        rows.AddRange(noAccountRows);
+        }
 
         return rows
             .OrderBy(x => StatusOrder(x.LinkStatus))
@@ -1834,6 +2502,7 @@ WHERE Id <> @ExcludedLoginId
             IdentityLinkStatus.LoginOnly => 1,
             IdentityLinkStatus.SystemOnly => 2,
             IdentityLinkStatus.NeedsSync => 3,
+            IdentityLinkStatus.NoAccount => 5,
             _ => 4
         };
     }
@@ -1892,6 +2561,9 @@ WHERE Id <> @ExcludedLoginId
         public string Email { get; set; } =
             string.Empty;
 
+        public string Notes { get; set; } =
+            string.Empty;
+
         public string CompatibilityRole { get; set; } =
             string.Empty;
 
@@ -1927,6 +2599,8 @@ WHERE Id <> @ExcludedLoginId
                     "هوية صلاحيات فقط",
                 IdentityLinkStatus.Conflict =>
                     "تعارض في الربط",
+                IdentityLinkStatus.NoAccount =>
+                    "بلا حساب دخول",
                 _ => "غير معروف"
             };
 
@@ -1938,11 +2612,13 @@ WHERE Id <> @ExcludedLoginId
                 IdentityLinkStatus.LoginOnly => "login-only",
                 IdentityLinkStatus.SystemOnly => "system-only",
                 IdentityLinkStatus.Conflict => "conflict",
+                IdentityLinkStatus.NoAccount => "login-only",
                 _ => "unknown"
             };
 
         public bool CanEdit =>
-            LinkStatus != IdentityLinkStatus.Conflict;
+            LinkStatus != IdentityLinkStatus.Conflict &&
+            (LoginId > 0 || SystemUserId > 0);
 
         public bool CanToggle =>
             LoginId > 0 &&
@@ -1955,7 +2631,8 @@ WHERE Id <> @ExcludedLoginId
         NeedsSync,
         LoginOnly,
         SystemOnly,
-        Conflict
+        Conflict,
+        NoAccount
     }
 
     public record RoleOption(

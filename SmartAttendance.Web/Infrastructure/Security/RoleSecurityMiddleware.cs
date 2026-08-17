@@ -25,7 +25,8 @@ public class RoleSecurityMiddleware
         HttpContext context,
         ApplicationDbContext dbContext,
         ILoginIdentityService loginIdentityService,
-        IPermissionAuthorizationService permissionAuthorizationService)
+        IPermissionAuthorizationService permissionAuthorizationService,
+        Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         await EnsureLoginDatabaseCreatedAsync(dbContext);
 
@@ -57,6 +58,23 @@ public class RoleSecurityMiddleware
         {
             RedirectToLogin(context);
             return;
+        }
+
+        // إجبار تغيير كلمة المرور: حسابٌ موسومٌ لا يبلغ أيّ صفحةٍ غير صفحة التغيير
+        // أو الخروج. القراءة بكاش 60 ثانية (نفس مفتاح OnValidatePrincipal) فلا
+        // ضربة قاعدةٍ إضافيّة، والوسم يُبطِل الكاش لحظة رفعه فيُرى فوراً.
+        if (!ForcedPasswordChangePolicy.IsExempt(path))
+        {
+            var securityState = await AccountSecurityStore.GetStateAsync(
+                dbContext,
+                cache,
+                username);
+
+            if (securityState.Exists && securityState.MustChangePassword)
+            {
+                context.Response.Redirect(ForcedPasswordChangePolicy.PagePath);
+                return;
+            }
         }
 
         // ملفات wwwroot التاريخية: لم تعد عامة. الصور تكفيها المصادقة، وما عداها

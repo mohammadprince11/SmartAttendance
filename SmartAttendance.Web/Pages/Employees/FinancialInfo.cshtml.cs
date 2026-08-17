@@ -109,11 +109,30 @@ public class FinancialInfoModel : PageModel
             HttpContext.RequestAborted);
     }
 
+    /// <summary>درجات سلم الرواتب النشطة (نظير كيان) — قائمة اقتراح للحقل النصي، لا قيد عليه.</summary>
+    public List<SalaryScaleStore.Grade> ScaleGrades { get; set; } = new();
+
+    /// <summary>الدرجة المقترحة من الأساسي الحالي (أول درجة يقع الأساسي بمداها) — عرض فقط.</summary>
+    public SalaryScaleStore.Grade? SuggestedGrade { get; set; }
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         if (!await CanViewSalaryAsync(id)) return Forbid();
         if (!await CanEditAsync(id)) return Forbid();
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        try
+        {
+            // درجات السلم المرئية لنطاق شركات المستخدم (المشتركة + شركاته) — عزل تهيئة 8D–8M.
+            var scopeProvider = HttpContext.RequestServices.GetService(typeof(ICompanyScopeProvider)) as ICompanyScopeProvider;
+            var scope = scopeProvider is null ? CompanyScope.DeniedAll() : await scopeProvider.GetAsync(HttpContext.RequestAborted);
+            ScaleGrades = await SalaryScaleStore.ListAsync(_dbContext, scope, activeOnly: true);
+        }
+        catch
+        {
+            // الجدول يأتي بهجرة 20260816-02 — قاعدة لم تُهاجَر بعد لا تكسر الملف المالي.
+            ScaleGrades = new();
+        }
 
         var employee = await _dbContext.Employees.AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
@@ -135,6 +154,10 @@ public class FinancialInfoModel : PageModel
         ActiveAllowancesTotal = allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
 
         await LoadProfilesAsync(id, today);
+
+        // اقتراح درجة السلم من الأساسي — عرضٌ لا فرض.
+        if (Input.BasicSalary is > 0)
+            SuggestedGrade = SalaryScaleStore.Suggest(ScaleGrades, Input.BasicSalary.Value);
 
         return Page();
     }

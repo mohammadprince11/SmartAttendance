@@ -244,7 +244,77 @@ public static class PeopleReportCatalog
             new ReportColumn("status", "الحالة", FilterKind.Select),
             new ReportColumn("source", "المصدر", FilterKind.Select),
             new ReportColumn("reason", "السبب")
-        }, "attendance")
+        }, "attendance"),
+
+        // ── مودل الرواتب (نظير «تقارير الرواتب» بكيان — 70 تقريراً فوق مصادر قليلة) ──
+        // أربعة مصادر تغطي الطقم: أسطر المسير · الحركات · القروض · العلاوات المسندة.
+        new ReportDataset("pay_lines", "رواتب الموظفين (أسطر المسير)", new[]
+        {
+            new ReportColumn("batch", "رقم الدفعة", FilterKind.Select),
+            new ReportColumn("period", "الفترة", FilterKind.Select),
+            new ReportColumn("runstatus", "حالة الدفعة", FilterKind.Select),
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("department", "القسم", FilterKind.Select),
+            new ReportColumn("position", "المسمى الوظيفي", FilterKind.Select),
+            new ReportColumn("basic", "الراتب الأساسي"),
+            new ReportColumn("allowances", "العلاوات"),
+            new ReportColumn("gross", "الإجمالي"),
+            new ReportColumn("tax", "الضريبة"),
+            new ReportColumn("gosi", "الضمان (موظف)"),
+            new ReportColumn("otherded", "اقتطاعات أخرى"),
+            new ReportColumn("net", "الصافي"),
+            new ReportColumn("workdays", "أيام العمل"),
+            new ReportColumn("absentdays", "أيام الغياب")
+        }, "payroll"),
+
+        new ReportDataset("pay_tx", "حركات الرواتب", new[]
+        {
+            new ReportColumn("refno", "الرقم المرجعي"),
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("txtype", "نوع الحركة", FilterKind.Select),
+            new ReportColumn("item", "عنصر الراتب", FilterKind.Select),
+            new ReportColumn("period", "الفترة", FilterKind.Select),
+            new ReportColumn("amount", "المبلغ"),
+            new ReportColumn("hours", "الساعات"),
+            new ReportColumn("days", "الأيام"),
+            new ReportColumn("paymenttype", "نوع الدفعة", FilterKind.Select),
+            new ReportColumn("source", "المصدر", FilterKind.Select),
+            new ReportColumn("status", "الحالة", FilterKind.Select),
+            new ReportColumn("locked", "مقفلة", FilterKind.Select),
+            new ReportColumn("calculated", "محسوبة بمسير", FilterKind.Select),
+            new ReportColumn("effectivedate", "تاريخ التنفيذ", FilterKind.DateRange),
+            new ReportColumn("retroactive", "بأثر رجعي", FilterKind.Select)
+        }, "payroll"),
+
+        new ReportDataset("pay_loans", "قروض وسلف الموظفين", new[]
+        {
+            new ReportColumn("refno", "الرقم المرجعي"),
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("department", "القسم", FilterKind.Select),
+            new ReportColumn("loantype", "النوع", FilterKind.Select),
+            new ReportColumn("amount", "المبلغ"),
+            new ReportColumn("installments", "عدد الأقساط"),
+            new ReportColumn("monthly", "القسط الشهري"),
+            new ReportColumn("start", "بداية السداد"),
+            new ReportColumn("paid", "المسدَّد"),
+            new ReportColumn("paidcount", "أقساط مسدَّدة"),
+            new ReportColumn("remaining", "الرصيد المتبقي"),
+            new ReportColumn("status", "الحالة", FilterKind.Select)
+        }, "payroll"),
+
+        new ReportDataset("pay_allowances", "علاوات الموظفين المسندة", new[]
+        {
+            new ReportColumn("no", "الرقم الوظيفي"),
+            new ReportColumn("name", "اسم الموظف"),
+            new ReportColumn("item", "عنصر الراتب", FilterKind.Select),
+            new ReportColumn("amount", "المبلغ"),
+            new ReportColumn("from", "من تاريخ", FilterKind.DateRange),
+            new ReportColumn("to", "إلى تاريخ", FilterKind.DateRange),
+            new ReportColumn("active", "سارية", FilterKind.Select)
+        }, "payroll")
     };
 
     public static ReportDataset? GetDataset(string key) =>
@@ -276,8 +346,185 @@ public static class PeopleReportCatalog
             "att_summary" => await LoadAttendanceSummaryAsync(db, filters),
             "att_online" => await LoadOnlinePunchesAsync(db, filters),
             "att_missing" => await LoadMissingPunchesAsync(db, filters),
+            "pay_lines" => await LoadPayrollLinesAsync(db, filters),
+            "pay_tx" => await LoadPayrollTransactionsAsync(db, filterKey, filters),
+            "pay_loans" => await LoadPayrollLoansAsync(db, filters),
+            "pay_allowances" => await LoadPayrollAllowancesAsync(db, filters),
             _ => new List<Dictionary<string, string>>()
         };
+    }
+
+    // ───────────────────────── مصادر الرواتب ─────────────────────────
+    // كلها عبر مخازن الرواتب القائمة (نطاق الشركات مفروض فيها) — لا استعلام مباشر
+    // على الجداول من طبقة التقارير. مدى الفترة من From/To كمصادر الحضور.
+
+    private static string M(decimal v) => v.ToString("#,0.##");
+
+    private static async Task<List<Dictionary<string, string>>> LoadPayrollLinesAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var scope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        var (from, to) = AttendanceRange(f);
+        var runs = (await Hrms.PayrollRunStore.ListRunsAsync(db, scope))
+            .Where(r => new DateOnly(r.Year, r.Month, 1) >= new DateOnly(from.Year, from.Month, 1)
+                     && new DateOnly(r.Year, r.Month, 1) <= new DateOnly(to.Year, to.Month, 1))
+            .OrderByDescending(r => r.Year).ThenByDescending(r => r.Month)
+            .Take(24)
+            .ToList();
+
+        var result = new List<Dictionary<string, string>>();
+        foreach (var run in runs)
+        {
+            var lines = await Hrms.PayrollRunStore.ListLinesAsync(db, run.Id);
+            foreach (var l in lines)
+            {
+                if (!string.IsNullOrWhiteSpace(f.Search) &&
+                    !l.EmployeeNo.Contains(f.Search, StringComparison.OrdinalIgnoreCase) &&
+                    !l.EmployeeName.Contains(f.Search, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                result.Add(new Dictionary<string, string>
+                {
+                    ["batch"] = run.BatchNo,
+                    ["period"] = run.PeriodText,
+                    ["runstatus"] = run.StatusLabelText,
+                    ["no"] = l.EmployeeNo,
+                    ["name"] = l.EmployeeName,
+                    ["department"] = l.Department,
+                    ["position"] = l.Position,
+                    ["basic"] = M(l.BasicSalary),
+                    ["allowances"] = M(l.TotalAllowances),
+                    ["gross"] = M(l.GrossSalary),
+                    ["tax"] = M(l.TaxAmount),
+                    ["gosi"] = M(l.GosiEmployee),
+                    ["otherded"] = M(l.OtherDeductions),
+                    ["net"] = M(l.NetSalary),
+                    ["workdays"] = l.WorkDays.ToString(),
+                    ["absentdays"] = l.AbsentDays.ToString()
+                });
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// حركات الرواتب. <paramref name="filterKey"/> يحصر النوع (Income/Deduction/Overtime/
+    /// SalaryDays/LeaveEncashment) أو يعطي «uncalculated» = معتمدة داخل الراتب ولم تُقفل بمسير
+    /// (نظير تقارير «الحركات غير المحسوبة» بكيان — كاشف الفاقد).
+    /// </summary>
+    private static async Task<List<Dictionary<string, string>>> LoadPayrollTransactionsAsync(
+        ApplicationDbContext db, string? filterKey, ReportFilters f)
+    {
+        var scope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        var (from, to) = AttendanceRange(f);
+        var result = new List<Dictionary<string, string>>();
+
+        var uncalculatedOnly = string.Equals(filterKey, "uncalculated", StringComparison.OrdinalIgnoreCase);
+        var allTypes = new[] { "Income", "Deduction", "Overtime", "SalaryDays", "LeaveEncashment" };
+        var types = !uncalculatedOnly && !string.IsNullOrWhiteSpace(filterKey) && allTypes.Contains(filterKey, StringComparer.OrdinalIgnoreCase)
+            ? new[] { allTypes.First(t => t.Equals(filterKey, StringComparison.OrdinalIgnoreCase)) }
+            : allTypes;
+
+        var cursor = new DateOnly(from.Year, from.Month, 1);
+        var end = new DateOnly(to.Year, to.Month, 1);
+        var months = 0;
+        while (cursor <= end && months++ < 24)
+        {
+            foreach (var type in types)
+            {
+                var rows = await Hrms.PayrollTransactionStore.ListAsync(db, scope, cursor.Year, cursor.Month, type, f.Search);
+                foreach (var t in rows)
+                {
+                    if (uncalculatedOnly && (t.LockedRunId.HasValue || t.Status != "Approved" || t.PaymentType == "OutSalary"))
+                        continue;
+                    result.Add(new Dictionary<string, string>
+                    {
+                        ["refno"] = t.ReferenceNo,
+                        ["no"] = t.EmployeeNo,
+                        ["name"] = t.EmployeeName,
+                        ["txtype"] = Hrms.PayrollTransactionStore.TypeLabel(t.TxType),
+                        ["item"] = t.ItemName,
+                        ["period"] = t.PeriodText,
+                        ["amount"] = M(t.Amount),
+                        ["hours"] = t.Hours.HasValue ? t.Hours.Value.ToString("0.##") : "",
+                        ["days"] = t.Days.HasValue ? t.Days.Value.ToString("0.##") : "",
+                        ["paymenttype"] = t.PaymentTypeLabel,
+                        ["source"] = t.Source,
+                        ["status"] = t.StatusText,
+                        ["locked"] = t.IsLocked ? "نعم" : "لا",
+                        // «غير المحسوبة» بنمط تقارير كيان: معتمدة داخل الراتب ولم تُقفل بمسير.
+                        ["calculated"] = t.LockedRunId.HasValue ? "نعم" : "لا",
+                        ["effectivedate"] = t.EffectiveDate?.ToString("yyyy-MM-dd") ?? "",
+                        ["retroactive"] = t.IsRetroactive ? "نعم" : "لا"
+                    });
+                }
+            }
+            cursor = cursor.AddMonths(1);
+        }
+        return result;
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadPayrollLoansAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var scope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        var loans = await Hrms.LoanStore.ListAsync(db, scope, search: f.Search);
+        return loans.Select(l => new Dictionary<string, string>
+        {
+            ["refno"] = l.ReferenceNo,
+            ["no"] = l.EmployeeNo,
+            ["name"] = l.EmployeeName,
+            ["department"] = l.Department,
+            ["loantype"] = l.LoanType,
+            ["amount"] = M(l.Amount),
+            ["installments"] = l.InstallmentCount.ToString(),
+            ["monthly"] = M(l.MonthlyAmount),
+            ["start"] = $"{l.StartMonth:00}/{l.StartYear}",
+            ["paid"] = M(l.PaidAmount),
+            ["paidcount"] = l.PaidCount.ToString(),
+            ["remaining"] = M(l.Remaining),
+            ["status"] = l.Status
+        }).ToList();
+    }
+
+    private static async Task<List<Dictionary<string, string>>> LoadPayrollAllowancesAsync(
+        ApplicationDbContext db, ReportFilters f)
+    {
+        var scope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (scope.IsDeniedAll) return new();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var rows = await Hrms.HrmsDatabase.QueryAsync(
+            db,
+            $"""
+SELECT ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
+       ISNULL(a.ItemName, N'') AS ItemName, ISNULL(a.Amount, 0) AS Amount, a.FromDate, a.ToDate
+FROM EmployeeAllowances a
+INNER JOIN Employees e ON e.Id = a.EmployeeId
+WHERE ISNULL(a.IsDeleted, 0) = 0 AND ISNULL(e.IsDeleted, 0) = 0
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@Q IS NULL OR e.EmployeeNo LIKE @Q OR e.FullName LIKE @Q)
+ORDER BY e.EmployeeNo;
+""",
+            command => Hrms.HrmsDatabase.AddParameter(command, "@Q",
+                string.IsNullOrWhiteSpace(f.Search) ? DBNull.Value : "%" + f.Search.Trim() + "%"),
+            reader =>
+            {
+                var from = Hrms.HrmsDatabase.GetDateOnly(reader, "FromDate");
+                var to = Hrms.HrmsDatabase.GetDateOnly(reader, "ToDate");
+                var active = (from is null || from <= today) && (to is null || to >= today);
+                return new Dictionary<string, string>
+                {
+                    ["no"] = Hrms.HrmsDatabase.GetString(reader, "EmployeeNo"),
+                    ["name"] = Hrms.HrmsDatabase.GetString(reader, "FullName"),
+                    ["item"] = Hrms.HrmsDatabase.GetString(reader, "ItemName"),
+                    ["amount"] = M(reader["Amount"] is decimal a ? a : 0),
+                    ["from"] = from?.ToString("yyyy-MM-dd") ?? "",
+                    ["to"] = to?.ToString("yyyy-MM-dd") ?? "",
+                    ["active"] = active ? "نعم" : "لا"
+                };
+            });
+        return rows;
     }
 
     private static async Task<List<Dictionary<string, string>>> LoadOnlinePunchesAsync(

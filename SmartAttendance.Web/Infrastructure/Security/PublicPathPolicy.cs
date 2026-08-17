@@ -40,6 +40,13 @@ public static class PublicPathPolicy
             return PathAccessClass.Public;
         }
 
+        // صفحة تغيير كلمة المرور العامّة يصلها أيّ دورٍ مصادَق (بمن فيهم من أُجبر
+        // على التغيير قبل بلوغه كتالوج دوره) — بلا مرورٍ بالكتالوج فلا تُحجب عنه.
+        if (path == "/account/changepassword")
+        {
+            return PathAccessClass.AnyAuthenticated;
+        }
+
         // ملفات الـPWA بالجذر يجب أن تُخدَم بلا مصادقة (المتصفح يجلبها قبل/بعد الدخول).
         // ملاحظة: .NET يبصم اسم الملف (manifest.<hash>.webmanifest) فنطابق اللاحقة.
         if (path.EndsWith(".webmanifest") ||

@@ -15,6 +15,29 @@
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-user-access.css" asp-append-version="true" />
 
+<style>
+    .zua-bulk-bar { border:1px solid var(--zua-line); border-radius:18px; padding:14px 18px; margin:0 0 14px; }
+    .zua-bulk-title { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .zua-bulk-title b { font-size:14px; }
+    .zua-bulk-title #zua-bulk-count { color:var(--zua-muted); font-size:12px; font-weight:800; }
+    .zua-bulk-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
+    .zua-bulk-fields label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); }
+    .zua-bulk-fields input[type=password] { min-height:38px; padding:0 12px; border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; min-width:190px; }
+    .zua-bulk-codes { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); margin-bottom:8px; }
+    .zua-bulk-codes textarea { border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; padding:10px 12px; resize:vertical; font-family:inherit; }
+    .zua-pager { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:center; margin:14px 0; }
+    .zua-pager .disabled { pointer-events:none; opacity:.45; }
+    .zua-pager-info { font-weight:800; font-size:13px; color:var(--zua-muted); padding:0 8px; }
+    .zua-accessroles { border:1px solid var(--zua-line); border-radius:12px; padding:10px 12px; }
+    .zua-ar-title { display:block; font-weight:800; font-size:12px; color:var(--zua-muted); margin-bottom:8px; }
+    .zua-ar-grid { display:flex; flex-direction:column; gap:6px; max-height:180px; overflow:auto; }
+    .zua-ar-item { display:flex !important; flex-direction:row !important; align-items:center; gap:8px; font-weight:700; }
+    .zua-ar-item input { min-height:auto; width:auto; }
+    .zua-ar-item small { color:var(--zua-muted); font-weight:600; }
+    .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
+    .zua-bulk-check input { min-height:auto; }
+</style>
+
 <section class="zua-page" dir="rtl">
 
     @* ---------- العنوان + العدادات ---------- *@
@@ -54,6 +77,57 @@
         <button type="button" class="zua-btn" onclick="zuaOpenCreate()">+ مستخدم جديد</button>
     </form>
 
+    @* ---------- شريط الإجراء الجماعيّ: إعادة تعيين كلمة المرور ---------- *@
+    <form method="post" asp-page-handler="BulkResetPassword" id="zua-bulk"
+          class="zua-bulk-bar" data-zyconfirm="تأكيد؟ اضغط «تطبيق» مرّة أخرى">
+        <input type="hidden" name="Search" value="@Model.Search" />
+        <input type="hidden" name="Status" value="@Model.Status" />
+        <div class="zua-bulk-title">
+            <b>إعادة تعيين كلمة المرور جماعيّاً</b>
+            <span id="zua-bulk-count">لم تُحدَّد حسابات</span>
+        </div>
+        <label class="zua-bulk-codes">أكواد الموظفين (اختياري — الصقها مفصولةً بمسافة أو سطر أو فاصلة)
+            <textarea name="BulkEmployeeCodes" rows="2" dir="ltr"
+                      placeholder="11230 10000 10521 ..." oninput="zuaBulkCount()"></textarea>
+        </label>
+        <span class="hint" style="display:block;margin:-4px 0 8px">من لا حساب دخول له من هذه الأكواد يُنشأ له حساب «موظف» تلقائيّاً (اسم المستخدم = كوده).</span>
+        <div class="zua-bulk-fields">
+                <label>كلمة مرور مؤقّتة
+                    <input type="password" name="BulkPassword" dir="ltr" minlength="8"
+                           autocomplete="new-password" placeholder="8 أحرف على الأقل" />
+                </label>
+                <label>تأكيد الكلمة
+                    <input type="password" name="BulkConfirmPassword" dir="ltr"
+                           autocomplete="new-password" />
+                </label>
+                <label class="zua-bulk-check">
+                    <input type="checkbox" name="BulkKickSessions" value="true" />
+                    طرد جلساتهم الحاليّة فوراً
+                </label>
+                <label class="zua-bulk-check">
+                    <input type="checkbox" name="BulkForceChange" value="true" checked />
+                    إجبار تغييرها عند أول دخول
+                </label>
+                <button type="submit" class="zua-btn" onclick="return zuaValidateBulk(event)">تطبيق</button>
+            </div>
+            <div id="zua-bulk-msg" class="zua-alert error" style="display:none;margin-top:10px"></div>
+            <label class="zua-bulk-check" style="margin-top:10px;color:var(--zua-amber);font-weight:800">
+                <input type="checkbox" name="BulkAllNoAccount" value="true" onchange="zuaBulkCount()" />
+                إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود الموظّف)
+            </label>
+            <p class="hint" style="margin:6px 0 0">
+                يُطبَّق على الحسابات المحدَّدة في الجدول أو المُلصقة بالأكواد، ويُطلب من كلٍّ تغييرها عند الدخول التالي. حسابك الشخصي مُستثنى.
+            </p>
+        </form>
+
+    @if (Model.NoAccountTotal > Model.NoAccountShown && Model.PageIndex <= 1)
+    {
+        <div class="zua-alert" style="background:rgba(18,217,227,.08)">
+            يوجد @Model.NoAccountTotal موظّف بلا حساب دخول — يُعرض منهم @Model.NoAccountShown فقط لأداء أفضل.
+            ابحث بالاسم أو الكود بالأعلى لإيجاد موظّفٍ بعينه، أو الصق أكواد الموظّفين في أداة كلمة المرور لإنشاء حساباتهم دفعةً واحدة.
+        </div>
+    }
+
     @* ---------- الجدول ---------- *@
     <div class="zua-table-card">
         @if (Model.Identities.Count == 0)
@@ -65,6 +139,10 @@
             <table class="zua-table">
                 <thead>
                     <tr>
+                        <th style="width:34px">
+                            <input type="checkbox" id="zua-select-all" title="تحديد الكل"
+                                   onclick="zuaToggleAll(this)" />
+                        </th>
                         <th>المستخدم</th>
                         <th>الموظف المرتبط</th>
                         <th>الدور</th>
@@ -78,6 +156,21 @@
                     @foreach (var row in Model.Identities)
                     {
                         <tr>
+                            <td>
+                                @if (row.LoginId > 0 && row.LoginId != Model.CurrentLoginId)
+                                {
+                                    <input type="checkbox" class="zua-row-check" form="zua-bulk"
+                                           name="SelectedLoginIds" value="@row.LoginId"
+                                           onchange="zuaBulkCount()" />
+                                }
+                                else if (row.LinkStatus == SmartAttendance.Web.Pages.UserAccess.IndexModel.IdentityLinkStatus.NoAccount
+                                         && !string.IsNullOrWhiteSpace(row.EmployeeNo))
+                                {
+                                    <input type="checkbox" class="zua-row-check" form="zua-bulk"
+                                           name="SelectedEmployeeCodes" value="@row.EmployeeNo"
+                                           onchange="zuaBulkCount()" title="سيُنشأ حساب موظف عند التطبيق" />
+                                }
+                            </td>
                             <td>
                                 <div class="zua-user">
                                     <span class="zua-avatar">@(string.IsNullOrWhiteSpace(row.DisplayName) ? "؟" : row.DisplayName.Trim()[..1])</span>
@@ -108,8 +201,23 @@
                                 <div class="zua-actions">
                                     @if (row.CanEdit)
                                     {
-                                        <a class="zua-btn ghost" style="display:inline-flex;align-items:center;text-decoration:none"
-                                           href="?EditLoginId=@row.LoginId&EditSystemUserId=@row.SystemUserId&Search=@Model.Search&Status=@Model.Status">تعديل</a>
+                                        <button type="button" class="zua-btn ghost" onclick="zuaEditRow(this)"
+                                                data-loginid="@row.LoginId" data-systemuserid="@row.SystemUserId"
+                                                data-empid="@(row.EmployeeId ?? 0)" data-code="@row.EmployeeNo"
+                                                data-empname="@row.EmployeeName" data-fullname="@row.DisplayName"
+                                                data-username="@row.UserName" data-email="@row.Email"
+                                                data-role="@row.CompatibilityRole" data-active="@(row.IsActive ? "1" : "0")"
+                                                data-notes="@row.Notes"
+                                                data-roleids="@(Model.AssignedRolesByUser.TryGetValue(row.SystemUserId, out var rids) ? string.Join(",", rids) : "")">تعديل</button>
+                                    }
+                                    @if (row.LinkStatus == SmartAttendance.Web.Pages.UserAccess.IndexModel.IdentityLinkStatus.NoAccount && row.EmployeeId.HasValue)
+                                    {
+                                        <button type="button" class="zua-btn" onclick="zuaEditRow(this)"
+                                                data-loginid="0" data-systemuserid="0"
+                                                data-empid="@row.EmployeeId" data-code="@row.EmployeeNo"
+                                                data-empname="@row.EmployeeName" data-fullname="@row.DisplayName"
+                                                data-username="@row.EmployeeNo" data-email=""
+                                                data-role="Employee" data-active="1" data-notes="" data-roleids="">إنشاء حساب</button>
                                     }
                                     @if (row.CanToggle)
                                     {
@@ -128,6 +236,21 @@
             </table>
         }
     </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="zua-pager" aria-label="ترقيم الصفحات">
+            <a class="zua-btn ghost @(Model.PageIndex <= 1 ? "disabled" : "")"
+               href="?pg=1&Search=@Model.Search">« الأولى</a>
+            <a class="zua-btn ghost @(Model.PageIndex <= 1 ? "disabled" : "")"
+               href="?pg=@(Model.PageIndex - 1)&Search=@Model.Search">‹ السابقة</a>
+            <span class="zua-pager-info">صفحة @Model.PageIndex من @Model.TotalPages · @Model.AccountsTotal حساب</span>
+            <a class="zua-btn ghost @(Model.PageIndex >= Model.TotalPages ? "disabled" : "")"
+               href="?pg=@(Model.PageIndex + 1)&Search=@Model.Search">التالية ›</a>
+            <a class="zua-btn ghost @(Model.PageIndex >= Model.TotalPages ? "disabled" : "")"
+               href="?pg=@Model.TotalPages&Search=@Model.Search">الأخيرة »</a>
+        </nav>
+    }
 
     @* ---------- سلايد الإنشاء/التعديل (نفس نمط سلايدات الملف 360°) ---------- *@
     <div class="hrms-slideover-backdrop" id="zua-backdrop" onclick="zuaClose()"></div>
@@ -171,9 +294,20 @@
                     </label>
                     <label>الدور
                         <select asp-for="Input.CompatibilityRole">
-                            @foreach (var role in Model.Roles)
+                            <optgroup label="أدوار النظام">
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <option value="@role.Value">@role.Label</option>
+                                }
+                            </optgroup>
+                            @if (Model.AccessRoleOptions.Count > 0)
                             {
-                                <option value="@role.Value">@role.Label</option>
+                                <optgroup label="أدوار مخصّصة (أدوار الوصول)">
+                                    @foreach (var r in Model.AccessRoleOptions)
+                                    {
+                                        <option value="access:@r.Id">@r.NameAr · @r.RoleType</option>
+                                    }
+                                </optgroup>
                             }
                         </select>
                     </label>
@@ -213,6 +347,41 @@
             document.getElementById('zua-slide').classList.remove('open');
             document.getElementById('zua-backdrop').classList.remove('open');
         }
+        // تعديل/إنشاء بلا رفرش: نملأ النموذج من بيانات الصفّ ونفتح السلايد مباشرة.
+        function zuaSet(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; }
+        function zuaEditRow(btn) {
+            var d = btn.dataset;
+            zuaSet('Input_LoginId', d.loginid || '0');
+            zuaSet('Input_SystemUserId', d.systemuserid || '0');
+            zuaSet('Input_FullName', d.fullname);
+            zuaSet('Input_UserName', d.username);
+            zuaSet('Input_Email', d.email);
+            zuaSet('Input_Notes', d.notes);
+            var role = document.getElementById('Input_CompatibilityRole');
+            if (role) {
+                var rids = (d.roleids || '').split(',').filter(function (x) { return x.length; });
+                role.value = rids.length > 0 ? ('access:' + rids[0]) : (d.role || 'Employee');
+                if (role.selectedIndex < 0) role.value = d.role || 'Employee';
+            }
+            var active = document.getElementById('Input_IsActive');
+            if (active) active.checked = (d.active === '1');
+            var pass = document.getElementById('Input_Password');
+            if (pass) pass.value = '';
+            var conf = document.getElementById('Input_ConfirmPassword');
+            if (conf) conf.value = '';
+            // منتقي الموظف داخل السلايد
+            var slide = document.getElementById('zua-slide');
+            var pid = slide ? slide.querySelector('.zyep-id') : null;
+            var pcode = slide ? slide.querySelector('.zyep-code') : null;
+            var pname = slide ? slide.querySelector('.zyep-name') : null;
+            var empId = (d.empid && d.empid !== '0') ? d.empid : '';
+            if (pid) pid.value = empId;
+            if (pcode) pcode.value = empId ? (d.code || '') : '';
+            if (pname) pname.value = empId ? (d.empname || '') : '';
+            var isNew = (d.loginid === '0' && d.systemuserid === '0');
+            document.getElementById('zua-slide-title').textContent = isNew ? 'حساب جديد' : 'تعديل الحساب';
+            zuaOpen();
+        }
         function zuaOpenCreate() {
             var form = document.querySelector('#zua-slide form');
             form.reset();
@@ -223,7 +392,81 @@
         }
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') zuaClose(); });
 
-        @if (Model.Input.IsEditing)
+        // ---- التحديد الجماعيّ لإعادة تعيين كلمة المرور ----
+        function zuaRowChecks() {
+            return Array.prototype.slice.call(document.querySelectorAll('.zua-row-check'));
+        }
+        function zuaToggleAll(master) {
+            zuaRowChecks().forEach(function (c) { c.checked = master.checked; });
+            zuaBulkCount();
+        }
+        function zuaCodeCount() {
+            var ta = document.querySelector('#zua-bulk textarea[name=BulkEmployeeCodes]');
+            if (!ta || !ta.value.trim()) { return 0; }
+            return ta.value.split(/[\s,;،]+/).filter(function (s) { return s.trim().length; }).length;
+        }
+        function zuaBulkCount() {
+            var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            var codes = zuaCodeCount();
+            var label = document.getElementById('zua-bulk-count');
+            if (label) {
+                var parts = [];
+                if (n > 0) { parts.push('محدَّدون: ' + n); }
+                if (codes > 0) { parts.push('أكواد ملصوقة: ' + codes); }
+                label.textContent = parts.length ? parts.join(' · ') : 'لم تُحدَّد حسابات';
+            }
+            var master = document.getElementById('zua-select-all');
+            if (master) {
+                var all = zuaRowChecks();
+                master.checked = all.length > 0 && n === all.length;
+                master.indeterminate = n > 0 && n < all.length;
+            }
+        }
+        function zuaBulkMsg(msg) {
+            var box = document.getElementById('zua-bulk-msg');
+            if (!box) { alert(msg); return; }
+            box.textContent = msg;
+            box.style.display = msg ? 'block' : 'none';
+        }
+        // تحقّق فوريّ قبل الإرسال: يمنع «تطبيق» بلا بيانات (لا ذهاب للخادم).
+        function zuaValidateBulk(e) {
+            var pass = document.querySelector('#zua-bulk input[name=BulkPassword]');
+            var conf = document.querySelector('#zua-bulk input[name=BulkConfirmPassword]');
+            var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            var codes = zuaCodeCount();
+            var all = zuaAllNoAccount();
+            var msg = '';
+            if (n === 0 && codes === 0 && !all) {
+                msg = 'حدِّد حساباً من الجدول، أو الصق أكواد موظفين، أو فعّل «إنشاء حساب للجميع».';
+            } else if (!pass || pass.value.length < 8) {
+                msg = 'اكتب كلمة مرورٍ مؤقّتة (8 أحرف على الأقل).';
+            } else if (!conf || conf.value !== pass.value) {
+                msg = 'كلمة المرور المؤقّتة وتأكيدها غير متطابقين.';
+            }
+            if (msg) { e.preventDefault(); zuaBulkMsg(msg); return false; }
+            zuaBulkMsg('');
+            return true;
+        }
+        function zuaAllNoAccount() {
+            var c = document.querySelector('#zua-bulk input[name=BulkAllNoAccount]');
+            return !!(c && c.checked);
+        }
+        function zuaBulkConfirm() {
+            var n = zuaRowChecks().filter(function (c) { return c.checked; }).length;
+            var codes = zuaCodeCount();
+            var all = zuaAllNoAccount();
+            if (n === 0 && codes === 0 && !all) {
+                alert('حدِّد حساباً من الجدول، أو الصق أكواد، أو فعّل «إنشاء حساب للجميع».');
+                return false;
+            }
+            if (all) {
+                return confirm('سيتم إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود كلٍّ) بكلمة المرور المُدخلة. متابعة؟');
+            }
+            var total = n + codes;
+            return confirm('إعادة تعيين كلمة المرور لـ' + total + ' حساب (المحدَّد + الملصوق)؟ من لا حساب له من الأكواد سيُنشأ له حساب «موظف».');
+        }
+
+        @if (Model.Input.IsEditing || Model.OpenCreate)
         {
             @:zuaOpen();
         }

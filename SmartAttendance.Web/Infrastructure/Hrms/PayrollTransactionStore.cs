@@ -325,6 +325,61 @@ WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
             });
     }
 
+    /// <summary>
+    /// بوابة فحص ما قبل المسير (نظير شاشة كيان الاعتراضية «تم العثور على حركات غير
+    /// مقفلة و/أو طلبات قيد الموافقة غير مشمولة في حساب الرواتب»): حركات الفترة
+    /// **المسودّة** (غير المعتمدة) داخل الراتب لأعضاء نطاق الدفعة — هي ما سيفوته
+    /// الاحتساب بصمت لأن <see cref="ForPeriodAsync"/> لا يقرأ إلا المعتمد.
+    ///
+    /// تعرضها الشاشة قبل التنفيذ لا بعده: من يحتسب ثم يكتشف الفاقد يعيد الاحتساب
+    /// مرّتين؛ ومن يراه أولاً يعتمد أو يتخطّى عن علم.
+    /// </summary>
+    public static async Task<List<Transaction>> PreflightDraftsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, int? runId = null)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Transaction>();
+        await EnsureAsync(dbContext);
+        return await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT t.Id, t.EmployeeId, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS EmployeeName,
+       t.TxType, ISNULL(t.ItemName, N'') AS ItemName, t.Amount, ISNULL(t.ReferenceNo, N'') AS ReferenceNo,
+       ISNULL(t.Status, N'Approved') AS Status
+FROM PayrollTransactions t
+INNER JOIN Employees e ON e.Id = t.EmployeeId
+WHERE t.[Year] = @Y AND t.[Month] = @M
+  AND ISNULL(t.PaymentType, N'InSalary') = N'InSalary'
+  AND ISNULL(t.Status, N'Approved') <> N'Approved'
+  AND ISNULL(t.Status, N'Approved') <> N'Rejected'
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@RunId IS NULL
+       OR NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId)
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=t.EmployeeId))
+ORDER BY e.EmployeeNo, t.Id;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Y", year);
+                HrmsDatabase.AddParameter(command, "@M", month);
+                HrmsDatabase.AddParameter(command, "@RunId", (object?)runId ?? DBNull.Value);
+            },
+            reader => new Transaction
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                EmployeeName = HrmsDatabase.GetString(reader, "EmployeeName"),
+                TxType = HrmsDatabase.GetString(reader, "TxType"),
+                ItemName = HrmsDatabase.GetString(reader, "ItemName"),
+                Amount = reader["Amount"] is decimal a ? a : 0,
+                ReferenceNo = HrmsDatabase.GetString(reader, "ReferenceNo"),
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                Year = year,
+                Month = month
+            });
+    }
+
     public static async Task<int> SaveAsync(
         ApplicationDbContext dbContext, CompanyScope scope, Transaction tx, string userName)
     {

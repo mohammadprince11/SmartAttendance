@@ -339,6 +339,14 @@
                        يذهب إلى وجهة زرّ «فتح المركز» نفسها بقسم «المستندات» أدناه،
                        وفرعُ المرساة `#profile-files` يكرّر تبويب «ملفات الموظف». *@
 
+                    <a asp-page="./EFilePrint"
+                       asp-route-id="@employee.Id"
+                       target="_blank"
+                       class="z360-action"
+                       title="إصدار الملف الإلكتروني كاملاً بصفحة طباعة واحدة (حفظ PDF)">
+                        إصدار الملف PDF
+                    </a>
+
                     @if (employee.IsActive && Model.CanEndService)
                     {
                         <a asp-page="./EndService"

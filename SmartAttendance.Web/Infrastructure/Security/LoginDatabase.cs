@@ -47,6 +47,7 @@ BEGIN
         LastLoginAt datetime2 NULL,
         PasswordChangedAt datetime2 NULL,
         SecurityStamp nvarchar(64) NULL,
+        MustChangePassword bit NOT NULL DEFAULT(0),
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
         UpdatedAt datetime2 NULL
     );
@@ -67,6 +68,11 @@ IF COL_LENGTH('AppLoginUsers', 'LastFailedLoginAt') IS NULL
 
 IF COL_LENGTH('AppLoginUsers', 'PasswordChangedAt') IS NULL
     ALTER TABLE AppLoginUsers ADD PasswordChangedAt datetime2 NULL;
+
+IF COL_LENGTH('AppLoginUsers', 'MustChangePassword') IS NULL
+    ALTER TABLE AppLoginUsers
+        ADD MustChangePassword bit NOT NULL
+            CONSTRAINT DF_AppLoginUsers_MustChangePassword DEFAULT(0);
 """);
 
         var totalUsers = await HrmsDatabase.ScalarAsync<int>(

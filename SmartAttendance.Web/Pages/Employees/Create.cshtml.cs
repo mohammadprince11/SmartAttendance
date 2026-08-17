@@ -5,7 +5,9 @@ using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -51,6 +53,20 @@ public class CreateModel : PageModel
 
     [BindProperty]
     public List<IFormFile> InitialDocumentFiles { get; set; } = new();
+
+    /// <summary>إنشاء حساب دخول «موظف» للموظف الجديد في نفس الخطوة.</summary>
+    [BindProperty]
+    public bool CreateLoginAccount { get; set; }
+
+    [BindProperty]
+    public string? LoginUsername { get; set; }
+
+    [BindProperty]
+    public string? LoginPassword { get; set; }
+
+    /// <summary>إجبار الموظف على تغيير كلمة المرور عند أول دخول (افتراضي: نعم).</summary>
+    [BindProperty]
+    public bool LoginForceChange { get; set; } = true;
 
     public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
 
@@ -149,6 +165,53 @@ public class CreateModel : PageModel
         if (!ModelState.IsValid)
             return Page();
 
+        // اشتقاق المواطنة من الجنسية إن كانت القاعدة مفعّلة (تهيئة الأشخاص) —
+        // تُطبَّق بالسيرفر كي لا تتوقف على JS الواجهة.
+        if (!string.IsNullOrWhiteSpace(Employee.Nationality) &&
+            bool.TryParse(await HrSettingsStore.GetAsync(_dbContext, CitizenshipPolicy.KeyEnabled, "False"), out var citizenshipRule) &&
+            citizenshipRule)
+        {
+            var citizenList = await HrSettingsStore.GetAsync(
+                _dbContext, CitizenshipPolicy.KeyNationalities, CitizenshipPolicy.DefaultNationalities);
+            Employee.IsCitizen = CitizenshipPolicy.IsCitizen(Employee.Nationality, citizenList);
+        }
+
+        // حساب الدخول إجباريّ لكل موظف جديد: نتحقّق قبل إنشاء الموظف كي لا نُنشئ
+        // موظفاً ثم نفشل. اسم الدخول اختياري (افتراضياً = كود الموظف)؛ الكلمة مطلوبة.
+        CreateLoginAccount = true;
+        string? loginUsername = null;
+        if (CreateLoginAccount)
+        {
+            await LoginDatabase.EnsureCreatedAsync(_dbContext);
+
+            loginUsername = string.IsNullOrWhiteSpace(LoginUsername)
+                ? Employee.EmployeeNo?.Trim()
+                : LoginUsername.Trim();
+
+            if (string.IsNullOrWhiteSpace(loginUsername))
+            {
+                ErrorMessage = "اسم الدخول مطلوب لإنشاء حساب الموظف.";
+                return Page();
+            }
+
+            if (string.IsNullOrWhiteSpace(LoginPassword) || LoginPassword.Length < 8)
+            {
+                ErrorMessage = "كلمة مرور الدخول يجب ألا تقل عن 8 أحرف.";
+                return Page();
+            }
+
+            var takenCount = await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
+                "SELECT COUNT(*) FROM AppLoginUsers WHERE Username = @Username;",
+                command => HrmsDatabase.AddParameter(command, "@Username", loginUsername));
+
+            if (takenCount > 0)
+            {
+                ErrorMessage = $"اسم الدخول «{loginUsername}» مستخدم مسبقاً. اختر اسماً آخر.";
+                return Page();
+            }
+        }
+
         var created = await _employeeService.CreateAsync(Employee);
 
         if (!created)
@@ -167,7 +230,8 @@ public class CreateModel : PageModel
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, employeeId, Request.Form);
             var photoResult = await SaveEmployeePhotoAsync(employeeId);
             var documentResult = await SaveInitialDocumentsAsync(employeeId);
-            var extraResult = string.Join(" ", new[] { photoResult, documentResult }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            var loginResult = await CreateEmployeeLoginAsync(employeeId, loginUsername);
+            var extraResult = string.Join(" ", new[] { photoResult, documentResult, loginResult }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
             if (!string.IsNullOrWhiteSpace(extraResult))
             {
@@ -186,6 +250,67 @@ public class CreateModel : PageModel
         return RedirectToPage("./Index");
     }
 
+
+    /// <summary>
+    /// ينشئ حساب دخول «موظف» للموظف الجديد إن طلب الأدمن ذلك. اسم المستخدم وكلمة
+    /// المرور مُتحقَّقان مسبقاً (فريدان و≥8)؛ يُهاش بملحٍ مستقلّ ويُوسَم بإجبار
+    /// التغيير حسب الاختيار. الدور «Employee» دائماً — أدنى صلاحية.
+    /// </summary>
+    private async Task<string> CreateEmployeeLoginAsync(int employeeId, string? username)
+    {
+        if (!CreateLoginAccount || string.IsNullOrWhiteSpace(username) ||
+            string.IsNullOrWhiteSpace(LoginPassword))
+        {
+            return string.Empty;
+        }
+
+        var salt = SimplePasswordHasher.CreateSalt();
+        var hash = SimplePasswordHasher.HashPassword(LoginPassword, salt);
+        var actor = User?.Identity?.Name ?? "HR";
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var loginId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+INSERT INTO AppLoginUsers
+(EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive,
+ PasswordChangedAt, MustChangePassword, CreatedAt)
+VALUES
+(@EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1,
+ SYSUTCDATETIME(), @MustChange, SYSUTCDATETIME());
+
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@Username", username);
+                HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
+                HrmsDatabase.AddParameter(command, "@PasswordSalt", salt);
+                HrmsDatabase.AddParameter(command, "@MustChange", LoginForceChange);
+            });
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
+VALUES ('UnifiedIdentity', @EntityId, 'Create Employee Login On Employee Create', @NewValues, @Actor, @IpAddress);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EntityId", $"{loginId}:0");
+                HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
+                    ("LoginId", loginId),
+                    ("EmployeeId", employeeId),
+                    ("UserName", username),
+                    ("Role", "Employee"),
+                    ("MustChangePassword", LoginForceChange)));
+                HrmsDatabase.AddParameter(command, "@Actor", actor);
+                HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
+            });
+
+        return $"وأُنشئ حساب دخول باسم «{username}».";
+    }
 
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)
     {

@@ -1404,6 +1404,99 @@ IF OBJECT_ID('DayAttendances', 'U') IS NOT NULL
     CREATE NONCLUSTERED INDEX IX_DayAttendances_WorkDate_Employee
         ON DayAttendances (WorkDate, EmployeeId);
 """),
+
+        // إجبار تغيير كلمة المرور عند الدخول التالي: علامة على هوية الدخول تُرفع
+        // بإعادة التعيين الجماعيّة (/UserAccess) وتُصفَّر لحظة تغيير المستخدم كلمته.
+        // NOT NULL بافتراض 0 كي لا يُجبَر أحدٌ قائمٌ عرضاً على التغيير بعد النشر.
+        new(
+            "20260812-01-login-must-change-password",
+            """
+IF OBJECT_ID('AppLoginUsers', 'U') IS NOT NULL
+   AND COL_LENGTH('AppLoginUsers', 'MustChangePassword') IS NULL
+    ALTER TABLE AppLoginUsers
+        ADD MustChangePassword bit NOT NULL
+            CONSTRAINT DF_AppLoginUsers_MustChangePassword DEFAULT(0);
+"""),
+
+        // متابعة تقييمات الأشخاص (نظير /Employees/EvaluationsScreening بكيان):
+        // نتيجة سنوية لكل موظف — نسبة + تقدير + وصف، بمصدر «مباشر» يدوي الآن
+        // ومصدر «إدارة الأداء» حين يُبنى التكامل. الفرادة على (الموظف، السنة، الفترة).
+        new(
+            "20260815-01-employee-evaluation-results",
+            """
+IF OBJECT_ID('EmployeeEvaluationResults', 'U') IS NULL
+BEGIN
+    CREATE TABLE EmployeeEvaluationResults
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        EvalYear int NOT NULL,
+        FromDate date NOT NULL,
+        ToDate date NOT NULL,
+        ScorePercent decimal(6,2) NOT NULL,
+        Grade nvarchar(40) NULL,
+        GradeText nvarchar(200) NULL,
+        Source nvarchar(40) NOT NULL CONSTRAINT DF_EmpEvalResults_Source DEFAULT(N'مباشر'),
+        CreatedBy nvarchar(150) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_EmpEvalResults_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT UQ_EmpEvalResults UNIQUE (EmployeeId, EvalYear, FromDate, ToDate)
+    );
+
+    CREATE INDEX IX_EmpEvalResults_Employee ON EmployeeEvaluationResults (EmployeeId, EvalYear DESC);
+END;
+"""),
+
+        // موافقة لجنة على إصدار الرواتب (نظير «يتطلب حساب الرواتب موافقة اللجنة» بكيان):
+        // من اعتمد الدفعة ومتى — الحارس بـPayrollRunStore.IssueAsync يرفض الإصدار بلا
+        // اعتماد حين تكون التهيئة تشترطه. NULL = لم تُعتمد؛ الافتراضي لا يشترط شيئاً.
+        new(
+            "20260816-01-payroll-run-committee-approval",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRuns', 'ApprovedBy') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovedBy nvarchar(150) NULL;
+    IF COL_LENGTH('PayrollRuns', 'ApprovedAt') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovedAt datetime2 NULL;
+    IF COL_LENGTH('PayrollRuns', 'ApprovalNote') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovalNote nvarchar(400) NULL;
+END;
+"""),
+
+        // سلم الرواتب (نظير «إدارة سلم الرواتب» بكيان): درجات مسمّاة بثلاثة أبعاد اختيارية
+        // (مثل: الفئة/الدرجة/المرتبة) + فئة/مجموعة للتصنيف + مبلغ أساسي مقترح لكل درجة.
+        // حقل Employees FinancialInfo.SalaryScale النصي القائم يبقى المرجع بالملف؛ الجدول
+        // يعطيه قاموساً وأرقاماً. لا مساس بأي احتساب — الاقتراح يُعرض ولا يُفرض.
+        new(
+            "20260816-02-salary-scale",
+            """
+IF OBJECT_ID('SalaryScaleGrades', 'U') IS NULL
+BEGIN
+    CREATE TABLE SalaryScaleGrades
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Code nvarchar(60) NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        Dim1 nvarchar(80) NULL,
+        Dim2 nvarchar(80) NULL,
+        Dim3 nvarchar(80) NULL,
+        Category nvarchar(80) NULL,
+        GroupName nvarchar(80) NULL,
+        MinBasic decimal(18,2) NULL,
+        MidBasic decimal(18,2) NULL,
+        MaxBasic decimal(18,2) NULL,
+        Color nvarchar(20) NULL,
+        SortOrder int NOT NULL CONSTRAINT DF_SalaryScaleGrades_Sort DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_SalaryScaleGrades_Active DEFAULT(1),
+        -- عزل تهيئة بالشركة (نمط 8D–8M): NULL = مشتركة، وغيرها معزولة لشركتها.
+        CompanyId int NULL,
+        -- عمود محسوب مثبَّت للفرادة لكل شركة (المشتركة = 0): الكود «G-01» مباح لشركتين مختلفتين.
+        CompanyKey AS ISNULL(CompanyId, 0) PERSISTED,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_SalaryScaleGrades_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT UQ_SalaryScaleGrades_Code UNIQUE (Code, CompanyKey)
+    );
+END;
+"""),
     };
 
     /// <summary>

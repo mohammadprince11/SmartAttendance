@@ -102,8 +102,13 @@ public partial class ProfileModel
         }
 
         var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
-        CanViewSalary = await CanAccessAsync(
-            systemUserId, role, PeoplePermissionCodes.ViewCompensation, Id);
+
+        // إضافيّ (أدوار الوصول — الحقول الحساسة): من يحمل دوراً يمنح حقل «الراتب»
+        // يراه أيضاً. OR فلا يُسحب من أحدٍ يراه اليوم.
+        CanViewSalary =
+            await CanAccessAsync(systemUserId, role, PeoplePermissionCodes.ViewCompensation, Id) ||
+            await SmartAttendance.Web.Infrastructure.Security.AccessRoleStore.HasSensitiveFieldAsync(
+                _dbContext, systemUserId, SmartAttendance.Web.Infrastructure.Security.SensitiveFieldCatalog.Salary);
     }
 
     [BindProperty] public DependentInput Dependent { get; set; } = new();
