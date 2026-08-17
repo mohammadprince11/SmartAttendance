@@ -10,6 +10,7 @@
       3. مرفوعات المستخدمين (wwwroot/uploads + wwwroot/tenant-assets).
       4. حالة App_Data وشهادة TLS المحليّة.
       5. سكربت التشغيل وتعريف المهمة المجدولة.
+      6. نفق Cloudflare (مجلد .cloudflared) — يربط النطاق zynorahr.com بالحاسبة (أُضيف 2026-08-16).
 
     ⚠️ البند 4 أُضيف بعد اكتشاف ثغرة فقدِ بيانات: `App_Data/ProtectedEmployeeFiles`
     يحوي وثائق الموظفين **مشفَّرةً بـIDataProtector** (`ProtectedFileService`)،
@@ -61,7 +62,7 @@ New-Item -ItemType Directory -Path $bundle -Force | Out-Null
 Write-Ok "المجلد: $bundle"
 
 # ---------------------------------------------------------------- 1. القاعدة
-Write-Step "1/5 نسخة القاعدة الاحتياطية"
+Write-Step "1/6 نسخة القاعدة الاحتياطية"
 
 # ⚠️ يكتب الملفَ **حسابُ خدمة SQL Server** لا حسابك — وهو ليس عضواً في Users،
 # فلا يقدر يكتب بمجلد الحزمة افتراضياً. نمنحه الحقّ صراحةً ليكتب مباشرةً هناك،
@@ -121,7 +122,7 @@ else {
 }
 
 # ------------------------------------------------------- 2. ملفات الإعدادات
-Write-Step "2/5 ملفات الإعدادات (تحوي أسراراً)"
+Write-Step "2/6 ملفات الإعدادات (تحوي أسراراً)"
 $configDir = Join-Path $bundle 'config'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 
@@ -138,7 +139,7 @@ foreach ($name in @('appsettings.json', 'appsettings.Production.json', 'appsetti
 if ($configCount -eq 0) { Write-Warn "لم يُعثر على أي appsettings في $LivePath" }
 
 # ------------------------------------------------------------ 3. المرفوعات
-Write-Step "3/5 مرفوعات المستخدمين"
+Write-Step "3/6 مرفوعات المستخدمين"
 
 # مجلدٌ واحدٌ لكل شجرة: robocopy /E ينسخ الفروع كما هي.
 # ⚠️ tenant-assets **شقيق** uploads لا ابنٌ له — نسخ uploads وحده يترك هوية كل
@@ -161,7 +162,7 @@ Copy-Tree (Join-Path $LivePath 'wwwroot\uploads')       (Join-Path $bundle 'uplo
 Copy-Tree (Join-Path $LivePath 'wwwroot\tenant-assets') (Join-Path $bundle 'tenant-assets') 'هوية الشركات'
 
 # ------------------------------------------- 4. App_Data والشهادة المحليّة
-Write-Step "4/5 حالة App_Data والشهادة"
+Write-Step "4/6 حالة App_Data والشهادة"
 
 # 🔴 ProtectedEmployeeFiles: وثائق الموظفين مشفَّرةً بـIDataProtector. تركُها
 # يعني فقداً نهائياً لا يُسترجَع من القاعدة — الصفوف تشير لملفات غير موجودة.
@@ -187,7 +188,7 @@ else {
 Copy-Tree (Join-Path $LivePath 'certs') (Join-Path $bundle 'certs') 'شهادة TLS'
 
 # ------------------------------------------------- 5. تشغيل الخادم والمهمة
-Write-Step "5/5 إعداد التشغيل"
+Write-Step "5/6 إعداد التشغيل"
 $runtimeDir = Join-Path $bundle 'runtime'
 New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
 
@@ -201,6 +202,33 @@ if (Test-Path -LiteralPath $runBat) {
 & schtasks /Query /TN 'ZynoraPortalServer' /XML > (Join-Path $runtimeDir 'ZynoraPortalServer.xml') 2>$null
 if ($LASTEXITCODE -eq 0) { Write-Ok 'ZynoraPortalServer.xml' }
 else { Write-Warn 'تعذّر تصدير المهمة المجدولة (قد تحتاج صلاحية إدارية).' }
+
+# ------------------------------------------------ 6. نفق Cloudflare (النطاق)
+Write-Step "6/6 نفق Cloudflare — ما يربط zynorahr.com بهذه الحاسبة"
+
+# 🔴 أُضيف 2026-08-16 بعد جرد فعلي: النطاق يعمل عبر Cloudflare Tunnel بوضع ملف
+# تهيئة (لا توكن). بدون هذا المجلد يعمل النظام على الجديدة محلياً فقط ولا يصله
+# أحد من الإنترنت. المعرّف نفسه يعمل على أي حاسبة — لا حاجة لتغيير DNS.
+# المجلد أسرار حقيقية (cert.pem + credentials json) — يمنح حامله ربط النطاق.
+$cfCandidates = @(
+    (Join-Path $env:USERPROFILE '.cloudflared'),
+    'C:\Windows\System32\config\systemprofile\.cloudflared',
+    'C:\ProgramData\cloudflared'
+)
+$cfCopied = $false
+foreach ($cfDir in $cfCandidates) {
+    if ((Test-Path -LiteralPath $cfDir) -and (Test-Path -LiteralPath (Join-Path $cfDir 'config.yml'))) {
+        Copy-Tree $cfDir (Join-Path $bundle 'cloudflared') "نفق Cloudflare ($cfDir)"
+        $cfCopied = $true
+        break
+    }
+}
+if (-not $cfCopied) {
+    Write-Warn 'لم يُعثر على مجلد .cloudflared بملف config.yml — إن كان النفق بوضع التوكن فسجّل التوكن من لوحة Cloudflare يدوياً.'
+    $notes.Add('نفق Cloudflare لم يُنسخ تلقائياً — انسخ مجلد .cloudflared يدوياً أو أعد تسجيل النفق بالتوكن على الجديدة.')
+}
+$cfService = Get-CimInstance Win32_Service -Filter "Name='Cloudflared'" -ErrorAction SilentlyContinue
+if ($cfService) { Write-Ok "خدمة Cloudflared على هذه الحاسبة: $($cfService.State) — على الجديدة: cloudflared service install" }
 
 # ------------------------------------------------------------------ البيان
 Write-Step "بيان الحزمة"
@@ -224,16 +252,21 @@ $manifest = @"
 - App_Data/ ........ وثائق الموظفين المشفَّرة + مفاتيح الحماية + قوالب التقارير
 - certs/ ........... شهادة TLS المحليّة (يلزمها PWA الموبايل)
 - runtime/ ......... run-server.bat + تعريف المهمة المجدولة
+- cloudflared/ ..... نفق Cloudflare (config.yml + cert.pem + credentials) — يربط zynorahr.com بالحاسبة
 
 ## ⚠️ أسرار
-config/appsettings.json يحوي سلسلة الاتصال ومفاتيح SMTP وVAPID.
-**لا تُرسل هذه الحزمة ببريد أو محادثة أو تخزين سحابي عام.** انقلها بذاكرة
-محمولة أو شبكة موثوقة، واحذفها بعد الاستيراد.
+config/appsettings.json يحوي سلسلة الاتصال ومفاتيح SMTP وVAPID، وcloudflared/ يمنح
+حامله ربط النطاق بأي حاسبة. **لا تُرسل هذه الحزمة ببريد أو محادثة أو تخزين سحابي
+عام.** انقلها بذاكرة محمولة أو شبكة موثوقة، واحذفها بعد الاستيراد.
+(بيانات الموظفين بالقاعدة وهمية للتجربة — الحساسية بأسرار البنية لا بالبيانات.)
 
 ## الاستيراد على الجهاز الجديد
 1. git clone للمستودع ثم: git checkout $branch
-2. نصّب .NET 10 SDK و SQL Server
+2. نصّب .NET 10 SDK و SQL Server 17+ (الـ.bak لا يُسترجع على أقدم) و cloudflared
 3. شغّل: scripts\handover\import-machine.ps1 -BundlePath "<مسار هذه الحزمة>"
+4. النفق: انسخ cloudflared\ إلى %USERPROFILE%\.cloudflared\ ثم: cloudflared service install
+   ⚠️ أوقف خدمة Cloudflared على الحاسبة القديمة أولاً — لا تشغّل النفق نفسه على حاسبتين.
+5. القائمة الكاملة (20 خطوة + التحقق): docs\MACHINE-MIGRATION-CHECKLIST-2026-08-16.md
 
 $(if ($notes.Count -gt 0) { "## ملاحظات`n" + (($notes | ForEach-Object { "- $_" }) -join "`n") })
 "@
