@@ -72,6 +72,119 @@ public class SettingsModel : PageModel
             await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
         GosiTaxBaseMode = (await HrSettingsStore.GetAsync(_db, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic"
             ? "FullBasic" : "Prorated";
+
+        RequireCommitteeApproval = bool.TryParse(
+            await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
+
+        FiscalYearStartMonth = int.TryParse(await HrSettingsStore.GetAsync(_db, KeyFiscalYearStartMonth, "1"), out var fy) && fy is >= 1 and <= 12 ? fy : 1;
+        ExtraSalariesPerYear = int.TryParse(await HrSettingsStore.GetAsync(_db, KeyExtraSalariesPerYear, "0"), out var es) && es >= 0 ? es : 0;
+
+        ConfigMonitorEnabled = bool.TryParse(
+            await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyEnabled, "False"), out var cme) && cme;
+        ConfigMonitorRole = await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyTargetRole, PayrollConfigChangeMonitor.DefaultTargetRole);
+
+        Caps = PayrollCapsPolicy.Parse(
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
+            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
+    }
+
+    /// <summary>
+    /// كل كتابة إعداد رواتب من هذه الشاشة تمرّ من مراقب التغيير: تسجيل قبل/بعد بالتدقيق
+    /// دائماً، وإشعار للجهة المستهدفة إن فُعّل (نظير «الخيارات الأمنية» بكيان).
+    /// </summary>
+    private Task<bool> TrackAsync(string key, string? value) =>
+        PayrollConfigChangeMonitor.SetAndTrackAsync(
+            _db, key, value, User?.Identity?.Name ?? "system", HttpContext.Connection.RemoteIpAddress?.ToString());
+
+    // ── السنة المالية (نظير «السنة المالية» بكيان: بداية السنة · عدد الرواتب الإضافية · ساعات الدوام) ──
+    public const string KeyFiscalYearStartMonth = "Payroll.FiscalYear.StartMonth";
+    public const string KeyExtraSalariesPerYear = "Payroll.FiscalYear.ExtraSalaries";
+
+    /// <summary>شهر بداية السنة المالية (1–12) — يحكم الاحتساب التراكمي/التقارير السنوية.</summary>
+    public int FiscalYearStartMonth { get; set; } = 1;
+
+    /// <summary>
+    /// عدد الرواتب الإضافية بالسنة (نظير كيان «2»). تهيئةٌ توثيقية الآن: مسير الرواتب
+    /// الإضافية كمسير موازٍ يمسّ محرّك الاحتساب فيحتاج طلباً صريحاً (قاعدة الرواتب الحمراء).
+    /// </summary>
+    public int ExtraSalariesPerYear { get; set; }
+
+    public async Task<IActionResult> OnPostSaveFiscalYearAsync(int fiscalYearStartMonth, int extraSalariesPerYear)
+    {
+        if (fiscalYearStartMonth is < 1 or > 12)
+        {
+            TempData["PayrollMessage"] = "شهر بداية السنة المالية بين 1 و12."; TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+        if (extraSalariesPerYear is < 0 or > 12)
+        {
+            TempData["PayrollMessage"] = "عدد الرواتب الإضافية بين 0 و12."; TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        await TrackAsync(KeyFiscalYearStartMonth, fiscalYearStartMonth.ToString());
+        await TrackAsync(KeyExtraSalariesPerYear, extraSalariesPerYear.ToString());
+        TempData["PayrollMessage"] = "حُفظت إعدادات السنة المالية.";
+        return RedirectToPage();
+    }
+
+    /// <summary>حالة مراقبة تغيير الإعدادات (إشعار مفعَّل؟ + الجهة).</summary>
+    public bool ConfigMonitorEnabled { get; set; }
+    public string ConfigMonitorRole { get; set; } = PayrollConfigChangeMonitor.DefaultTargetRole;
+
+    public async Task<IActionResult> OnPostSaveMonitorAsync(bool monitorEnabled, string? monitorRole)
+    {
+        await TrackAsync(PayrollConfigChangeMonitor.KeyEnabled, monitorEnabled.ToString());
+        await TrackAsync(PayrollConfigChangeMonitor.KeyTargetRole,
+            string.IsNullOrWhiteSpace(monitorRole) ? PayrollConfigChangeMonitor.DefaultTargetRole : monitorRole.Trim());
+        TempData["PayrollMessage"] = monitorEnabled
+            ? "حُفظ: كل تغيير بإعدادات الرواتب يُسجَّل بالتدقيق ويُشعَر به الدور المستهدف فوراً."
+            : "حُفظ: التغييرات تُسجَّل بالتدقيق فقط بلا إشعار.";
+        return RedirectToPage();
+    }
+
+    /// <summary>الحدود القصوى الشهرية الحالية (نظير «التحقق من المبالغ القصوى» بكيان).</summary>
+    public PayrollCapsPolicy.Caps Caps { get; set; } = PayrollCapsPolicy.Caps.None;
+
+    /// <summary>هل يتطلب إصدار الرواتب اعتماد لجنة؟ (نظير «خيارات الموافقات» بتهيئة كيان).</summary>
+    public bool RequireCommitteeApproval { get; set; }
+
+    public async Task<IActionResult> OnPostSaveApprovalAsync(bool requireCommitteeApproval)
+    {
+        await TrackAsync(PayrollRunStore.KeyRequireCommitteeApproval, requireCommitteeApproval.ToString());
+        TempData["PayrollMessage"] = requireCommitteeApproval
+            ? "حُفظ: إصدار الرواتب يتطلب اعتماد اللجنة على الدفعة المقفلة أولاً."
+            : "حُفظ: الإصدار بلا اشتراط اعتماد لجنة (السلوك القائم).";
+        return RedirectToPage();
+    }
+
+    /// <summary>
+    /// حفظ الحدود القصوى: صفر أو فارغ = بلا سقف (السلوك القائم). النسبة تُحصر 0–100.
+    /// السقف يمسّ الاقتطاعات الاختيارية والإضافي فقط — لا الضريبة ولا الضمان.
+    /// </summary>
+    public async Task<IActionResult> OnPostSaveCapsAsync(
+        string? deductionCapAmount, string? deductionCapPercent, string? overtimeCapAmount, string? overtimeCapHours)
+    {
+        var caps = PayrollCapsPolicy.Parse(deductionCapAmount, deductionCapPercent, overtimeCapAmount, overtimeCapHours);
+        if (caps.DeductionCapPercentOfGross > 100)
+        {
+            TempData["PayrollMessage"] = "نسبة سقف الاقتطاع لا تتجاوز 100% من الإجمالي.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        await TrackAsync(PayrollCapsPolicy.KeyDeductionCapAmount, caps.DeductionCapAmount.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyDeductionCapPercent, caps.DeductionCapPercentOfGross.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyOvertimeCapAmount, caps.OvertimeCapAmount.ToString(inv));
+        await TrackAsync(PayrollCapsPolicy.KeyOvertimeCapHours, caps.OvertimeCapHours.ToString(inv));
+
+        TempData["PayrollMessage"] = caps.HasDeductionCap || caps.HasOvertimeCap
+            ? "حُفظت الحدود القصوى — تسري على الاحتساب القادم، والمتجاوز يُعلَن بسطر بالقسيمة."
+            : "حُفظ: بلا حدود قصوى (السلوك القائم).";
+        return RedirectToPage();
     }
 
     /// <summary>
@@ -81,7 +194,7 @@ public class SettingsModel : PageModel
     public async Task<IActionResult> OnPostSaveGosiTaxBaseAsync(string gosiTaxBase)
     {
         var mode = gosiTaxBase == "FullBasic" ? "FullBasic" : "Prorated";
-        await HrSettingsStore.SetAsync(_db, "Payroll.GosiTaxBase", mode);
+        await TrackAsync("Payroll.GosiTaxBase", mode);
         TempData["PayrollMessage"] = mode == "FullBasic"
             ? "حُفظ: وعاء الضمان/الضريبة على الأساسي الكامل — يسري على الاحتساب القادم."
             : "حُفظ: وعاء الضمان/الضريبة على الأساسي بعد الحضور (السلوك القديم).";
@@ -113,10 +226,10 @@ public class SettingsModel : PageModel
         }
         var hours = PayrollDivisorPolicy.DailyHours(standardDailyHours);
 
-        await HrSettingsStore.SetAsync(_db, "Payroll.OvertimeBaseMode", otMode);
-        await HrSettingsStore.SetAsync(_db, "Payroll.UnpaidLeaveBaseMode", ulMode);
-        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, basis);
-        await HrSettingsStore.SetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey,
+        await TrackAsync("Payroll.OvertimeBaseMode", otMode);
+        await TrackAsync("Payroll.UnpaidLeaveBaseMode", ulMode);
+        await TrackAsync(PayrollDivisorPolicy.SalaryDaysBasisKey, basis);
+        await TrackAsync(PayrollDivisorPolicy.StandardDailyHoursKey,
             hours.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         string ModeLabel(string m) => m == PayrollEarningBase.ModeBasicPlusAllowances

@@ -1,0 +1,96 @@
+@page
+@model SmartAttendance.Web.Pages.Payroll.SalaryScaleModel
+
+@{
+    ViewData["Title"] = "سلم الرواتب";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a href="/Payroll/Settings">إعدادات الرواتب</a>
+        <h1>سلم الرواتب</h1>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="nxhs-alert" style="@(Model.MessageOk ? "" : "border-color:#b42318;color:#b42318")">@Model.Message</div>
+    }
+
+    <form method="post" asp-page-handler="SaveLabels" class="nxhs-panel zyp-editor">
+        <h3>أبعاد السلم</h3>
+        <p class="zyp-hint">ثلاثة أبعاد اختيارية تُسمّيها الشركة (نظير البعد الأول/الثاني/الثالث بكيان) — مثل الفئة/الدرجة/المرتبة.</p>
+        <div class="zyp-editor-grid">
+            <label>البعد الأول <input asp-for="Dim1Label" /></label>
+            <label>البعد الثاني <input asp-for="Dim2Label" /></label>
+            <label>البعد الثالث <input asp-for="Dim3Label" /></label>
+        </div>
+        <footer class="nxhs-actions"><button type="submit">حفظ الأسماء</button></footer>
+    </form>
+
+    <form method="post" asp-page-handler="Save" class="nxhs-panel zyp-editor">
+        <h3>درجة جديدة / تعديل</h3>
+        <p class="zyp-hint">
+            لكل درجة كود فريد + مدى أساسي (أدنى/متوسط/أقصى). المدى <b>يُقترح</b> بالملف المالي ولا يُفرض —
+            لا يمسّ أي احتساب. الحرّاس ترفض مدى مقلوباً أو متوسطاً خارج المدى.
+        </p>
+        <input type="hidden" asp-for="Input.Id" />
+        <div class="zyp-editor-grid">
+            <label>الكود <input asp-for="Input.Code" placeholder="G-01" /></label>
+            <label>الاسم <input asp-for="Input.Name" placeholder="الدرجة الأولى" /></label>
+            <label>@Model.Dim1Label <input asp-for="Input.Dim1" /></label>
+            <label>@Model.Dim2Label <input asp-for="Input.Dim2" /></label>
+            <label>@Model.Dim3Label <input asp-for="Input.Dim3" /></label>
+            <label>الفئة <input asp-for="Input.Category" placeholder="إداري / فني" /></label>
+            <label>المجموعة <input asp-for="Input.GroupName" placeholder="مجموعة السلم" /></label>
+            <label>الأساسي الأدنى <input asp-for="Input.MinBasic" type="number" step="0.01" min="0" /></label>
+            <label>الأساسي المتوسط <input asp-for="Input.MidBasic" type="number" step="0.01" min="0" /></label>
+            <label>الأساسي الأقصى <input asp-for="Input.MaxBasic" type="number" step="0.01" min="0" /></label>
+            <label>اللون <input asp-for="Input.Color" type="color" value="@(Model.Input.Color ?? "#2c5aa0")" /></label>
+            <label>الترتيب <input asp-for="Input.SortOrder" type="number" /></label>
+            <label>نشطة
+                <select asp-for="Input.IsActive"><option value="true">نعم</option><option value="false">لا</option></select>
+            </label>
+        </div>
+        <footer class="nxhs-actions"><button type="submit">حفظ الدرجة</button></footer>
+    </form>
+
+    <div class="nxhs-panel">
+        <h3>درجات السلم (@Model.Grades.Count)</h3>
+        <table class="zyp-table" style="width:100%">
+            <thead>
+                <tr>
+                    <th></th><th>الكود</th><th>الاسم</th><th>@Model.Dim1Label</th><th>@Model.Dim2Label</th><th>@Model.Dim3Label</th>
+                    <th>الفئة</th><th>المجموعة</th><th>أدنى</th><th>متوسط</th><th>أقصى</th><th>نشطة</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Grades.Count == 0)
+                {
+                    <tr><td colspan="13">لا درجات بعد — أضف الأولى أعلاه.</td></tr>
+                }
+                @foreach (var g in Model.Grades)
+                {
+                    <tr>
+                        <td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:@(g.Color ?? "#94a3b8")"></span></td>
+                        <td><b>@g.Code</b></td>
+                        <td>@g.Name</td>
+                        <td>@(g.Dim1 ?? "—")</td><td>@(g.Dim2 ?? "—")</td><td>@(g.Dim3 ?? "—")</td>
+                        <td>@(g.Category ?? "—")</td><td>@(g.GroupName ?? "—")</td>
+                        <td>@(g.MinBasic?.ToString("#,0.##") ?? "—")</td>
+                        <td>@(g.MidBasic?.ToString("#,0.##") ?? "—")</td>
+                        <td>@(g.MaxBasic?.ToString("#,0.##") ?? "—")</td>
+                        <td>@(g.IsActive ? "نعم" : "لا")</td>
+                        <td>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@g.Id" data-zyconfirm="حذف الدرجة «@g.Code»؟" style="display:inline">
+                                <button type="submit" style="background:none;border:none;color:#b42318;cursor:pointer">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

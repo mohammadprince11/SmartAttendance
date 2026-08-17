@@ -56,6 +56,12 @@ public static class PayrollRunStore
         /// </summary>
         public int? CompanyId { get; set; }
 
+        /// <summary>اعتماد اللجنة قبل الإصدار (نظير كيان) — null = لم تُعتمد بعد.</summary>
+        public string? ApprovedBy { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public string? ApprovalNote { get; set; }
+        public bool IsApproved => ApprovedAt.HasValue;
+
         public string StatusLabelText => StatusLabel(Status);
         public string ScopeText => PayrollRunScope.Describe(ScopeMode, ScopeCount);
         public string PeriodText => $"{Month:00}/{Year}";
@@ -687,6 +693,13 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
 
         // سياسة الأوعية والمقام تُقرأ مرّة للتشغيل كلّه. الافتراضات (Basic · Fixed30 · 8)
         // تعيد أرقام المحرك القائم حرفياً — يُفعَّل الجديد بإعدادٍ صريح.
+        // الحدود القصوى الشهرية (نظير كيان) — تُقرأ مرّة للدفعة؛ الافتراضي 0 = بلا أثر.
+        var caps = PayrollCapsPolicy.Parse(
+            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
+            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
+            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
+            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
+
         var overtimeBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
         var unpaidLeaveBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
         var salaryDaysBasis = await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
@@ -897,6 +910,32 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                         ? $"{t.ItemName} ({t.Hours:0.##}س × {t.RateFactor ?? PayrollTransactionStore.DefaultRateFactor:0.##})"
                         : t.ItemName;
                     comps.Add(new Component { ItemName = label, Amount = amt, IsAddition = true, Kind = "Overtime" });
+                }
+            }
+
+            // سقف الإضافي الشهري (إن فُعّل): يُطبَّق على المجموع لا على كل حركة. الأسطر
+            // الأصلية تبقى بالقسيمة والإجمالي كما هي، ويُضاف **خصم مُعلَن** بالمقصوص —
+            // فالصافي = الإجمالي − السطر المُعلَن، والقارئ يرى السبب لا رقماً أصغر بلا تفسير.
+            decimal overtimeCapDeduct = 0;
+            if (caps.HasOvertimeCap && overtimeTotal > 0)
+            {
+                var totalOtHours = empOt is null ? 0m : empOt.Where(t => t.Hours is > 0).Sum(t => t.Hours!.Value);
+                var (_, cappedAmount, trimmedHours) = PayrollCapsPolicy.ApplyOvertimeCap(
+                    caps, totalOtHours > 0 ? totalOtHours : overtimeTotal, overtimeTotal);
+                if (cappedAmount < overtimeTotal)
+                {
+                    overtimeCapDeduct = Math.Round(overtimeTotal - cappedAmount, 2);
+                    // الخاضع للضريبة يتقلّص بنفس النسبة كي لا تُفرض ضريبة على مبلغ لم يُدفع.
+                    taxableOvertime = Math.Round(taxableOvertime * cappedAmount / overtimeTotal, 2);
+                    comps.Add(new Component
+                    {
+                        ItemName = totalOtHours > 0 && trimmedHours > 0
+                            ? $"إضافي فوق الحد الشهري (−{trimmedHours:0.##}س)"
+                            : "إضافي فوق الحد الشهري",
+                        Amount = overtimeCapDeduct,
+                        IsAddition = false,
+                        Kind = "OvertimeCap"
+                    });
                 }
             }
 
@@ -1181,6 +1220,26 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             }
 
             var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct + unpaidLeaveDeduct + formulaDeductTotal;
+
+            // سقف الاقتطاع الشهري (إن فُعّل): على الاختيارية فقط لا الضريبة/الضمان. المُرحَّل
+            // يُعلَن كسطر معلوماتي بالقسيمة كي يُحصَّل بشهرٍ لاحق لا أن يُبتلَع بصمت.
+            if (caps.HasDeductionCap && otherDeductions > 0)
+            {
+                var (appliedDeductions, deferred) = PayrollCapsPolicy.ApplyDeductionCap(caps, gross, otherDeductions);
+                if (deferred > 0)
+                {
+                    otherDeductions = appliedDeductions;
+                    comps.Add(new Component
+                    {
+                        ItemName = $"اقتطاعات مُرحَّلة فوق الحد الشهري ({deferred:#,0.##})",
+                        Amount = 0,
+                        IsAddition = false,
+                        Kind = "DeductionCapDeferred"
+                    });
+                }
+            }
+
+            otherDeductions += overtimeCapDeduct;
             var net = Math.Round(gross - tax - gosiEmp - otherDeductions, 2);
 
             var lineId = await HrmsDatabase.ScalarAsync<int>(
@@ -1496,8 +1555,51 @@ ORDER BY e.EmployeeNo;
         return res;
     }
 
-    public static Task<(bool, string)> IssueAsync(ApplicationDbContext dbContext, int runId) =>
-        TransitionAsync(dbContext, runId, from: "Locked", to: "Issued", "IssuedAt", "اعتُمدت للصرف.");
+    /// <summary>مفتاح التهيئة: هل يتطلب إصدار الرواتب اعتماد لجنة؟ (نظير كيان؛ الافتراضي لا).</summary>
+    public const string KeyRequireCommitteeApproval = "Payroll.Issue.RequireCommitteeApproval";
+
+    /// <summary>
+    /// الإصدار — بحارس اللجنة: إن اشترطت التهيئة الاعتماد ولم تُعتمد الدفعة، يُرفض
+    /// الإصدار برسالة واضحة بدل أن يُصرف مسير لم يراجعه أحد.
+    /// </summary>
+    public static async Task<(bool, string)> IssueAsync(ApplicationDbContext dbContext, int runId)
+    {
+        var requireApproval = bool.TryParse(
+            await HrSettingsStore.GetAsync(dbContext, KeyRequireCommitteeApproval, "False"), out var r) && r;
+
+        if (requireApproval)
+        {
+            var run = await GetRunAsync(dbContext, runId);
+            if (run is not null && !run.IsApproved)
+                return (false, "الإصدار يتطلب اعتماد اللجنة أولاً (تهيئة الرواتب) — استخدم «اعتماد اللجنة» على الدفعة المقفلة.");
+        }
+
+        return await TransitionAsync(dbContext, runId, from: "Locked", to: "Issued", "IssuedAt", "اعتُمدت للصرف.");
+    }
+
+    /// <summary>
+    /// اعتماد اللجنة لدفعة مقفلة — يُسجَّل المعتمِد والوقت والملاحظة. لا يغيّر الحالة:
+    /// الاعتماد إذنٌ بالإصدار لا الإصدار نفسه. إلغاء القفل يُسقط الاعتماد (الأرقام تغيّرت).
+    /// </summary>
+    public static async Task<(bool, string)> ApproveAsync(ApplicationDbContext dbContext, int runId, string approver, string? note)
+    {
+        var run = await GetRunAsync(dbContext, runId);
+        if (run is null) return (false, "الدفعة غير موجودة.");
+        if (run.Status != "Locked") return (false, "الاعتماد يكون على دفعة مقفلة فقط.");
+        if (run.IsApproved) return (false, $"الدفعة معتمدة أصلاً بواسطة {run.ApprovedBy}.");
+
+        await HrmsDatabase.ExecuteAsync(
+            dbContext,
+            "UPDATE PayrollRuns SET ApprovedBy = @By, ApprovedAt = SYSUTCDATETIME(), ApprovalNote = @Note WHERE Id = @Id AND Status = N'Locked';",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", runId);
+                HrmsDatabase.AddParameter(command, "@By", approver);
+                HrmsDatabase.AddParameter(command, "@Note", string.IsNullOrWhiteSpace(note) ? null : note.Trim());
+            });
+
+        return (true, "اعتمدت اللجنة الدفعة — صارت جاهزة للإصدار.");
+    }
 
     public static Task<(bool, string)> SendPayslipsAsync(ApplicationDbContext dbContext, int runId) =>
         TransitionAsync(dbContext, runId, from: "Issued", to: "PayslipSent", "PayslipSentAt", "أُرسلت القسائم.");
@@ -1514,7 +1616,14 @@ ORDER BY e.EmployeeNo;
     {
         var res = await TransitionAsync(dbContext, runId, from: "Locked", to: "Calculated", null, "أُلغي القفل — عادت الدفعة قابلة للتعديل.");
         if (res.Item1)
+        {
             await PayrollTransactionStore.UnlockForRunAsync(dbContext, runId);
+            // اعتماد اللجنة كان على أرقامٍ ستتغيّر — يُسقَط ويُعاد بعد القفل الجديد.
+            await HrmsDatabase.ExecuteAsync(
+                dbContext,
+                "UPDATE PayrollRuns SET ApprovedBy = NULL, ApprovedAt = NULL, ApprovalNote = NULL WHERE Id = @Id AND COL_LENGTH('PayrollRuns','ApprovedAt') IS NOT NULL;",
+                command => HrmsDatabase.AddParameter(command, "@Id", runId));
+        }
         return res;
     }
 
@@ -1940,6 +2049,24 @@ ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
         ScopeMode = PayrollRunScope.NormalizeMode(HrmsDatabase.GetString(reader, "ScopeMode")),
         ScopeCount = HrmsDatabase.GetInt(reader, "ScopeCount"),
-        CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId")
+        CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId"),
+        // أعمدة اعتماد اللجنة تأتي بهجرة 20260816-01 — تُقرأ بتسامح كي لا تنكسر قاعدة
+        // لم تُهاجَر بعد (اختبار/نسخة قديمة) على قراءةٍ لا تحتاجها.
+        ApprovedBy = TryString(reader, "ApprovedBy"),
+        ApprovedAt = TryDateTime(reader, "ApprovedAt"),
+        ApprovalNote = TryString(reader, "ApprovalNote")
     };
+
+    private static bool HasColumn(System.Data.Common.DbDataReader reader, string name)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+            if (string.Equals(reader.GetName(i), name, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    private static string? TryString(System.Data.Common.DbDataReader reader, string name) =>
+        HasColumn(reader, name) && HrmsDatabase.GetString(reader, name) is { Length: > 0 } s ? s : null;
+
+    private static DateTime? TryDateTime(System.Data.Common.DbDataReader reader, string name) =>
+        HasColumn(reader, name) ? HrmsDatabase.GetDateTime(reader, name) : null;
 }

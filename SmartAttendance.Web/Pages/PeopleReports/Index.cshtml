@@ -247,7 +247,7 @@
                     .Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value!)}"));
             }
             <div class="hrms-inline-form">
-                @if (Model.RunFilterColumns.Any() || Model.IsAttendance)
+                @if (Model.RunFilterColumns.Any() || Model.UsesDateRange)
                 {
                     <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث متقدم</button>
                 }
@@ -313,9 +313,9 @@
             <div class="hrms-slideover-body">
                 <form method="get" class="hrms-page">
                     <input type="hidden" name="ReportId" value="@Model.ReportId" />
-                    @if (Model.IsAttendance)
+                    @if (Model.UsesDateRange)
                     {
-                        <div class="hrms-tile-sub" style="margin-top:4px">مدى تاريخ الحضور</div>
+                        <div class="hrms-tile-sub" style="margin-top:4px">@(Model.IsPayroll ? "مدى فترة الرواتب" : "مدى تاريخ الحضور")</div>
                         <div class="hrms-field">
                             <label>من / إلى (افتراضياً الشهر الحالي)</label>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">

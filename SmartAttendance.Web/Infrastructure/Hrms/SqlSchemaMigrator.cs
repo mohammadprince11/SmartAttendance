@@ -1445,6 +1445,58 @@ BEGIN
     CREATE INDEX IX_EmpEvalResults_Employee ON EmployeeEvaluationResults (EmployeeId, EvalYear DESC);
 END;
 """),
+
+        // موافقة لجنة على إصدار الرواتب (نظير «يتطلب حساب الرواتب موافقة اللجنة» بكيان):
+        // من اعتمد الدفعة ومتى — الحارس بـPayrollRunStore.IssueAsync يرفض الإصدار بلا
+        // اعتماد حين تكون التهيئة تشترطه. NULL = لم تُعتمد؛ الافتراضي لا يشترط شيئاً.
+        new(
+            "20260816-01-payroll-run-committee-approval",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRuns', 'ApprovedBy') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovedBy nvarchar(150) NULL;
+    IF COL_LENGTH('PayrollRuns', 'ApprovedAt') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovedAt datetime2 NULL;
+    IF COL_LENGTH('PayrollRuns', 'ApprovalNote') IS NULL
+        ALTER TABLE PayrollRuns ADD ApprovalNote nvarchar(400) NULL;
+END;
+"""),
+
+        // سلم الرواتب (نظير «إدارة سلم الرواتب» بكيان): درجات مسمّاة بثلاثة أبعاد اختيارية
+        // (مثل: الفئة/الدرجة/المرتبة) + فئة/مجموعة للتصنيف + مبلغ أساسي مقترح لكل درجة.
+        // حقل Employees FinancialInfo.SalaryScale النصي القائم يبقى المرجع بالملف؛ الجدول
+        // يعطيه قاموساً وأرقاماً. لا مساس بأي احتساب — الاقتراح يُعرض ولا يُفرض.
+        new(
+            "20260816-02-salary-scale",
+            """
+IF OBJECT_ID('SalaryScaleGrades', 'U') IS NULL
+BEGIN
+    CREATE TABLE SalaryScaleGrades
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        Code nvarchar(60) NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        Dim1 nvarchar(80) NULL,
+        Dim2 nvarchar(80) NULL,
+        Dim3 nvarchar(80) NULL,
+        Category nvarchar(80) NULL,
+        GroupName nvarchar(80) NULL,
+        MinBasic decimal(18,2) NULL,
+        MidBasic decimal(18,2) NULL,
+        MaxBasic decimal(18,2) NULL,
+        Color nvarchar(20) NULL,
+        SortOrder int NOT NULL CONSTRAINT DF_SalaryScaleGrades_Sort DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_SalaryScaleGrades_Active DEFAULT(1),
+        -- عزل تهيئة بالشركة (نمط 8D–8M): NULL = مشتركة، وغيرها معزولة لشركتها.
+        CompanyId int NULL,
+        -- عمود محسوب مثبَّت للفرادة لكل شركة (المشتركة = 0): الكود «G-01» مباح لشركتين مختلفتين.
+        CompanyKey AS ISNULL(CompanyId, 0) PERSISTED,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_SalaryScaleGrades_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT UQ_SalaryScaleGrades_Code UNIQUE (Code, CompanyKey)
+    );
+END;
+"""),
     };
 
     /// <summary>
