@@ -65,12 +65,13 @@
     .ps-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     @@media (max-width:760px){ .ps-cols { grid-template-columns:1fr; } .ps-hdr { grid-template-columns:1fr 1fr; } }
     .ps-box { border:1px solid rgba(73,111,151,.25); border-radius:10px; overflow:hidden; }
-    .ps-box table { width:100%; border-collapse:collapse; font-size:12px; }
+    .ps-box table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; }
     .ps-box th { text-align:start; padding:8px 12px; font-weight:1000; color:#fff; }
     .ps-box.inc th { background:#16a34a; } .ps-box.ded th { background:#dc2626; }
-    .ps-box td { padding:7px 12px; border-bottom:1px dashed rgba(143,168,188,.18); }
+    .ps-box td { padding:9px 12px; border-bottom:1px dashed rgba(143,168,188,.18); vertical-align:middle; }
+    .ps-box td:first-child { white-space:normal; overflow-wrap:anywhere; line-height:1.5; }
+    .ps-box .amount-col { width:36%; }
     .ps-box .amt { direction:ltr; unicode-bidi:plaintext; font-weight:900; text-align:start; white-space:nowrap; }
-    .ps-box .days { color:var(--sa-muted,#8FA8BC); font-weight:900; text-align:center; width:56px; }
     .ps-box tr.sum td { background:rgba(73,111,151,.1); font-weight:1000; }
     .ps-box tr.net td { background:rgba(74,222,128,.12); color:#4ade80; font-weight:1000; }
     .ps-words { margin-top:14px; padding:12px 16px; border-radius:10px; background:rgba(18,217,227,.06); font-size:13px; font-weight:900; }
@@ -140,7 +141,6 @@
         .ps-box.inc th { background:#15803d !important; }
         .ps-box.ded th { background:#b91c1c !important; }
         .ps-box td { padding:5pt 10pt !important; border-bottom:1pt solid #e2e8ee !important; color:#111 !important; }
-        .ps-box .days { color:#5a6672 !important; }
         .ps-box tr.sum td { background:#eef2f6 !important; font-weight:1000; }
         .ps-box tr.net td { background:#e6f7ec !important; color:#15803d !important; }
         .ps-words { background:#f2fbfc !important; border:1pt solid #cfe6e8 !important; color:#111 !important;
@@ -216,9 +216,6 @@
                         // أساس أيام الاستحقاق: 30/الفترة حين توجد سياسة WorkingDays (العطل مدفوعة)،
                         // وإلا أيام الحضور (السلوك القديم). القسيمة تعرض أيام الاستحقاق لا الحضور.
                         var psBasis = c.DaysBasis > 0 ? c.DaysBasis : c.WorkDays;
-                        var psPaid = psBasis > 0
-                            ? (int)Math.Round(psBasis * (c.AttendanceFactor == 0 ? 1m : c.AttendanceFactor), MidpointRounding.AwayFromZero)
-                            : 0;
                     }
                     <div class="f"><span>أيام العمل / الغياب</span><b>@psBasis / @c.AbsentDays</b></div>
                 </div>
@@ -228,37 +225,39 @@
                     <div class="ps-cols">
                         <div class="ps-box inc">
                             <table>
-                                <thead><tr><th>الدخل</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
+                                <colgroup><col /><col class="amount-col" /></colgroup>
+                                <thead><tr><th>الدخل</th><th style="text-align:end">المبلغ</th></tr></thead>
                                 <tbody>
-                                    <tr><td>الراتب المستحق</td><td class="days">@psPaid</td><td class="amt" style="text-align:end">@c.BasicSalary.ToString("#,0.##")</td></tr>
+                                    <tr><td>الراتب المستحق</td><td class="amt" style="text-align:end">@c.BasicSalary.ToString("#,0.##")</td></tr>
                                     @foreach (var e in c.Earnings)
                                     {
-                                        <tr><td>@e.ItemName</td><td class="days"></td><td class="amt" style="text-align:end">@e.Amount.ToString("#,0.##")</td></tr>
+                                        <tr><td>@e.ItemName</td><td class="amt" style="text-align:end">@e.Amount.ToString("#,0.##")</td></tr>
                                     }
-                                    <tr class="sum"><td>مجموع الدخل</td><td class="days"></td><td class="amt" style="text-align:end">@c.GrossSalary.ToString("#,0.##")</td></tr>
-                                    <tr class="net"><td>صافي الراتب</td><td class="days"></td><td class="amt" style="text-align:end">@c.NetSalary.ToString("#,0.##")</td></tr>
+                                    <tr class="sum"><td>مجموع الدخل</td><td class="amt" style="text-align:end">@c.GrossSalary.ToString("#,0.##")</td></tr>
+                                    <tr class="net"><td>صافي الراتب</td><td class="amt" style="text-align:end">@c.NetSalary.ToString("#,0.##")</td></tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="ps-box ded">
                             <table>
-                                <thead><tr><th>الإقتطاعات</th><th style="width:56px">أيام</th><th style="text-align:end">المبلغ</th></tr></thead>
+                                <colgroup><col /><col class="amount-col" /></colgroup>
+                                <thead><tr><th>الإقتطاعات</th><th style="text-align:end">المبلغ</th></tr></thead>
                                 <tbody>
                                     @if (c.TaxAmount > 0)
                                     {
-                                        <tr><td>ضريبة الدخل</td><td class="days"></td><td class="amt" style="text-align:end">@c.TaxAmount.ToString("#,0.##")</td></tr>
+                                        <tr><td>ضريبة الدخل</td><td class="amt" style="text-align:end">@c.TaxAmount.ToString("#,0.##")</td></tr>
                                     }
                                     @if (c.GosiEmployee > 0)
                                     {
-                                        <tr><td>الضمان الاجتماعي</td><td class="days"></td><td class="amt" style="text-align:end">@c.GosiEmployee.ToString("#,0.##")</td></tr>
+                                        <tr><td>الضمان الاجتماعي</td><td class="amt" style="text-align:end">@c.GosiEmployee.ToString("#,0.##")</td></tr>
                                     }
                                     @* الضريبة والضمان يُعرَضان أعلاه من الحقول الصريحة — نستثني
                                        مكوّنيهما هنا كي لا يتكرّرا (المجموع أصلاً لا يضاعفهما). *@
                                     @foreach (var d in c.Deductions.Where(d => d.Kind != "Tax" && d.Kind != "Gosi"))
                                     {
-                                        <tr><td>@d.ItemName</td><td class="days">@(d.Kind == "Leave" && c.AbsentDays > 0 ? c.AbsentDays.ToString() : "")</td><td class="amt" style="text-align:end">@d.Amount.ToString("#,0.##")</td></tr>
+                                        <tr><td>@d.ItemName</td><td class="amt" style="text-align:end">@d.Amount.ToString("#,0.##")</td></tr>
                                     }
-                                    <tr class="sum"><td>مجموع الاقتطاعات</td><td class="days"></td><td class="amt" style="text-align:end">@c.TotalDeductions.ToString("#,0.##")</td></tr>
+                                    <tr class="sum"><td>مجموع الاقتطاعات</td><td class="amt" style="text-align:end">@c.TotalDeductions.ToString("#,0.##")</td></tr>
                                 </tbody>
                             </table>
                         </div>

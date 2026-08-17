@@ -48,4 +48,15 @@ public sealed class PayslipPrintIsolationGuardTests
         Assert.DoesNotContain("ps-print-bg", page);
         Assert.Contains("background:#fff!important", page);
     }
+
+    [Fact]
+    public void IncomeAndDeductionTablesUseTwoColumnsWithoutDays()
+    {
+        var page = PayslipPage();
+
+        Assert.DoesNotContain(">أيام</th>", page);
+        Assert.DoesNotContain("class=\"days\"", page);
+        Assert.DoesNotContain("var psPaid", page);
+        Assert.Equal(2, Regex.Matches(page, "<col class=\"amount-col\" />").Count);
+    }
 }
