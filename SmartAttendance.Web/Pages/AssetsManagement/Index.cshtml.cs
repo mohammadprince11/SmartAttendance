@@ -42,6 +42,37 @@ public class IndexModel : PageModel
         public string? AttachmentPath { get; set; }
         public bool EmployeeAcknowledged { get; set; }
         public DateTime? AcknowledgedAt { get; set; }
+
+        /// <summary>
+        /// عهدة متناقصة (نمط كيان): لها قيمة وفترة محدّدة، فتُستهلك قيمتها خطياً
+        /// من البداية حتى الصفر عند النهاية. مشتقة من الحقول القائمة لا من عمود جديد.
+        /// </summary>
+        public bool IsDeclining => Amount is > 0 && FromDate is not null && ToDate is not null && ToDate > FromDate;
+
+        /// <summary>
+        /// القيمة المتبقية بذمة الموظف اليوم. غير المتناقصة تبقى بكامل قيمتها،
+        /// والمُرجَعة تُجمَّد عند تاريخ الإرجاع — فالإرجاع يوقف الاستهلاك.
+        /// </summary>
+        public decimal RemainingValue
+        {
+            get
+            {
+                var amount = Amount ?? 0;
+                if (!IsDeclining)
+                    return amount;
+
+                var asOf = IsReturned && ReturnDate is not null
+                    ? ReturnDate.Value
+                    : DateOnly.FromDateTime(DateTime.Today);
+
+                if (asOf <= FromDate!.Value) return amount;
+                if (asOf >= ToDate!.Value) return 0;
+
+                var totalDays = ToDate.Value.DayNumber - FromDate.Value.DayNumber;
+                var usedDays = asOf.DayNumber - FromDate.Value.DayNumber;
+                return Math.Round(amount * (totalDays - usedDays) / totalDays, 2);
+            }
+        }
     }
 
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }

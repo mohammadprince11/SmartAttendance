@@ -30,6 +30,13 @@ public class IndexModel : PageModel
     private const int MaxBadgesPerRun = 200;
 
     [BindProperty(SupportsGet = true)] public int TemplateId { get; set; }
+
+    /// <summary>
+    /// قالب الوجه الخلفي (اختياري) — نمط كيان: لكل موظف بطاقتان أمامي/خلفي.
+    /// صفر = بطاقة بوجه واحد كما كانت.
+    /// </summary>
+    [BindProperty(SupportsGet = true)] public int BackTemplateId { get; set; }
+
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
 
     /// <summary>معرّفات الموظفين المطلوب طبع بطاقاتهم — تُمرَّر بالرابط ليكون العرض قابلاً للمشاركة.</summary>
@@ -40,8 +47,8 @@ public class IndexModel : PageModel
 
     public List<(int Id, string Label)> Candidates { get; set; } = new();
 
-    /// <summary>البطاقات المرسومة: اسم الموظف + HTML الناتج + رموزٌ بقيت بلا قيمة.</summary>
-    public List<(string Employee, string Html, IReadOnlyList<string> Unresolved)> Cards { get; set; } = new();
+    /// <summary>البطاقات المرسومة: اسم الموظف + الوجه (أمامي/خلفي) + HTML الناتج + رموزٌ بقيت بلا قيمة.</summary>
+    public List<(string Employee, string Side, string Html, IReadOnlyList<string> Unresolved)> Cards { get; set; } = new();
 
     public string? Message { get; set; }
 
@@ -79,28 +86,37 @@ public class IndexModel : PageModel
             selected = selected.Take(MaxBadgesPerRun).ToList();
         }
 
+        // الوجه الخلفي (إن اختير): قالب بطاقة آخر يُرسم لكل موظف بعد وجهه الأمامي.
+        var back = BackTemplateId > 0 ? Templates.FirstOrDefault(t => t.Id == BackTemplateId) : null;
+
         foreach (var employeeId in selected)
         {
-            // نفس محرّك توليد الوثائق، وبـ persist:false: البطاقة تُطبع ولا تُؤرشَف
-            // كوثيقة برقم مرجعي — أرشفة ألف بطاقة بكل طبعة ضجيجٌ لا سجلّ.
-            var (_, html, unresolved) = await DocumentTemplateStore.GenerateAsync(
-                _db,
-                Current,
-                employeeId,
-                User.Identity?.Name,
-                notes: null,
-                issuedOn: DateOnly.FromDateTime(DateTime.Today),
-                persist: false,
-                source: "بطاقة");
-
-            if (string.IsNullOrWhiteSpace(html))
-            {
-                continue;
-            }
-
             var label = Candidates.FirstOrDefault(c => c.Id == employeeId).Label ?? employeeId.ToString();
-            // تنقية نفس ناتج محرّك القوالب قبل عرضه خاماً بـ Html.Raw (كطريق View).
-            Cards.Add((label, DocumentHtmlSanitizer.Sanitize(html), unresolved));
+
+            foreach (var (template, side) in back is null
+                         ? new[] { (Current, string.Empty) }
+                         : new[] { (Current, "أمامي"), (back, "خلفي") })
+            {
+                // نفس محرّك توليد الوثائق، وبـ persist:false: البطاقة تُطبع ولا تُؤرشَف
+                // كوثيقة برقم مرجعي — أرشفة ألف بطاقة بكل طبعة ضجيجٌ لا سجلّ.
+                var (_, html, unresolved) = await DocumentTemplateStore.GenerateAsync(
+                    _db,
+                    template,
+                    employeeId,
+                    User.Identity?.Name,
+                    notes: null,
+                    issuedOn: DateOnly.FromDateTime(DateTime.Today),
+                    persist: false,
+                    source: "بطاقة");
+
+                if (string.IsNullOrWhiteSpace(html))
+                {
+                    continue;
+                }
+
+                // تنقية نفس ناتج محرّك القوالب قبل عرضه خاماً بـ Html.Raw (كطريق View).
+                Cards.Add((label, side, DocumentHtmlSanitizer.Sanitize(html), unresolved));
+            }
         }
     }
 

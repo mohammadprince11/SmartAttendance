@@ -118,6 +118,13 @@ public class EmployeeService : IEmployeeService
             }
         }
 
+        // فلترة بأكواد محددة (رفع جدول بيانات): تقاطعٌ مع النطاقات لا توسيع لها.
+        if (query.EmployeeNos is { Count: > 0 })
+        {
+            var codes = query.EmployeeNos;
+            filteredQuery = filteredQuery.Where(x => codes.Contains(x.EmployeeNo));
+        }
+
         if (query.BranchId.HasValue && query.BranchId.Value > 0)
         {
             filteredQuery = filteredQuery.Where(x =>

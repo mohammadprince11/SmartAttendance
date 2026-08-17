@@ -1,0 +1,69 @@
+@page
+@model SmartAttendance.Web.Pages.HrSettings.PeopleConfigurationModel
+
+@{
+    ViewData["Title"] = "تهيئة الأشخاص";
+}
+
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Index">إعدادات الموارد البشرية</a>
+        <h1>تهيئة الأشخاص</h1>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+    }
+
+    <form method="post" class="nxhs-panel zyp-editor">
+        <h3>اشتقاق المواطنة من الجنسية</h3>
+        <p class="zyp-hint">
+            عند التفعيل: أي موظف يُنشأ أو تُعدَّل جنسيته يُوسم <b>مواطناً</b> تلقائياً
+            إذا طابقت جنسيتُه القائمة أدناه، و<b>غير مواطن</b> إن لم تطابق.
+            القاعدة معطّلة ⟹ الحقل يبقى بيد المدخِل كما هو اليوم.
+        </p>
+
+        <div class="zyp-editor-grid">
+            <label>
+                تفعيل القاعدة
+                <select asp-for="CitizenshipEnabled">
+                    <option value="false">معطّلة</option>
+                    <option value="true">مفعّلة</option>
+                </select>
+            </label>
+            <label>
+                الجنسيات المواطِنة — افصل بينها بفاصلة
+                <input asp-for="CitizenNationalities" placeholder="سعودي، أردني" />
+            </label>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <p class="zyp-hint" style="color:var(--zy-danger,#b42318)">
+                @foreach (var entry in ViewData.ModelState.Values)
+                {
+                    foreach (var error in entry.Errors)
+                    {
+                        @error.ErrorMessage
+                    }
+                }
+            </p>
+        }
+        else if (Model.ParsedNationalities.Count > 0)
+        {
+            <p class="zyp-hint">
+                القائمة كما ستُطبَّق بعد التنظيف:
+                <b>@string.Join("، ", Model.ParsedNationalities)</b>
+                — المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة.
+            </p>
+        }
+
+        <footer class="nxhs-actions">
+            <button type="submit">حفظ التهيئة</button>
+        </footer>
+    </form>
+</section>

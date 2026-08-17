@@ -5,6 +5,7 @@ using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -163,6 +164,17 @@ public class CreateModel : PageModel
 
         if (!ModelState.IsValid)
             return Page();
+
+        // اشتقاق المواطنة من الجنسية إن كانت القاعدة مفعّلة (تهيئة الأشخاص) —
+        // تُطبَّق بالسيرفر كي لا تتوقف على JS الواجهة.
+        if (!string.IsNullOrWhiteSpace(Employee.Nationality) &&
+            bool.TryParse(await HrSettingsStore.GetAsync(_dbContext, CitizenshipPolicy.KeyEnabled, "False"), out var citizenshipRule) &&
+            citizenshipRule)
+        {
+            var citizenList = await HrSettingsStore.GetAsync(
+                _dbContext, CitizenshipPolicy.KeyNationalities, CitizenshipPolicy.DefaultNationalities);
+            Employee.IsCitizen = CitizenshipPolicy.IsCitizen(Employee.Nationality, citizenList);
+        }
 
         // حساب الدخول إجباريّ لكل موظف جديد: نتحقّق قبل إنشاء الموظف كي لا نُنشئ
         // موظفاً ثم نفشل. اسم الدخول اختياري (افتراضياً = كود الموظف)؛ الكلمة مطلوبة.

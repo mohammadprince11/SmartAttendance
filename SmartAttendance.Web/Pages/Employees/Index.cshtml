@@ -88,6 +88,30 @@
                     <a asp-page="./Index" asp-route-companyId="@Model.CompanyId" class="zhr-btn zhr-btn-secondary" title="مسح الفلاتر">مسح</a>
                 </div>
             </div>
+            @if (!string.IsNullOrWhiteSpace(Model.Codes))
+            {
+                <input type="hidden" name="Codes" value="@Model.Codes" />
+            }
+        </form>
+
+        @* فلترة «الموظفون من جدول البيانات» (نمط كيان): ملف CSV/TXT بأكواد الموظفين. *@
+        <form method="post" asp-page-handler="FilterFile" enctype="multipart/form-data"
+              style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+            <label class="zhr-label" style="margin:0;">فلترة من ملف أكواد (CSV/TXT):</label>
+            <input type="file" name="CodesFile" accept=".csv,.txt" class="zhr-input" style="width:auto;padding:4px;" />
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+            <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
+            <button type="submit" class="zhr-btn zhr-btn-secondary">فلترة بالملف</button>
+            @if (!string.IsNullOrWhiteSpace(Model.Codes))
+            {
+                <span class="zhr-toolbar-info">مفلترة بـ@(Model.Codes.Split(',').Length) كوداً —
+                    <a asp-page="./Index" asp-route-companyId="@Model.CompanyId">إلغاء</a>
+                </span>
+            }
+            @if (TempData["CodesFilterMessage"] is string codesMsg)
+            {
+                <span class="zhr-toolbar-info">@codesMsg</span>
+            }
         </form>
     </section>
 

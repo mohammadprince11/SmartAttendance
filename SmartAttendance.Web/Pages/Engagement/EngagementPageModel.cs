@@ -474,7 +474,12 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
             new() { Key = "marriage", Name = "زواج", Description = "تهنئة رسمية", Category = "تهنئة", Icon = "💍", CssClass = "marriage", AssetKey = "marriage" },
             new() { Key = "condolence", Name = "تعزية", Description = "تعزية ومواساة", Category = "تعزية", Icon = "🕊️", CssClass = "condolence", AssetKey = "condolence" },
             new() { Key = "newborn", Name = "مولود جديد", Description = "تهنئة مولود", Category = "تهنئة", Icon = "👶", CssClass = "newborn", AssetKey = "newborn" },
-            new() { Key = "farewell", Name = "وداع موظف", Description = "شكر وتقدير", Category = "وداع", Icon = "🧳", CssClass = "farewell", AssetKey = "farewell" }
+            new() { Key = "farewell", Name = "وداع موظف", Description = "شكر وتقدير", Category = "وداع", Icon = "🧳", CssClass = "farewell", AssetKey = "farewell" },
+            // أربعة قوالب أُضيفت لمطابقة طقم كيان الكامل (دراسة 2026-08-15).
+            new() { Key = "birthday", Name = "عيد ميلاد", Description = "تهنئة عيد ميلاد", Category = "تهنئة", Icon = "🎂", CssClass = "newborn", AssetKey = "newborn" },
+            new() { Key = "employee-of-month", Name = "موظف الشهر", Description = "تكريم شهري", Category = "شكر وتقدير", Icon = "🌟", CssClass = "promotion", AssetKey = "promotion" },
+            new() { Key = "anniversary", Name = "ذكرى عمل", Description = "ذكرى انضمام", Category = "تهنئة", Icon = "🎖️", CssClass = "promotion", AssetKey = "promotion" },
+            new() { Key = "retirement", Name = "تقاعد موظف", Description = "تكريم تقاعد", Category = "وداع", Icon = "🏅", CssClass = "farewell", AssetKey = "farewell" }
         };
     }
 

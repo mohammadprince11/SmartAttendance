@@ -111,6 +111,19 @@ BEGIN
         (N'حالات المخالفات',                   N'violations', NULL,          N'refno,no,employee,category,title,eventdate,status,action', 1, 230);
 END;
 
+-- إكمال طقم تقارير كيان (دراسة 2026-08-15): أربعة مصادر كانت بلا تقرير نظام
+-- مزروع + تقرير الإجراءات التأديبية. زرع مستقل idempotent بنفس نمط att_* أدناه.
+IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'contracts', N'acknowledgments', N'tasks', N'updates'))
+BEGIN
+    INSERT INTO PeopleReports (Name, DatasetKey, FilterKey, ColumnsCsv, IsSystem, SortOrder, FilterColumnsCsv)
+    VALUES
+        (N'تحديثات عقود الموظفين',   N'contracts',       NULL, N'no,employee,contractno,contracttype,fromdate,todate,effectivedate,iscurrent', 1, 240, N'contracttype,iscurrent,effectivedate'),
+        (N'إقرارات الموظفين',        N'acknowledgments', NULL, N'no,employee,template,state,sentat,respondedat',                               1, 250, N'template,state,sentat'),
+        (N'مهام الموظفين',           N'tasks',           NULL, N'no,employee,process,title,assignee,duedate,state,completedat',                1, 260, N'process,assignee,state,duedate'),
+        (N'تقرير تعديلات الموظفين',  N'updates',         NULL, N'no,employee,section,field,oldvalue,newvalue,effectivedate,retroactive,state', 1, 270, N'section,field,state,effectivedate'),
+        (N'الإجراءات التأديبية',     N'violations',      NULL, N'refno,no,employee,category,title,eventdate,action,status',                    1, 280, N'category,status,eventdate');
+END;
+
 -- تقارير نظام الحضور (مصدر att_*): زرع مستقل idempotent كي تظهر على قواعد بيانات
 -- قائمة سبق أن زُرعت بتقارير الأشخاص (كتلة IF NOT EXISTS أعلاه لا تعمل حينها).
 IF NOT EXISTS (SELECT 1 FROM PeopleReports WHERE IsSystem = 1 AND DatasetKey IN (N'att_daily', N'att_summary'))

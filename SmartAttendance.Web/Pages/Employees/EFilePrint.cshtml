@@ -1,0 +1,143 @@
+@page
+@model SmartAttendance.Web.Pages.Employees.EFilePrintModel
+
+@{
+    ViewData["Title"] = $"الملف الإلكتروني — {Model.FullName}";
+    Layout = null; // صفحة إصدار مستقلة: بلا قوقعة ولا ثيم — تطبع نظيفة كـPDF.
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin: 0; padding: 32px; background: #fff; color: #1a2233;
+        }
+        .efile-toolbar { display: flex; gap: 8px; justify-content: flex-start; margin-bottom: 24px; }
+        .efile-toolbar button {
+            border: 1px solid #2c5aa0; background: #2c5aa0; color: #fff;
+            padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .efile-toolbar a { align-self: center; color: #2c5aa0; text-decoration: none; font-size: 13px; }
+        header.efile-head { border-bottom: 3px solid #2c5aa0; padding-bottom: 12px; margin-bottom: 20px; }
+        header.efile-head h1 { margin: 0 0 4px; font-size: 22px; }
+        header.efile-head small { color: #5a6478; }
+        .efile-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 24px; margin-bottom: 24px; }
+        .efile-meta div { font-size: 13px; }
+        .efile-meta b { display: block; color: #64748b; font-weight: 600; font-size: 12px; }
+        section.efile-section { margin-bottom: 22px; break-inside: avoid; }
+        section.efile-section h2 {
+            font-size: 15px; border-inline-start: 4px solid #2c5aa0;
+            padding-inline-start: 8px; margin: 0 0 8px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        th, td { border: 1px solid #d7dce5; padding: 6px 8px; text-align: right; }
+        th { background: #f1f5fb; font-weight: 600; }
+        footer.efile-foot {
+            margin-top: 32px; padding-top: 10px; border-top: 1px solid #d7dce5;
+            font-size: 11.5px; color: #64748b; display: flex; justify-content: space-between;
+        }
+        @@media print {
+            body { padding: 0; }
+            .efile-toolbar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="efile-toolbar">
+        <button type="button" onclick="window.print()">طباعة / حفظ PDF</button>
+        <a href="/Employees/Profile?id=@Request.Query["id"]">← عودة لملف الموظف</a>
+    </div>
+
+    <header class="efile-head">
+        <h1>الملف الإلكتروني — @Model.FullName</h1>
+        <small>رمز الموظف: @Model.EmployeeNo</small>
+    </header>
+
+    <div class="efile-meta">
+        <div><b>المسمى الوظيفي</b>@(Model.Position ?? "—")</div>
+        <div><b>موقع العمل</b>@(Model.BranchName ?? "—")</div>
+        <div><b>القسم</b>@(Model.DepartmentName ?? "—")</div>
+        <div><b>تاريخ التعيين</b>@Model.HireDate.ToString("yyyy/MM/dd")</div>
+        <div><b>تاريخ الولادة</b>@(Model.BirthDate?.ToString("yyyy/MM/dd") ?? "—")</div>
+        <div><b>الجنسية</b>@(Model.Nationality ?? "—")</div>
+        <div><b>رقم الهوية</b>@(Model.NationalId ?? "—")</div>
+        <div><b>البريد الإلكتروني</b>@(Model.Email ?? "—")</div>
+        <div><b>الهاتف</b>@(Model.Phone ?? "—")</div>
+    </div>
+
+    @foreach (var (sectionTitle, lines) in Model.RecordSections)
+    {
+        <section class="efile-section">
+            <h2>@sectionTitle</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>البيان</th>
+                        <th>تفصيل</th>
+                        <th>من</th>
+                        <th>إلى</th>
+                        <th>القيمة</th>
+                        <th>ملاحظة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in lines)
+                    {
+                        <tr>
+                            <td>@line.Title</td>
+                            <td>@(string.IsNullOrWhiteSpace(line.Subtitle) ? "—" : line.Subtitle)</td>
+                            <td>@(line.FromDate?.ToString("yyyy/MM/dd") ?? "—")</td>
+                            <td>@(line.ToDate?.ToString("yyyy/MM/dd") ?? "—")</td>
+                            <td>@(line.Amount?.ToString("#,0.##") ?? "—")</td>
+                            <td>@(string.IsNullOrWhiteSpace(line.Note) ? "—" : line.Note)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    }
+
+    <section class="efile-section">
+        <h2>فهرس الوثائق (@Model.Documents.Count)</h2>
+        @if (Model.Documents.Count == 0)
+        {
+            <p style="font-size:12.5px;color:#64748b">لا توجد وثائق مرفوعة.</p>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>نوع الوثيقة</th>
+                        <th>اسم الملف</th>
+                        <th>تاريخ الرفع</th>
+                        <th>تاريخ الانتهاء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model.Documents)
+                    {
+                        <tr>
+                            <td>@doc.DocumentType</td>
+                            <td>@doc.FileName</td>
+                            <td>@(doc.UploadedAt == DateTime.MinValue ? "—" : doc.UploadedAt.ToString("yyyy/MM/dd"))</td>
+                            <td>@(doc.ExpiryDate?.ToString("yyyy/MM/dd") ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    <footer class="efile-foot">
+        <span>أُصدر بواسطة: @Model.GeneratedBy</span>
+        <span>وقت الإصدار: @Model.GeneratedAt.ToString("yyyy/MM/dd HH:mm")</span>
+    </footer>
+</body>
+</html>

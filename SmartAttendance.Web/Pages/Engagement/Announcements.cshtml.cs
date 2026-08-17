@@ -156,6 +156,10 @@ public class AnnouncementsModel : EngagementPageModel
             "condolence" => $"تعزية ومواساة - {name}",
             "newborn" => $"مولود جديد - {name}",
             "farewell" => $"وداع وشكر - {name}",
+            "birthday" => $"عيد ميلاد سعيد - {name}",
+            "employee-of-month" => $"موظف الشهر - {name}",
+            "anniversary" => $"ذكرى عمل - {name}",
+            "retirement" => $"تقاعد وتكريم - {name}",
             _ => Announcement.Title?.Trim() ?? string.Empty
         };
     }
@@ -179,6 +183,10 @@ public class AnnouncementsModel : EngagementPageModel
             "condolence" => $"تتقدم الشركة بخالص العزاء والمواساة إلى {name}. سائلين الله أن يتغمد الفقيد بواسع رحمته، وأن يلهم أهله وذويه الصبر والسلوان.",
             "newborn" => $"تتقدم الشركة بأصدق التهاني إلى {name} بمناسبة المولود الجديد{(string.IsNullOrWhiteSpace(extra) ? "" : $" ({extra})")}. نسأل الله أن يجعله من مواليد السعادة والبركة.",
             "farewell" => $"تتقدم الشركة بالشكر والتقدير إلى {name} على ما قدمه من جهود خلال فترة عمله. نتمنى له دوام التوفيق والنجاح في مسيرته القادمة.",
+            "birthday" => $"تتقدم الشركة بأطيب التهاني إلى {name} بمناسبة عيد ميلاده{(string.IsNullOrWhiteSpace(date) ? "" : $" بتاريخ {date}")}. كل عام وهو بخير وصحة وسعادة.",
+            "employee-of-month" => $"يسرنا تكريم {name} بلقب موظف الشهر{(string.IsNullOrWhiteSpace(extra) ? "" : $" تقديراً لـ {extra}")}. نثمّن تميزه والتزامه، ونتمنى له مزيداً من النجاح.",
+            "anniversary" => $"نبارك إلى {name} ذكرى انضمامه لفريق العمل{(string.IsNullOrWhiteSpace(extra) ? "" : $" — {extra}")}{(string.IsNullOrWhiteSpace(date) ? "" : $" بتاريخ {date}")}. شكراً لعطائه المستمر خلال هذه المسيرة.",
+            "retirement" => $"تتقدم الشركة بخالص الشكر والتقدير إلى {name} بمناسبة تقاعده، عرفاناً بسنوات العطاء والإخلاص. نتمنى له تقاعداً سعيداً مليئاً بالصحة والراحة.",
             _ => Announcement.Body?.Trim() ?? string.Empty
         } + $"\n\n{department}";
     }
