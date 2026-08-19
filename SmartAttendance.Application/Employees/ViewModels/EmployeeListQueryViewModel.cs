@@ -17,12 +17,6 @@ public class EmployeeListQueryViewModel
 
     public string? SearchTerm { get; set; }
 
-    /// <summary>
-    /// حصر القائمة بأكواد موظفين محدّدة (فلترة «من جدول بيانات» بنمط كيان) —
-    /// تُقاطَع مع بقية المرشّحات والنطاقات ولا توسّعها.
-    /// </summary>
-    public IReadOnlyList<string>? EmployeeNos { get; set; }
-
     public int? BranchId { get; set; }
 
     public int? DepartmentId { get; set; }
