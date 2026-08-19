@@ -108,67 +108,6 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int PageSize { get; set; } = 25;
 
-    /// <summary>
-    /// أكواد موظفين مفصولة بفواصل — فلترة «الموظفون من جدول البيانات» بنمط كيان.
-    /// تُملأ من رافع الملف (<see cref="OnPostFilterFileAsync"/>) وتبقى بالرابط
-    /// كي تصمد مع الترقيم والفرز.
-    /// </summary>
-    [BindProperty(SupportsGet = true)]
-    public string? Codes { get; set; }
-
-    [BindProperty]
-    public IFormFile? CodesFile { get; set; }
-
-    /// <summary>سقف أكواد الفلترة — يحمي طول الرابط ويحدّ حجم عبارة IN بالاستعلام.</summary>
-    private const int MaxFilterCodes = 300;
-
-    /// <summary>
-    /// يستخرج الأكواد من ملف CSV/TXT (عمود أول أو قيم مفصولة بفواصل/أسطر) ثم
-    /// يعيد التوجيه لنفس القائمة والأكواد بالرابط — فتعمل كل المرشّحات فوقها.
-    /// </summary>
-    public async Task<IActionResult> OnPostFilterFileAsync()
-    {
-        if (CodesFile is null || CodesFile.Length == 0)
-        {
-            TempData["CodesFilterMessage"] = "اختر ملف أكواد أولاً (CSV أو TXT).";
-            return RedirectToPage(new { CompanyId, StatusFilter });
-        }
-
-        if (CodesFile.Length > 1024 * 1024)
-        {
-            TempData["CodesFilterMessage"] = "ملف الأكواد أكبر من 1MB — المتوقع قائمة أكواد لا بيانات كاملة.";
-            return RedirectToPage(new { CompanyId, StatusFilter });
-        }
-
-        using var reader = new StreamReader(CodesFile.OpenReadStream());
-        var content = await reader.ReadToEndAsync();
-
-        var codes = content
-            .Split(new[] { '\r', '\n', ',', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(x => x.Trim().Trim('"'))
-            .Where(x => x.Length > 0 && x.Length <= 40)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(MaxFilterCodes)
-            .ToList();
-
-        if (codes.Count == 0)
-        {
-            TempData["CodesFilterMessage"] = "لم يُعثر على أي كود بالملف.";
-            return RedirectToPage(new { CompanyId, StatusFilter });
-        }
-
-        TempData["CodesFilterMessage"] = $"فُلترت القائمة بـ{codes.Count} كوداً من الملف.";
-        return RedirectToPage(new { CompanyId, StatusFilter, Codes = string.Join(",", codes) });
-    }
-
-    /// <summary>الأكواد المفكوكة من بارامتر الرابط — فارغة = لا فلترة ملف.</summary>
-    private IReadOnlyList<string> ParsedCodes =>
-        string.IsNullOrWhiteSpace(Codes)
-            ? Array.Empty<string>()
-            : Codes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Take(MaxFilterCodes)
-                .ToArray();
-
     public async Task OnGetAsync()
     {
         var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
@@ -278,7 +217,6 @@ public class IndexModel : PageModel
                 AccessRoleScope = accessRoleScope,
                 CompanyId = CompanyId,
                 SearchTerm = SearchTerm,
-                EmployeeNos = ParsedCodes.Count > 0 ? ParsedCodes : null,
                 BranchId = BranchId,
                 DepartmentId = DepartmentId,
                 StatusFilter = StatusFilter,
