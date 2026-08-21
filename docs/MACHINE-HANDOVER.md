@@ -1,6 +1,7 @@
 # نقل النظام إلى جهاز آخر
 
-**آخر تحديث:** 2026-08-11 · **مُجرَّب فعلياً على جهاز الإنتاج الحالي**
+**آخر تحديث:** 2026-08-21 · **مُجرَّب فعلياً على جهاز الإنتاج الحالي** ·
+جرد الحالة الفعلية: [`MACHINE-MIGRATION-CHECKLIST-2026-08-16.md`](MACHINE-MIGRATION-CHECKLIST-2026-08-16.md)
 
 ---
 
@@ -17,7 +18,8 @@
 | 4 | `wwwroot/tenant-assets/*` | جذر النشر | هوية كل شركة المرفوعة — **شقيق `uploads` لا ابنه** |
 | 5 | `App_Data/ProtectedEmployeeFiles` | جذر النشر | وثائق الموظفين **مشفَّرة بـIDataProtector** |
 | 6 | `certs/lan.pfx` | جذر النشر | شهادة TLS المحليّة — يلزمها PWA الموبايل |
-| 7 | `run-server.bat` + المهمة المجدولة | جذر النشر / Task Scheduler | إعداد تشغيل خاص بالجهاز |
+| 7 | `run-server.bat` + `run-hidden.vbs` + المهمة المجدولة | جذر النشر / Task Scheduler | إعداد تشغيل خاص بالجهاز — المهمة تستدعي الـ`.vbs` لا الـ`.bat` مباشرة |
+| 8 | مجلد `.cloudflared` | ملف مستخدم Windows | نفق Cloudflare — يربط `zynorahr.com` بالحاسبة؛ أسرار حيّة (cert + credentials) |
 
 ### 🔴 البند 5 — فئة الخطر الوحيدة التي لا تُسترجَع
 
@@ -62,7 +64,8 @@ App_Data/ProtectedEmployeeFiles/    وثائق الموظفين المشفَّر
 App_Data/DataProtection-Keys/       مفاتيح الحماية (احتياطاً — الأصل بالقاعدة)
 App_Data/ReportTemplates/           قوالب التقارير
 certs/                              شهادة TLS المحليّة
-runtime/                            run-server.bat + ZynoraPortalServer.xml
+runtime/                            run-server.bat + run-hidden.vbs + ZynoraPortalServer.xml
+cloudflared/                        نفق Cloudflare (config.yml + cert.pem + credentials)
 ```
 
 أرشيف الاستيراد (`AttendanceImports` وأخواته، ~140 ميغابايت) **مُستثنى
@@ -78,14 +81,18 @@ runtime/                            run-server.bat + ZynoraPortalServer.xml
 
 ### على الجهاز الجديد
 
-المتطلبات: **.NET 10 SDK** · **SQL Server** (أي إصدار، Express يكفي) · **git**
+المتطلبات: **.NET 10 SDK** · **SQL Server 17/2025 Express أو أحدث** (الـ`.bak`
+المأخوذ من 17 **لا يُسترجَع** على إصدار أقدم) · **git** · **cloudflared** (للنطاق العام)
 
 ```powershell
 git clone https://github.com/mohammadprince11/SmartAttendance.git
 cd SmartAttendance
+git checkout <الفرع المذكور في MANIFEST.md>
 ```
 
-الفرع المطلوب هو `main` (الافتراضي) — وهو ما يعمل حيّاً. لا تنقل فرعاً آخر.
+**الفرع الصحيح هو ما يذكره `MANIFEST.md` داخل الحزمة** (بيان الحزمة يسجّل فرع
+وكوميت الجهاز المصدر وقت التصدير). لا تفترض أنه `main`: الجهاز الحيّ عمل
+فترةً بفرعٍ متقدمٍ على `main` (جرد 2026-08-16) — انقل ما يعمل فعلاً.
 
 افحص الجاهزية أولاً بلا أي تغيير:
 
@@ -99,8 +106,10 @@ cd SmartAttendance
 .\scripts\handover\import-machine.ps1 -BundlePath "D:\handover_20260803_183652"
 ```
 
-يسترجع القاعدة (**يسأل `YES` صراحةً** إن كانت موجودة) ويعيد الإعدادات
-والمرفوعات، ثم يطبع الخطوات الثلاث المتبقية: النشر، تسجيل المهمة، التشغيل.
+يسترجع القاعدة (**يسأل `YES` صراحةً** إن كانت موجودة)، يعيد الإعدادات
+والمرفوعات، يعيد مجلد النفق إلى `%USERPROFILE%\.cloudflared` (يسأل `YES`
+إن وُجد نفقٌ قائم)، ثم يطبع الخطوات المتبقية: النشر، تسجيل المهمة، التشغيل،
+وتثبيت خدمة النفق (`cloudflared service install` — **بعد** إيقافها على القديمة).
 
 ---
 
@@ -114,6 +123,8 @@ cd SmartAttendance
 | **اسم خادم SQL مختلف** | التطبيق لا يتصل | عدّل `DefaultConnection` في `appsettings.json` |
 | **`run-server.bat` فيه حلقة `goto loop`** | `schtasks /End` وحده لا يوقف الخادم — الحلقة تعيد إطلاقه بعد 3 ثوانٍ | أوقف الـ`cmd.exe` صاحب الحلقة لا الـ`.exe`. وكل `schtasks /Run` يفتح حلقة جديدة فتتراكم |
 | **`sqlcmd` وQUOTED_IDENTIFIER** | جُمَل الفهارس المفلترة تفشل | استعمل الراية `-I` |
+| **XML المهمة يحمل حساب الجهاز القديم** (اسماً وSID) | `schtasks /Create /XML` يفشل بـ`No mapping between account names and security IDs` | استبدل كل `<UserId>…</UserId>` بحسابك المحلي: `(Get-Content $xml -Raw) -replace '<UserId>[^<]*</UserId>', "<UserId>$env:COMPUTERNAME\<حسابك></UserId>"` إلى ملف جديد بترميز Unicode ثم سجّله |
+| **المهمة تستدعي `run-hidden.vbs` لا الـ`.bat`** | حزمة قديمة بلاه ⟹ «Can not find script file» بعد التسجيل | سكربت الاستيراد الحالي ينشئه تلقائياً إن غاب؛ التصدير الحالي يحمله |
 
 ## إيقاف الخادم إيقافاً صحيحاً
 
@@ -135,4 +146,6 @@ Get-Process -Name "SmartAttendance*" -ErrorAction SilentlyContinue | Stop-Proces
 - **افتح وثيقة موظف فعليّة** — هذا وحده يثبت أن الملفات المشفَّرة وصلت
   ومفاتيحها تفكّها. لا تحذف الحزمة قبل هذا الاختبار بالذات
 - افتح شاشةً فيها شعار الشركة — يثبت وصول `tenant-assets`
+- افتح `https://zynorahr.com` من هاتفك **خارج الشبكة** — يثبت وصول النفق
+  (وتأكد أن خدمة Cloudflared على القديمة **متوقفة** — نفقٌ واحد لا اثنان)
 - **احذف حزمة النقل**
