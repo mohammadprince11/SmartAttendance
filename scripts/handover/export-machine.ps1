@@ -192,10 +192,15 @@ Write-Step "5/6 إعداد التشغيل"
 $runtimeDir = Join-Path $bundle 'runtime'
 New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
 
-$runBat = Join-Path $LivePath 'run-server.bat'
-if (Test-Path -LiteralPath $runBat) {
-    Copy-Item -LiteralPath $runBat -Destination $runtimeDir -Force
-    Write-Ok 'run-server.bat'
+# run-hidden.vbs هو ما تستدعيه المهمة المجدولة فعلياً (يشغّل الـbat بلا نافذة) —
+# غيابه اكتُشف ميدانياً 2026-08-21: مهمة مستوردة تفشل بـ«Can not find script file».
+foreach ($runFile in @('run-server.bat', 'run-hidden.vbs')) {
+    $runPath = Join-Path $LivePath $runFile
+    if (Test-Path -LiteralPath $runPath) {
+        Copy-Item -LiteralPath $runPath -Destination $runtimeDir -Force
+        Write-Ok $runFile
+    }
+    else { Write-Warn "غير موجود: $runFile" }
 }
 
 # تعريف المهمة المجدولة كـXML — يُستورَد على الجهاز الجديد بأمر واحد.

@@ -18,7 +18,7 @@
 | 4 | `wwwroot/tenant-assets/*` | جذر النشر | هوية كل شركة المرفوعة — **شقيق `uploads` لا ابنه** |
 | 5 | `App_Data/ProtectedEmployeeFiles` | جذر النشر | وثائق الموظفين **مشفَّرة بـIDataProtector** |
 | 6 | `certs/lan.pfx` | جذر النشر | شهادة TLS المحليّة — يلزمها PWA الموبايل |
-| 7 | `run-server.bat` + المهمة المجدولة | جذر النشر / Task Scheduler | إعداد تشغيل خاص بالجهاز |
+| 7 | `run-server.bat` + `run-hidden.vbs` + المهمة المجدولة | جذر النشر / Task Scheduler | إعداد تشغيل خاص بالجهاز — المهمة تستدعي الـ`.vbs` لا الـ`.bat` مباشرة |
 | 8 | مجلد `.cloudflared` | ملف مستخدم Windows | نفق Cloudflare — يربط `zynorahr.com` بالحاسبة؛ أسرار حيّة (cert + credentials) |
 
 ### 🔴 البند 5 — فئة الخطر الوحيدة التي لا تُسترجَع
@@ -64,7 +64,7 @@ App_Data/ProtectedEmployeeFiles/    وثائق الموظفين المشفَّر
 App_Data/DataProtection-Keys/       مفاتيح الحماية (احتياطاً — الأصل بالقاعدة)
 App_Data/ReportTemplates/           قوالب التقارير
 certs/                              شهادة TLS المحليّة
-runtime/                            run-server.bat + ZynoraPortalServer.xml
+runtime/                            run-server.bat + run-hidden.vbs + ZynoraPortalServer.xml
 cloudflared/                        نفق Cloudflare (config.yml + cert.pem + credentials)
 ```
 
@@ -123,6 +123,8 @@ git checkout <الفرع المذكور في MANIFEST.md>
 | **اسم خادم SQL مختلف** | التطبيق لا يتصل | عدّل `DefaultConnection` في `appsettings.json` |
 | **`run-server.bat` فيه حلقة `goto loop`** | `schtasks /End` وحده لا يوقف الخادم — الحلقة تعيد إطلاقه بعد 3 ثوانٍ | أوقف الـ`cmd.exe` صاحب الحلقة لا الـ`.exe`. وكل `schtasks /Run` يفتح حلقة جديدة فتتراكم |
 | **`sqlcmd` وQUOTED_IDENTIFIER** | جُمَل الفهارس المفلترة تفشل | استعمل الراية `-I` |
+| **XML المهمة يحمل حساب الجهاز القديم** (اسماً وSID) | `schtasks /Create /XML` يفشل بـ`No mapping between account names and security IDs` | استبدل كل `<UserId>…</UserId>` بحسابك المحلي: `(Get-Content $xml -Raw) -replace '<UserId>[^<]*</UserId>', "<UserId>$env:COMPUTERNAME\<حسابك></UserId>"` إلى ملف جديد بترميز Unicode ثم سجّله |
+| **المهمة تستدعي `run-hidden.vbs` لا الـ`.bat`** | حزمة قديمة بلاه ⟹ «Can not find script file» بعد التسجيل | سكربت الاستيراد الحالي ينشئه تلقائياً إن غاب؛ التصدير الحالي يحمله |
 
 ## إيقاف الخادم إيقافاً صحيحاً
 

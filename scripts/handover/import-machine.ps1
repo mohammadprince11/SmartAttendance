@@ -173,9 +173,23 @@ if (Test-Path -LiteralPath $bundleAppData) {
     }
 }
 
-if (Test-Path -LiteralPath (Join-Path $runtimeDir 'run-server.bat')) {
-    Copy-Item -LiteralPath (Join-Path $runtimeDir 'run-server.bat') -Destination $LivePath -Force
-    Write-Ok 'run-server.bat'
+foreach ($runFile in @('run-server.bat', 'run-hidden.vbs')) {
+    if (Test-Path -LiteralPath (Join-Path $runtimeDir $runFile)) {
+        Copy-Item -LiteralPath (Join-Path $runtimeDir $runFile) -Destination $LivePath -Force
+        Write-Ok $runFile
+    }
+}
+# حزمة قديمة بلا run-hidden.vbs: المهمة المجدولة تستدعيه فتفشل بصمت بعد التسجيل.
+# ننشئه بمحتواه القياسي بدل ترك الاكتشاف لما بعد التشغيل.
+$vbsPath = Join-Path $LivePath 'run-hidden.vbs'
+if (-not (Test-Path -LiteralPath $vbsPath)) {
+    $batPath = Join-Path $LivePath 'run-server.bat'
+    @"
+Set sh = CreateObject("Wscript.Shell")
+sh.CurrentDirectory = "$LivePath"
+sh.Run "$batPath", 0, False
+"@ | Set-Content -LiteralPath $vbsPath -Encoding ASCII
+    Write-Warn 'run-hidden.vbs لم يكن بالحزمة — أُنشئ بالمحتوى القياسي.'
 }
 
 # ------------------------------------------------------- 3. نفق Cloudflare
@@ -217,6 +231,9 @@ Write-Host @"
 
   2) سجّل المهمة المجدولة (يحتاج صلاحية إدارية):
        schtasks /Create /TN "ZynoraPortalServer" /XML "$runtimeDir\ZynoraPortalServer.xml"
+     إن فشل بـ«No mapping between account names and security IDs»: الـXML يحمل
+     حساب الجهاز القديم — استبدل كل عناصر <UserId> فيه بحسابك المحلي بنسخة
+     معدّلة ثم سجّلها (المزلق موثّق بجدول docs\MACHINE-HANDOVER.md).
 
   3) شغّل وتحقّق:
        schtasks /Run /TN "ZynoraPortalServer"
