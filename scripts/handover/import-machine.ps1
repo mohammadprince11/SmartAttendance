@@ -87,6 +87,16 @@ else {
     Write-Warn 'إن كانت الحزمة من إصدارٍ قديم للتصدير: أعِد التصدير قبل إخلاء الجهاز.'
 }
 
+# نفق Cloudflare هو ما يربط النطاق العام (zynorahr.com) بالحاسبة. حزمة بلاه
+# تعني نظاماً يعمل محلياً فقط بعد الاستيراد — تنبيهٌ الآن لا اكتشافٌ بعد الإخلاء.
+if (Test-Path -LiteralPath (Join-Path $BundlePath 'cloudflared\config.yml')) {
+    Write-Ok 'نفق Cloudflare (cloudflared/)'
+}
+else {
+    Write-Warn 'الحزمة بلا cloudflared\config.yml — النطاق العام لن يُربط تلقائياً.'
+    Write-Warn 'انسخ مجلد .cloudflared من الحاسبة القديمة يدوياً، أو أعد تسجيل النفق بالتوكن.'
+}
+
 if ($blockers.Count -gt 0) {
     Write-Host "`nناقص قبل المتابعة:" -ForegroundColor Red
     $blockers | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
@@ -99,7 +109,7 @@ if ($WhatIfOnly) {
 }
 
 # ------------------------------------------------------- 1. استرجاع القاعدة
-Write-Step '1/3 استرجاع القاعدة'
+Write-Step '1/4 استرجاع القاعدة'
 
 $exists = (& sqlcmd -S $SqlInstance -E -C -h -1 -W -Q `
     "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = N'$Database';" |
@@ -129,7 +139,7 @@ $tables = (& sqlcmd -S $SqlInstance -d $Database -E -C -h -1 -W -Q `
 Write-Ok "استُرجعت — $tables جدولاً"
 
 # --------------------------------------------------- 2. الإعدادات والمرفوعات
-Write-Step '2/3 الإعدادات والمرفوعات'
+Write-Step '2/4 الإعدادات والمرفوعات'
 New-Item -ItemType Directory -Path $LivePath -Force | Out-Null
 
 if (Test-Path -LiteralPath $configDir) {
@@ -168,8 +178,37 @@ if (Test-Path -LiteralPath (Join-Path $runtimeDir 'run-server.bat')) {
     Write-Ok 'run-server.bat'
 }
 
-# ------------------------------------------------------------ 3. ما بقي عليك
-Write-Step '3/3 الخطوات المتبقية (يدوية عمداً)'
+# ------------------------------------------------------- 3. نفق Cloudflare
+Write-Step '3/4 نفق Cloudflare (ربط النطاق بهذه الحاسبة)'
+
+# التصدير يحمل مجلد .cloudflared (config.yml + cert.pem + credentials) منذ
+# 2026-08-16. نعيده لمجلد المستخدم هنا — أما تثبيت الخدمة فيبقى يدوياً عمداً:
+# النفق نفسه على حاسبتين معاً يوزّع الطلبات بينهما بلا قصد، فلا نشغّله قبل أن
+# يؤكّد المستخدم إيقافه على القديمة.
+$bundleCf = Join-Path $BundlePath 'cloudflared'
+if (Test-Path -LiteralPath (Join-Path $bundleCf 'config.yml')) {
+    $cfTarget  = Join-Path $env:USERPROFILE '.cloudflared'
+    $proceedCf = $true
+
+    if (Test-Path -LiteralPath (Join-Path $cfTarget 'config.yml')) {
+        Write-Warn "يوجد $cfTarget بملف config.yml أصلاً وسيُستبدَل محتواه."
+        $answer = Read-Host 'اكتب YES للاستبدال'
+        if ($answer -cne 'YES') { $proceedCf = $false; Write-Warn 'تُرك النفق الحالي كما هو.' }
+    }
+
+    if ($proceedCf) {
+        Restore-Tree $bundleCf $cfTarget 'نفق Cloudflare'
+        if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
+            Write-Warn 'cloudflared غير مثبَّت على هذه الحاسبة — ثبّته قبل خطوة service install.'
+        }
+    }
+}
+else {
+    Write-Warn 'الحزمة بلا cloudflared/ — تخطّيتُ ربط النطاق (النظام سيعمل محلياً فقط).'
+}
+
+# ------------------------------------------------------------ 4. ما بقي عليك
+Write-Step '4/4 الخطوات المتبقية (يدوية عمداً)'
 
 Write-Host @"
   1) انشر التطبيق من مجلد المستودع:
@@ -183,7 +222,14 @@ Write-Host @"
        schtasks /Run /TN "ZynoraPortalServer"
        ثم افتح http://localhost:5080
 
-  4) بعد نجاح الدخول: **احذف حزمة النقل** — فيها أسرار حيّة.
+  4) النفق (بعد استرجاع cloudflared/ أعلاه):
+       ⚠️ أوقف خدمة Cloudflared على الحاسبة القديمة أولاً — لا تشغّل النفق
+       نفسه على حاسبتين معاً. ثم هنا:
+       cloudflared service install
+       Start-Service Cloudflared
+       وتحقّق بفتح https://zynorahr.com من خارج الشبكة.
+
+  5) بعد نجاح الدخول وفتح وثيقة موظف فعليّة: **احذف حزمة النقل** — فيها أسرار حيّة.
 "@ -ForegroundColor Gray
 
 Write-Host "`nالاستيراد اكتمل." -ForegroundColor Green
