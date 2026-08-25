@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -26,18 +27,21 @@ public class FinancialRequestModel : PageModel
     public List<FinancialRequestStore.Row> MyRequests { get; private set; } = new();
     public bool HasEmployee { get; private set; }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         await HrmsDatabase.EnsureCreatedAsync(_db);
         var employeeId = await ResolveEmployeeIdAsync();
         HasEmployee = employeeId > 0;
         if (employeeId > 0)
             MyRequests = (await FinancialRequestStore.ListAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted()))
                 .Where(r => r.EmployeeId == employeeId).ToList();
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
@@ -76,6 +80,7 @@ public class FinancialRequestModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         // تأكّد أن الطلب لهذا الموظف قبل الحذف.
         if (employeeId > 0)

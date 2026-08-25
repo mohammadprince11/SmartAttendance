@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -27,6 +28,7 @@ public class MissingPunchModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "PunchCorrection")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId > 0)
         {
@@ -39,6 +41,7 @@ public class MissingPunchModel : PageModel
     /// <summary>بصمات يوم الموظف (AJAX) مصنَّفةً بالأسبقية — للمعاينة الحيّة.</summary>
     public async Task<IActionResult> OnGetDayPunchesAsync(string? date)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "PunchCorrection")) return Forbid();
         if (!DateOnly.TryParse(date, out var d))
             return new JsonResult(new { punches = Array.Empty<object>() });
 
@@ -56,9 +59,8 @@ public class MissingPunchModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(string? MpDate, string? MpTime, string? MpReason)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "PunchCorrection")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";

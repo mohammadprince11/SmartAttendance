@@ -305,6 +305,21 @@ WHERE u.SystemUserId = @UserId
         ApplicationDbContext dbContext, int systemUserId, string fieldCode) =>
         HasGrantAsync(dbContext, systemUserId, TypeSensitiveFields, fieldCode);
 
+    /// <summary>
+    /// سياسة أنواع الأدوار الاختيارية: عدم إسناد أي دور من النوع يبقي السلوك
+    /// التوافقي غير مقيّد، لكن متى أُسنِد دور يصبح اتحاد منح أدواره هو القائمة
+    /// البيضاء الفعلية. الهوية المفقودة تفشل مغلقة.
+    /// </summary>
+    public static async Task<bool> IsGrantedOrUnrestrictedAsync(
+        ApplicationDbContext dbContext, int systemUserId, string roleType, string grantKey)
+    {
+        if (systemUserId <= 0 || !RoleTypes.Contains(roleType) || string.IsNullOrWhiteSpace(grantKey))
+            return false;
+
+        return await CountUserRolesAsync(dbContext, systemUserId, roleType) == 0 ||
+               await HasGrantAsync(dbContext, systemUserId, roleType, grantKey);
+    }
+
     /// <summary>كل الأدوار الفعّالة (أيّ نوع) — لملء منتقي «الأدوار المخصّصة» بـUserAccess.</summary>
     public static async Task<List<AccessRole>> ListActiveAsync(ApplicationDbContext dbContext)
     {

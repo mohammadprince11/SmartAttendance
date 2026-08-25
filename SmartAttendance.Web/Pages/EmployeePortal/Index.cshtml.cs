@@ -275,6 +275,10 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
 
+        var actionCode = SelfServiceAccessPolicy.ActionForRequestType(type);
+        if (actionCode is null || !await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, actionCode))
+            return Forbid();
+
         if (!fromDate.HasValue)
         {
             StatusMessage = "يرجى إدخال تاريخ بداية الطلب.";
@@ -349,12 +353,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         string? reason,
         IFormFile? attachment)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "LeaveRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-        {
-            employeeId = await HrmsDatabase.ScalarAsync<int>(
-                _dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-        }
         if (employeeId <= 0)
         {
             StatusMessage = "تعذّر تحديد الموظف.";
@@ -494,12 +494,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     /// </summary>
     public async Task<IActionResult> OnPostSubmitMissingPunchAsync(string? returnTab)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "PunchCorrection")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-        {
-            // نفس fallback العرض: مستخدم غير مربوط بموظف (وضع تجريبي) ← أول موظف.
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-        }
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
@@ -546,8 +542,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return new JsonResult(new { punches = Array.Empty<object>() });
 
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
             return new JsonResult(new { punches = Array.Empty<object>() });
 
@@ -617,9 +611,8 @@ ORDER BY AttendanceDate;
     /// </summary>
     public async Task<IActionResult> OnPostSubmitDataChangeAsync(string? returnTab)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
@@ -688,8 +681,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         string? punchType, string? returnTab, double? geoLat, double? geoLng, string? bioToken)
     {
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن تسجيل البصمة لأن المستخدم غير مرتبط بموظف.";
@@ -781,7 +772,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         if (employeeId <= 0)
         {
             IsDemoMode = true;
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         }
 
         if (employeeId <= 0)
@@ -886,9 +876,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     /// <summary>حذف طلب تعديل بيانات معلّق من تبويب الطلبات (لصاحبه فقط، قبل الاعتماد).</summary>
     public async Task<IActionResult> OnPostDeleteDataChangeAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        if (employeeId <= 0) return Forbid();
         var ok = await DataChangeRequestStore.DeletePendingRequestAsync(_dbContext, id, employeeId);
         StatusMessage = ok ? "تم حذف طلب التعديل المعلّق." : "تعذّر الحذف (الطلب غير موجود أو تمّ البتّ فيه).";
         return RedirectToPage(new { tab = "requests" });
@@ -956,7 +946,7 @@ ORDER BY Id DESC;
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+            return Forbid();
         }
 
         await EmployeeRecordsSchema.EnsureAsync(_dbContext);
@@ -1075,12 +1065,6 @@ ORDER BY EventDate DESC, Id DESC;
     public async Task<IActionResult> OnPostViolationReplyAsync(int id, string reply, string? returnTab)
     {
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-        {
-            // نفس fallback الوضع التجريبي المستخدم بعرض البوابة (مستخدم غير مربوط بموظف).
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-        }
-
         if (employeeId <= 0 || string.IsNullOrWhiteSpace(reply))
         {
             StatusMessage = "يرجى كتابة نص الرد.";

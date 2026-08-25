@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Reports;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.PeopleReports;
 
@@ -72,7 +73,7 @@ public class IndexModel : PageModel
 
     public string PageTitle => IsAttendance ? "تقارير الحضور" : IsPayroll ? "تقارير الرواتب" : "التقارير";
 
-    public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets => PeopleReportCatalog.DatasetsFor(Module);
+    public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets { get; private set; } = Array.Empty<PeopleReportCatalog.ReportDataset>();
 
     public List<CompanyOption> Companies { get; set; } = new();
 
@@ -97,12 +98,13 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
         await LoadListsAsync();
 
         if (ReportId > 0)
         {
             Current = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
-            if (Current == null)
+            if (Current == null || !IsDatasetAllowed(Current.DatasetKey))
             {
                 return Redirect(SelfPath);
             }
@@ -127,6 +129,7 @@ public class IndexModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnGetCountsAsync()
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
         await LoadListsAsync();
 
         var reports = SystemReports.Concat(MyReports).Concat(SharedReports).ToList();
@@ -162,8 +165,9 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetExportAsync()
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
         var report = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
-        if (report == null)
+        if (report == null || !IsDatasetAllowed(report.DatasetKey))
         {
             return Redirect(SelfPath);
         }
@@ -188,12 +192,13 @@ public class IndexModel : PageModel
         string name, string? description, string datasetKey, string columnsCsv, string visibility,
         int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false)
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
 
         var dataset = PeopleReportCatalog.GetDataset(datasetKey ?? "");
         name = (name ?? "").Trim();
 
-        if (dataset == null || string.IsNullOrWhiteSpace(name))
+        if (dataset == null || !IsDatasetAllowed(dataset.Key) || string.IsNullOrWhiteSpace(name))
         {
             Message = "اسم التقرير ومصدر البيانات مطلوبان.";
             return Redirect(SelfPath);
@@ -251,8 +256,9 @@ public class IndexModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnPostDuplicateReportAsync(int id)
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
         var source = await PeopleReportsStore.GetAsync(_dbContext, id);
-        if (source == null)
+        if (source == null || !IsDatasetAllowed(source.DatasetKey))
         {
             Message = "التقرير غير موجود.";
             return Redirect(SelfPath);
@@ -308,6 +314,9 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteReportAsync(int id)
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, id);
+        if (report == null || !IsDatasetAllowed(report.DatasetKey)) return Forbid();
         await PeopleReportsStore.DeleteOwnAsync(_dbContext, id, CurrentUser);
         Message = "تم حذف التقرير.";
         return Redirect(SelfPath + "#mine");
@@ -315,6 +324,9 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostToggleShareAsync(int id)
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, id);
+        if (report == null || !IsDatasetAllowed(report.DatasetKey)) return Forbid();
         await PeopleReportsStore.ToggleShareOwnAsync(_dbContext, id, CurrentUser);
         Message = "تم تحديث المشاركة.";
         return Redirect(SelfPath + "#mine");
@@ -352,6 +364,42 @@ public class IndexModel : PageModel
             .Select(u => u.UserName)
             .ToListAsync();
     }
+
+    private async Task<bool> LoadReportAccessAsync()
+    {
+        var moduleDatasets = PeopleReportCatalog.DatasetsFor(Module);
+        if (RoleRouteCatalog.IsAdmin(PeopleAccessContext.GetRole(HttpContext)))
+        {
+            Datasets = moduleDatasets;
+            return true;
+        }
+
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        if (systemUserId <= 0) return false;
+        var roleCount = await AccessRoleStore.CountUserRolesAsync(
+            _dbContext, systemUserId, AccessRoleStore.TypeReports);
+        if (roleCount == 0)
+        {
+            Datasets = moduleDatasets;
+            return true;
+        }
+
+        var grants = (await AccessRoleStore.GetUserGrantsAsync(
+                _dbContext, systemUserId, AccessRoleStore.TypeReports))
+            .Select(grant => grant.GrantKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Datasets = moduleDatasets.Where(dataset => grants.Contains(ReportGroupFor(dataset))).ToList();
+        return Datasets.Count > 0;
+    }
+
+    private bool IsDatasetAllowed(string datasetKey) =>
+        Datasets.Any(dataset => dataset.Key.Equals(datasetKey, StringComparison.OrdinalIgnoreCase));
+
+    private static string ReportGroupFor(PeopleReportCatalog.ReportDataset dataset) =>
+        dataset.Module.Equals("attendance", StringComparison.OrdinalIgnoreCase) ? "Attendance" :
+        dataset.Module.Equals("payroll", StringComparison.OrdinalIgnoreCase) ? "Payroll" :
+        dataset.Key.Equals("leaves", StringComparison.OrdinalIgnoreCase) ? "Leaves" :
+        "Employees";
 
     private async Task RunAsync(PeopleReportsStore.SavedReport report)
     {

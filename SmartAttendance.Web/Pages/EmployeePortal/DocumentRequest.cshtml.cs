@@ -33,20 +33,23 @@ public class DocumentRequestModel : PageModel
     public List<DocumentTemplateStore.Template> Available { get; private set; } = new();
     public List<DocumentRequestStore.Request> MyRequests { get; private set; } = new();
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "DocumentRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            return;
+            return Forbid();
         }
 
         Available = await DocumentRequestStore.RequestableAsync(_db, employeeId, DateOnly.FromDateTime(DateTime.Today));
         MyRequests = await DocumentRequestStore.LoadAsync(_db, employeeId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "DocumentRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
@@ -106,6 +109,7 @@ public class DocumentRequestModel : PageModel
 
     public async Task<IActionResult> OnPostWithdrawAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "DocumentRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         var done = employeeId > 0 && await DocumentRequestStore.WithdrawAsync(_db, id, employeeId);
 

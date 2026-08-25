@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Reports;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -44,6 +45,7 @@ public class ReportsModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "ViewPublishedReports")) return Forbid();
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
 
         var employee = await ResolveEmployeeAsync();

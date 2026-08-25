@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -23,18 +24,21 @@ public class ShiftRequestModel : PageModel
     public List<ShiftRequestStore.MyRow> MyRequests { get; private set; } = new();
     public bool HasEmployee { get; private set; }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "ShiftRequest")) return Forbid();
         await HrmsDatabase.EnsureCreatedAsync(_db);
         Shifts = await ShiftRequestStore.RequestableShiftsAsync(_db);
         var employeeId = await ResolveEmployeeIdAsync();
         HasEmployee = employeeId > 0;
         if (employeeId > 0)
             MyRequests = await ShiftRequestStore.ListMineAsync(_db, employeeId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "ShiftRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
