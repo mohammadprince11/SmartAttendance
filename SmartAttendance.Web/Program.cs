@@ -439,6 +439,21 @@ else
 // صندوق داخل النظام + Web-Push. يعمل دائماً (لا يحتاج SMTP) ويمنع التكرار بجدول أحداث.
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGeneratorService>();
 
+// Webhooks: صندوق صادر durable يعمل حتى إن لم توجد اشتراكات؛ الأسرار محمية
+// بـData Protection، والتحويلات ممنوعة كي لا تتجاوز سياسة عنوان الوجهة.
+builder.Services.Configure<SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherOptions>(
+    builder.Configuration.GetSection(
+        SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherOptions.SectionName));
+builder.Services.AddHttpClient("ZynoraWebhooks", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false,
+    AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+});
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherService>();
+
 // كلمة مرور شهادة HTTPS لم تعد بالمستودع: مصدرها متغيّر البيئة وحده. نفشل بوضوح
 // عند الحاجة إليها وغيابها بدل رسالة ربط غامضة من Kestrel أو تشغيل بلا TLS بصمت.
 var certificatePath = builder.Configuration["Kestrel:Certificates:Default:Path"];

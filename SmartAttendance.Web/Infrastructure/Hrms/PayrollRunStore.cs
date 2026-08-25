@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.HrSettings;
+using SmartAttendance.Web.Infrastructure.Integrations;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -1579,7 +1580,27 @@ ORDER BY e.EmployeeNo;
                 return (false, "الإصدار يتطلب اعتماد اللجنة أولاً (تهيئة الرواتب) — استخدم «اعتماد اللجنة» على الدفعة المقفلة.");
         }
 
-        return await TransitionAsync(dbContext, runId, from: "Locked", to: "Issued", "IssuedAt", "اعتُمدت للصرف.");
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var result = await TransitionAsync(dbContext, runId, from: "Locked", to: "Issued", "IssuedAt", "اعتُمدت للصرف.");
+        if (result.Item1 && run?.CompanyId is > 0)
+        {
+            await WebhookStore.EnqueueAsync(dbContext, run.CompanyId.Value, "payroll.issued",
+                new
+                {
+                    eventType = "payroll.issued",
+                    runId = run.Id,
+                    batchNo = run.BatchNo,
+                    year = run.Year,
+                    month = run.Month,
+                    employeeCount = run.EmployeeCount,
+                    totalGross = run.TotalGross,
+                    totalNet = run.TotalNet,
+                    occurredAt = DateTimeOffset.UtcNow
+                },
+                $"payroll.issued:{run.Id}");
+        }
+        await transaction.CommitAsync();
+        return result;
     }
 
     /// <summary>

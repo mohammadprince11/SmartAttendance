@@ -8,6 +8,7 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Integrations;
 using SmartAttendance.Web.Infrastructure.Reports;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -374,6 +375,41 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
         await AttendanceSourceStore.DeleteAsync(db, scopeA, _companyA, bId);
         Assert.Equal("Company B import", Assert.Single(await RawStringsAsync(
             db, $"SELECT Name FROM AttendanceSources WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
+    public async Task Webhook_outbox_is_company_scoped_and_idempotent()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+
+        await WebhookStore.SaveSubscriptionAsync(db, scopeA, _companyA, 0, "A ERP",
+            new Uri("https://events-a.example.com/zynora"), "protected-a", "employee.updated", true);
+        await WebhookStore.SaveSubscriptionAsync(db, scopeB, _companyB, 0, "B ERP",
+            new Uri("https://events-b.example.com/zynora"), "protected-b", "employee.updated", true);
+
+        var aRows = await WebhookStore.ListSubscriptionsAsync(db, scopeA, _companyA);
+        Assert.Single(aRows, subscription => subscription.Name == "A ERP");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            WebhookStore.ListSubscriptionsAsync(db, scopeA, _companyB));
+
+        await WebhookStore.EnqueueAsync(db, _companyA, "employee.updated",
+            new { employeeId = _employeeA }, "employee.updated:test-1");
+        await WebhookStore.EnqueueAsync(db, _companyA, "employee.updated",
+            new { employeeId = _employeeA }, "employee.updated:test-1");
+        Assert.Equal(1, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM WebhookDeliveries WHERE CompanyId={_companyA} AND IdempotencyKey=N'employee.updated:test-1';"));
+        Assert.Equal(0, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM WebhookDeliveries WHERE CompanyId={_companyB} AND IdempotencyKey=N'employee.updated:test-1';"));
+
+        var claimed = await WebhookStore.ClaimAsync(db, 10, 8, CancellationToken.None);
+        var delivery = Assert.Single(claimed, item => item.CompanyId == _companyA);
+        Assert.Equal(1, delivery.AttemptCount);
+        await WebhookStore.MarkSentAsync(db, delivery.Id, 204);
+        Assert.Equal("Sent", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Status FROM WebhookDeliveries WHERE Id={delivery.Id};")));
     }
 
     [SkippableFact]

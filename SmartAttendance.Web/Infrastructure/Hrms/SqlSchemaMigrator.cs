@@ -1562,6 +1562,53 @@ BEGIN
     CREATE INDEX IX_AttendanceSources_Company ON AttendanceSources (CompanyId, IsSystem, IsActive);
 END;
 """),
+        new(
+            "20260826-05-webhook-outbox",
+            """
+IF OBJECT_ID('WebhookSubscriptions', 'U') IS NULL
+BEGIN
+    CREATE TABLE WebhookSubscriptions
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_WebhookSubscriptions PRIMARY KEY,
+        CompanyId int NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        EndpointUrl nvarchar(1000) NOT NULL,
+        ProtectedSecret nvarchar(max) NOT NULL,
+        EventsCsv nvarchar(1000) NOT NULL CONSTRAINT DF_WebhookSubscriptions_Events DEFAULT(N'*'),
+        IsActive bit NOT NULL CONSTRAINT DF_WebhookSubscriptions_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_WebhookSubscriptions_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_WebhookSubscriptions_Company FOREIGN KEY (CompanyId) REFERENCES Companies(Id)
+    );
+    CREATE INDEX IX_WebhookSubscriptions_Company ON WebhookSubscriptions(CompanyId, IsActive);
+END;
+
+IF OBJECT_ID('WebhookDeliveries', 'U') IS NULL
+BEGIN
+    CREATE TABLE WebhookDeliveries
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_WebhookDeliveries PRIMARY KEY,
+        SubscriptionId int NOT NULL,
+        CompanyId int NOT NULL,
+        EventType nvarchar(150) NOT NULL,
+        PayloadJson nvarchar(max) NOT NULL,
+        IdempotencyKey nvarchar(200) NOT NULL,
+        Status nvarchar(20) NOT NULL,
+        AttemptCount int NOT NULL CONSTRAINT DF_WebhookDeliveries_Attempts DEFAULT(0),
+        NextAttemptAt datetime2 NOT NULL,
+        LastAttemptAt datetime2 NULL,
+        SentAt datetime2 NULL,
+        LastStatusCode int NULL,
+        LastError nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_WebhookDeliveries_Created DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_WebhookDeliveries_Subscription FOREIGN KEY (SubscriptionId) REFERENCES WebhookSubscriptions(Id),
+        CONSTRAINT FK_WebhookDeliveries_Company FOREIGN KEY (CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_WebhookDeliveries_Idempotency UNIQUE (SubscriptionId, IdempotencyKey)
+    );
+    CREATE INDEX IX_WebhookDeliveries_Due
+        ON WebhookDeliveries(Status, NextAttemptAt, AttemptCount) INCLUDE(SubscriptionId, CompanyId);
+END;
+"""),
     };
 
     /// <summary>

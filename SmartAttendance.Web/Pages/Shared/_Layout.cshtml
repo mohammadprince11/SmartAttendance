@@ -305,6 +305,10 @@
                         <span class="nexora-nav-dot"></span>
                         <span>أدوار الوصول</span>
                     </a>
+                    <a asp-page="/Integrations/Webhooks" class="nexora-nav-link nexora-root-link @(IsUnder("/Integrations") ? "active nexora-active" : "")" data-nav-area="integrations" data-sidebar-label="التكاملات">
+                        <span class="nexora-nav-dot gold"></span>
+                        <span>التكاملات</span>
+                    </a>
                 }
                 @if ((hasVisiblePeopleNavigation || accessProfile?.HasPagesRole == true) && CanModule("People"))
                 {
