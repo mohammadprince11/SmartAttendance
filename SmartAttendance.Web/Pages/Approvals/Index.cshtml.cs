@@ -82,7 +82,7 @@ public class IndexModel : PageModel
             await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
         Message = result.Message;
         MessageIsError = !result.Ok;
-        if (result.FinalApproved) await ApplyEffectsAsync(id);
+        if (result.FinalApproved) await ApplyEffectsAsync(id, await ScopeAsync());
         await LoadAsync();
         return Page();
     }
@@ -109,7 +109,7 @@ public class IndexModel : PageModel
             var r = await ApprovalWorkflowEngine.ApproveAsync(
                 _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
-            if (r.FinalApproved) { await ApplyEffectsAsync(id); final++; }
+            if (r.FinalApproved) { await ApplyEffectsAsync(id, scope); final++; }
         }
         Message = ok == 0 ? "لم يُعتمد أي طلب (تحقق من الصلاحية/الخطوة)." :
             $"تم اعتماد خطوة لـ {ok} طلب" + (final > 0 ? $"، منها {final} اكتملت لجنتها وفُعِّل أثرها." : ".");
@@ -136,11 +136,11 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    private async Task ApplyEffectsAsync(int id)
+    private async Task ApplyEffectsAsync(int id, CompanyScope scope)
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
-        await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, id, ActorName(), ip);
+        await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, scope, id, ActorName(), ip);
         await ShiftRequestStore.ApplyIfShiftRequestAsync(_dbContext, id);
 
         // الإجازة/المغادرة المعتمَدة تغيّر اليومية — أعد تحليلها إن كان المفتاح مفعّلاً.

@@ -333,8 +333,13 @@ DELETE FROM SelfServiceRequests WHERE Id=@r AND (@e IS NULL OR EmployeeId=@e);
     /// <item>زيادة راتب → إنشاء وتطبيق <see cref="SalaryRaiseStore"/> (يحدّث الأساسي).</item>
     /// </list>
     /// </summary>
-    public static async Task<bool> ApplyIfFinancialAsync(ApplicationDbContext db, int requestId, string actor, string? ip)
+    public static async Task<bool> ApplyIfFinancialAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, int requestId, string actor, string? ip)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
+            return false;
         await EnsureAsync(db);
 
         var detail = await GetDetailAsync(db, requestId);
@@ -369,10 +374,7 @@ SELECT @@ROWCOUNT;
             case Loan:
             case Advance:
             {
-                // مسارٌ داخليّ بعد اعتماد الطلب: التخويل حُسم بمسار الاعتماد (يُفحَص
-                // بالنطاق)، والموظف هنا من صفّ الطلب المعتمَد لا من مدخل مستخدم —
-                // فالنطاق غير مقيَّد عمداً كي لا يُرفَض تطبيقُ طلبٍ اعتُمد بحقّه.
-                var loanId = await LoanStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new LoanStore.Loan_
+                var loanId = await LoanStore.SaveAsync(db, scope, new LoanStore.Loan_
                 {
                     EmployeeId = employeeId,
                     LoanType = detail.Kind == Advance ? LoanStore.Advance : LoanStore.Loan,
@@ -393,7 +395,7 @@ SELECT @@ROWCOUNT;
             case Reimbursement:
             {
                 var outSalary = detail.Kind == Reimbursement;
-                var txId = await PayrollTransactionStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new PayrollTransactionStore.Transaction
+                var txId = await PayrollTransactionStore.SaveAsync(db, scope, new PayrollTransactionStore.Transaction
                 {
                     EmployeeId = employeeId,
                     Year = detail.StartYear,
@@ -421,11 +423,7 @@ SELECT @@ROWCOUNT;
                     ? Math.Round(oldBasic * (1 + detail.Amount / 100m), 2)
                     : oldBasic + detail.Amount;
 
-                // تطبيق داخلي بعد اعتماد الطلب المالي: معرّف الموظف من صفّ الطلب المُعتمَد
-                // (لا من المتصفح) وقد مرّ بعزل الطلبات المالية عند السرد/الاعتماد، فالنطاق
-                // هنا غير مقيَّد عمداً (نمط المسارات الداخلية الموثوقة).
-                var internalScope = Security.CompanyScope.Unrestricted();
-                var raiseId = await SalaryRaiseStore.SaveAsync(db, internalScope, new SalaryRaiseStore.Raise
+                var raiseId = await SalaryRaiseStore.SaveAsync(db, scope, new SalaryRaiseStore.Raise
                 {
                     EmployeeId = employeeId,
                     OldBasic = oldBasic,
@@ -437,7 +435,7 @@ SELECT @@ROWCOUNT;
                     Note = $"من طلب مالي #{requestId}",
                     Status = "Approved"
                 }, actor);
-                await SalaryRaiseStore.ApplyAsync(db, internalScope, raiseId, actor);
+                await SalaryRaiseStore.ApplyAsync(db, scope, raiseId, actor);
                 refId = raiseId;
                 effect = $"زيادة راتب معتمدة (#{raiseId}) — الأساسي {oldBasic:0.##} ← {newBasic:0.##}";
                 break;

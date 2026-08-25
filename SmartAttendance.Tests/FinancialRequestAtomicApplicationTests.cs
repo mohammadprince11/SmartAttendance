@@ -15,8 +15,10 @@ public sealed class FinancialRequestAtomicApplicationTests
             directory!.FullName, "SmartAttendance.Web", "Infrastructure", "Hrms", "FinancialRequestStore.cs"));
 
         Assert.Contains("BeginTransactionAsync", source, StringComparison.Ordinal);
+        Assert.Contains("CanAccessOwnedRowAsync", source, StringComparison.Ordinal);
         Assert.Contains("d.Applied = 0 AND r.Status = N'Approved'", source, StringComparison.Ordinal);
         Assert.Contains("if (claimed != 1) return false", source, StringComparison.Ordinal);
         Assert.Contains("transaction.CommitAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CompanyScope.Unrestricted()", source, StringComparison.Ordinal);
     }
 }
