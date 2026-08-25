@@ -17,6 +17,8 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity>
         _dbSet = context.Set<TEntity>();
     }
 
+    public IQueryable<TEntity> Query() => _dbSet.Where(entity => !entity.IsDeleted);
+
     public virtual async Task<TEntity?> GetByIdAsync(int id)
     {
         return await _dbSet
@@ -25,9 +27,7 @@ public class GenericRepository<TEntity> : IGenericRepository<TEntity>
 
     public virtual async Task<IEnumerable<TEntity>> GetAllAsync()
     {
-        return await _dbSet
-            .Where(x => !x.IsDeleted)
-            .ToListAsync();
+        return await Query().ToListAsync();
     }
 
     public virtual async Task AddAsync(TEntity entity)
