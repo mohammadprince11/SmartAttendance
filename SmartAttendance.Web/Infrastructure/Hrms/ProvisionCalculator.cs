@@ -1,5 +1,6 @@
 using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -42,9 +43,11 @@ public static class ProvisionCalculator
     /// لموظفي الشركة النشطين (أو الكل عند null). فلتر اختياري بالبحث/القسم/الفرع.
     /// </summary>
     public static async Task<Result> ComputeAsync(
-        ApplicationDbContext db, DateOnly asOf, int year,
+        ApplicationDbContext db, CompanyScope scope, DateOnly asOf, int year,
         int? companyId = null, string? search = null, string? department = null, string? branch = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new Result();
         await EmployeeFinancialInfoSchema.EnsureAsync(db);
         await LeaveBalanceSchema.EnsureAsync(db);
 
@@ -61,9 +64,20 @@ LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
 WHERE ISNULL(e.IsDeleted,0) = 0 AND ISNULL(e.IsActive,1) = 1
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@CompanyId IS NULL OR e.CompanyId = @CompanyId)
+  AND (@Department IS NULL OR d.Name = @Department)
+  AND (@Branch IS NULL OR b.Name = @Branch)
+  AND (@Search IS NULL OR e.EmployeeNo LIKE N'%' + @Search + N'%' OR e.FullName LIKE N'%' + @Search + N'%')
 ORDER BY e.EmployeeNo;
 """,
-            command => { },
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId is > 0 ? companyId.Value : DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Department", DbValue(department));
+                HrmsDatabase.AddParameter(command, "@Branch", DbValue(branch));
+                HrmsDatabase.AddParameter(command, "@Search", DbValue(search));
+            },
             reader => new
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
@@ -76,26 +90,16 @@ ORDER BY e.EmployeeNo;
                 CompanyId = HrmsDatabase.GetInt(reader, "CompanyId")
             });
 
-        if (companyId is > 0) employees = employees.Where(e => e.CompanyId == companyId).ToList();
-        if (!string.IsNullOrWhiteSpace(department)) employees = employees.Where(e => e.Dept == department).ToList();
-        if (!string.IsNullOrWhiteSpace(branch)) employees = employees.Where(e => e.Branch == branch).ToList();
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var v = search.Trim();
-            employees = employees.Where(e =>
-                e.No.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                e.Name.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-
         // 2) تجاوزات رصيد الإجازة السنوية للسنة (المستحق + المرحّل) — استعلام واحد
         var annualType = (int)Domain.Enums.LeaveType.Annual;
         var overrides = (await HrmsDatabase.QueryAsync(
             db,
-            "SELECT EmployeeId, EntitledDays, CarriedOverDays FROM LeaveBalances WHERE [Year] = @Year AND LeaveType = @Type;",
+            $"SELECT l.EmployeeId, l.EntitledDays, l.CarriedOverDays FROM LeaveBalances l INNER JOIN Employees e ON e.Id=l.EmployeeId WHERE l.[Year] = @Year AND l.LeaveType = @Type AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")} AND (@CompanyId IS NULL OR e.CompanyId=@CompanyId);",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Year", year);
                 HrmsDatabase.AddParameter(command, "@Type", annualType);
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId is > 0 ? companyId.Value : DBNull.Value);
             },
             reader => new
             {
@@ -111,13 +115,14 @@ ORDER BY e.EmployeeNo;
         var used = new Dictionary<int, decimal>();
         var leaveRows = await HrmsDatabase.QueryAsync(
             db,
-            "SELECT EmployeeId, FromDate, ToDate FROM LeaveRequests WHERE Status = @Status AND LeaveType = @Type AND FromDate <= @End AND ToDate >= @Start AND ISNULL(IsDeleted,0)=0;",
+            $"SELECT l.EmployeeId, l.FromDate, l.ToDate FROM LeaveRequests l INNER JOIN Employees e ON e.Id=l.EmployeeId WHERE l.Status = @Status AND l.LeaveType = @Type AND l.FromDate <= @End AND l.ToDate >= @Start AND ISNULL(l.IsDeleted,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")} AND (@CompanyId IS NULL OR e.CompanyId=@CompanyId);",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Status", approved);
                 HrmsDatabase.AddParameter(command, "@Type", annualType);
                 HrmsDatabase.AddParameter(command, "@Start", yearStart.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@End", yearEnd.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId is > 0 ? companyId.Value : DBNull.Value);
             },
             reader => new
             {
@@ -169,4 +174,7 @@ ORDER BY e.EmployeeNo;
         result.Rows = result.Rows.OrderByDescending(r => r.Total).ToList();
         return result;
     }
+
+    private static object DbValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
 }

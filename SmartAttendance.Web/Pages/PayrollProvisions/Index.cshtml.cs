@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.PayrollProvisions;
 
@@ -14,10 +15,12 @@ namespace SmartAttendance.Web.Pages.PayrollProvisions;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext db)
+    public IndexModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)] public string? AsOf { get; set; }
@@ -39,14 +42,16 @@ public class IndexModel : PageModel
         AsOf = asOf.ToString("yyyy-MM-dd");
         Year = ResolvedYear;
 
-        Data = await ProvisionCalculator.ComputeAsync(_db, asOf, ResolvedYear, null, Search, FDept, FBranch);
-        (AllDepartments, AllBranches, _) = await MassScopeResolver.OrgListsAsync(_db);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        Data = await ProvisionCalculator.ComputeAsync(_db, scope, asOf, ResolvedYear, null, Search, FDept, FBranch);
+        (AllDepartments, AllBranches, _) = await MassScopeResolver.OrgListsAsync(_db, authorizationScope: scope);
     }
 
     public async Task<IActionResult> OnGetExportAsync()
     {
         var asOf = AsOfDate;
-        var data = await ProvisionCalculator.ComputeAsync(_db, asOf, ResolvedYear, null, Search, FDept, FBranch);
+        var data = await ProvisionCalculator.ComputeAsync(
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), asOf, ResolvedYear, null, Search, FDept, FBranch);
 
         var sb = new StringBuilder();
         sb.AppendLine("الرقم الوظيفي,اسم الموظف,القسم,الفرع,تاريخ التعيين,الأساسي,سنوات الخدمة,مخصص نهاية الخدمة,أيام الإجازة,مخصص الإجازات,إجمالي الاحتياطي");
