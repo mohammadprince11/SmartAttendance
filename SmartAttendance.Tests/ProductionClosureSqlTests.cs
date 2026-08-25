@@ -8,6 +8,7 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Reports;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Tests;
@@ -275,6 +276,31 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
         Assert.False(await SalaryItemStore.DeleteAsync(db, scopeA, bId));
         Assert.Equal("Company B allowance", Assert.Single(await RawStringsAsync(
             db, $"SELECT Name FROM SalaryItems WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
+    public async Task Saved_reports_reject_cross_company_reads_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+
+        await PeopleReportsStore.EnsureSchemaAsync(db);
+        await PeopleReportsStore.CreateAsync(
+            db, scopeA, _companyA, "Company A custom report", null, "employees", "no,name", "owner-a", false);
+        await PeopleReportsStore.CreateAsync(
+            db, scopeB, _companyB, "Company B custom report", null, "employees", "no,name", "owner-b", false);
+
+        var aRows = await PeopleReportsStore.LoadAllAsync(db, scopeA);
+        Assert.Contains(aRows, report => report.Name == "Company A custom report");
+        Assert.DoesNotContain(aRows, report => report.Name == "Company B custom report");
+
+        var bId = await ScalarAsync(db,
+            $"SELECT Id FROM PeopleReports WHERE CompanyId={_companyB} AND Name=N'Company B custom report';");
+        Assert.Null(await PeopleReportsStore.GetAsync(db, scopeA, bId));
+        await PeopleReportsStore.DeleteOwnAsync(db, scopeA, bId, "owner-b");
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PeopleReports WHERE Id={bId} AND IsDeleted=0;"));
     }
 
     [SkippableFact]

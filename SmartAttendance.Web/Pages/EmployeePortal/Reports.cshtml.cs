@@ -54,7 +54,10 @@ public class ReportsModel : PageModel
             return RedirectToPage("/EmployeePortal/Index");
         }
 
-        var all = await PeopleReportsStore.LoadAllAsync(_dbContext);
+        var employeeScope = employee.Value.CompanyId is > 0
+            ? CompanyScope.ForCompanies(new[] { employee.Value.CompanyId.Value })
+            : CompanyScope.DeniedAll();
+        var all = await PeopleReportsStore.LoadAllAsync(_dbContext, employeeScope);
         Published = all.Where(report => report.ShareWithEmployees).ToList();
 
         if (ReportId <= 0)
@@ -98,13 +101,7 @@ public class ReportsModel : PageModel
 
         // نطاق البوابة = شركة الموظف نفسه: لا يقرأ مصدرُ الحضور صفوف شركات أخرى
         // حتى قبل ترشيح «صفوفي أنا» بالأسفل. موظف بلا شركة ⟹ مغلق الفشل.
-        var companyId = (await SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.QueryAsync(
-            _dbContext,
-            "SELECT CompanyId FROM Employees WHERE Id = @Id;",
-            command => SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.AddParameter(
-                command, "@Id", employee.Value.Id),
-            reader => SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.GetNullableInt(
-                reader, "CompanyId"))).FirstOrDefault();
+        var companyId = employee.Value.CompanyId;
 
         var rows = await PeopleReportCatalog.LoadAsync(
             _dbContext,
@@ -127,7 +124,7 @@ public class ReportsModel : PageModel
     }
 
     /// <summary>نفس مسار حسم الموظف ببوابة الموظف: مطالبة <c>EmployeeId</c> وإلا جدول الدخول.</summary>
-    private async Task<(int Id, string EmployeeNo)?> ResolveEmployeeAsync()
+    private async Task<(int Id, string EmployeeNo, int? CompanyId)?> ResolveEmployeeAsync()
     {
         var employeeId = 0;
 
@@ -155,9 +152,9 @@ public class ReportsModel : PageModel
 
         var match = await _dbContext.Employees.AsNoTracking()
             .Where(e => e.Id == employeeId && !e.IsDeleted)
-            .Select(e => new { e.Id, e.EmployeeNo })
+            .Select(e => new { e.Id, e.EmployeeNo, e.CompanyId })
             .FirstOrDefaultAsync();
 
-        return match is null ? null : (match.Id, match.EmployeeNo);
+        return match is null ? null : (match.Id, match.EmployeeNo, match.CompanyId);
     }
 }

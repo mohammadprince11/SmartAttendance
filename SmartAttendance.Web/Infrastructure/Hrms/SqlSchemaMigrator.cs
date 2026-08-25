@@ -1525,6 +1525,16 @@ BEGIN
     CREATE INDEX IX_SalaryItems_Company ON SalaryItems (CompanyId, IsActive, ItemType);
 END;
 """),
+        new(
+            "20260826-02-people-report-company-scope",
+            """
+IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL
+   AND COL_LENGTH('PeopleReports', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE PeopleReports ADD CompanyId int NULL;
+    CREATE INDEX IX_PeopleReports_Company ON PeopleReports (CompanyId, IsSystem, IsDeleted);
+END;
+"""),
     };
 
     /// <summary>

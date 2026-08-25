@@ -99,11 +99,13 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
         await LoadListsAsync();
 
         if (ReportId > 0)
         {
-            Current = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
+            Current = await PeopleReportsStore.GetAsync(_dbContext, scope, ReportId);
             if (Current == null || !IsDatasetAllowed(Current.DatasetKey))
             {
                 return Redirect(SelfPath);
@@ -130,29 +132,31 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnGetCountsAsync()
     {
         if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
         await LoadListsAsync();
 
         var reports = SystemReports.Concat(MyReports).Concat(SharedReports).ToList();
-        var filters = new PeopleReportCatalog.ReportFilters
-        {
-            Scope = await _companyScope.GetAsync(),
-            CompanyId = CompanyId,
-            ActiveOnly = ActiveOnly,
-            From = ParseDate(From),
-            To = ParseDate(To)
-        };
-
         var bySource = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var counts = new Dictionary<string, int>();
 
         foreach (var report in reports)
         {
-            var sourceKey = report.DatasetKey + "|" + (report.FilterKey ?? "");
+            var reportCompanyId = report.CompanyId ?? CompanyId;
+            var sourceKey = report.DatasetKey + "|" + (report.FilterKey ?? "") + "|" + reportCompanyId;
 
             if (!bySource.TryGetValue(sourceKey, out var count))
             {
                 var rows = await PeopleReportCatalog.LoadAsync(
-                    _dbContext, report.DatasetKey, report.FilterKey, filters);
+                    _dbContext, report.DatasetKey, report.FilterKey,
+                    new PeopleReportCatalog.ReportFilters
+                    {
+                        Scope = scope,
+                        CompanyId = reportCompanyId,
+                        ActiveOnly = ActiveOnly,
+                        From = ParseDate(From),
+                        To = ParseDate(To)
+                    });
                 count = rows.Count;
                 bySource[sourceKey] = count;
             }
@@ -166,7 +170,9 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnGetExportAsync()
     {
         if (!await LoadReportAccessAsync()) return Forbid();
-        var report = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, scope, ReportId);
         if (report == null || !IsDatasetAllowed(report.DatasetKey))
         {
             return Redirect(SelfPath);
@@ -190,10 +196,12 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostCreateReportAsync(
         string name, string? description, string datasetKey, string columnsCsv, string visibility,
-        int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false)
+        int companyId, int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false)
     {
         if (!await LoadReportAccessAsync()) return Forbid();
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
 
         var dataset = PeopleReportCatalog.GetDataset(datasetKey ?? "");
         name = (name ?? "").Trim();
@@ -217,21 +225,23 @@ public class IndexModel : PageModel
 
         var isShared = string.Equals(visibility, "everyone", StringComparison.OrdinalIgnoreCase);
         var isSpecific = string.Equals(visibility, "specific", StringComparison.OrdinalIgnoreCase);
+        var allowedShareUsers = await AllowedShareUsersAsync(scope, companyId);
         var sharedWithCsv = isSpecific && sharedWith is { Count: > 0 }
-            ? string.Join(",", sharedWith.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+            ? string.Join(",", sharedWith.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim())
+                .Where(allowedShareUsers.Contains).Distinct(StringComparer.OrdinalIgnoreCase))
             : null;
 
         if (id > 0)
         {
             await PeopleReportsStore.UpdateOwnAsync(
-                _dbContext, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
+                _dbContext, scope, companyId, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
                 sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
             Message = "تم تحديث التقرير.";
         }
         else
         {
             await PeopleReportsStore.CreateAsync(
-                _dbContext, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
+                _dbContext, scope, companyId, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
                 sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
             Message = "تم حفظ التقرير.";
         }
@@ -254,13 +264,21 @@ public class IndexModel : PageModel
     /// النسخة تُولَد **مملوكةً لك وغير مشاركة** مهما كان الأصل — مشاركةُ الأصل
     /// قرارُ صاحبه لا يُورَّث بالنسخ.
     /// </summary>
-    public async Task<IActionResult> OnPostDuplicateReportAsync(int id)
+    public async Task<IActionResult> OnPostDuplicateReportAsync(int id, int? companyId)
     {
         if (!await LoadReportAccessAsync()) return Forbid();
-        var source = await PeopleReportsStore.GetAsync(_dbContext, id);
+        var scope = await _companyScope.GetAsync();
+        var source = await PeopleReportsStore.GetAsync(_dbContext, scope, id);
         if (source == null || !IsDatasetAllowed(source.DatasetKey))
         {
             Message = "التقرير غير موجود.";
+            return Redirect(SelfPath);
+        }
+
+        var targetCompanyId = companyId ?? source.CompanyId;
+        if (targetCompanyId is not > 0 || !scope.Allows(targetCompanyId))
+        {
+            Message = "اختر شركة من مرشح الصفحة قبل إنشاء نسخة.";
             return Redirect(SelfPath);
         }
 
@@ -270,6 +288,8 @@ public class IndexModel : PageModel
 
         await PeopleReportsStore.CreateAsync(
             _dbContext,
+            scope,
+            targetCompanyId.Value,
             NextCopyName(source.Name),
             source.Description,
             source.DatasetKey,
@@ -315,9 +335,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostDeleteReportAsync(int id)
     {
         if (!await LoadReportAccessAsync()) return Forbid();
-        var report = await PeopleReportsStore.GetAsync(_dbContext, id);
+        var scope = await _companyScope.GetAsync();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, scope, id);
         if (report == null || !IsDatasetAllowed(report.DatasetKey)) return Forbid();
-        await PeopleReportsStore.DeleteOwnAsync(_dbContext, id, CurrentUser);
+        await PeopleReportsStore.DeleteOwnAsync(_dbContext, scope, id, CurrentUser);
         Message = "تم حذف التقرير.";
         return Redirect(SelfPath + "#mine");
     }
@@ -325,16 +346,18 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostToggleShareAsync(int id)
     {
         if (!await LoadReportAccessAsync()) return Forbid();
-        var report = await PeopleReportsStore.GetAsync(_dbContext, id);
+        var scope = await _companyScope.GetAsync();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, scope, id);
         if (report == null || !IsDatasetAllowed(report.DatasetKey)) return Forbid();
-        await PeopleReportsStore.ToggleShareOwnAsync(_dbContext, id, CurrentUser);
+        await PeopleReportsStore.ToggleShareOwnAsync(_dbContext, scope, id, CurrentUser);
         Message = "تم تحديث المشاركة.";
         return Redirect(SelfPath + "#mine");
     }
 
     private async Task LoadListsAsync()
     {
-        var all = await PeopleReportsStore.LoadAllAsync(_dbContext);
+        var scope = await _companyScope.GetAsync();
+        var all = await PeopleReportsStore.LoadAllAsync(_dbContext, scope);
 
         // اقصر القوائم على مصادر هذا الموديول فقط (أشخاص مقابل حضور).
         var moduleKeys = new HashSet<string>(
@@ -350,19 +373,40 @@ public class IndexModel : PageModel
             !string.Equals(r.OwnerUser, CurrentUser, StringComparison.OrdinalIgnoreCase) &&
             (r.IsShared || r.SharedWith.Contains(CurrentUser, StringComparer.OrdinalIgnoreCase))).ToList();
 
-        Companies = await _dbContext.Companies
+        var companyQuery = _dbContext.Companies
             .AsNoTracking()
-            .Where(c => !c.IsDeleted && c.IsActive)
+            .Where(c => !c.IsDeleted && c.IsActive);
+        if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+            companyQuery = companyQuery.Where(c => allowedCompanyIds.Contains(c.Id));
+        }
+        Companies = await companyQuery
             .OrderBy(c => c.Name)
             .Select(c => new CompanyOption { Id = c.Id, Name = c.Name })
             .ToListAsync();
 
-        ShareUserOptions = await _dbContext.SystemUsers
-            .AsNoTracking()
-            .Where(u => !u.IsDeleted && u.IsActive && u.UserName != CurrentUser)
-            .OrderBy(u => u.UserName)
-            .Select(u => u.UserName)
-            .ToListAsync();
+        ShareUserOptions = (await AllowedShareUsersAsync(scope, CompanyId)).OrderBy(u => u).ToList();
+    }
+
+    private async Task<HashSet<string>> AllowedShareUsersAsync(CompanyScope scope, int? companyId)
+    {
+        var query = _dbContext.SystemUsers.AsNoTracking()
+            .Where(u => !u.IsDeleted && u.IsActive && u.UserName != CurrentUser &&
+                        u.EmployeeId != null && u.Employee != null && u.Employee.CompanyId != null);
+
+        if (companyId is > 0)
+        {
+            if (!scope.Allows(companyId)) return new(StringComparer.OrdinalIgnoreCase);
+            query = query.Where(u => u.Employee!.CompanyId == companyId);
+        }
+        else if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(u => u.Employee!.CompanyId != null && allowedCompanyIds.Contains(u.Employee.CompanyId.Value));
+        }
+
+        return (await query.Select(u => u.UserName).ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task<bool> LoadReportAccessAsync()
@@ -427,7 +471,7 @@ public class IndexModel : PageModel
             new PeopleReportCatalog.ReportFilters
             {
                 Scope = await _companyScope.GetAsync(),
-                CompanyId = CompanyId,
+                CompanyId = report.CompanyId ?? CompanyId,
                 Search = Search,
                 ActiveOnly = ActiveOnly,
                 From = ParseDate(From),
