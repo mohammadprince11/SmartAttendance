@@ -519,14 +519,15 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             _dbContext, employeeId, DateOnly.FromDateTime(punchAt.Value));
         var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt.Value);
 
-        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_dbContext, new MissingPunchRequestStore.Request
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(
+            _dbContext, CompanyScope.Unrestricted(), new MissingPunchRequestStore.Request
         {
             EmployeeId = employeeId,
             PunchAt = punchAt.Value,
             PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(form["MpReason"]) ? null : form["MpReason"].ToString().Trim(),
             Source = "خدمة ذاتية"
-        }, User.Identity?.Name ?? "employee");
+        }, User.Identity?.Name ?? "employee", employeeId);
 
         StatusMessage = ok ? "تم إرسال طلب البصمة المفقودة وهو الآن قيد مراجعة الموارد البشرية." : message;
         return RedirectToPage(new { tab = returnTab ?? "requests" });

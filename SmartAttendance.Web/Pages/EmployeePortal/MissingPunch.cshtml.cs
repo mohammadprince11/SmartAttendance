@@ -78,14 +78,15 @@ public class MissingPunchModel : PageModel
         var existingTimes = await PunchTypingEngine.DayPunchTimesAsync(_dbContext, employeeId, d);
         var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt);
 
-        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_dbContext, new MissingPunchRequestStore.Request
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(
+            _dbContext, CompanyScope.Unrestricted(), new MissingPunchRequestStore.Request
         {
             EmployeeId = employeeId,
             PunchAt = punchAt,
             PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(MpReason) ? null : MpReason.Trim(),
             Source = "خدمة ذاتية"
-        }, User.Identity?.Name ?? "employee");
+        }, User.Identity?.Name ?? "employee", employeeId);
 
         StatusMessage = ok
             ? "تم إرسال طلب البصمة المفقودة وهو الآن قيد مراجعة الموارد البشرية."

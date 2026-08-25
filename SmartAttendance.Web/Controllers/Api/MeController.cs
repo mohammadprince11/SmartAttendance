@@ -170,14 +170,15 @@ WHERE e.Id = @Id;
         var existingTimes = await PunchTypingEngine.DayPunchTimesAsync(_db, EmployeeId, d);
         var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt);
 
-        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_db, new MissingPunchRequestStore.Request
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(
+            _db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(), new MissingPunchRequestStore.Request
         {
             EmployeeId = EmployeeId,
             PunchAt = punchAt,
             PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(body.Reason) ? null : body.Reason.Trim(),
             Source = "خدمة ذاتية"
-        }, User.Identity?.Name ?? "employee");
+        }, User.Identity?.Name ?? "employee", EmployeeId);
 
         return ok ? Ok(new { message, derivedType }) : BadRequest(new { message });
     }
