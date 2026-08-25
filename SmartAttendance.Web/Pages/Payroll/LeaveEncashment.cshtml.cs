@@ -71,7 +71,7 @@ public class LeaveEncashmentModel : PageModel
         Items = await PayrollTransactionStore.ListAsync(
             _db, scope, Year, Month, PayrollTransactionStore.LeaveEncashment, Search, locked: Lock == "Locked");
 
-        var all = await SalaryItemStore.ListAsync(_db);
+        var all = await SalaryItemStore.ListAsync(_db, scope);
         Catalog = all.Where(x => x.IsActive && x.ItemType == "LeaveEncashment").ToList();
 
         Employees = await HrmsDatabase.QueryAsync(_db,

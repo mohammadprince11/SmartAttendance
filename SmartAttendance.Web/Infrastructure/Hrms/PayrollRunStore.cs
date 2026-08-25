@@ -668,7 +668,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
         // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ
         // وتُضاف بنوداً للقسيمة (استحقاق يدخل الإجمالي/الوعاء الخاضع، أو اقتطاع). عناصر
         // النظام (الأساسي/الضريبة/الضمان) مستثناة — يعالجها المحرك مباشرةً.
-        var salaryItems = await SalaryItemStore.ListAsync(dbContext);
+        var salaryItems = await SalaryItemStore.ListAsync(dbContext, runScope, run.CompanyId);
         var salaryItemsById = salaryItems
             .GroupBy(x => x.Id)
             .ToDictionary(g => g.Key, g => g.First());

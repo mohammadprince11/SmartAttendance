@@ -7,7 +7,7 @@
     ViewData["Title"] = "عناصر الراتب";
     var itemsJson = JsonSerializer.Serialize(Model.Items.Select(i => new
     {
-        i.Id, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue, i.Formula,
+        i.Id, i.CompanyId, i.Name, i.NameEn, i.ItemType, i.ValueKind, i.DefaultValue, i.Formula,
         i.Taxable, i.GosiEligible, i.InGross, i.Prorated, i.OvertimeEligible, i.UnpaidLeaveEligible,
         i.IsActive, i.SortOrder, i.IsSystem,
         i.MinValue, i.MaxValue,
@@ -77,6 +77,15 @@
             <p>كتالوج بنود المسير (دخل/بدل/اقتطاع/أوفرتايم) — يحدد النوع والقيمة وخضوعه للضريبة ودخوله بالإجمالي وتنسيبه بالحضور.</p>
         </div>
         <div style="display:flex;gap:8px">
+            <form method="get" style="display:flex;gap:8px;align-items:center">
+                <select name="CompanyId" onchange="this.form.submit()" aria-label="الشركة">
+                    <option value="">كل الشركات المسموحة</option>
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                    }
+                </select>
+            </form>
             <button type="button" class="si-btn" onclick="siOpen(0)">+ عنصر جديد</button>
         </div>
     </header>
@@ -109,9 +118,9 @@
                         </td>
                         <td><span class="si-chip @(i.IsActive ? "" : "ded")">@(i.IsActive ? "نشط" : "متوقف")</span></td>
                         <td style="text-align:end;white-space:nowrap">
-                            <button type="button" class="si-btn ghost sm" onclick="siOpen(@i.Id)">تعديل</button>
                             @if (!i.IsSystem)
                             {
+                                <button type="button" class="si-btn ghost sm" onclick="siOpen(@i.Id)">تعديل</button>
                                 <form method="post" asp-page-handler="Delete" style="display:inline"><input type="hidden" name="id" value="@i.Id" /><button class="si-btn ghost sm" type="submit" style="color:#f87171" data-zyconfirm="حذف العنصر؟">حذف</button></form>
                             }
                         </td>
@@ -138,6 +147,15 @@
         <div class="hrms-slideover-body">
             <form method="post" asp-page-handler="Save" class="si-form" style="display:flex;flex-direction:column;gap:12px">
                 <input type="hidden" name="Id" id="si-Id" value="0" />
+                <label>الشركة *
+                    <select name="CompanyId" id="si-CompanyId" required>
+                        <option value="">اختر الشركة</option>
+                        @foreach (var company in Model.Companies)
+                        {
+                            <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                        }
+                    </select>
+                </label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                     <label>الاسم (عربي) *<input type="text" name="Name" id="si-Name" required /></label>
                     <label>Name (EN)<input type="text" name="NameEn" id="si-NameEn" dir="ltr" /></label>
@@ -266,6 +284,7 @@
                 var i = SI_DATA.find(function (x) { return x.Id === id; });
                 if (i) {
                     document.getElementById('si-Name').value = i.Name || '';
+                    document.getElementById('si-CompanyId').value = i.CompanyId || '';
                     document.getElementById('si-NameEn').value = i.NameEn || '';
                     document.getElementById('si-ItemType').value = i.ItemType;
                     document.getElementById('si-ValueKind').value = i.ValueKind;

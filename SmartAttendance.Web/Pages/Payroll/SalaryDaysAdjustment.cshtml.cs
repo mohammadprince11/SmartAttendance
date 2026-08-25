@@ -70,7 +70,7 @@ public class SalaryDaysAdjustmentModel : PageModel
         Items = await PayrollTransactionStore.ListAsync(
             _db, scope, Year, Month, PayrollTransactionStore.SalaryDays, Search, locked: Lock == "Locked");
 
-        var all = await SalaryItemStore.ListAsync(_db);
+        var all = await SalaryItemStore.ListAsync(_db, scope);
         Catalog = all.Where(x => x.IsActive && x.ItemType == "SalaryDays").ToList();
 
         Employees = await HrmsDatabase.QueryAsync(_db,

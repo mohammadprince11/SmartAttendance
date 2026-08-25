@@ -68,7 +68,7 @@ public class OvertimeModel : PageModel
         Items = await PayrollTransactionStore.ListAsync(
             _db, scope, Year, Month, PayrollTransactionStore.Overtime, Search, locked: Lock == "Locked");
 
-        var all = await SalaryItemStore.ListAsync(_db);
+        var all = await SalaryItemStore.ListAsync(_db, scope);
         Catalog = all.Where(x => x.IsActive && x.ItemType == "Overtime").ToList();
 
         Employees = await HrmsDatabase.QueryAsync(_db,

@@ -147,7 +147,9 @@ public partial class ProfileModel
 
             ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
             await LoadFinancialProfilesAsync(today);
-            SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext);
+            var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+            SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(
+                _dbContext, companyScope, await AuthorizedEmployeeCompanyIdAsync(companyScope));
         }
 
         await HrLookups.EnsureSchemaAsync(_dbContext);
@@ -259,6 +261,12 @@ public partial class ProfileModel
     private IActionResult BackToFiles() => RedirectToPage("./Profile", null, new { Id }, "profile-files");
 
     private static string? CleanText(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    private async Task<int?> AuthorizedEmployeeCompanyIdAsync(CompanyScope scope) =>
+        await HrmsDatabase.ScalarAsync<int?>(
+            _dbContext,
+            $"SELECT CompanyId FROM Employees e WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0 AND {SmartAttendance.Web.Infrastructure.Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", Id));
 
     public async Task<IActionResult> OnPostSaveDependentAsync()
     {
@@ -396,8 +404,10 @@ public partial class ProfileModel
 
         await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
         if (!await _dbContext.Employees.AnyAsync(e => e.Id == Id && !e.IsDeleted)) return NotFound();
-        var salaryItem = Allowance.SalaryItemId > 0
-            ? (await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext))
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var employeeCompanyId = await AuthorizedEmployeeCompanyIdAsync(scope);
+        var salaryItem = Allowance.SalaryItemId > 0 && employeeCompanyId is > 0
+            ? (await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext, scope, employeeCompanyId))
                 .SingleOrDefault(x => x.Id == Allowance.SalaryItemId)
             : null;
         if (salaryItem == null) { PanelError = "عنصر الراتب غير موجود أو غير نشط."; return BackToFiles(); }

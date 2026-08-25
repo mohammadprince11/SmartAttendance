@@ -1513,7 +1513,17 @@ END;
 IF OBJECT_ID('BankFileTemplates', 'U') IS NOT NULL
     UPDATE BankFileTemplates
     SET IsActive = 0
-    WHERE Name IN (N'الرافدين (نموذج)', N'الرشيد (نموذج)') AND CompanyId IS NULL;
+WHERE Name IN (N'الرافدين (نموذج)', N'الرشيد (نموذج)') AND CompanyId IS NULL;
+"""),
+        new(
+            "20260826-01-salary-item-company-scope",
+            """
+IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+   AND COL_LENGTH('SalaryItems', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE SalaryItems ADD CompanyId int NULL;
+    CREATE INDEX IX_SalaryItems_Company ON SalaryItems (CompanyId, IsActive, ItemType);
+END;
 """),
     };
 

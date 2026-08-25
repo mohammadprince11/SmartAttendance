@@ -139,7 +139,7 @@ public class TransactionsModel : PageModel
         Branches = Items.Select(x => x.Branch).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
         JobTitles = Items.Select(x => x.Position).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
 
-        var all = await SalaryItemStore.ListAsync(_db);
+        var all = await SalaryItemStore.ListAsync(_db, scope);
         Catalog = IsDeduction
             ? all.Where(x => x.IsActive && x.ItemType == "Deduction").ToList()
             : all.Where(x => x.IsActive && (x.ItemType == "Income" || x.ItemType == "Overtime")).ToList();

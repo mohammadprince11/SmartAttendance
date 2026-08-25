@@ -59,14 +59,14 @@ public class SimulatorModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Items = (await SalaryItemStore.ListAsync(_db))
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (scope.IsDeniedAll) return;
+
+        Items = (await SalaryItemStore.ListAsync(_db, scope, CompanyId))
             .Where(i => i.IsActive && i.ItemType is "Income" or "Deduction")
             .ToList();
 
         if (ItemIds.Count == 0) return;
-
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        if (scope.IsDeniedAll) return;
 
         var selected = Items.Where(i => ItemIds.Contains(i.Id)).ToList();
         if (selected.Count == 0) return;
