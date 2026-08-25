@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -254,6 +255,9 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
             return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         }
 
+        if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
+            return new ActionResult(false, "لا يمكن لصاحب الطلب اعتماد طلبه بنفسه.");
+
         if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
@@ -261,15 +265,21 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
                              .OrderBy(s => s.StepOrder)
                              .FirstOrDefault();
 
-        await HrmsDatabase.ExecuteAsync(
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var claimed = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
+DECLARE @Changed int;
 UPDATE ApprovalRequestSteps
 SET Status = 'Approved', ActionBy = @Actor, ActionAt = SYSUTCDATETIME(), Note = @Note
-WHERE Id = @StepId;
+WHERE Id = @StepId AND Status = 'Current';
+SET @Changed = @@ROWCOUNT;
 
+IF @Changed = 1
 INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes)
 VALUES (@RequestId, @StepName, 'Approved', @Actor, @Note);
+
+SELECT @Changed;
 """,
             command =>
             {
@@ -279,6 +289,8 @@ VALUES (@RequestId, @StepName, 'Approved', @Actor, @Note);
                 HrmsDatabase.AddParameter(command, "@RequestId", requestId);
                 HrmsDatabase.AddParameter(command, "@StepName", current.DisplayName);
             });
+        if (claimed != 1)
+            return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
 
         if (next == null)
         {
@@ -301,6 +313,7 @@ VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بع
                     HrmsDatabase.AddParameter(command, "@Actor", actor);
                     HrmsDatabase.AddParameter(command, "@Note", (object?)note ?? DBNull.Value);
                 });
+            await transaction.CommitAsync();
             return new ActionResult(true, "تم اعتماد الطلب نهائياً — اكتملت اللجنة.", FinalApproved: true);
         }
 
@@ -325,6 +338,7 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
                 HrmsDatabase.AddParameter(command, "@TargetRole", next.ApproverType == "Role" ? next.RoleName ?? "HR" : "HR");
             });
+        await transaction.CommitAsync();
         return new ActionResult(true, $"تمت الموافقة وانتقل الطلب إلى: {next.DisplayName}.");
     }
 
@@ -345,6 +359,9 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
             return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         }
 
+        if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
+            return new ActionResult(false, "لا يمكن لصاحب الطلب رفض طلبه من مركز الموافقات.");
+
         if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
@@ -353,13 +370,17 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
             return new ActionResult(false, "قالب الموافقة يشترط كتابة تعليق عند الرفض.");
         }
 
-        await HrmsDatabase.ExecuteAsync(
+        var claimed = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
+DECLARE @Changed int;
 UPDATE ApprovalRequestSteps
 SET Status = 'Rejected', ActionBy = @Actor, ActionAt = SYSUTCDATETIME(), Note = @Note
-WHERE Id = @StepId;
+WHERE Id = @StepId AND Status = 'Current';
+SET @Changed = @@ROWCOUNT;
 
+IF @Changed = 1
+BEGIN
 UPDATE ApprovalRequestSteps SET Status = 'Skipped' WHERE RequestId = @RequestId AND Status = 'Pending';
 
 UPDATE SelfServiceRequests
@@ -372,6 +393,9 @@ VALUES (@RequestId, @StepName, 'Rejected', @Actor, @Note);
 
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
 VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepName, 'Employee', '/SelfServices');
+END;
+
+SELECT @Changed;
 """,
             command =>
             {
@@ -381,6 +405,8 @@ VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepN
                 HrmsDatabase.AddParameter(command, "@Note", (object?)note ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@StepName", current.DisplayName);
             });
+        if (claimed != 1)
+            return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
     }
 
@@ -425,6 +451,24 @@ WHERE r.Id = @RequestId AND e.DirectManagerId = @ActorEmployeeId;
                 HrmsDatabase.AddParameter(command, "@ActorEmployeeId", actorEmployeeId.Value);
             }) > 0;
     }
+
+    private static async Task<bool> IsRequesterAsync(
+        ApplicationDbContext dbContext, int requestId, string actor, int? actorEmployeeId) =>
+        await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(1)
+FROM SelfServiceRequests r
+WHERE r.Id = @RequestId
+  AND ((@ActorEmployeeId IS NOT NULL AND r.EmployeeId = @ActorEmployeeId)
+       OR (ISNULL(r.CreatedBy, N'') <> N'' AND r.CreatedBy = @Actor));
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@RequestId", requestId);
+                HrmsDatabase.AddParameter(command, "@Actor", actor);
+                HrmsDatabase.AddParameter(command, "@ActorEmployeeId", actorEmployeeId is > 0 ? actorEmployeeId.Value : DBNull.Value);
+            }) > 0;
 
     /// <summary>تصعيد الخطوات المتأخرة (تشغيل كسولاً عند فتح شاشة الموافقات) — إشعار واحد لكل طلب.</summary>
     public static async Task<int> EscalateOverdueAsync(ApplicationDbContext dbContext)
