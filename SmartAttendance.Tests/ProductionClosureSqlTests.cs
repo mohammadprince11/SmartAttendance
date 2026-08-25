@@ -243,13 +243,48 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Salary_items_reject_cross_company_reads_writes_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+
+        var itemA = new SalaryItemStore.SalaryItem
+        {
+            CompanyId = _companyA, Name = "Company A allowance", ItemType = "Income",
+            ValueKind = "Fixed", DefaultValue = 100, IsActive = true
+        };
+        var itemB = new SalaryItemStore.SalaryItem
+        {
+            CompanyId = _companyB, Name = "Company B allowance", ItemType = "Income",
+            ValueKind = "Fixed", DefaultValue = 200, IsActive = true
+        };
+        Assert.True(await SalaryItemStore.SaveAsync(db, scopeA, itemA));
+        Assert.True(await SalaryItemStore.SaveAsync(db, scopeB, itemB));
+
+        var aRows = await SalaryItemStore.ListAsync(db, scopeA, _companyA);
+        Assert.Contains(aRows, row => row.Name == itemA.Name);
+        Assert.DoesNotContain(aRows, row => row.Name == itemB.Name);
+
+        var bId = await ScalarAsync(db,
+            $"SELECT Id FROM SalaryItems WHERE CompanyId={_companyB} AND Name=N'Company B allowance';");
+        itemB.Id = bId;
+        itemB.Name = "Malicious rename";
+        Assert.False(await SalaryItemStore.SaveAsync(db, scopeA, itemB));
+        Assert.False(await SalaryItemStore.DeleteAsync(db, scopeA, bId));
+        Assert.Equal("Company B allowance", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Name FROM SalaryItems WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
     public async Task Allowance_identity_audit_is_unambiguous_and_fk_backed()
     {
         RequireSql();
         await using var db = NewContext();
         var salaryItemId = await ScalarAsync(db, """
-INSERT INTO SalaryItems (Name, ItemType, ValueKind, DefaultValue, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, CreatedAt)
-VALUES (N'Housing', N'Income', N'PerEmployee', 0, 0, 1, 1, 1, 1, 0, 0, 1, 10, SYSUTCDATETIME());
+INSERT INTO SalaryItems (CompanyId, Name, ItemType, ValueKind, DefaultValue, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, CreatedAt)
+VALUES ({_companyA}, N'Housing', N'Income', N'PerEmployee', 0, 0, 1, 1, 1, 1, 0, 0, 1, 10, SYSUTCDATETIME());
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """);
         await ExecuteAsync(db, $"""
