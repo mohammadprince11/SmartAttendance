@@ -454,6 +454,7 @@ builder.Services.AddHttpClient("ZynoraWebhooks", client =>
 });
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherService>();
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integrations.DevicePunchProcessorService>();
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Reports.ReportScheduleDispatcherService>();
 
 // كلمة مرور شهادة HTTPS لم تعد بالمستودع: مصدرها متغيّر البيئة وحده. نفشل بوضوح
 // عند الحاجة إليها وغيابها بدل رسالة ربط غامضة من Kestrel أو تشغيل بلا TLS بصمت.

@@ -1,7 +1,11 @@
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
 /// <summary>رسالة بريد واحدة جاهزة للإرسال.</summary>
-public sealed record EmailMessage(string ToAddress, string Subject, string Body);
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Bytes);
+
+public sealed record EmailMessage(
+    string ToAddress, string Subject, string Body,
+    IReadOnlyList<EmailAttachment>? Attachments = null);
 
 /// <summary>نتيجة محاولة إرسال: نجاح، أو فشل برسالة خطأ للتسجيل بالصادر.</summary>
 public sealed record EmailResult(bool Sent, string? Error)

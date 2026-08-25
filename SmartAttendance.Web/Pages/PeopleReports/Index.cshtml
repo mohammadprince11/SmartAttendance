@@ -260,10 +260,50 @@
                 }
                 <a href="@Model.SelfPath?handler=Export&format=xlsx&@exportQs" class="hrms-btn-secondary">⬇ Excel</a>
                 <a href="@Model.SelfPath?handler=Export&format=csv&@exportQs" class="hrms-btn-secondary">⬇ CSV</a>
+                @if (!Model.Current.IsSystem && string.Equals(Model.Current.OwnerUser, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    <button type="button" class="hrms-btn-secondary" data-hrms-open="report-schedule">⏱ جدولة</button>
+                }
                 <button type="button" class="hrms-btn-secondary" data-hrms-open="print-settings">🖨 طباعة</button>
                 <a href="@Model.SelfPath" class="hrms-btn-secondary">→ رجوع</a>
             </div>
         </div>
+
+        @if (!Model.Current.IsSystem && string.Equals(Model.Current.OwnerUser, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            <aside class="hrms-slideover" data-hrms-panel="report-schedule" aria-hidden="true">
+                <div class="hrms-slideover-backdrop" data-hrms-close></div>
+                <div class="hrms-slideover-panel">
+                    <div class="hrms-slideover-head"><h2>جدولة التقرير</h2><button type="button" data-hrms-close>×</button></div>
+                    <div class="hrms-slideover-body">
+                        <form method="post" action="@Model.SelfPath?handler=CreateSchedule" class="hrms-page">
+                            <input type="hidden" name="reportId" value="@Model.Current.Id" />
+                            <input type="hidden" name="companyId" value="@Model.Current.CompanyId" />
+                            <div class="hrms-field"><label>البريد الإلكتروني (افصل المتعدد بفاصلة)</label><textarea name="recipients" required></textarea></div>
+                            <div class="hrms-field"><label>التكرار</label><select name="frequency"><option value="Daily">يومي</option><option value="Weekly">أسبوعي</option></select></div>
+                            <div class="hrms-field"><label>ساعة التنفيذ UTC</label><input type="number" name="hourUtc" min="0" max="23" value="6" required /></div>
+                            <div class="hrms-field"><label>يوم الأسبوع (للأسبوعي: 0 الأحد — 6 السبت)</label><input type="number" name="dayOfWeek" min="0" max="6" value="0" /></div>
+                            <button type="submit" class="hrms-btn-primary">حفظ الجدولة</button>
+                        </form>
+                        @foreach (var schedule in Model.ReportSchedules.Where(item => item.ReportId == Model.Current.Id))
+                        {
+                            <div class="hrms-card" style="margin-top:10px">
+                                <strong>@(schedule.Frequency == "Weekly" ? "أسبوعي" : "يومي") · @schedule.HourUtc:00 UTC</strong>
+                                <p>@schedule.RecipientsCsv · التنفيذ التالي @schedule.NextRunAt.ToString("yyyy-MM-dd HH:mm")</p>
+                                @if (!string.IsNullOrWhiteSpace(schedule.LastError)) { <p class="text-danger">@schedule.LastError</p> }
+                                @if (schedule.IsActive)
+                                {
+                                    <form method="post" action="@Model.SelfPath?handler=DisableSchedule">
+                                        <input type="hidden" name="id" value="@schedule.Id" /><input type="hidden" name="reportId" value="@Model.Current.Id" /><input type="hidden" name="companyId" value="@Model.Current.CompanyId" />
+                                        <button class="hrms-btn-danger" type="submit">إيقاف</button>
+                                    </form>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </aside>
+        }
 
         @* ترويسة الطباعة — تظهر فقط عند الطباعة وحسب اختيار المستخدم *@
         <div class="rep-print-head" id="rep-print-head">

@@ -1716,6 +1716,33 @@ END;
         new(
             "20260826-08-report-group-sort",
             """
+IF OBJECT_ID('PeopleReports', 'U') IS NULL
+BEGIN
+    CREATE TABLE PeopleReports
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PeopleReports PRIMARY KEY,
+        CompanyId int NULL,
+        Name nvarchar(200) NOT NULL,
+        Description nvarchar(500) NULL,
+        DatasetKey nvarchar(60) NOT NULL,
+        FilterKey nvarchar(60) NULL,
+        ColumnsCsv nvarchar(max) NOT NULL,
+        OwnerUser nvarchar(150) NULL,
+        IsSystem bit NOT NULL CONSTRAINT DF_PeopleReports_IsSystem_Migration DEFAULT(0),
+        IsShared bit NOT NULL CONSTRAINT DF_PeopleReports_IsShared_Migration DEFAULT(0),
+        ShareWithEmployees bit NULL,
+        SharedWithCsv nvarchar(max) NULL,
+        FilterColumnsCsv nvarchar(max) NULL,
+        GroupColumnKey nvarchar(60) NULL,
+        SortColumnKey nvarchar(60) NULL,
+        SortDescending bit NOT NULL CONSTRAINT DF_PeopleReports_SortDescending_Migration DEFAULT(0),
+        SortOrder int NOT NULL CONSTRAINT DF_PeopleReports_SortOrder_Migration DEFAULT(0),
+        IsDeleted bit NOT NULL CONSTRAINT DF_PeopleReports_IsDeleted_Migration DEFAULT(0),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PeopleReports_CreatedAt_Migration DEFAULT(SYSUTCDATETIME())
+    );
+    CREATE INDEX IX_PeopleReports_Company ON PeopleReports(CompanyId,IsSystem,IsDeleted);
+END;
+
 IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('PeopleReports', 'GroupColumnKey') IS NULL
@@ -1724,6 +1751,56 @@ BEGIN
         ALTER TABLE PeopleReports ADD SortColumnKey nvarchar(60) NULL;
     IF COL_LENGTH('PeopleReports', 'SortDescending') IS NULL
         ALTER TABLE PeopleReports ADD SortDescending bit NOT NULL CONSTRAINT DF_PeopleReports_SortDescending DEFAULT(0);
+END;
+"""),
+        new(
+            "20260826-09-report-schedules",
+            """
+IF OBJECT_ID('ReportSchedules', 'U') IS NULL
+BEGIN
+    CREATE TABLE ReportSchedules
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ReportSchedules PRIMARY KEY,
+        CompanyId int NOT NULL,
+        ReportId int NOT NULL,
+        OwnerUserId int NOT NULL,
+        OwnerUser nvarchar(150) NOT NULL,
+        RecipientsCsv nvarchar(2000) NOT NULL,
+        Frequency nvarchar(20) NOT NULL,
+        HourUtc int NOT NULL,
+        DayOfWeek int NULL,
+        NextRunAt datetime2 NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ReportSchedules_Active DEFAULT(1),
+        AttemptCount int NOT NULL CONSTRAINT DF_ReportSchedules_Attempts DEFAULT(0),
+        ProcessingAt datetime2 NULL,
+        RetryAt datetime2 NULL,
+        LastRunAt datetime2 NULL,
+        LastSent bit NULL,
+        LastError nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL,
+        CONSTRAINT FK_ReportSchedules_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT FK_ReportSchedules_Report FOREIGN KEY(ReportId) REFERENCES PeopleReports(Id),
+        CONSTRAINT FK_ReportSchedules_User FOREIGN KEY(OwnerUserId) REFERENCES SystemUsers(Id),
+        CONSTRAINT CK_ReportSchedules_Frequency CHECK(Frequency IN (N'Daily',N'Weekly')),
+        CONSTRAINT CK_ReportSchedules_Hour CHECK(HourUtc BETWEEN 0 AND 23),
+        CONSTRAINT CK_ReportSchedules_Day CHECK(DayOfWeek IS NULL OR DayOfWeek BETWEEN 0 AND 6)
+    );
+    CREATE INDEX IX_ReportSchedules_Due ON ReportSchedules(IsActive,NextRunAt) INCLUDE(CompanyId,ReportId);
+    CREATE INDEX IX_ReportSchedules_Owner ON ReportSchedules(CompanyId,OwnerUser,IsActive);
+END;
+
+IF OBJECT_ID('ReportScheduleDeliveries', 'U') IS NULL
+BEGIN
+    CREATE TABLE ReportScheduleDeliveries
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_ReportScheduleDeliveries PRIMARY KEY,
+        ScheduleId int NOT NULL,
+        OccurrenceAt datetime2 NOT NULL,
+        Recipient nvarchar(320) NOT NULL,
+        SentAt datetime2 NULL,
+        CONSTRAINT FK_ReportScheduleDeliveries_Schedule FOREIGN KEY(ScheduleId) REFERENCES ReportSchedules(Id),
+        CONSTRAINT UQ_ReportScheduleDeliveries UNIQUE(ScheduleId,OccurrenceAt,Recipient)
+    );
 END;
 """),
     };

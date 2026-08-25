@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Reports;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -84,6 +85,7 @@ public class IndexModel : PageModel
     public List<PeopleReportCatalog.ReportColumn> RunColumns { get; set; } = new();
     public List<Dictionary<string, string>> RunRows { get; set; } = new();
     public string? RunGroupColumnKey { get; set; }
+    public List<ReportScheduleStore.Schedule> ReportSchedules { get; set; } = new();
 
     // مرشحات التقرير (المختارة بالباني) + قيمها الحالية من الـ query string.
     // المفاتيح بـ RunFilterValues: <key> للنص/القائمة، و<key>_from / <key>_to لنطاق التاريخ.
@@ -102,6 +104,7 @@ public class IndexModel : PageModel
         var scope = await _companyScope.GetAsync();
         if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
         await LoadListsAsync();
+        ReportSchedules = await ReportScheduleStore.ListAsync(_dbContext, scope, CurrentUser);
 
         if (ReportId > 0)
         {
@@ -115,6 +118,49 @@ public class IndexModel : PageModel
         }
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostCreateScheduleAsync(
+        int reportId, int companyId, string recipients, string frequency, int hourUtc, int? dayOfWeek)
+    {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
+        var userId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        if (userId <= 0) return Forbid();
+        var validRecipients = (recipients ?? string.Empty)
+            .Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(address => MailAddress.TryCreate(address, out _))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+        if (validRecipients.Count == 0)
+        {
+            Message = "أدخل بريداً صحيحاً واحداً على الأقل.";
+            return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
+        }
+        var allowedRecipients = (await _dbContext.SystemUsers.AsNoTracking()
+                .Where(user => !user.IsDeleted && user.IsActive && user.EmployeeId != null &&
+                               user.Employee != null && user.Employee.CompanyId == companyId && user.Email != null)
+                .Select(user => user.Email!).ToListAsync())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (validRecipients.Any(address => !allowedRecipients.Contains(address)))
+        {
+            Message = "الإرسال مسموح فقط إلى مستخدمين نشطين تابعين للشركة نفسها.";
+            return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
+        }
+        await ReportScheduleStore.CreateAsync(_dbContext, scope, companyId, reportId, userId,
+            CurrentUser, string.Join(',', validRecipients), frequency, hourUtc, dayOfWeek);
+        Message = "تمت جدولة التقرير، وستعاد صلاحياتك عند كل تنفيذ.";
+        return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
+    }
+
+    public async Task<IActionResult> OnPostDisableScheduleAsync(int id, int reportId, int companyId)
+    {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
+        await ReportScheduleStore.DisableAsync(_dbContext, scope, id, CurrentUser);
+        Message = "تم إيقاف الجدولة.";
+        return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
     }
 
     private static DateOnly? ParseDate(string? value) =>

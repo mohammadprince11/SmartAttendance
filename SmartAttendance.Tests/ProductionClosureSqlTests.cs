@@ -296,7 +296,7 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
 
         var aRows = await PeopleReportsStore.LoadAllAsync(db, scopeA);
         Assert.Contains(aRows, report => report.Name == "Company A custom report");
-        var configured = Assert.Single(aRows.Where(report => report.Name == "Company A custom report"));
+        var configured = Assert.Single(aRows, report => report.Name == "Company A custom report");
         Assert.Equal("department", configured.GroupColumnKey);
         Assert.Equal("name", configured.SortColumnKey);
         Assert.True(configured.SortDescending);
@@ -307,6 +307,40 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
         Assert.Null(await PeopleReportsStore.GetAsync(db, scopeA, bId));
         await PeopleReportsStore.DeleteOwnAsync(db, scopeA, bId, "owner-b");
         Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PeopleReports WHERE Id={bId} AND IsDeleted=0;"));
+    }
+
+    [SkippableFact]
+    public async Task Report_schedules_are_tenant_scoped_and_keep_delivery_idempotency()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await PeopleReportsStore.EnsureSchemaAsync(db);
+        await PeopleReportsStore.CreateAsync(db, scopeA, _companyA, "Scheduled A", null,
+            "employees", "no,name", "schedule-owner", false);
+        var reportId = await ScalarAsync(db,
+            $"SELECT Id FROM PeopleReports WHERE CompanyId={_companyA} AND Name=N'Scheduled A';");
+        var user = new SystemUser
+        {
+            FullName = "Schedule Owner", UserName = "schedule-owner", Email = "owner-a@example.com",
+            EmployeeId = _employeeA, Role = SmartAttendance.Domain.Enums.SystemUserRole.HR, IsActive = true
+        };
+        db.SystemUsers.Add(user);
+        await db.SaveChangesAsync();
+
+        await ReportScheduleStore.CreateAsync(db, scopeA, _companyA, reportId, user.Id,
+            user.UserName, user.Email!, "Daily", 6, null);
+        var schedule = Assert.Single(await ReportScheduleStore.ListAsync(db, scopeA, user.UserName));
+        Assert.Empty(await ReportScheduleStore.ListAsync(db, scopeB, user.UserName));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => ReportScheduleStore.CreateAsync(
+            db, scopeB, _companyA, reportId, user.Id, user.UserName, user.Email!, "Daily", 6, null));
+
+        var occurrence = new DateTime(2026, 8, 27, 6, 0, 0, DateTimeKind.Utc);
+        await ReportScheduleStore.RecordDeliveryAsync(db, schedule.Id, occurrence, user.Email!);
+        await ReportScheduleStore.RecordDeliveryAsync(db, schedule.Id, occurrence, user.Email!);
+        Assert.Equal(1, await ReportScheduleStore.DeliveryExistsAsync(db, schedule.Id, occurrence, user.Email!));
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM ReportScheduleDeliveries WHERE ScheduleId={schedule.Id};"));
     }
 
     [SkippableFact]
