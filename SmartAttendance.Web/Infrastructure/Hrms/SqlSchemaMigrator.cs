@@ -1803,6 +1803,35 @@ BEGIN
     );
 END;
 """),
+        new(
+            "20260826-10-dashboard-company-layouts",
+            """
+IF OBJECT_ID('DashboardWidgets', 'U') IS NULL
+BEGIN
+    CREATE TABLE DashboardWidgets
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_DashboardWidgets PRIMARY KEY,
+        CompanyId int NULL,
+        Title nvarchar(150) NOT NULL CONSTRAINT DF_DashboardWidgets_Title DEFAULT(N''),
+        Metric nvarchar(40) NOT NULL,
+        ChartKind nvarchar(20) NOT NULL CONSTRAINT DF_DashboardWidgets_Kind DEFAULT(N'Number'),
+        SortOrder int NOT NULL CONSTRAINT DF_DashboardWidgets_Order DEFAULT(0),
+        IsVisible bit NOT NULL CONSTRAINT DF_DashboardWidgets_Visible DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DashboardWidgets_Created DEFAULT(SYSUTCDATETIME())
+    );
+    INSERT INTO DashboardWidgets(Metric,ChartKind,SortOrder) VALUES
+      (N'ActiveEmployees',N'Number',1),(N'NewHiresMonth',N'Number',2),(N'TodayPresent',N'Number',3),
+      (N'TodayLate',N'Number',4),(N'TodayAbsent',N'Number',5),(N'PendingRequests',N'Number',6),
+      (N'ByBranch',N'HBars',10),(N'ByDepartment',N'HBars',11),(N'TodayStatus',N'Donut',12),
+      (N'ByMaritalStatus',N'Donut',13),(N'ByNationality',N'Columns',14),(N'ByAge',N'Columns',15),
+      (N'ByServiceYears',N'Columns',16),(N'ByGender',N'Donut',17),(N'ByContractType',N'Donut',18);
+END;
+ELSE IF COL_LENGTH('DashboardWidgets','CompanyId') IS NULL
+    ALTER TABLE DashboardWidgets ADD CompanyId int NULL;
+
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('DashboardWidgets') AND name='IX_DashboardWidgets_Company')
+    CREATE INDEX IX_DashboardWidgets_Company ON DashboardWidgets(CompanyId,SortOrder,Id);
+"""),
     };
 
     /// <summary>

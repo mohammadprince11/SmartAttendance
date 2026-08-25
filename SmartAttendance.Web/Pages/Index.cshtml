@@ -170,10 +170,11 @@
             <div class="zxd-stats">
                 @foreach (var (widget, data) in counters)
                 {
-                    <div class="zxd-stat">
+                    var definition = DashboardWidgetStore.Metrics.First(metric => metric.Key == widget.Metric);
+                    <a class="zxd-stat" href="@(definition.DrillPath + (definition.DrillPath.Contains('?') ? "&" : "?") + "CompanyId=" + Model.CompanyId)" title="المصدر: @definition.Source">
                         <b>@data.Single.ToString("N0")</b>
-                        <span>@widget.DisplayTitle</span>
-                    </div>
+                        <span>@widget.DisplayTitle · @definition.Unit</span>
+                    </a>
                 }
             </div>
         </div>
@@ -184,11 +185,12 @@
         @foreach (var (widget, data) in charts)
         {
             var rows = data.Rows;
+            var definition = DashboardWidgetStore.Metrics.First(metric => metric.Key == widget.Metric);
             var total = Math.Max(1, rows.Sum(r => r.Total));
             var max = Math.Max(1, rows.Count == 0 ? 1 : rows.Max(r => r.Total));
 
             <div class="zxd-card">
-                <h2>@widget.DisplayTitle <span class="zxd-badge">@total.ToString("N0")</span></h2>
+                <h2><a href="@(definition.DrillPath + (definition.DrillPath.Contains('?') ? "&" : "?") + "CompanyId=" + Model.CompanyId)" title="المصدر: @definition.Source">@widget.DisplayTitle</a> <span class="zxd-badge">@total.ToString("N0")</span></h2>
                 <div class="zxd-card-body">
                 @if (rows.Count == 0 || rows.All(r => r.Total == 0))
                 {
@@ -314,9 +316,9 @@
                 <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
                 <label>المقياس (شنو يظهر)
                     <select name="Metric" id="zxd-metric" onchange="zxdMetricChanged()">
-                        @foreach (var (key, label, isCounter) in DashboardWidgetStore.Metrics)
+                        @foreach (var metric in DashboardWidgetStore.Metrics)
                         {
-                            <option value="@key" data-counter="@(isCounter ? "1" : "0")">@label</option>
+                            <option value="@metric.Key" data-counter="@(metric.IsCounter ? "1" : "0")">@metric.Label</option>
                         }
                     </select>
                 </label>

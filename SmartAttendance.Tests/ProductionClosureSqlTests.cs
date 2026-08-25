@@ -344,6 +344,28 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Dashboard_layouts_and_mutations_are_company_isolated()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        var aRows = await DashboardWidgetStore.ListAsync(db, scopeA, _companyA);
+        var bRows = await DashboardWidgetStore.ListAsync(db, scopeB, _companyB);
+        Assert.NotEmpty(aRows); Assert.NotEmpty(bRows);
+        Assert.All(aRows, row => Assert.Equal(_companyA, row.CompanyId));
+        Assert.All(bRows, row => Assert.Equal(_companyB, row.CompanyId));
+
+        await DashboardWidgetStore.AddAsync(db, scopeA, new DashboardWidgetStore.Widget
+        { CompanyId = _companyA, Title = "Only A", Metric = "ActiveEmployees", ChartKind = "Number" });
+        var customA = Assert.Single(await DashboardWidgetStore.ListAsync(db, scopeA, _companyA), row => row.Title == "Only A");
+        await DashboardWidgetStore.DeleteAsync(db, scopeB, _companyB, customA.Id);
+        Assert.Contains(await DashboardWidgetStore.ListAsync(db, scopeA, _companyA), row => row.Id == customA.Id);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            DashboardWidgetStore.DeleteAsync(db, scopeB, _companyA, customA.Id));
+    }
+
+    [SkippableFact]
     public async Task Payroll_profiles_reject_cross_company_reads_updates_and_deletes()
     {
         RequireSql();
