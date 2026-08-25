@@ -1,4 +1,5 @@
 using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -338,6 +339,22 @@ DELETE FROM SelfServiceRequests WHERE Id=@r AND (@e IS NULL OR EmployeeId=@e);
 
         var detail = await GetDetailAsync(db, requestId);
         if (detail == null || detail.Applied) return false;
+        if (detail.Kind is not (Loan or Advance or Allowance or Reimbursement or Raise)) return false;
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        // مطالبة ذرية: لا أثر إلا لطلب معتمد، ولا منفّذان يطبّقان الطلب نفسه.
+        // Applied=1 هنا داخل المعاملة؛ أي استثناء لاحق يعيدها إلى صفر مع كل الأثر.
+        var claimed = await HrmsDatabase.ScalarAsync<int>(db,
+            """
+UPDATE d
+SET Applied = 1
+FROM FinancialRequestDetails d
+INNER JOIN SelfServiceRequests r ON r.Id = d.RequestId
+WHERE d.RequestId = @r AND d.Applied = 0 AND r.Status = N'Approved';
+SELECT @@ROWCOUNT;
+""",
+            cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+        if (claimed != 1) return false;
 
         var employeeId = await HrmsDatabase.ScalarAsync<int>(db,
             "SELECT ISNULL((SELECT EmployeeId FROM SelfServiceRequests WHERE Id=@r), 0)",
@@ -431,7 +448,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r AND (@e IS NULL OR EmployeeId=@e);
         }
 
         await HrmsDatabase.ExecuteAsync(db, """
-UPDATE FinancialRequestDetails SET Applied=1, AppliedRefId=@ref, AppliedAt=SYSUTCDATETIME() WHERE RequestId=@r;
+UPDATE FinancialRequestDetails SET AppliedRefId=@ref, AppliedAt=SYSUTCDATETIME() WHERE RequestId=@r AND Applied=1;
 
 IF OBJECT_ID('AuditLogs','U') IS NOT NULL
     INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
@@ -445,6 +462,7 @@ IF OBJECT_ID('AuditLogs','U') IS NOT NULL
                 HrmsDatabase.AddParameter(cmd, "@actor", actor);
                 HrmsDatabase.AddParameter(cmd, "@ip", (object?)ip ?? DBNull.Value);
             });
+        await transaction.CommitAsync();
         return true;
     }
 
