@@ -1832,6 +1832,74 @@ ELSE IF COL_LENGTH('DashboardWidgets','CompanyId') IS NULL
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('DashboardWidgets') AND name='IX_DashboardWidgets_Company')
     CREATE INDEX IX_DashboardWidgets_Company ON DashboardWidgets(CompanyId,SortOrder,Id);
 """),
+        new(
+            "20260826-11-approval-template-company-scope",
+            """
+IF OBJECT_ID('ApprovalTemplates','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalTemplates
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTemplates PRIMARY KEY,
+        CompanyId int NOT NULL,
+        RequestType nvarchar(64) NOT NULL,Name nvarchar(150) NOT NULL,NameEn nvarchar(150) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Active DEFAULT(1),Priority int NOT NULL CONSTRAINT DF_ApprovalTemplates_Priority DEFAULT(0),
+        HasConditions bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Conditions DEFAULT(0),CondBranchId int NULL,CondDepartmentId int NULL,CondWorkType nvarchar(50) NULL,
+        AutoRejectUnknownCommittee bit NOT NULL CONSTRAINT DF_ApprovalTemplates_AutoReject DEFAULT(0),CancelLimitDays int NULL,
+        CommentRequiredOnReject bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Comment DEFAULT(0),AttachmentRequiredOnRequest bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Attachment DEFAULT(0),
+        EscalationDays int NULL,EscalationTo nvarchar(30) NULL,NotifyJson nvarchar(max) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalTemplates_Created DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_ApprovalTemplates_Company_New FOREIGN KEY(CompanyId) REFERENCES Companies(Id)
+    );
+    CREATE TABLE ApprovalTemplateSteps
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTemplateSteps PRIMARY KEY,TemplateId int NOT NULL,StepOrder int NOT NULL,
+        ApproverType nvarchar(20) NOT NULL,RoleName nvarchar(50) NULL,UserName nvarchar(150) NULL,DisplayName nvarchar(150) NOT NULL,
+        CONSTRAINT FK_ApprovalTemplateSteps_Template FOREIGN KEY(TemplateId) REFERENCES ApprovalTemplates(Id)
+    );
+    CREATE TABLE ApprovalTemplateWatchers
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTemplateWatchers PRIMARY KEY,TemplateId int NOT NULL,UserName nvarchar(150) NOT NULL,
+        CONSTRAINT FK_ApprovalTemplateWatchers_Template FOREIGN KEY(TemplateId) REFERENCES ApprovalTemplates(Id)
+    );
+    CREATE INDEX IX_ApprovalTemplates_CompanyType ON ApprovalTemplates(CompanyId,RequestType,IsActive,Priority);
+END;
+
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplates','CompanyId') IS NULL
+BEGIN
+    ALTER TABLE ApprovalTemplates ADD CompanyId int NULL;
+
+    DECLARE @TemplateId int,@CompanyId int,@CloneId int;
+    DECLARE templates CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM ApprovalTemplates WHERE CompanyId IS NULL;
+    OPEN templates; FETCH NEXT FROM templates INTO @TemplateId;
+    WHILE @@FETCH_STATUS=0
+    BEGIN
+        DECLARE companies CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM Companies WHERE IsDeleted=0;
+        OPEN companies; FETCH NEXT FROM companies INTO @CompanyId;
+        WHILE @@FETCH_STATUS=0
+        BEGIN
+            INSERT INTO ApprovalTemplates(CompanyId,RequestType,Name,NameEn,IsActive,Priority,HasConditions,CondBranchId,CondDepartmentId,CondWorkType,AutoRejectUnknownCommittee,CancelLimitDays,CommentRequiredOnReject,AttachmentRequiredOnRequest,EscalationDays,EscalationTo,NotifyJson,CreatedAt)
+            SELECT @CompanyId,RequestType,Name,NameEn,IsActive,Priority,HasConditions,CondBranchId,CondDepartmentId,CondWorkType,AutoRejectUnknownCommittee,CancelLimitDays,CommentRequiredOnReject,AttachmentRequiredOnRequest,EscalationDays,EscalationTo,NotifyJson,CreatedAt
+            FROM ApprovalTemplates WHERE Id=@TemplateId;
+            SET @CloneId=SCOPE_IDENTITY();
+            INSERT INTO ApprovalTemplateSteps(TemplateId,StepOrder,ApproverType,RoleName,UserName,DisplayName)
+              SELECT @CloneId,StepOrder,ApproverType,RoleName,UserName,DisplayName FROM ApprovalTemplateSteps WHERE TemplateId=@TemplateId;
+            INSERT INTO ApprovalTemplateWatchers(TemplateId,UserName)
+              SELECT @CloneId,UserName FROM ApprovalTemplateWatchers WHERE TemplateId=@TemplateId;
+            FETCH NEXT FROM companies INTO @CompanyId;
+        END
+        CLOSE companies; DEALLOCATE companies;
+        FETCH NEXT FROM templates INTO @TemplateId;
+    END
+    CLOSE templates; DEALLOCATE templates;
+
+    DELETE s FROM ApprovalTemplateSteps s INNER JOIN ApprovalTemplates t ON t.Id=s.TemplateId WHERE t.CompanyId IS NULL;
+    DELETE w FROM ApprovalTemplateWatchers w INNER JOIN ApprovalTemplates t ON t.Id=w.TemplateId WHERE t.CompanyId IS NULL;
+    DELETE FROM ApprovalTemplates WHERE CompanyId IS NULL;
+    ALTER TABLE ApprovalTemplates ALTER COLUMN CompanyId int NOT NULL;
+    ALTER TABLE ApprovalTemplates ADD CONSTRAINT FK_ApprovalTemplates_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id);
+    CREATE INDEX IX_ApprovalTemplates_CompanyType ON ApprovalTemplates(CompanyId,RequestType,IsActive,Priority);
+END;
+"""),
     };
 
     /// <summary>

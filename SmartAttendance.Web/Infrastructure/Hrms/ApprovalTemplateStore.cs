@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -42,6 +43,7 @@ public static class ApprovalTemplateStore
     public sealed class TemplateRow
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
         public string RequestType { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string? NameEn { get; set; }
@@ -86,6 +88,7 @@ BEGIN
     CREATE TABLE ApprovalTemplates
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NOT NULL,
         RequestType nvarchar(64) NOT NULL,
         Name nvarchar(150) NOT NULL,
         NameEn nvarchar(150) NULL,
@@ -133,13 +136,14 @@ END;
     }
 
     /// <summary>عدد القوالب لكل نوع طلب (لعدّادات الكتالوج).</summary>
-    public static async Task<Dictionary<string, int>> CountsAsync(ApplicationDbContext dbContext)
+    public static async Task<Dictionary<string, int>> CountsAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT RequestType, COUNT(*) AS Cnt FROM ApprovalTemplates GROUP BY RequestType;",
-            command => { },
+            "SELECT RequestType,COUNT(*) AS Cnt FROM ApprovalTemplates WHERE CompanyId=@CompanyId GROUP BY RequestType;",
+            command => HrmsDatabase.AddParameter(command,"@CompanyId",companyId),
             reader => new
             {
                 Type = HrmsDatabase.GetString(reader, "RequestType") ?? string.Empty,
@@ -148,13 +152,13 @@ END;
         return rows.ToDictionary(r => r.Type, r => r.Count, StringComparer.OrdinalIgnoreCase);
     }
 
-    public static async Task<List<TemplateRow>> ListAsync(ApplicationDbContext dbContext, string requestType)
+    public static async Task<List<TemplateRow>> ListAsync(ApplicationDbContext dbContext, int companyId, string requestType)
     {
         await EnsureAsync(dbContext);
         var templates = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM ApprovalTemplates WHERE RequestType = @Type ORDER BY Priority, Id;",
-            command => HrmsDatabase.AddParameter(command, "@Type", requestType),
+            "SELECT * FROM ApprovalTemplates WHERE CompanyId=@CompanyId AND RequestType=@Type ORDER BY Priority,Id;",
+            command => { HrmsDatabase.AddParameter(command,"@CompanyId",companyId); HrmsDatabase.AddParameter(command,"@Type",requestType); },
             ReadTemplate);
 
         foreach (var template in templates)
@@ -164,13 +168,14 @@ END;
         return templates;
     }
 
-    public static async Task<TemplateRow?> GetAsync(ApplicationDbContext dbContext, int id)
+    public static async Task<TemplateRow?> GetAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId, int id)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM ApprovalTemplates WHERE Id = @Id;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            "SELECT * FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;",
+            command => { HrmsDatabase.AddParameter(command,"@Id",id); HrmsDatabase.AddParameter(command,"@CompanyId",companyId); },
             ReadTemplate);
 
         var template = rows.FirstOrDefault();
@@ -178,11 +183,13 @@ END;
         return template;
     }
 
-    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, TemplateRow template)
+    public static async Task<int> SaveAsync(ApplicationDbContext dbContext, CompanyScope scope, TemplateRow template)
     {
+        if (!scope.Allows(template.CompanyId)) throw new UnauthorizedAccessException();
         var validationError = Validate(template);
         if (validationError is not null) throw new ArgumentException(validationError, nameof(template));
         await EnsureAsync(dbContext);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         int id;
         if (template.Id > 0)
@@ -198,9 +205,10 @@ UPDATE ApprovalTemplates SET
     AutoRejectUnknownCommittee = @AutoReject, CancelLimitDays = @CancelLimitDays,
     CommentRequiredOnReject = @CommentReq, AttachmentRequiredOnRequest = @AttachReq,
     EscalationDays = @EscDays, EscalationTo = @EscTo, NotifyJson = @NotifyJson
-WHERE Id = @Id;
-DELETE FROM ApprovalTemplateSteps WHERE TemplateId = @Id;
-DELETE FROM ApprovalTemplateWatchers WHERE TemplateId = @Id;
+WHERE Id=@Id AND CompanyId=@CompanyId;
+IF @@ROWCOUNT=0 THROW 50001, 'Approval template is outside company scope.', 1;
+DELETE FROM ApprovalTemplateSteps WHERE TemplateId=@Id;
+DELETE FROM ApprovalTemplateWatchers WHERE TemplateId=@Id;
 """,
                 command => AddTemplateParameters(command, template, includeId: true));
         }
@@ -210,12 +218,12 @@ DELETE FROM ApprovalTemplateWatchers WHERE TemplateId = @Id;
                 dbContext,
                 """
 INSERT INTO ApprovalTemplates
-(RequestType, Name, NameEn, IsActive, Priority, HasConditions, CondBranchId, CondDepartmentId, CondWorkType,
+(CompanyId,RequestType, Name, NameEn, IsActive, Priority, HasConditions, CondBranchId, CondDepartmentId, CondWorkType,
  AutoRejectUnknownCommittee, CancelLimitDays, CommentRequiredOnReject, AttachmentRequiredOnRequest,
  EscalationDays, EscalationTo, NotifyJson)
 VALUES
-(@RequestType, @Name, @NameEn, @IsActive,
- (SELECT ISNULL(MAX(Priority), 0) + 1 FROM ApprovalTemplates WHERE RequestType = @RequestType),
+(@CompanyId,@RequestType, @Name, @NameEn, @IsActive,
+ (SELECT ISNULL(MAX(Priority), 0) + 1 FROM ApprovalTemplates WHERE CompanyId=@CompanyId AND RequestType = @RequestType),
  @HasConditions, @CondBranchId, @CondDepartmentId, @CondWorkType,
  @AutoReject, @CancelLimitDays, @CommentReq, @AttachReq, @EscDays, @EscTo, @NotifyJson);
 SELECT CAST(SCOPE_IDENTITY() AS int);
@@ -257,6 +265,7 @@ VALUES (@TemplateId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNa
                 });
         }
 
+        await transaction.CommitAsync();
         return id;
     }
 
@@ -281,22 +290,24 @@ VALUES (@TemplateId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNa
         return null;
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId, int id)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
-DELETE FROM ApprovalTemplateSteps WHERE TemplateId = @Id;
-DELETE FROM ApprovalTemplateWatchers WHERE TemplateId = @Id;
-DELETE FROM ApprovalTemplates WHERE Id = @Id;
+DELETE s FROM ApprovalTemplateSteps s INNER JOIN ApprovalTemplates t ON t.Id=s.TemplateId WHERE t.Id=@Id AND t.CompanyId=@CompanyId;
+DELETE w FROM ApprovalTemplateWatchers w INNER JOIN ApprovalTemplates t ON t.Id=w.TemplateId WHERE t.Id=@Id AND t.CompanyId=@CompanyId;
+DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
 """,
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+            command => { HrmsDatabase.AddParameter(command,"@Id",id); HrmsDatabase.AddParameter(command,"@CompanyId",companyId); });
     }
 
     /// <summary>إعادة ترتيب أولوية قوالب نوع واحد حسب تسلسل المعرّفات المرسل (سحب وإفلات).</summary>
-    public static async Task ReorderAsync(ApplicationDbContext dbContext, string requestType, IReadOnlyList<int> orderedIds)
+    public static async Task ReorderAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId, string requestType, IReadOnlyList<int> orderedIds)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         for (var index = 0; index < orderedIds.Count; index++)
         {
@@ -304,11 +315,12 @@ DELETE FROM ApprovalTemplates WHERE Id = @Id;
             var id = orderedIds[index];
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                "UPDATE ApprovalTemplates SET Priority = @Priority WHERE Id = @Id AND RequestType = @Type;",
+                "UPDATE ApprovalTemplates SET Priority=@Priority WHERE Id=@Id AND CompanyId=@CompanyId AND RequestType=@Type;",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Priority", priority);
                     HrmsDatabase.AddParameter(command, "@Id", id);
+                    HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
                     HrmsDatabase.AddParameter(command, "@Type", requestType);
                 });
         }
@@ -319,9 +331,9 @@ DELETE FROM ApprovalTemplates WHERE Id = @Id;
     /// (القالب غير الشرطي ينطبق دائماً). null = لا قالب معرّفاً للنوع.
     /// </summary>
     public static async Task<TemplateRow?> ResolveAsync(
-        ApplicationDbContext dbContext, string requestType, int? branchId, int? departmentId, string? workType)
+        ApplicationDbContext dbContext, int companyId, string requestType, int? branchId, int? departmentId, string? workType)
     {
-        var templates = await ListAsync(dbContext, requestType);
+        var templates = await ListAsync(dbContext, companyId, requestType);
         foreach (var template in templates.Where(t => t.IsActive))
         {
             if (!template.HasConditions) return template;
@@ -339,6 +351,7 @@ DELETE FROM ApprovalTemplates WHERE Id = @Id;
     private static TemplateRow ReadTemplate(System.Data.Common.DbDataReader reader) => new()
     {
         Id = HrmsDatabase.GetInt(reader, "Id"),
+        CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
         RequestType = HrmsDatabase.GetString(reader, "RequestType") ?? string.Empty,
         Name = HrmsDatabase.GetString(reader, "Name") ?? string.Empty,
         NameEn = HrmsDatabase.GetString(reader, "NameEn"),
@@ -384,6 +397,7 @@ DELETE FROM ApprovalTemplates WHERE Id = @Id;
 
     private static void AddTemplateParameters(System.Data.Common.DbCommand command, TemplateRow template, bool includeId)
     {
+        HrmsDatabase.AddParameter(command, "@CompanyId", template.CompanyId);
         if (includeId) HrmsDatabase.AddParameter(command, "@Id", template.Id);
         else HrmsDatabase.AddParameter(command, "@RequestType", template.RequestType);
         HrmsDatabase.AddParameter(command, "@Name", template.Name);

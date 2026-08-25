@@ -55,6 +55,16 @@
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>قوالب الموافقات</h1>
     </header>
+    <form method="get" class="nxhs-panel" style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+        <input type="hidden" name="Type" value="@Model.Type" />
+        <label>الشركة</label>
+        <select name="CompanyId" onchange="this.form.submit()" required>
+            @foreach (var company in Model.Companies)
+            {
+                <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name</option>
+            }
+        </select>
+    </form>
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -69,7 +79,7 @@
                 foreach (var type in module)
                 {
                     var count = Model.Counts.TryGetValue(type.Key, out var c) ? c : 0;
-                    <a href="?Type=@type.Key" class="@(type.Key == Model.Type ? "active" : "")">
+                    <a href="?Type=@type.Key&CompanyId=@Model.CompanyId" class="@(type.Key == Model.Type ? "active" : "")">
                         <span>@type.Label</span>
                         <span class="apt-count">@count</span>
                     </a>
@@ -107,7 +117,7 @@
                                 <td>@(template.IsActive ? "نشط" : "متوقف")</td>
                                 <td style="white-space:nowrap">
                                     <button type="button" class="nxhs-modal-cancel" onclick="aptOpen(@template.Id)">تعديل</button>
-                                    <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" style="display:inline"
+                                    <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" style="display:inline"
                                           data-zyconfirm="حذف القالب «@template.Name»؟">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" class="nxhs-delete-trigger">حذف</button>
@@ -137,7 +147,7 @@
     <div class="apt-backdrop" id="aptBackdrop" onclick="aptClose()"></div>
     <aside class="apt-slide" id="aptSlide">
         <h2 id="aptSlideTitle">قالب جديد</h2>
-        <form method="post" asp-page-handler="Save" asp-route-Type="@Model.Type" id="aptForm">
+        <form method="post" asp-page-handler="Save" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" id="aptForm">
             <input type="hidden" name="Id" id="f_Id" value="0" />
             <div class="apt-form-grid">
                 <label class="full">اسم القالب (عربي)
@@ -363,7 +373,7 @@
                 var data = new FormData();
                 data.append("order", order);
                 data.append("__RequestVerificationToken", document.querySelector('input[name="__RequestVerificationToken"]').value);
-                fetch("?Type=" + aptType + "&handler=Reorder", { method: "POST", body: data, credentials: "same-origin" });
+                fetch("?Type=" + aptType + "&CompanyId=@Model.CompanyId&handler=Reorder", { method: "POST", body: data, credentials: "same-origin" });
             });
         })();
 
@@ -371,7 +381,7 @@
             var empId = document.getElementById("aptSimEmp").value;
             var target = document.getElementById("aptSimResult");
             if (!empId) { target.textContent = "أدخل رقم الموظف."; return; }
-            fetch("?handler=Resolve&type=" + aptType + "&employeeId=" + empId, { credentials: "same-origin" })
+            fetch("?handler=Resolve&CompanyId=@Model.CompanyId&type=" + aptType + "&employeeId=" + empId, { credentials: "same-origin" })
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
                     if (!d.found) { target.textContent = (d.employee ? d.employee + ": " : "") + d.message; return; }

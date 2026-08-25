@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.CompanyContext;
 
 namespace SmartAttendance.Web.Pages.HrSettings;
 
@@ -14,14 +16,18 @@ namespace SmartAttendance.Web.Pages.HrSettings;
 public class ApprovalTemplatesModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public ApprovalTemplatesModel(ApplicationDbContext dbContext)
+    public ApprovalTemplatesModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
     public string Type { get; set; } = "LeaveRequest";
+    [BindProperty(SupportsGet = true)] public int? CompanyId { get; set; }
+    public List<Option> Companies { get; set; } = new();
 
     public Dictionary<string, int> Counts { get; set; } = new();
     public List<ApprovalTemplateStore.TemplateRow> Templates { get; set; } = new();
@@ -35,25 +41,31 @@ public class ApprovalTemplatesModel : PageModel
 
     public async Task OnGetAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        Companies = (await _dbContext.Companies.AsNoTracking().Where(company => !company.IsDeleted && company.IsActive)
+            .OrderBy(company => company.Name).Select(company => new Option(company.Id,company.Name)).ToListAsync())
+            .Where(company => scope.Allows(company.Id)).ToList();
+        CompanyId = CompanySelectionContext.Resolve(HttpContext, CompanyId, Companies.Select(company => company.Id).ToArray());
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return;
         SelectedType = ApprovalTemplateStore.RequestTypes.FirstOrDefault(t => t.Key.Equals(Type, StringComparison.OrdinalIgnoreCase))
                        ?? ApprovalTemplateStore.RequestTypes[0];
         Type = SelectedType.Key;
 
-        Counts = await ApprovalTemplateStore.CountsAsync(_dbContext);
-        Templates = await ApprovalTemplateStore.ListAsync(_dbContext, Type);
+        Counts = await ApprovalTemplateStore.CountsAsync(_dbContext, scope, CompanyId.Value);
+        Templates = await ApprovalTemplateStore.ListAsync(_dbContext, CompanyId.Value, Type);
         await LoadLookupsAsync();
     }
 
     private async Task LoadLookupsAsync()
     {
         Branches = await _dbContext.Branches.AsNoTracking()
-            .Where(b => !b.IsDeleted && b.IsActive)
+            .Where(b => !b.IsDeleted && b.IsActive && b.CompanyId == CompanyId)
             .OrderBy(b => b.Name)
             .Select(b => new Option(b.Id, b.Name))
             .ToListAsync();
 
         Departments = await _dbContext.Departments.AsNoTracking()
-            .Where(d => !d.IsDeleted && d.IsActive)
+            .Where(d => !d.IsDeleted && d.IsActive && d.CompanyId == CompanyId)
             .OrderBy(d => d.Name)
             .Select(d => new Option(d.Id, d.Name))
             .ToListAsync();
@@ -61,7 +73,7 @@ public class ApprovalTemplatesModel : PageModel
         WorkTypes = await HrLookups.ValuesAsync(_dbContext, "worktypes");
 
         Users = await _dbContext.SystemUsers.AsNoTracking()
-            .Where(u => !u.IsDeleted && u.IsActive)
+            .Where(u => !u.IsDeleted && u.IsActive && u.Employee != null && u.Employee.CompanyId == CompanyId)
             .OrderBy(u => u.UserName)
             .Select(u => u.UserName)
             .ToListAsync();
@@ -69,11 +81,14 @@ public class ApprovalTemplatesModel : PageModel
 
     public async Task<IActionResult> OnPostSaveAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
         var form = Request.Form;
 
         var template = new ApprovalTemplateStore.TemplateRow
         {
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
+            CompanyId = CompanyId.Value,
             RequestType = Type,
             Name = form["Name"].ToString().Trim(),
             NameEn = NullIfEmpty(form["NameEn"]),
@@ -94,7 +109,7 @@ public class ApprovalTemplatesModel : PageModel
         if (string.IsNullOrWhiteSpace(template.Name))
         {
             TempData["SuccessMessage"] = "اسم القالب مطلوب.";
-            return RedirectToPage(new { Type });
+            return RedirectToPage(new { Type, CompanyId });
         }
 
         // شروط معطّلة = تُمسح حتى لا تبقى شروط خفية.
@@ -130,7 +145,7 @@ public class ApprovalTemplatesModel : PageModel
         if (ApprovalTemplateStore.Validate(template) is { } validationError)
         {
             TempData["SuccessMessage"] = validationError;
-            return RedirectToPage(new { Type });
+            return RedirectToPage(new { Type, CompanyId });
         }
 
         foreach (var watcher in form["Watchers"])
@@ -141,36 +156,42 @@ public class ApprovalTemplatesModel : PageModel
             }
         }
 
-        await ApprovalTemplateStore.SaveAsync(_dbContext, template);
+        await ApprovalTemplateStore.SaveAsync(_dbContext, scope, template);
         TempData["SuccessMessage"] = template.Id > 0 ? "تم تحديث القالب." : "تم إنشاء القالب.";
-        return RedirectToPage(new { Type });
+        return RedirectToPage(new { Type, CompanyId });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await ApprovalTemplateStore.DeleteAsync(_dbContext, id);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
+        await ApprovalTemplateStore.DeleteAsync(_dbContext, scope, CompanyId.Value, id);
         TempData["SuccessMessage"] = "تم حذف القالب.";
-        return RedirectToPage(new { Type });
+        return RedirectToPage(new { Type, CompanyId });
     }
 
     public async Task<IActionResult> OnPostReorderAsync(string order)
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
         var ids = (order ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(part => int.TryParse(part, out var value) ? value : 0)
             .Where(value => value > 0)
             .ToList();
 
-        await ApprovalTemplateStore.ReorderAsync(_dbContext, Type, ids);
+        await ApprovalTemplateStore.ReorderAsync(_dbContext, scope, CompanyId.Value, Type, ids);
         return new JsonResult(new { ok = true });
     }
 
     /// <summary>محاكاة: أي قالب ينطبق على موظف معيّن (بفرعه/قسمه/نوع دوامه).</summary>
     public async Task<IActionResult> OnGetResolveAsync(string type, int employeeId)
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
         var employee = await _dbContext.Employees.AsNoTracking()
-            .Where(e => e.Id == employeeId)
-            .Select(e => new { e.Id, e.FullName, e.BranchId, e.DepartmentId, e.WorkType })
+            .Where(e => e.Id == employeeId && e.CompanyId == CompanyId)
+            .Select(e => new { e.Id, e.FullName, e.CompanyId, e.BranchId, e.DepartmentId, e.WorkType })
             .FirstOrDefaultAsync();
 
         if (employee == null)
@@ -179,7 +200,7 @@ public class ApprovalTemplatesModel : PageModel
         }
 
         var template = await ApprovalTemplateStore.ResolveAsync(
-            _dbContext, type, employee.BranchId, employee.DepartmentId, employee.WorkType);
+            _dbContext, employee.CompanyId ?? CompanyId.Value, type, employee.BranchId, employee.DepartmentId, employee.WorkType);
 
         if (template == null)
         {

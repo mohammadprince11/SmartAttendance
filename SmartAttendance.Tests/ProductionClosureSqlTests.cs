@@ -366,6 +366,28 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Approval_templates_reject_cross_company_read_update_delete()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        var template = new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="LeaveRequest",Name="Company A leave",IsActive=true,
+            Steps=new() { new() { ApproverType="Role",RoleName="HR Manager",DisplayName="HR Manager" } }
+        };
+        var id = await ApprovalTemplateStore.SaveAsync(db,scopeA,template);
+        Assert.Single(await ApprovalTemplateStore.ListAsync(db,_companyA,"LeaveRequest"), item=>item.Id==id);
+        Assert.Empty(await ApprovalTemplateStore.ListAsync(db,_companyB,"LeaveRequest"));
+        Assert.Null(await ApprovalTemplateStore.GetAsync(db,scopeB,_companyB,id));
+        template.Id=id; template.Name="Cross-company overwrite";
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(()=>ApprovalTemplateStore.SaveAsync(db,scopeB,template));
+        await ApprovalTemplateStore.DeleteAsync(db,scopeB,_companyB,id);
+        Assert.NotNull(await ApprovalTemplateStore.GetAsync(db,scopeA,_companyA,id));
+    }
+
+    [SkippableFact]
     public async Task Payroll_profiles_reject_cross_company_reads_updates_and_deletes()
     {
         RequireSql();

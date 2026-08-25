@@ -113,19 +113,20 @@ END;
 
         var employee = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT BranchId, DepartmentId, ISNULL(WorkType, '') AS WorkType FROM Employees WHERE Id = @Id;",
+            "SELECT CompanyId,BranchId,DepartmentId,ISNULL(WorkType,'') AS WorkType FROM Employees WHERE Id=@Id AND IsDeleted=0;",
             command => HrmsDatabase.AddParameter(command, "@Id", employeeId),
             reader => new
             {
                 BranchId = HrmsDatabase.GetInt(reader, "BranchId"),
                 DepartmentId = HrmsDatabase.GetInt(reader, "DepartmentId"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 WorkType = HrmsDatabase.GetString(reader, "WorkType")
             });
         var employeeInfo = employee.FirstOrDefault();
 
         var template = employeeInfo == null
             ? null
-            : await ApprovalTemplateStore.ResolveAsync(dbContext, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType);
+            : await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType);
 
         // بلا قالب: السلسلة الافتراضية القديمة نفسها.
         var steps = template?.Steps.OrderBy(s => s.StepOrder).ToList()

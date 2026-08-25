@@ -69,7 +69,6 @@ public sealed class TenantGuardRatchetTests
         "Forms/Index.cshtml.cs",
         "Forms/Submissions.cshtml.cs",
         "Holidays/Delete.cshtml.cs",
-        "HrSettings/ApprovalTemplates.cshtml.cs",
         "HrSettings/EmployeeGroups.cshtml.cs",
         "HrSettings/EntityFields.cshtml.cs",
         "HrSettings/Formulas.cshtml.cs",
