@@ -63,10 +63,10 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        var escalated = await ApprovalWorkflowEngine.EscalateOverdueAsync(_dbContext);
-        if (escalated > 0)
+        var sla = await ApprovalWorkflowEngine.ProcessSlaAsync(_dbContext);
+        if (sla.Escalated > 0||sla.Reminded>0)
         {
-            Message = $"تم تصعيد {escalated} طلب متأخر حسب قواعد قوالبها.";
+            Message = $"معالجة SLA: {sla.Reminded} تذكير، {sla.Escalated} تصعيد.";
         }
         await LoadAsync();
     }

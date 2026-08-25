@@ -47,6 +47,10 @@ public static class ApprovalWorkflowEngine
         public string DisplayName { get; set; } = string.Empty;
         public string Status { get; set; } = "Pending";
         public DateTime? CurrentSince { get; set; }
+        public DateTime? ReminderSentAt { get; set; }
+        public DateTime? EscalatedAt { get; set; }
+        public string? EscalatedToRole { get; set; }
+        public string? EscalatedToUser { get; set; }
     }
 
     public sealed class FlowState
@@ -54,8 +58,10 @@ public static class ApprovalWorkflowEngine
         public int RequestId { get; set; }
         public string TemplateName { get; set; } = string.Empty;
         public bool CommentRequiredOnReject { get; set; }
+        public int? ReminderHours { get; set; }
         public int? EscalationDays { get; set; }
         public string? EscalationTo { get; set; }
+        public string? EscalationAlternateUser { get; set; }
         public bool Escalated { get; set; }
         public List<StepState> Steps { get; set; } = new();
         public StepState? Current => Steps.FirstOrDefault(s => s.Status == "Current");
@@ -79,6 +85,8 @@ BEGIN
         CancelLimitDays int NULL,
         EscalationDays int NULL,
         EscalationTo nvarchar(30) NULL,
+        ReminderHours int NULL,
+        EscalationAlternateUser nvarchar(100) NULL,
         Escalated bit NOT NULL DEFAULT(0),
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
@@ -101,6 +109,7 @@ BEGIN
         ActionBy nvarchar(150) NULL,
         ActionAt datetime2 NULL,
         Note nvarchar(500) NULL
+        ,ReminderSentAt datetime2 NULL,EscalatedAt datetime2 NULL,EscalatedToRole nvarchar(50) NULL,EscalatedToUser nvarchar(100) NULL
     );
     CREATE INDEX IX_ApprovalRequestSteps_Request ON ApprovalRequestSteps(RequestId, StepOrder);
 END;
@@ -147,8 +156,8 @@ END;
 DELETE FROM ApprovalRequestSteps WHERE RequestId = @RequestId;
 DELETE FROM ApprovalRequestFlows WHERE RequestId = @RequestId;
 INSERT INTO ApprovalRequestFlows
-(RequestId, TemplateId, TemplateName, CommentRequiredOnReject, AttachmentRequiredOnRequest, CancelLimitDays, EscalationDays, EscalationTo)
-VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @CancelLimit, @EscDays, @EscTo);
+(RequestId, TemplateId, TemplateName, CommentRequiredOnReject, AttachmentRequiredOnRequest, CancelLimitDays, ReminderHours,EscalationDays, EscalationTo,EscalationAlternateUser)
+VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @CancelLimit,@ReminderHours,@EscDays, @EscTo,@EscAltUser);
 """,
             command =>
             {
@@ -158,8 +167,10 @@ VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @Cancel
                 HrmsDatabase.AddParameter(command, "@CommentReq", template?.CommentRequiredOnReject == true ? 1 : 0);
                 HrmsDatabase.AddParameter(command, "@AttachReq", template?.AttachmentRequiredOnRequest == true ? 1 : 0);
                 HrmsDatabase.AddParameter(command, "@CancelLimit", (object?)template?.CancelLimitDays ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command,"@ReminderHours",(object?)template?.ReminderHours??DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@EscDays", (object?)template?.EscalationDays ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@EscTo", (object?)template?.EscalationTo ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command,"@EscAltUser",(object?)template?.EscalationAlternateUser??DBNull.Value);
             });
 
         for (var i = 0; i < steps.Count; i++)
@@ -211,8 +222,10 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
                 RequestId = HrmsDatabase.GetInt(reader, "RequestId"),
                 TemplateName = HrmsDatabase.GetString(reader, "TemplateName"),
                 CommentRequiredOnReject = HrmsDatabase.GetBool(reader, "CommentRequiredOnReject"),
+                ReminderHours=HrmsDatabase.GetNullableInt(reader,"ReminderHours"),
                 EscalationDays = HrmsDatabase.GetNullableInt(reader, "EscalationDays"),
                 EscalationTo = HrmsDatabase.GetString(reader, "EscalationTo"),
+                EscalationAlternateUser=HrmsDatabase.GetString(reader,"EscalationAlternateUser"),
                 Escalated = HrmsDatabase.GetBool(reader, "Escalated")
             });
 
@@ -232,6 +245,9 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
     {
         var roleSet = new HashSet<string>(roles, StringComparer.OrdinalIgnoreCase);
         if (roleSet.Contains("Admin") || roleSet.Contains("HR Manager")) return true;
+        if(step.EscalatedAt is not null &&
+           ((!string.IsNullOrWhiteSpace(step.EscalatedToUser)&&string.Equals(step.EscalatedToUser,userName,StringComparison.OrdinalIgnoreCase))||
+            (!string.IsNullOrWhiteSpace(step.EscalatedToRole)&&roleSet.Contains(step.EscalatedToRole)))) return true;
 
         return step.ApproverType switch
         {
@@ -623,7 +639,8 @@ IF @StepId IS NULL BEGIN SELECT 0; RETURN; END;
 UPDATE SelfServiceRequests SET Reason=@Reason,FromDate=COALESCE(@FromDate,FromDate),ToDate=COALESCE(@ToDate,ToDate),
  Status='Pending',CurrentStep=@StepName,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status='Returned';
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
-UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL
+UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL,
+ ReminderSentAt=NULL,EscalatedAt=NULL,EscalatedToRole=NULL,EscalatedToUser=NULL
 WHERE RequestId=@RequestId AND StageOrder=@StageOrder AND Status IN ('Returned','WaitingRevision');
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
 INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes) VALUES(@RequestId,@StepName,'Resubmitted',CONVERT(nvarchar(30),@EmployeeId),@Reason);
@@ -699,34 +716,56 @@ WHERE r.Id = @RequestId
                 HrmsDatabase.AddParameter(command, "@ActorEmployeeId", actorEmployeeId is > 0 ? actorEmployeeId.Value : DBNull.Value);
             }) > 0;
 
-    /// <summary>تصعيد الخطوات المتأخرة (تشغيل كسولاً عند فتح شاشة الموافقات) — إشعار واحد لكل طلب.</summary>
-    public static async Task<int> EscalateOverdueAsync(ApplicationDbContext dbContext)
+    public sealed record SlaResult(int Reminded,int Escalated);
+
+    /// <summary>يرسل تذكيراً واحداً لكل خطوة، ثم يفعّل الدور/البديل للقرار عند تجاوز SLA.</summary>
+    public static async Task<SlaResult> ProcessSlaAsync(ApplicationDbContext dbContext)
     {
         await EnsureAsync(dbContext);
-        return await HrmsDatabase.ScalarAsync<int>(
+        var rows=await HrmsDatabase.QueryAsync(
             dbContext,
             """
-DECLARE @Escalated TABLE (RequestId int, StepName nvarchar(150), EscalateTo nvarchar(30));
+DECLARE @Reminded TABLE(RequestId int,StepName nvarchar(150),ApproverType nvarchar(20),RoleName nvarchar(50),UserName nvarchar(150));
+DECLARE @Escalated TABLE(RequestId int,StepName nvarchar(150),TargetRole nvarchar(50),TargetUser nvarchar(100));
 
-UPDATE f
-SET f.Escalated = 1
-OUTPUT inserted.RequestId, s.DisplayName, ISNULL(inserted.EscalationTo, 'HR Manager') INTO @Escalated
-FROM ApprovalRequestFlows f
-JOIN ApprovalRequestSteps s ON s.RequestId = f.RequestId AND s.Status = 'Current'
-WHERE f.Escalated = 0
-  AND f.EscalationDays IS NOT NULL
-  AND s.CurrentSince IS NOT NULL
-  AND DATEDIFF(day, s.CurrentSince, SYSUTCDATETIME()) >= f.EscalationDays;
+UPDATE s SET ReminderSentAt=SYSUTCDATETIME()
+OUTPUT inserted.RequestId,inserted.DisplayName,inserted.ApproverType,inserted.RoleName,inserted.UserName INTO @Reminded
+FROM ApprovalRequestSteps s
+INNER JOIN ApprovalRequestFlows f ON f.RequestId=s.RequestId
+WHERE s.Status='Current' AND s.ReminderSentAt IS NULL AND s.CurrentSince IS NOT NULL
+ AND f.ReminderHours IS NOT NULL AND DATEDIFF(hour,s.CurrentSince,SYSUTCDATETIME())>=f.ReminderHours;
 
-INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
-SELECT N'تصعيد طلب متأخر',
-       N'الطلب رقم ' + CAST(RequestId AS nvarchar(20)) + N' متأخر في خطوة: ' + StepName,
-       EscalateTo, '/Approvals'
+INSERT INTO SystemNotifications(Title,Message,TargetRole,TargetUser,Url)
+SELECT N'تذكير موافقة',N'الطلب رقم '+CAST(m.RequestId AS nvarchar(20))+N' بانتظار قرارك: '+m.StepName,
+ CASE WHEN m.ApproverType='Role' THEN m.RoleName WHEN m.ApproverType='DirectManager' AND managerUser.UserName IS NULL THEN 'HR' END,
+ CASE WHEN m.ApproverType='User' THEN m.UserName WHEN m.ApproverType='DirectManager' THEN managerUser.UserName END,'/Approvals'
+FROM @Reminded m
+LEFT JOIN SelfServiceRequests r ON r.Id=m.RequestId
+LEFT JOIN Employees requester ON requester.Id=r.EmployeeId
+OUTER APPLY(SELECT TOP(1) u.UserName FROM SystemUsers u
+ INNER JOIN Employees manager ON manager.Id=u.EmployeeId AND ISNULL(manager.IsDeleted,0)=0
+ WHERE manager.Id=requester.DirectManagerId AND manager.CompanyId=requester.CompanyId
+ AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0) managerUser;
+
+UPDATE s SET EscalatedAt=SYSUTCDATETIME(),EscalatedToRole=COALESCE(f.EscalationTo,'HR Manager'),EscalatedToUser=f.EscalationAlternateUser
+OUTPUT inserted.RequestId,inserted.DisplayName,inserted.EscalatedToRole,inserted.EscalatedToUser INTO @Escalated
+FROM ApprovalRequestSteps s INNER JOIN ApprovalRequestFlows f ON f.RequestId=s.RequestId
+WHERE s.Status='Current' AND s.EscalatedAt IS NULL AND s.CurrentSince IS NOT NULL
+ AND f.EscalationDays IS NOT NULL AND DATEDIFF(day,s.CurrentSince,SYSUTCDATETIME())>=f.EscalationDays;
+
+UPDATE f SET Escalated=1 FROM ApprovalRequestFlows f WHERE EXISTS(SELECT 1 FROM @Escalated e WHERE e.RequestId=f.RequestId);
+
+INSERT INTO SystemNotifications (Title, Message, TargetRole,TargetUser, Url)
+SELECT N'تصعيد طلب متأخر',N'الطلب رقم '+CAST(RequestId AS nvarchar(20))+N' متأخر في خطوة: '+StepName,
+       TargetRole,TargetUser,'/Approvals'
 FROM @Escalated;
 
-SELECT COUNT(*) FROM @Escalated;
-""");
+SELECT (SELECT COUNT(*) FROM @Reminded) AS Reminded,(SELECT COUNT(*) FROM @Escalated) AS Escalated;
+""",null,reader=>new SlaResult(HrmsDatabase.GetInt(reader,"Reminded"),HrmsDatabase.GetInt(reader,"Escalated")));
+        return rows.Single();
     }
+
+    public static async Task<int> EscalateOverdueAsync(ApplicationDbContext dbContext)=>(await ProcessSlaAsync(dbContext)).Escalated;
 
     private static StepState ReadStep(System.Data.Common.DbDataReader reader) => new()
     {
@@ -740,5 +779,9 @@ SELECT COUNT(*) FROM @Escalated;
         DisplayName = HrmsDatabase.GetString(reader, "DisplayName"),
         Status = HrmsDatabase.GetString(reader, "Status"),
         CurrentSince = HrmsDatabase.GetDateTime(reader, "CurrentSince")
+        ,ReminderSentAt=HrmsDatabase.GetDateTime(reader,"ReminderSentAt")
+        ,EscalatedAt=HrmsDatabase.GetDateTime(reader,"EscalatedAt")
+        ,EscalatedToRole=HrmsDatabase.GetString(reader,"EscalatedToRole")
+        ,EscalatedToUser=HrmsDatabase.GetString(reader,"EscalatedToUser")
     };
 }

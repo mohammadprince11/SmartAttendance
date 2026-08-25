@@ -1954,6 +1954,27 @@ BEGIN
  ALTER TABLE ApprovalRequestSteps ALTER COLUMN StageOrder int NOT NULL;
 END;
 """),
+        new(
+            "20260826-14-approval-sla-reminders-alternates",
+            """
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalTemplates','ReminderHours') IS NULL ALTER TABLE ApprovalTemplates ADD ReminderHours int NULL;
+ IF COL_LENGTH('ApprovalTemplates','EscalationAlternateUser') IS NULL ALTER TABLE ApprovalTemplates ADD EscalationAlternateUser nvarchar(100) NULL;
+END;
+IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalRequestFlows','ReminderHours') IS NULL ALTER TABLE ApprovalRequestFlows ADD ReminderHours int NULL;
+ IF COL_LENGTH('ApprovalRequestFlows','EscalationAlternateUser') IS NULL ALTER TABLE ApprovalRequestFlows ADD EscalationAlternateUser nvarchar(100) NULL;
+END;
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalRequestSteps','ReminderSentAt') IS NULL ALTER TABLE ApprovalRequestSteps ADD ReminderSentAt datetime2 NULL;
+ IF COL_LENGTH('ApprovalRequestSteps','EscalatedAt') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedAt datetime2 NULL;
+ IF COL_LENGTH('ApprovalRequestSteps','EscalatedToRole') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedToRole nvarchar(50) NULL;
+ IF COL_LENGTH('ApprovalRequestSteps','EscalatedToUser') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedToUser nvarchar(100) NULL;
+END;
+"""),
     };
 
     /// <summary>

@@ -770,6 +770,51 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.Equal(2,await RawIntAsync(verificationDb,$"SELECT COUNT(*) FROM ApprovalRequestSteps WHERE RequestId={raceId} AND StageOrder=1 AND Status='Approved';"));
     }
 
+    [SkippableFact]
+    public async Task Approval_sla_reminds_once_then_grants_the_configured_alternate()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.AsNoTracking().SingleAsync(x=>x.Id==_employeeA);
+        var approvers=Enumerable.Range(1,2).Select(index=>new Employee
+        {
+            EmployeeNo=$"SLA-{index}-"+Guid.NewGuid().ToString("N")[..6],FullName=$"SLA User {index}",
+            CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,
+            HireDate=new DateOnly(2090,1,1),IsActive=true
+        }).ToArray();
+        db.AddRange(approvers); await db.SaveChangesAsync();
+        var users=approvers.Select((approver,index)=>new SystemUser
+        {
+            FullName=approver.FullName,UserName=$"sla-{index+1}-{approver.Id}",Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,
+            IsActive=true,EmployeeId=approver.Id
+        }).ToArray();
+        db.SystemUsers.AddRange(users); await db.SaveChangesAsync();
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="DocumentRequest",Name="SQL SLA "+Guid.NewGuid().ToString("N"),IsActive=true,
+            ReminderHours=1,EscalationDays=1,EscalationTo="HR Manager",EscalationAlternateUser=users[1].UserName,
+            Steps={new(){StageOrder=1,ApproverType="User",UserName=users[0].UserName,DisplayName="Document owner"}}
+        });
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'DocumentRequest',N'اختبار SLA','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,requestId,"DocumentRequest",_employeeA);
+        await ExecuteAsync(db,$"UPDATE ApprovalRequestSteps SET CurrentSince=DATEADD(day,-2,SYSUTCDATETIME()) WHERE RequestId={requestId};");
+        var processed=await ApprovalWorkflowEngine.ProcessSlaAsync(db);
+        Assert.True(processed.Reminded>=1); Assert.True(processed.Escalated>=1);
+        var secondPass=await ApprovalWorkflowEngine.ProcessSlaAsync(db);
+        Assert.Equal(0,secondPass.Reminded); Assert.Equal(0,secondPass.Escalated);
+        var flow=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        var step=Assert.Single(flow.CurrentSteps);
+        Assert.NotNull(step.ReminderSentAt); Assert.NotNull(step.EscalatedAt); Assert.Equal(users[1].UserName,step.EscalatedToUser);
+        var alternateDecision=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[1].UserName,"alternate",Array.Empty<string>(),approvers[1].Id);
+        Assert.True(alternateDecision.Ok,alternateDecision.Message); Assert.True(alternateDecision.FinalApproved);
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };

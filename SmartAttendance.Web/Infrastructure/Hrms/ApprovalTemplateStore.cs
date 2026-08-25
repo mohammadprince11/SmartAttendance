@@ -57,8 +57,10 @@ public static class ApprovalTemplateStore
         public int? CancelLimitDays { get; set; }
         public bool CommentRequiredOnReject { get; set; }
         public bool AttachmentRequiredOnRequest { get; set; }
+        public int? ReminderHours { get; set; }
         public int? EscalationDays { get; set; }
         public string? EscalationTo { get; set; }
+        public string? EscalationAlternateUser { get; set; }
         public string? NotifyJson { get; set; }
         public List<StepRow> Steps { get; set; } = new();
         public List<WatcherRow> Watchers { get; set; } = new();
@@ -103,8 +105,10 @@ BEGIN
         CancelLimitDays int NULL,
         CommentRequiredOnReject bit NOT NULL DEFAULT(0),
         AttachmentRequiredOnRequest bit NOT NULL DEFAULT(0),
+        ReminderHours int NULL,
         EscalationDays int NULL,
         EscalationTo nvarchar(30) NULL,
+        EscalationAlternateUser nvarchar(100) NULL,
         NotifyJson nvarchar(max) NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
@@ -191,6 +195,24 @@ END;
         var validationError = Validate(template);
         if (validationError is not null) throw new ArgumentException(validationError, nameof(template));
         await EnsureAsync(dbContext);
+        var referencedUsers=template.Steps.Where(step=>step.ApproverType=="User").Select(step=>step.UserName)
+            .Concat(template.Watchers.Select(watcher=>watcher.UserName)).Append(template.EscalationAlternateUser)
+            .Where(user=>!string.IsNullOrWhiteSpace(user)).Select(user=>user!.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if(referencedUsers.Length>0)
+        {
+            var parameters=referencedUsers.Select((_,index)=>$"@User{index}").ToArray();
+            var count=await HrmsDatabase.ScalarAsync<int>(dbContext,$"""
+SELECT COUNT(DISTINCT u.UserName) FROM SystemUsers u
+INNER JOIN Employees e ON e.Id=u.EmployeeId AND ISNULL(e.IsDeleted,0)=0
+WHERE u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0 AND e.CompanyId=@CompanyId
+AND u.UserName IN ({string.Join(",",parameters)});
+""",command=>
+            {
+                HrmsDatabase.AddParameter(command,"@CompanyId",template.CompanyId);
+                for(var index=0;index<referencedUsers.Length;index++) HrmsDatabase.AddParameter(command,parameters[index],referencedUsers[index]);
+            });
+            if(count!=referencedUsers.Length) throw new ArgumentException("أحد مستخدمي المسار غير نشط أو خارج شركة القالب.",nameof(template));
+        }
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         int id;
@@ -206,7 +228,8 @@ UPDATE ApprovalTemplates SET
     CondDepartmentId = @CondDepartmentId, CondWorkType = @CondWorkType,
     AutoRejectUnknownCommittee = @AutoReject, CancelLimitDays = @CancelLimitDays,
     CommentRequiredOnReject = @CommentReq, AttachmentRequiredOnRequest = @AttachReq,
-    EscalationDays = @EscDays, EscalationTo = @EscTo, NotifyJson = @NotifyJson
+    ReminderHours=@ReminderHours,EscalationDays = @EscDays, EscalationTo = @EscTo,
+    EscalationAlternateUser=@EscAltUser,NotifyJson = @NotifyJson
 WHERE Id=@Id AND CompanyId=@CompanyId;
 IF @@ROWCOUNT=0 THROW 50001, 'Approval template is outside company scope.', 1;
 DELETE FROM ApprovalTemplateSteps WHERE TemplateId=@Id;
@@ -222,12 +245,12 @@ DELETE FROM ApprovalTemplateWatchers WHERE TemplateId=@Id;
 INSERT INTO ApprovalTemplates
 (CompanyId,RequestType, Name, NameEn, IsActive, Priority, HasConditions, CondBranchId, CondDepartmentId, CondWorkType,
  AutoRejectUnknownCommittee, CancelLimitDays, CommentRequiredOnReject, AttachmentRequiredOnRequest,
- EscalationDays, EscalationTo, NotifyJson)
+ ReminderHours,EscalationDays, EscalationTo, EscalationAlternateUser,NotifyJson)
 VALUES
 (@CompanyId,@RequestType, @Name, @NameEn, @IsActive,
  (SELECT ISNULL(MAX(Priority), 0) + 1 FROM ApprovalTemplates WHERE CompanyId=@CompanyId AND RequestType = @RequestType),
  @HasConditions, @CondBranchId, @CondDepartmentId, @CondWorkType,
- @AutoReject, @CancelLimitDays, @CommentReq, @AttachReq, @EscDays, @EscTo, @NotifyJson);
+ @AutoReject, @CancelLimitDays, @CommentReq, @AttachReq, @ReminderHours,@EscDays, @EscTo,@EscAltUser,@NotifyJson);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command => AddTemplateParameters(command, template, includeId: false));
@@ -284,6 +307,8 @@ VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserNam
             return "نوع الطلب غير معروف.";
         if (string.IsNullOrWhiteSpace(template.Name)) return "اسم القالب مطلوب.";
         if (template.Steps.Count == 0) return "لجنة الموافقة يجب أن تحتوي خطوة واحدة على الأقل.";
+        if(template.ReminderHours is >0&&template.EscalationDays is >0&&template.ReminderHours>=template.EscalationDays*24)
+            return "مهلة التذكير يجب أن تسبق مهلة التصعيد.";
 
         foreach (var step in template.Steps)
         {
@@ -373,8 +398,10 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
         CancelLimitDays = HrmsDatabase.GetNullableInt(reader, "CancelLimitDays"),
         CommentRequiredOnReject = HrmsDatabase.GetBool(reader, "CommentRequiredOnReject"),
         AttachmentRequiredOnRequest = HrmsDatabase.GetBool(reader, "AttachmentRequiredOnRequest"),
+        ReminderHours = HrmsDatabase.GetNullableInt(reader,"ReminderHours"),
         EscalationDays = HrmsDatabase.GetNullableInt(reader, "EscalationDays"),
         EscalationTo = HrmsDatabase.GetString(reader, "EscalationTo"),
+        EscalationAlternateUser=HrmsDatabase.GetString(reader,"EscalationAlternateUser"),
         NotifyJson = HrmsDatabase.GetString(reader, "NotifyJson")
     };
 
@@ -420,8 +447,10 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
         HrmsDatabase.AddParameter(command, "@CancelLimitDays", (object?)template.CancelLimitDays ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CommentReq", template.CommentRequiredOnReject ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@AttachReq", template.AttachmentRequiredOnRequest ? 1 : 0);
+        HrmsDatabase.AddParameter(command,"@ReminderHours",(object?)template.ReminderHours??DBNull.Value);
         HrmsDatabase.AddParameter(command, "@EscDays", (object?)template.EscalationDays ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@EscTo", (object?)template.EscalationTo ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command,"@EscAltUser",(object?)template.EscalationAlternateUser??DBNull.Value);
         HrmsDatabase.AddParameter(command, "@NotifyJson", (object?)template.NotifyJson ?? DBNull.Value);
     }
 }

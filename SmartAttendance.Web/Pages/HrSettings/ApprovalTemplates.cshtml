@@ -13,7 +13,7 @@
         t.CondBranchId, t.CondDepartmentId, t.CondWorkType,
         t.AutoRejectUnknownCommittee, t.CancelLimitDays,
         t.CommentRequiredOnReject, t.AttachmentRequiredOnRequest,
-        t.EscalationDays, t.EscalationTo, t.NotifyJson,
+        t.ReminderHours,t.EscalationDays, t.EscalationTo,t.EscalationAlternateUser,t.NotifyJson,
         Steps = t.Steps.Select(s => new { s.ApproverType, s.RoleName, s.UserName, s.DisplayName, s.StageOrder }),
         Watchers = t.Watchers.Select(w => w.UserName)
     }));
@@ -250,8 +250,14 @@
 
             <h3 style="font-size:13px;margin:14px 0 4px">التصعيد وقواعد الطلب</h3>
             <div class="apt-form-grid">
+                <label>تذكير بعد (ساعات)
+                    <input type="number" name="ReminderHours" id="f_ReminderHours" min="1" />
+                </label>
                 <label>تصعيد بعد (أيام بلا قرار)
                     <input type="number" name="EscalationDays" id="f_EscalationDays" min="1" />
+                </label>
+                <label>البديل بعد التصعيد
+                    <select name="EscalationAlternateUser" id="f_EscalationAlternateUser"><option value="">—</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select>
                 </label>
                 <label>التصعيد إلى
                     <select name="EscalationTo" id="f_EscalationTo">
@@ -349,7 +355,9 @@
                     document.getElementById("f_CommentReq").checked = !!t.CommentRequiredOnReject;
                     document.getElementById("f_AttachReq").checked = !!t.AttachmentRequiredOnRequest;
                     document.getElementById("f_EscalationDays").value = t.EscalationDays || "";
+                    document.getElementById("f_ReminderHours").value = t.ReminderHours || "";
                     document.getElementById("f_EscalationTo").value = t.EscalationTo || "";
+                    document.getElementById("f_EscalationAlternateUser").value = t.EscalationAlternateUser || "";
                     document.getElementById("f_CancelLimitDays").value = t.CancelLimitDays || "";
                     (t.Steps || []).forEach(function (s) {
                         aptAddStep(s.ApproverType, s.RoleName || "", s.UserName || "", s.DisplayName, s.StageOrder || 0);

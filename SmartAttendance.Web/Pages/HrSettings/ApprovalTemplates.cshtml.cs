@@ -149,8 +149,10 @@ public class ApprovalTemplatesModel : PageModel
             CancelLimitDays = ParseNullableInt(form["CancelLimitDays"]),
             CommentRequiredOnReject = form["CommentReq"] == "true",
             AttachmentRequiredOnRequest = form["AttachReq"] == "true",
+            ReminderHours=ParseNullableInt(form["ReminderHours"]),
             EscalationDays = ParseNullableInt(form["EscalationDays"]),
             EscalationTo = NullIfEmpty(form["EscalationTo"]),
+            EscalationAlternateUser=NullIfEmpty(form["EscalationAlternateUser"]),
             NotifyJson = BuildNotifyJson(form)
         };
 
