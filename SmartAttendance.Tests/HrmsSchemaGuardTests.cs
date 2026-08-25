@@ -10,7 +10,7 @@ namespace SmartAttendance.Tests;
 /// ٢٢٦ سطر DDL (<c>IF COL_LENGTH… ALTER TABLE</c>, <c>IF OBJECT_ID IS NULL CREATE TABLE</c>)
 /// في كل طلب، بلا أي حارس. هذا هدرٌ على كل صفحة وخرقٌ لقاعدة «لا شفاء ذاتي على الطلب».
 ///
-/// <para>الإصلاح: حارس تشغيل-مرّة-واحدة لكل عملية (<c>_schemaEnsured</c> + قفل مزدوج
+/// <para>الإصلاح: حارس تشغيل-مرّة-واحدة لكل قاعدة (قاموس قواعد + قفل لكل قاعدة
 /// الفحص عبر <c>SemaphoreSlim</c>)، والـDDL نُقل لدالة خاصّة <c>RunSchemaScriptAsync</c>
 /// لا تُستدعى إلا مرّة واحدة بعد أول طلب. السكربت idempotent فالتشغيل مرّة آمن.</para>
 ///
@@ -45,23 +45,23 @@ public class HrmsSchemaGuardTests
         var body = Body(source, "Task EnsureCreatedAsync", "private static async Task RunSchemaScriptAsync");
 
         // قصرٌ مبكّر بلا انتظار قفل عند ضمانٍ سابق.
-        Assert.Contains("if (_schemaEnsured) return;", body);
+        Assert.Contains("EnsuredDatabases.ContainsKey(databaseKey)", body);
         // يُضبط العَلَم بعد النجاح فقط ⟹ فشلٌ جزئي يُعاد.
-        Assert.Contains("_schemaEnsured = true;", body);
+        Assert.Contains("EnsuredDatabases.TryAdd(databaseKey", body);
         // القفل يمنع سباق أول طلبين متزامنين.
-        Assert.Contains("_ensureGate.WaitAsync", body);
+        Assert.Contains("gate.WaitAsync", body);
         // 🔴 لا DDL على نقطة الدخول — نُقل بالكامل لدالة السكربت.
         Assert.DoesNotContain("ALTER TABLE", body);
         Assert.DoesNotContain("CREATE TABLE", body);
     }
 
-    /// <summary>الحقول: عَلَم volatile وقفل SemaphoreSlim معرّفان على الصنف.</summary>
+    /// <summary>الحقول: قاموس حالة وقفل منفصل لكل قاعدة معرّفان على الصنف.</summary>
     [Fact]
     public void حقول_الحارس_معرّفة()
     {
         var source = HrmsSource();
-        Assert.Contains("private static volatile bool _schemaEnsured", source);
-        Assert.Contains("SemaphoreSlim _ensureGate", source);
+        Assert.Contains("ConcurrentDictionary<string, byte> EnsuredDatabases", source);
+        Assert.Contains("ConcurrentDictionary<string, SemaphoreSlim> EnsureGates", source);
     }
 
     /// <summary>سكربت الشفاء الذاتي ما زال موجوداً — لكنه معزول في دالته الخاصّة (يُشغَّل مرّة).</summary>

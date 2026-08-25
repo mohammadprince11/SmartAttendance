@@ -75,6 +75,7 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
             await EmployeeAllowanceSchema.EnsureAsync(db);
             await PayrollTransactionStore.EnsureAsync(db);
             await PayrollRunStore.EnsureAsync(db);
+            await HrmsDatabase.EnsureCreatedAsync(db);
             await SqlSchemaMigrator.ApplyAsync(db);
             await SeedCompaniesAsync(db);
             _available = true;
