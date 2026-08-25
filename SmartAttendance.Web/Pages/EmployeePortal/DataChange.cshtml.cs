@@ -158,7 +158,12 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage();
         }
 
-        await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        if(!start.Ok)
+        {
+            StatusMessage=start.Message;
+            return RedirectToPage();
+        }
         StatusMessage = $"تم إرسال طلب تعديل البيانات ({saved} حقل) وهو الآن قيد المراجعة.";
         return RedirectToPage();
     }

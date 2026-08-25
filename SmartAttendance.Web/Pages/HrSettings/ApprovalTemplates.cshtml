@@ -226,12 +226,12 @@
             </div>
             <div class="apt-steps" id="aptSteps"></div>
 
-            <h3 style="font-size:13px;margin:14px 0 4px">مشاهدون (بلا صلاحية قرار)</h3>
+            <h3 style="font-size:13px;margin:14px 0 4px">مشاهدون (بلا صلاحية قرار — يستلمون جميع أحداث الطلب)</h3>
             <select name="Watchers" id="f_Watchers" multiple size="4" style="width:100%">
                 @foreach (var user in Model.Users) { <option value="@user">@user</option> }
             </select>
 
-            <h3 style="font-size:13px;margin:14px 0 4px">مصفوفة الإشعارات</h3>
+            <h3 style="font-size:13px;margin:14px 0 4px">مصفوفة الإشعارات الإضافية للقالب</h3>
             <table class="apt-matrix">
                 <thead><tr><th></th><th>عند الطلب</th><th>الموافقة</th><th>الرفض</th><th>الإلغاء</th></tr></thead>
                 <tbody>
@@ -241,7 +241,7 @@
                         { <td><input type="checkbox" name="notify_Employee_@evt" value="true" class="apt-nt" data-a="Employee" data-e="@evt" /></td> }
                     </tr>
                     <tr>
-                        <th>اللجان السابقة</th>
+                        <th>لجنة الطلب</th>
                         @foreach (var evt in new[] { "Submit", "Approve", "Reject", "Cancel" })
                         { <td><input type="checkbox" name="notify_Committee_@evt" value="true" class="apt-nt" data-a="Committee" data-e="@evt" /></td> }
                     </tr>

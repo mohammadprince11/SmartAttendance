@@ -83,10 +83,11 @@ SELECT @RequestId;
         // سريان الموافقات: حلّ القالب المناسب وتجميد خطوات اللجنة على الطلب.
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, Input.RequestType, Input.EmployeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, Input.RequestType, Input.EmployeeId);
+            if(!start.Ok) Message=start.Message;
         }
 
-        Message = "تم إرسال الطلب للموافقة.";
+        Message ??= "تم إرسال الطلب للموافقة.";
         await LoadAsync();
 
         return Page();

@@ -422,7 +422,8 @@ EXEC sp_executesql @sql,
         // سريان الموافقات: حلّ القالب وتجميد خطوات اللجنة على الطلب.
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, RequestInput.RequestType ?? string.Empty, employeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, RequestInput.RequestType ?? string.Empty, employeeId);
+            if(!start.Ok) return false;
         }
 
         return true;

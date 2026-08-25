@@ -1,5 +1,6 @@
 using SmartAttendance.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -58,6 +59,9 @@ public static class ApprovalWorkflowEngine
         public int RequestId { get; set; }
         public string TemplateName { get; set; } = string.Empty;
         public bool CommentRequiredOnReject { get; set; }
+        public bool AttachmentRequiredOnRequest { get; set; }
+        public int? CancelLimitDays { get; set; }
+        public string? NotifyJson { get; set; }
         public int? ReminderHours { get; set; }
         public int? EscalationDays { get; set; }
         public string? EscalationTo { get; set; }
@@ -87,6 +91,7 @@ BEGIN
         EscalationTo nvarchar(30) NULL,
         ReminderHours int NULL,
         EscalationAlternateUser nvarchar(100) NULL,
+        NotifyJson nvarchar(max) NULL,
         Escalated bit NOT NULL DEFAULT(0),
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
@@ -113,11 +118,22 @@ BEGIN
     );
     CREATE INDEX IX_ApprovalRequestSteps_Request ON ApprovalRequestSteps(RequestId, StepOrder);
 END;
+
+IF OBJECT_ID('ApprovalRequestWatchers', 'U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalRequestWatchers
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        RequestId int NOT NULL,
+        UserName nvarchar(150) NOT NULL
+    );
+    CREATE UNIQUE INDEX UX_ApprovalRequestWatchers_RequestUser ON ApprovalRequestWatchers(RequestId,UserName);
+END;
 """);
     }
 
     /// <summary>يبدأ سريان الموافقة لطلب جديد: حلّ القالب وتجميد الخطوات وتعليم الأولى حالية.</summary>
-    public static async Task StartAsync(ApplicationDbContext dbContext, int requestId, string requestType, int employeeId)
+    public static async Task<ActionResult> StartAsync(ApplicationDbContext dbContext, int requestId, string requestType, int employeeId)
     {
         await EnsureAsync(dbContext);
 
@@ -135,10 +151,10 @@ END;
                 WorkType = HrmsDatabase.GetString(reader, "WorkType")
             });
         var employeeInfo = employee.FirstOrDefault();
+        if (employeeInfo is null)
+            return new ActionResult(false, "تعذّر بدء الموافقة لأن الموظف غير موجود.");
 
-        var template = employeeInfo == null
-            ? null
-            : await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType,requestId);
+        var template = await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType,requestId);
 
         // بلا قالب: السلسلة الافتراضية القديمة نفسها.
         var steps = template?.Steps.OrderBy(s => s.StepOrder).ToList()
@@ -148,16 +164,32 @@ END;
                 new() { StepOrder = 2, StageOrder=2, ApproverType = "Role", RoleName = "HR Manager", DisplayName = "HR Manager" }
             };
 
+        if (template?.AttachmentRequiredOnRequest == true && !await HasRequestAttachmentAsync(dbContext, requestId, employeeId))
+        {
+            await BlockSubmissionAsync(dbContext, requestId, "Draft", "يتطلب مرفقاً", "AttachmentRequired",
+                "قالب الموافقة يشترط إرفاق ملف قبل تقديم الطلب.");
+            return new ActionResult(false, "هذا الطلب يتطلب مرفقاً قبل الإرسال.");
+        }
+
+        var unresolved = await FindUnresolvedCommitteeAsync(dbContext, employeeId, employeeInfo.CompanyId, steps);
+        if (unresolved.Count > 0 && template?.AutoRejectUnknownCommittee == true)
+        {
+            var reason = "تعذّر تحديد أعضاء لجنة الموافقة: " + string.Join("، ", unresolved);
+            await BlockSubmissionAsync(dbContext, requestId, "Rejected", "Rejected", "AutoRejected", reason);
+            return new ActionResult(false, "رُفض الطلب تلقائياً لأن أعضاء اللجنة غير معرّفين.", Rejected: true);
+        }
+
         var firstStage=steps.Min(step=>step.StageOrder>0?step.StageOrder:step.StepOrder);
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
 DELETE FROM ApprovalRequestSteps WHERE RequestId = @RequestId;
+DELETE FROM ApprovalRequestWatchers WHERE RequestId = @RequestId;
 DELETE FROM ApprovalRequestFlows WHERE RequestId = @RequestId;
 INSERT INTO ApprovalRequestFlows
-(RequestId, TemplateId, TemplateName, CommentRequiredOnReject, AttachmentRequiredOnRequest, CancelLimitDays, ReminderHours,EscalationDays, EscalationTo,EscalationAlternateUser)
-VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @CancelLimit,@ReminderHours,@EscDays, @EscTo,@EscAltUser);
+(RequestId, TemplateId, TemplateName, CommentRequiredOnReject, AttachmentRequiredOnRequest, CancelLimitDays, ReminderHours,EscalationDays, EscalationTo,EscalationAlternateUser,NotifyJson)
+VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @CancelLimit,@ReminderHours,@EscDays, @EscTo,@EscAltUser,@NotifyJson);
 """,
             command =>
             {
@@ -171,7 +203,19 @@ VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @Cancel
                 HrmsDatabase.AddParameter(command, "@EscDays", (object?)template?.EscalationDays ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@EscTo", (object?)template?.EscalationTo ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command,"@EscAltUser",(object?)template?.EscalationAlternateUser??DBNull.Value);
+                HrmsDatabase.AddParameter(command,"@NotifyJson",(object?)template?.NotifyJson??DBNull.Value);
             });
+
+        foreach (var watcher in template?.Watchers.Select(w => w.UserName).Where(user => !string.IsNullOrWhiteSpace(user)).Distinct(StringComparer.OrdinalIgnoreCase) ?? Array.Empty<string>())
+        {
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                "INSERT INTO ApprovalRequestWatchers(RequestId,UserName) VALUES(@RequestId,@UserName);",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+                    HrmsDatabase.AddParameter(command,"@UserName",watcher);
+                });
+        }
 
         for (var i = 0; i < steps.Count; i++)
         {
@@ -208,6 +252,10 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
                 HrmsDatabase.AddParameter(command, "@Step", string.Join(" + ",steps.Where(step=>(step.StageOrder>0?step.StageOrder:step.StepOrder)==firstStage).Select(step=>step.DisplayName)));
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
             });
+
+        await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Submit", "طلب جديد",
+            $"تم تقديم الطلب رقم {requestId} وبدأ مسار الموافقة.");
+        return new ActionResult(true, "تم بدء مسار الموافقة.");
     }
 
     public static async Task<FlowState?> GetFlowAsync(ApplicationDbContext dbContext, int requestId)
@@ -222,6 +270,9 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
                 RequestId = HrmsDatabase.GetInt(reader, "RequestId"),
                 TemplateName = HrmsDatabase.GetString(reader, "TemplateName"),
                 CommentRequiredOnReject = HrmsDatabase.GetBool(reader, "CommentRequiredOnReject"),
+                AttachmentRequiredOnRequest = HrmsDatabase.GetBool(reader, "AttachmentRequiredOnRequest"),
+                CancelLimitDays = HrmsDatabase.GetNullableInt(reader, "CancelLimitDays"),
+                NotifyJson = HrmsDatabase.GetString(reader, "NotifyJson"),
                 ReminderHours=HrmsDatabase.GetNullableInt(reader,"ReminderHours"),
                 EscalationDays = HrmsDatabase.GetNullableInt(reader, "EscalationDays"),
                 EscalationTo = HrmsDatabase.GetString(reader, "EscalationTo"),
@@ -427,6 +478,8 @@ SELECT @Changed;
                     HrmsDatabase.AddParameter(command,"@Id",requestId);
                 });
             await transaction.CommitAsync();
+            await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "تحديث موافقة",
+                $"سُجّلت موافقة في الطلب رقم {requestId} وما زالت المرحلة بانتظار قرارات أخرى.");
             return new ActionResult(true,$"تم تسجيل قرارك؛ ما زالت المرحلة المتوازية بانتظار {remaining} قرار.");
         }
 
@@ -454,6 +507,8 @@ VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بع
                     HrmsDatabase.AddParameter(command, "@Note", (object?)note ?? DBNull.Value);
                 });
             await transaction.CommitAsync();
+            await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "طلب معتمد",
+                $"اكتملت الموافقات على الطلب رقم {requestId}.");
             return new ActionResult(true, "تم اعتماد الطلب نهائياً — اكتملت اللجنة.", FinalApproved: true);
         }
 
@@ -482,6 +537,8 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى مر
                 HrmsDatabase.AddParameter(command, "@TargetRole", nextSteps.FirstOrDefault(step=>step.ApproverType=="Role")?.RoleName ?? "HR");
             });
         await transaction.CommitAsync();
+        await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "انتقال طلب",
+            $"انتقل الطلب رقم {requestId} إلى مرحلة: {nextName}.");
         return new ActionResult(true, $"تمت الموافقة وانتقل الطلب إلى: {nextName}.");
     }
 
@@ -555,6 +612,8 @@ SELECT @Changed;
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
         await transaction.CommitAsync();
+        await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Reject", "طلب مرفوض",
+            $"رُفض الطلب رقم {requestId} في خطوة {current.DisplayName}.");
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
     }
 
@@ -654,6 +713,221 @@ SELECT 1;
         if (changed != 1) return new ActionResult(false,"الطلب ليس معاداً إليك أو سبق إعادة تقديمه.");
         await transaction.CommitAsync();
         return new ActionResult(true,"أُعيد تقديم الطلب إلى نفس خطوة الموافقة.");
+    }
+
+    /// <summary>
+    /// إلغاء صاحب الطلب ضمن المهلة المجمدة وقت التقديم. لا يقبل معرّف موظف من
+    /// النموذج بلا مطابقة مالك الصف، ولا يلغي طلباً منتهياً أو مطبق الأثر.
+    /// </summary>
+    public static async Task<ActionResult> CancelByRequesterAsync(
+        ApplicationDbContext dbContext, int requestId, int employeeId, string actor, string? note = null)
+    {
+        if (requestId <= 0 || employeeId <= 0) return new ActionResult(false,"الطلب غير صالح.");
+        await EnsureAsync(dbContext);
+        var rows = await HrmsDatabase.QueryAsync(dbContext, """
+SELECT r.Status,r.CreatedAt,f.CancelLimitDays
+FROM SelfServiceRequests r
+INNER JOIN Employees e ON e.Id=r.EmployeeId AND ISNULL(e.IsDeleted,0)=0
+LEFT JOIN ApprovalRequestFlows f ON f.RequestId=r.Id
+WHERE r.Id=@RequestId AND r.EmployeeId=@EmployeeId;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId);
+        }, reader => new
+        {
+            Status=HrmsDatabase.GetString(reader,"Status"),
+            CreatedAt=HrmsDatabase.GetDateTime(reader,"CreatedAt") ?? DateTime.UtcNow,
+            Limit=HrmsDatabase.GetNullableInt(reader,"CancelLimitDays")
+        });
+        var request=rows.FirstOrDefault();
+        if(request is null) return new ActionResult(false,"الطلب غير موجود أو لا يخصك.");
+        if(request.Status is not ("Pending" or "Returned" or "Draft"))
+            return new ActionResult(false,"لا يمكن إلغاء طلب منتهٍ أو مطبّق.");
+        if(request.Limit is int days && DateTime.UtcNow > request.CreatedAt.AddDays(days))
+            return new ActionResult(false,$"انتهت مهلة الإلغاء المحددة بـ {days} يوم.");
+
+        await using var transaction=await dbContext.Database.BeginTransactionAsync();
+        await AcquireDecisionLockAsync(dbContext,requestId);
+        var changed=await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+UPDATE SelfServiceRequests
+SET Status='Cancelled',CurrentStep='Cancelled',ReviewNote=@Note,ReviewedBy=@Actor,UpdatedAt=SYSUTCDATETIME()
+WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status IN ('Pending','Returned','Draft');
+DECLARE @Changed int=@@ROWCOUNT;
+IF @Changed=1
+BEGIN
+ UPDATE ApprovalRequestSteps SET Status='Cancelled',ActionBy=@Actor,ActionAt=SYSUTCDATETIME(),Note=@Note
+ WHERE RequestId=@RequestId AND Status IN ('Current','Pending','Returned','WaitingRevision');
+ INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes)
+ VALUES(@RequestId,N'صاحب الطلب','Cancelled',@Actor,@Note);
+END;
+SELECT @Changed;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId);
+            HrmsDatabase.AddParameter(command,"@Actor",actor);
+            HrmsDatabase.AddParameter(command,"@Note",(object?)note??DBNull.Value);
+        });
+        if(changed!=1) return new ActionResult(false,"تغيّرت حالة الطلب ولم يعد قابلاً للإلغاء.");
+        await transaction.CommitAsync();
+        await DispatchConfiguredNotificationsAsync(dbContext,requestId,"Cancel","طلب ملغي",
+            $"ألغى صاحب الطلب الطلب رقم {requestId}.");
+        return new ActionResult(true,"تم إلغاء الطلب.");
+    }
+
+    private static async Task<bool> HasRequestAttachmentAsync(ApplicationDbContext dbContext,int requestId,int employeeId) =>
+        await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+SELECT COUNT(1) FROM SelfServiceRequests
+WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND NULLIF(LTRIM(RTRIM(ISNULL(AttachmentPath,N''))),N'') IS NOT NULL;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId);
+        }) > 0;
+
+    private static async Task<List<string>> FindUnresolvedCommitteeAsync(
+        ApplicationDbContext dbContext,int employeeId,int companyId,IEnumerable<ApprovalTemplateStore.StepRow> steps)
+    {
+        var unresolved=new List<string>();
+        foreach(var step in steps)
+        {
+            if(step.ApproverType.Equals("DirectManager",StringComparison.OrdinalIgnoreCase))
+            {
+                var found=await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+SELECT COUNT(1)
+FROM Employees requester
+INNER JOIN Employees manager ON manager.Id=requester.DirectManagerId AND manager.CompanyId=requester.CompanyId
+INNER JOIN SystemUsers u ON u.EmployeeId=manager.Id AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+WHERE requester.Id=@EmployeeId AND requester.CompanyId=@CompanyId
+ AND ISNULL(requester.IsDeleted,0)=0 AND ISNULL(manager.IsDeleted,0)=0 AND ISNULL(manager.IsActive,1)=1;
+""", command =>
+                {
+                    HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId);
+                    HrmsDatabase.AddParameter(command,"@CompanyId",companyId);
+                });
+                if(found==0) unresolved.Add(step.DisplayName);
+            }
+            else if(step.ApproverType.Equals("User",StringComparison.OrdinalIgnoreCase))
+            {
+                var found=await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+SELECT COUNT(1) FROM SystemUsers u
+INNER JOIN Employees e ON e.Id=u.EmployeeId AND ISNULL(e.IsDeleted,0)=0
+WHERE u.UserName=@UserName AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0 AND e.CompanyId=@CompanyId;
+""", command =>
+                {
+                    HrmsDatabase.AddParameter(command,"@UserName",step.UserName ?? string.Empty);
+                    HrmsDatabase.AddParameter(command,"@CompanyId",companyId);
+                });
+                if(found==0) unresolved.Add(step.DisplayName);
+            }
+        }
+        return unresolved.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static Task BlockSubmissionAsync(ApplicationDbContext dbContext,int requestId,string status,string currentStep,string action,string reason) =>
+        HrmsDatabase.ExecuteAsync(dbContext,"""
+UPDATE SelfServiceRequests SET Status=@Status,CurrentStep=@CurrentStep,ReviewNote=@Reason,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId;
+INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes)
+VALUES(@RequestId,N'فحص التقديم',@Action,N'System',@Reason);
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@Status",status);
+            HrmsDatabase.AddParameter(command,"@CurrentStep",currentStep);
+            HrmsDatabase.AddParameter(command,"@Action",action);
+            HrmsDatabase.AddParameter(command,"@Reason",reason);
+        });
+
+    private static async Task DispatchConfiguredNotificationsAsync(
+        ApplicationDbContext dbContext,int requestId,string eventName,string title,string message)
+    {
+        var rows=await HrmsDatabase.QueryAsync(dbContext,
+            "SELECT NotifyJson FROM ApprovalRequestFlows WHERE RequestId=@RequestId;",
+            command=>HrmsDatabase.AddParameter(command,"@RequestId",requestId),
+            reader=>HrmsDatabase.GetString(reader,"NotifyJson"));
+        var notifyJson=rows.FirstOrDefault();
+        var notifyEmployee=ShouldNotify(notifyJson,"Employee",eventName);
+        var notifyCommittee=ShouldNotify(notifyJson,"Committee",eventName);
+
+        // المراقبون لقطةٌ من القالب؛ تصلهم أحداث الدورة دائماً بصفة مشاهدة فقط.
+        await HrmsDatabase.ExecuteAsync(dbContext,"""
+INSERT INTO SystemNotifications(Title,Message,TargetUser,Url)
+SELECT @Title,@Message,w.UserName,'/Approvals'
+FROM ApprovalRequestWatchers w WHERE w.RequestId=@RequestId;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@Title",title);
+            HrmsDatabase.AddParameter(command,"@Message",message);
+        });
+
+        if(notifyEmployee)
+            await HrmsDatabase.ExecuteAsync(dbContext,"""
+INSERT INTO SystemNotifications(Title,Message,TargetUser,Url)
+SELECT @Title,@Message,u.UserName,'/EmployeePortal?tab=requests'
+FROM SelfServiceRequests r
+INNER JOIN Employees e ON e.Id=r.EmployeeId AND ISNULL(e.IsDeleted,0)=0
+INNER JOIN SystemUsers u ON u.EmployeeId=e.Id AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+WHERE r.Id=@RequestId;
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+                HrmsDatabase.AddParameter(command,"@Title",title);
+                HrmsDatabase.AddParameter(command,"@Message",message);
+            });
+
+        if(notifyCommittee)
+        {
+            var current=await GetFlowAsync(dbContext,requestId);
+            var targets=current?.CurrentSteps.Count>0
+                ? current.CurrentSteps
+                : current?.Steps.Where(step=>step.Status is "Approved" or "Rejected" or "Returned" or "Cancelled").ToList()
+                  ?? new List<StepState>();
+            foreach(var step in targets)
+            {
+                if(step.ApproverType=="Role")
+                    await InsertNotificationAsync(dbContext,title,message,step.RoleName,null,"/Approvals");
+                else if(step.ApproverType=="User")
+                    await InsertNotificationAsync(dbContext,title,message,null,step.UserName,"/Approvals");
+                else if(step.ApproverType=="DirectManager")
+                {
+                    var users=await HrmsDatabase.QueryAsync(dbContext,"""
+SELECT u.UserName FROM SelfServiceRequests r
+INNER JOIN Employees requester ON requester.Id=r.EmployeeId AND ISNULL(requester.IsDeleted,0)=0
+INNER JOIN Employees manager ON manager.Id=requester.DirectManagerId AND manager.CompanyId=requester.CompanyId AND ISNULL(manager.IsDeleted,0)=0
+INNER JOIN SystemUsers u ON u.EmployeeId=manager.Id AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+WHERE r.Id=@RequestId;
+""",command=>HrmsDatabase.AddParameter(command,"@RequestId",requestId),reader=>HrmsDatabase.GetString(reader,"UserName"));
+                    foreach(var user in users) await InsertNotificationAsync(dbContext,title,message,null,user,"/Approvals");
+                }
+            }
+        }
+    }
+
+    private static async Task InsertNotificationAsync(ApplicationDbContext dbContext,string title,string message,string? role,string? user,string url)
+    {
+        if(string.IsNullOrWhiteSpace(role)&&string.IsNullOrWhiteSpace(user)) return;
+        await HrmsDatabase.ExecuteAsync(dbContext,
+            "INSERT INTO SystemNotifications(Title,Message,TargetRole,TargetUser,Url) VALUES(@Title,@Message,@Role,@User,@Url);",
+            command=>
+            {
+                HrmsDatabase.AddParameter(command,"@Title",title);HrmsDatabase.AddParameter(command,"@Message",message);
+                HrmsDatabase.AddParameter(command,"@Role",(object?)role??DBNull.Value);HrmsDatabase.AddParameter(command,"@User",(object?)user??DBNull.Value);
+                HrmsDatabase.AddParameter(command,"@Url",url);
+            });
+    }
+
+    private static bool ShouldNotify(string? json,string audience,string eventName)
+    {
+        if(string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var document=JsonDocument.Parse(json);
+            return document.RootElement.TryGetProperty(audience,out var events) && events.ValueKind==JsonValueKind.Array &&
+                   events.EnumerateArray().Any(value=>string.Equals(value.GetString(),eventName,StringComparison.OrdinalIgnoreCase));
+        }
+        catch(JsonException){return false;}
     }
 
     /// <summary>

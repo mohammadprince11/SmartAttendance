@@ -190,8 +190,8 @@ VALUES
             });
 
         // سريان الموافقة: قالب النوع المالي (Loan/FinancialClaim/SalaryIncrease) يُحلّ من التسمية.
-        await ApprovalWorkflowEngine.StartAsync(db, requestId, kind.Label, employeeId);
-        return requestId;
+        var start=await ApprovalWorkflowEngine.StartAsync(db, requestId, kind.Label, employeeId);
+        return start.Ok ? requestId : 0;
     }
 
     public static async Task<Detail?> GetDetailAsync(ApplicationDbContext db, int requestId)
@@ -310,6 +310,7 @@ ORDER BY r.CreatedAt DESC;
         await HrmsDatabase.ExecuteAsync(db, """
 DELETE FROM FinancialRequestDetails WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL DELETE FROM ApprovalRequestSteps WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestWatchers','U') IS NOT NULL DELETE FROM ApprovalRequestWatchers WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL DELETE FROM ApprovalRequestFlows WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalHistories','U') IS NOT NULL DELETE FROM ApprovalHistories WHERE RequestId=@r;
 DELETE FROM SelfServiceRequests WHERE Id=@r AND (@e IS NULL OR EmployeeId=@e);

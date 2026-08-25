@@ -863,6 +863,80 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.Equal(fieldName,(await ApprovalWorkflowEngine.GetFlowAsync(db,fieldRequest))!.TemplateName);
     }
 
+    [SkippableFact]
+    public async Task Approval_visible_policies_enforce_attachment_cancellation_watchers_and_unknown_committee()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.AsNoTracking().SingleAsync(x=>x.Id==_employeeA);
+        var watcherEmployee=new Employee
+        {
+            EmployeeNo="WATCH-"+Guid.NewGuid().ToString("N")[..8],FullName="Approval Watcher",CompanyId=_companyA,
+            BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,HireDate=new DateOnly(2090,1,1),IsActive=true
+        };
+        db.Employees.Add(watcherEmployee); await db.SaveChangesAsync();
+        var watcher=new SystemUser
+        {
+            FullName=watcherEmployee.FullName,UserName="watch-"+watcherEmployee.Id,
+            Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,IsActive=true,EmployeeId=watcherEmployee.Id
+        };
+        db.SystemUsers.Add(watcher); await db.SaveChangesAsync();
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Resignation",Name="Policy SQL "+Guid.NewGuid().ToString("N"),IsActive=true,
+            AttachmentRequiredOnRequest=true,CancelLimitDays=1,NotifyJson="{\"Employee\":[\"Submit\",\"Cancel\"],\"Committee\":[\"Submit\"]}",
+            Watchers={new(){UserName=watcher.UserName}},
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="HR committee"}}
+        });
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'Resignation',N'policy check','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var missing=await ApprovalWorkflowEngine.StartAsync(db,requestId,"Resignation",_employeeA);
+        Assert.False(missing.Ok); Assert.Contains("مرفق",missing.Message);
+        Assert.Equal("Draft",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={requestId}"));
+
+        await ExecuteAsync(db,$"UPDATE SelfServiceRequests SET AttachmentPath=N'protected/request/{requestId}',Status='Pending' WHERE Id={requestId};");
+        var started=await ApprovalWorkflowEngine.StartAsync(db,requestId,"Resignation",_employeeA);
+        Assert.True(started.Ok,started.Message);
+        var flow=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        Assert.True(flow.AttachmentRequiredOnRequest); Assert.Equal(1,flow.CancelLimitDays);
+        Assert.Equal(1,await ScalarAsync(db,$"SELECT COUNT(1) FROM ApprovalRequestWatchers WHERE RequestId={requestId} AND UserName=N'{watcher.UserName}'"));
+        var wrongOwner=await ApprovalWorkflowEngine.CancelByRequesterAsync(db,requestId,_employeeB,"employee-b");
+        Assert.False(wrongOwner.Ok);
+        var cancelled=await ApprovalWorkflowEngine.CancelByRequesterAsync(db,requestId,_employeeA,"employee-a","changed mind");
+        Assert.True(cancelled.Ok,cancelled.Message);
+        Assert.Equal("Cancelled",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={requestId}"));
+        Assert.True(await ScalarAsync(db,$"SELECT COUNT(1) FROM SystemNotifications WHERE TargetUser=N'{watcher.UserName}' AND Message LIKE N'%{requestId}%'")>=2);
+
+        var expiredId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy,CreatedAt,AttachmentPath)
+VALUES({_employeeA},N'Resignation',N'expired cancel','Pending',N'employee-a',DATEADD(day,-2,SYSUTCDATETIME()),N'protected/request/expired');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        Assert.True((await ApprovalWorkflowEngine.StartAsync(db,expiredId,"Resignation",_employeeA)).Ok);
+        Assert.False((await ApprovalWorkflowEngine.CancelByRequesterAsync(db,expiredId,_employeeA,"employee-a")).Ok);
+
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Transfer",Name="Unknown committee "+Guid.NewGuid().ToString("N"),IsActive=true,
+            AutoRejectUnknownCommittee=true,
+            Steps={new(){StageOrder=1,ApproverType="DirectManager",DisplayName="Missing direct manager"}}
+        });
+        await ExecuteAsync(db,$"UPDATE Employees SET DirectManagerId=NULL WHERE Id={_employeeA};");
+        var unknownId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'Transfer',N'unknown committee','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var autoRejected=await ApprovalWorkflowEngine.StartAsync(db,unknownId,"Transfer",_employeeA);
+        Assert.False(autoRejected.Ok); Assert.True(autoRejected.Rejected);
+        Assert.Equal("Rejected",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={unknownId}"));
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };
@@ -970,6 +1044,9 @@ CREATE TABLE dbo.HrJobPositions
 
     private static async Task<int> ScalarAsync(ApplicationDbContext db, string sql) =>
         Convert.ToInt32(await ScalarObjectAsync(db, sql));
+
+    private static async Task<string> ScalarStringAsync(ApplicationDbContext db, string sql) =>
+        Convert.ToString(await ScalarObjectAsync(db, sql)) ?? string.Empty;
 
     private static async Task<object?> ScalarObjectAsync(ApplicationDbContext db, string sql)
     {

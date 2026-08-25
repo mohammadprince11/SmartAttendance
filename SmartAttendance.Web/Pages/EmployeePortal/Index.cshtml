@@ -552,7 +552,7 @@
                         <button type="button" data-request-type="أوفر تايم">⏱️<span>أوفر تايم</span></button>
                     </div>
 
-                    <form method="post" asp-page-handler="CreateRequest" class="nxex-form nxex-request-form" data-request-form>
+                    <form method="post" asp-page-handler="CreateRequest" enctype="multipart/form-data" class="nxex-form nxex-request-form" data-request-form>
                         <input type="hidden" name="returnTab" value="requests" />
                         <input type="hidden" asp-for="RequestInput.RequestType" value="إجازة" data-request-type-input />
 
@@ -575,6 +575,9 @@
 
                         <label>السبب / الملاحظات *</label>
                         <textarea asp-for="RequestInput.Reason" placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
+
+                        <label>مرفق الطلب (اختياري، وقد يشترطه قالب الموافقة)</label>
+                        <input type="file" name="requestAttachment" accept=".pdf,.jpg,.jpeg,.png,.webp" />
 
                         <button type="submit">إرسال الطلب للموارد البشرية</button>
                     </form>
@@ -696,6 +699,16 @@
                                         <input type="date" name="revisedFrom" value="@(row.FromDate?.ToString("yyyy-MM-dd"))" />
                                         <input type="date" name="revisedTo" value="@(row.ToDate?.ToString("yyyy-MM-dd"))" />
                                         <button type="submit" class="nxex-btn primary">إعادة التقديم</button>
+                                    </form>
+                                }
+                                @if (row.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ||
+                                     row.Status.Equals("Returned", StringComparison.OrdinalIgnoreCase) ||
+                                     row.Status.Equals("Draft", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <form method="post" asp-page-handler="CancelRequest" class="nxex-form nxex-cancel-request-form">
+                                        <input type="hidden" name="id" value="@row.Id" />
+                                        <input type="text" name="cancelReason" maxlength="500" placeholder="سبب الإلغاء (اختياري)" />
+                                        <button type="submit" class="nxex-btn danger" onclick="return confirm('هل تريد إلغاء هذا الطلب؟');">إلغاء الطلب</button>
                                     </form>
                                 }
                             </div>

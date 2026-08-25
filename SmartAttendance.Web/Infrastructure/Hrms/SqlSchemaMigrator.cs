@@ -1944,14 +1944,12 @@ END;
 IF OBJECT_ID('ApprovalTemplateSteps','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplateSteps','StageOrder') IS NULL
 BEGIN
  ALTER TABLE ApprovalTemplateSteps ADD StageOrder int NULL;
- UPDATE ApprovalTemplateSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL;
- ALTER TABLE ApprovalTemplateSteps ALTER COLUMN StageOrder int NOT NULL;
+ EXEC sp_executesql N'UPDATE ApprovalTemplateSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL; ALTER TABLE ApprovalTemplateSteps ALTER COLUMN StageOrder int NOT NULL;';
 END;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL AND COL_LENGTH('ApprovalRequestSteps','StageOrder') IS NULL
 BEGIN
  ALTER TABLE ApprovalRequestSteps ADD StageOrder int NULL;
- UPDATE ApprovalRequestSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL;
- ALTER TABLE ApprovalRequestSteps ALTER COLUMN StageOrder int NOT NULL;
+ EXEC sp_executesql N'UPDATE ApprovalRequestSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL; ALTER TABLE ApprovalRequestSteps ALTER COLUMN StageOrder int NOT NULL;';
 END;
 """),
         new(
@@ -1983,6 +1981,24 @@ BEGIN
  IF COL_LENGTH('ApprovalTemplates','CondMinAmount') IS NULL ALTER TABLE ApprovalTemplates ADD CondMinAmount decimal(18,2) NULL;
  IF COL_LENGTH('ApprovalTemplates','CondMaxAmount') IS NULL ALTER TABLE ApprovalTemplates ADD CondMaxAmount decimal(18,2) NULL;
  IF COL_LENGTH('ApprovalTemplates','CondChangedFieldKey') IS NULL ALTER TABLE ApprovalTemplates ADD CondChangedFieldKey nvarchar(60) NULL;
+END;
+"""),
+        new(
+            "20260826-16-approval-policy-snapshots",
+            """
+IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL AND COL_LENGTH('ApprovalRequestFlows','NotifyJson') IS NULL
+    ALTER TABLE ApprovalRequestFlows ADD NotifyJson nvarchar(max) NULL;
+
+IF OBJECT_ID('ApprovalRequestWatchers','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalRequestWatchers
+ (
+  Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalRequestWatchers PRIMARY KEY,
+  RequestId int NOT NULL,
+  UserName nvarchar(150) NOT NULL,
+  CONSTRAINT FK_ApprovalRequestWatchers_Request FOREIGN KEY(RequestId) REFERENCES SelfServiceRequests(Id)
+ );
+ CREATE UNIQUE INDEX UX_ApprovalRequestWatchers_RequestUser ON ApprovalRequestWatchers(RequestId,UserName);
 END;
 """),
     };

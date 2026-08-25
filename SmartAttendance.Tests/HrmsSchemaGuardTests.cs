@@ -88,4 +88,20 @@ public class HrmsSchemaGuardTests
         Assert.Contains("EXEC sp_executesql",block,StringComparison.Ordinal);
         Assert.DoesNotContain("AND EXISTS (SELECT 1 FROM AttendanceRecords",block,StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void هجرة_المراحل_لا_تربط_العمود_قبل_إضافته()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx"))) dir = dir.Parent;
+        var source=File.ReadAllText(Path.Combine(Assert.IsType<DirectoryInfo>(dir).FullName,
+            "SmartAttendance.Web","Infrastructure","Hrms","SqlSchemaMigrator.cs"));
+        var start=source.IndexOf("20260826-13-approval-parallel-stages",StringComparison.Ordinal);
+        var end=source.IndexOf("20260826-14-approval-sla-reminders-alternates",start,StringComparison.Ordinal);
+        Assert.True(start>0&&end>start);
+        var block=source[start..end];
+        Assert.Equal(2,block.Split("EXEC sp_executesql",StringSplitOptions.None).Length-1);
+        Assert.DoesNotContain("\n UPDATE ApprovalTemplateSteps SET StageOrder",block,StringComparison.Ordinal);
+        Assert.DoesNotContain("\n UPDATE ApprovalRequestSteps SET StageOrder",block,StringComparison.Ordinal);
+    }
 }

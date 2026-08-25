@@ -244,7 +244,7 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
     }
 
 
-    public async Task<IActionResult> OnPostCreateRequestAsync(string? returnTab)
+    public async Task<IActionResult> OnPostCreateRequestAsync(string? returnTab,IFormFile? requestAttachment)
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
 
@@ -312,13 +312,24 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             }
         }
 
+        string? attachmentPath=null;
+        if(requestAttachment is { Length: >0 })
+        {
+            attachmentPath=await _protectedFiles.SaveAsync(requestAttachment,employeeId,"request",HttpContext.RequestAborted);
+            if(attachmentPath is null)
+            {
+                StatusMessage="المرفق غير صالح؛ استخدم PDF أو صورة ضمن الحجم المسموح.";
+                return RedirectToPage(new { tab = returnTab ?? "requests" });
+            }
+        }
+
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status)
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status,AttachmentPath)
 VALUES
-(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending');
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending',@AttachmentPath);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -328,12 +339,18 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 HrmsDatabase.AddParameter(command, "@FromDate", fromDate.Value);
                 HrmsDatabase.AddParameter(command, "@ToDate", toDate);
                 HrmsDatabase.AddParameter(command, "@Reason", reason);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath",(object?)attachmentPath??DBNull.Value);
             });
 
         // سريان الموافقات: حلّ القالب وتجميد خطوات اللجنة على الطلب.
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, type, employeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, type, employeeId);
+            if(!start.Ok)
+            {
+                StatusMessage=start.Message;
+                return RedirectToPage(new { tab = returnTab ?? "requests" });
+            }
         }
 
         StatusMessage = $"تم إرسال طلب {type} بنجاح وهو الآن قيد المراجعة.";
@@ -347,6 +364,16 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         if (employeeId<=0) return Forbid();
         var result=await ApprovalWorkflowEngine.ResubmitReturnedAsync(
             _dbContext,id,employeeId,revisedReason??string.Empty,revisedFrom,revisedTo);
+        StatusMessage=result.Message;
+        return RedirectToPage(new { tab="requests" });
+    }
+
+    public async Task<IActionResult> OnPostCancelRequestAsync(int id, string? cancelReason)
+    {
+        var employeeId=await ResolveEmployeeIdAsync();
+        if(employeeId<=0) return Forbid();
+        var result=await ApprovalWorkflowEngine.CancelByRequesterAsync(
+            _dbContext,id,employeeId,User.Identity?.Name ?? employeeId.ToString(),cancelReason);
         StatusMessage=result.Message;
         return RedirectToPage(new { tab="requests" });
     }
@@ -491,7 +518,12 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, typeLabel, employeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, typeLabel, employeeId);
+            if(!start.Ok)
+            {
+                StatusMessage=start.Message;
+                return RedirectToPage(new { tab = "requests" });
+            }
         }
 
         StatusMessage = $"تم إرسال {typeLabel} ({days:0.#} يوم) وهو الآن قيد المراجعة.";
@@ -680,7 +712,12 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
 
-        await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        if(!start.Ok)
+        {
+            StatusMessage=start.Message;
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
         StatusMessage = $"تم إرسال طلب تعديل البيانات ({saved} حقل) وهو الآن قيد المراجعة.";
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
@@ -1516,6 +1553,7 @@ ORDER BY CreatedAt DESC, Id DESC;
         if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase)) return "قيد الموافقة";
         if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "ملغي";
         if (status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "معاد للتعديل";
+        if (status.Equals("Draft", StringComparison.OrdinalIgnoreCase)) return "مسودة تحتاج استكمالاً";
         return string.IsNullOrWhiteSpace(status) ? "-" : status;
     }
 
@@ -1531,7 +1569,7 @@ ORDER BY CreatedAt DESC, Id DESC;
     public string StatusClass(string status)
     {
         if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Answered", StringComparison.OrdinalIgnoreCase)) return "live";
-        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Open", StringComparison.OrdinalIgnoreCase)) return "pending";
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Open", StringComparison.OrdinalIgnoreCase) || status.Equals("Draft", StringComparison.OrdinalIgnoreCase)) return "pending";
         if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) || status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "danger";
         return string.Empty;
     }

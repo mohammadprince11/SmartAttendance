@@ -70,7 +70,10 @@ SELECT @RequestId;
             });
 
         if (requestId > 0)
-            await ApprovalWorkflowEngine.StartAsync(db, requestId, RequestType, employeeId);
+        {
+            var start=await ApprovalWorkflowEngine.StartAsync(db, requestId, RequestType, employeeId);
+            if(!start.Ok) return 0;
+        }
 
         return requestId;
     }

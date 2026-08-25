@@ -255,6 +255,7 @@ ORDER BY Id DESC;
             """
 DELETE FROM DataChangeRequestFields WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL DELETE FROM ApprovalRequestSteps WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestWatchers','U') IS NOT NULL DELETE FROM ApprovalRequestWatchers WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL DELETE FROM ApprovalRequestFlows WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalHistories','U') IS NOT NULL DELETE FROM ApprovalHistories WHERE RequestId=@r;
 DELETE FROM SelfServiceRequests WHERE Id=@r;
