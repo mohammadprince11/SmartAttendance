@@ -76,4 +76,16 @@ public class HrmsSchemaGuardTests
         Assert.Contains("IF OBJECT_ID('SelfServiceRequests', 'U') IS NULL", script);
         Assert.Contains("await ExecuteAsync(dbContext, sql);", script);
     }
+
+    [Fact]
+    public void الجدول_الاختياري_لا_يُربط_الدفعة_قبل_شرط_وجوده()
+    {
+        var source=HrmsSource();
+        var optionalStart=source.IndexOf("IF OBJECT_ID('PunchSemantics', 'U') IS NOT NULL",StringComparison.Ordinal);
+        var optionalEnd=source.IndexOf("IF OBJECT_ID('ApprovalHistories'",optionalStart,StringComparison.Ordinal);
+        Assert.True(optionalStart>0&&optionalEnd>optionalStart);
+        var block=source[optionalStart..optionalEnd];
+        Assert.Contains("EXEC sp_executesql",block,StringComparison.Ordinal);
+        Assert.DoesNotContain("AND EXISTS (SELECT 1 FROM AttendanceRecords",block,StringComparison.Ordinal);
+    }
 }

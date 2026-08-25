@@ -191,14 +191,15 @@ IF COL_LENGTH('AttendanceRecords', 'PunchSemanticId') IS NULL
 -- للمسار القديم (AttendanceProcessingService بـEF) أن يفرّقها بشرط بسيط بلا
 -- معرفة مُعرّف الدلالة النظامية. الشرط EXISTS يمنع تحديث الجدول بلا داعٍ.
 IF OBJECT_ID('PunchSemantics', 'U') IS NOT NULL
-   AND EXISTS (SELECT 1 FROM AttendanceRecords ar
-               INNER JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
-               WHERE ps.IsSystem = 1)
 BEGIN
-    UPDATE ar SET ar.PunchSemanticId = NULL
-    FROM AttendanceRecords ar
-    INNER JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
-    WHERE ps.IsSystem = 1;
+    -- Dynamic SQL is intentional: SQL Server resolves static table references for
+    -- the whole batch before evaluating IF, so a clean database without the optional
+    -- catalog otherwise fails with "Invalid object name PunchSemantics".
+    EXEC sp_executesql N'
+        UPDATE ar SET ar.PunchSemanticId = NULL
+        FROM AttendanceRecords ar
+        INNER JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
+        WHERE ps.IsSystem = 1;';
 END;
 
 IF OBJECT_ID('ApprovalHistories', 'U') IS NULL
