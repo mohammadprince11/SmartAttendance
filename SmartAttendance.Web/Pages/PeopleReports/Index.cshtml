@@ -255,7 +255,8 @@
                 {
                     <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث متقدم</button>
                 }
-                <a href="@Model.SelfPath?handler=Export&@exportQs" class="hrms-btn-secondary">⬇ تصدير إكسل</a>
+                <a href="@Model.SelfPath?handler=Export&format=xlsx&@exportQs" class="hrms-btn-secondary">⬇ Excel</a>
+                <a href="@Model.SelfPath?handler=Export&format=csv&@exportQs" class="hrms-btn-secondary">⬇ CSV</a>
                 <button type="button" class="hrms-btn-secondary" data-hrms-open="print-settings">🖨 طباعة</button>
                 <a href="@Model.SelfPath" class="hrms-btn-secondary">→ رجوع</a>
             </div>

@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -167,7 +166,7 @@ public class IndexModel : PageModel
         return new JsonResult(counts);
     }
 
-    public async Task<IActionResult> OnGetExportAsync()
+    public async Task<IActionResult> OnGetExportAsync(string format = "xlsx")
     {
         if (!await LoadReportAccessAsync()) return Forbid();
         var scope = await _companyScope.GetAsync();
@@ -180,18 +179,11 @@ public class IndexModel : PageModel
 
         await RunAsync(report);
 
-        var sb = new StringBuilder();
-        sb.AppendLine(string.Join(",", RunColumns.Select(c => Csv(c.Label))));
-        foreach (var row in RunRows)
-        {
-            sb.AppendLine(string.Join(",", RunColumns.Select(c => Csv(row.GetValueOrDefault(c.Key, "")))));
-        }
-
-        var bytes = Encoding.UTF8.GetPreamble()
-            .Concat(Encoding.UTF8.GetBytes(sb.ToString()))
-            .ToArray();
-
-        return File(bytes, "text/csv", $"report-{report.Id}.csv");
+        var export = ReportExportService.Build(
+            format, report.Name,
+            RunColumns.Select(column => new ReportExportService.Column(column.Key, column.Label)).ToList(),
+            RunRows);
+        return File(export.Bytes, export.ContentType, $"report-{report.Id}.{export.Extension}");
     }
 
     public async Task<IActionResult> OnPostCreateReportAsync(
@@ -546,16 +538,6 @@ public class IndexModel : PageModel
                     break;
             }
         }
-    }
-
-    private static string Csv(string value)
-    {
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
     }
 
     public class CompanyOption
