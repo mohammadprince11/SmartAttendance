@@ -5,6 +5,19 @@ namespace SmartAttendance.Tests;
 /// <summary>يثبت أن نطاق الشركة وحده لا يكفي للبتّ؛ يجب أن يطابق الفاعل الخطوة الحالية.</summary>
 public sealed class ApprovalStepAuthorizationContractTests
 {
+    [Theory]
+    [InlineData("إجازة سنوية", "LeaveRequest")]
+    [InlineData("إجازة مرضية", "LeaveRequest")]
+    [InlineData("مغادرة شخصية", "ExitPermission")]
+    [InlineData("خروج عمل", "ExitPermission")]
+    [InlineData("نسيان بصمة", "MissingPunch")]
+    [InlineData("عمل إضافي", "Overtime")]
+    [InlineData("تعديل البيانات", "InfoChange")]
+    [InlineData("قرض", "Loan")]
+    public void DynamicRequestNames_ResolveToConfiguredTemplateKeys(string requestType, string expected) =>
+        Assert.Equal(expected,
+            SmartAttendance.Web.Infrastructure.Hrms.ApprovalWorkflowEngine.ResolveRequestTypeKey(requestType));
+
     [Fact]
     public void ApproveAndReject_EnforceCurrentStepActorInsideEngine()
     {

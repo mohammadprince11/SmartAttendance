@@ -25,6 +25,7 @@ public static class ApprovalWorkflowEngine
         ["عمل إضافي"] = "Overtime",
         ["ShiftRequest"] = "ShiftRequest",
         ["طلب مناوبة"] = "ShiftRequest",
+        ["تعديل البيانات"] = "InfoChange",
         // الطلبات المالية (FinancialRequestStore) — التسمية العربية ← مفتاح قالب اللجنة.
         ["قرض"] = "Loan",
         ["سُلفة"] = "Loan",
@@ -107,9 +108,7 @@ END;
     {
         await EnsureAsync(dbContext);
 
-        var typeKey = RequestTypeMap.TryGetValue(requestType?.Trim() ?? string.Empty, out var mapped)
-            ? mapped
-            : requestType?.Trim() ?? string.Empty;
+        var typeKey = ResolveRequestTypeKey(requestType);
 
         var employee = await HrmsDatabase.QueryAsync(
             dbContext,
@@ -383,6 +382,29 @@ VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepN
                 HrmsDatabase.AddParameter(command, "@StepName", current.DisplayName);
             });
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
+    }
+
+    /// <summary>
+    /// الأنواع الداينمكية تحمل أسماء تفصيلية (إجازة سنوية/مغادرة شخصية)، بينما
+    /// القوالب مفاتيح موديول ثابتة. التطبيع هنا يمنع سقوطها الصامت للمسار الافتراضي.
+    /// </summary>
+    public static string ResolveRequestTypeKey(string? requestType)
+    {
+        var value = requestType?.Trim() ?? string.Empty;
+        if (RequestTypeMap.TryGetValue(value, out var mapped)) return mapped;
+        if (value.Contains("تعديل", StringComparison.OrdinalIgnoreCase) &&
+            value.Contains("بيانات", StringComparison.OrdinalIgnoreCase)) return "InfoChange";
+        if (value.Contains("نسيان بصمة", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("missing punch", StringComparison.OrdinalIgnoreCase)) return "MissingPunch";
+        if (value.Contains("مغادرة", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("خروج", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("exit", StringComparison.OrdinalIgnoreCase)) return "ExitPermission";
+        if (value.Contains("أوفر", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("إضافي", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("overtime", StringComparison.OrdinalIgnoreCase)) return "Overtime";
+        if (value.Contains("إجاز", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("leave", StringComparison.OrdinalIgnoreCase)) return "LeaveRequest";
+        return value;
     }
 
     private static async Task<bool> IsRequesterManagerAsync(
