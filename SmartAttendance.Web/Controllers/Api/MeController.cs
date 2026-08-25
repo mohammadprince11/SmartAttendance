@@ -12,6 +12,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 /// صاحب التوكن. تعيد استخدام مخازن HRMS نفسها المستخدمة بالبوابة.
 /// </summary>
 [ApiController]
+[Route("api/v1/me")]
 [Route("api/me")]
 [Authorize(AuthenticationSchemes = ApiTokenAuthHandler.SchemeName)]
 public sealed class MeController : ControllerBase

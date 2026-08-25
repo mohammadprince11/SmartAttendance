@@ -15,8 +15,11 @@ public class LoginRateLimitPolicyTests
     [Theory]
     [InlineData("/account/login")]
     [InlineData("/api/auth/login")]
+    [InlineData("/api/v1/auth/login")]
     [InlineData("/api/webauthn/login/options")]
+    [InlineData("/api/v1/webauthn/login/options")]
     [InlineData("/api/webauthn/login/verify")]
+    [InlineData("/api/v1/webauthn/login/verify")]
     public void LoginPaths_AreLimited(string path) =>
         Assert.True(LoginRateLimitPolicy.AppliesTo(path));
 

@@ -12,6 +12,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 /// الاعتماد نفسه المستخدم في صفحة الدخول)، والخروج يُلغيه.
 /// </summary>
 [ApiController]
+[Route("api/v1/auth")]
 [Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {

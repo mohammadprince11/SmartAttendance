@@ -19,6 +19,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 /// بأي شيء يرسله العميل سوى توقيعٍ يُطابق التحدّي والمفتاح العام المخزَّن.
 /// </summary>
 [ApiController]
+[Route("api/v1/webauthn")]
 [Route("api/webauthn")]
 [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
 public class WebAuthnController : ControllerBase

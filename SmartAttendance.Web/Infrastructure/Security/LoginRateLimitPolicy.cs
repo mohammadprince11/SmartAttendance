@@ -34,9 +34,12 @@ public static class LoginRateLimitPolicy
 
         return normalized == "/account/login" ||
                normalized == "/api/auth/login" ||
+               normalized == "/api/v1/auth/login" ||
                // WebAuthn: التحقّق يقبل تأكيداً بلا كوكي (دخول بالبصمة) فهو مسار دخول.
                normalized == "/api/webauthn/login/options" ||
-               normalized == "/api/webauthn/login/verify";
+               normalized == "/api/v1/webauthn/login/options" ||
+               normalized == "/api/webauthn/login/verify" ||
+               normalized == "/api/v1/webauthn/login/verify";
     }
 
     /// <summary>
