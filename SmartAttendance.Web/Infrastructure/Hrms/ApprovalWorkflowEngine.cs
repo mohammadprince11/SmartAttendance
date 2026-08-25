@@ -138,7 +138,7 @@ END;
 
         var template = employeeInfo == null
             ? null
-            : await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType);
+            : await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType,requestId);
 
         // بلا قالب: السلسلة الافتراضية القديمة نفسها.
         var steps = template?.Steps.OrderBy(s => s.StepOrder).ToList()

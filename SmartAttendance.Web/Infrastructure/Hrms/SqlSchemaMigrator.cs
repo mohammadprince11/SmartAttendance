@@ -1975,6 +1975,16 @@ BEGIN
  IF COL_LENGTH('ApprovalRequestSteps','EscalatedToUser') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedToUser nvarchar(100) NULL;
 END;
 """),
+        new(
+            "20260826-15-approval-value-field-conditions",
+            """
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalTemplates','CondMinAmount') IS NULL ALTER TABLE ApprovalTemplates ADD CondMinAmount decimal(18,2) NULL;
+ IF COL_LENGTH('ApprovalTemplates','CondMaxAmount') IS NULL ALTER TABLE ApprovalTemplates ADD CondMaxAmount decimal(18,2) NULL;
+ IF COL_LENGTH('ApprovalTemplates','CondChangedFieldKey') IS NULL ALTER TABLE ApprovalTemplates ADD CondChangedFieldKey nvarchar(60) NULL;
+END;
+"""),
     };
 
     /// <summary>

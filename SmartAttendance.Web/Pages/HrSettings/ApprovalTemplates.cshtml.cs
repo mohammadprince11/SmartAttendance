@@ -145,6 +145,9 @@ public class ApprovalTemplatesModel : PageModel
             CondBranchId = ParseNullableInt(form["CondBranchId"]),
             CondDepartmentId = ParseNullableInt(form["CondDepartmentId"]),
             CondWorkType = NullIfEmpty(form["CondWorkType"]),
+            CondMinAmount=ParseNullableDecimal(form["CondMinAmount"]),
+            CondMaxAmount=ParseNullableDecimal(form["CondMaxAmount"]),
+            CondChangedFieldKey=NullIfEmpty(form["CondChangedFieldKey"]),
             AutoRejectUnknownCommittee = form["AutoReject"] == "true",
             CancelLimitDays = ParseNullableInt(form["CancelLimitDays"]),
             CommentRequiredOnReject = form["CommentReq"] == "true",
@@ -168,6 +171,9 @@ public class ApprovalTemplatesModel : PageModel
             template.CondBranchId = null;
             template.CondDepartmentId = null;
             template.CondWorkType = null;
+            template.CondMinAmount=null;
+            template.CondMaxAmount=null;
+            template.CondChangedFieldKey=null;
         }
 
         var stepTypes = form["StepType"];
@@ -274,6 +280,9 @@ public class ApprovalTemplatesModel : PageModel
 
     private static int? ParseNullableInt(string? value)
         => int.TryParse(value, out var parsed) && parsed > 0 ? parsed : null;
+
+    private static decimal? ParseNullableDecimal(string? value)
+        => decimal.TryParse(value,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.InvariantCulture,out var parsed)&&parsed>=0?parsed:null;
 
     private static string BuildNotifyJson(IFormCollection form)
     {

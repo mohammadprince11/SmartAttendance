@@ -10,7 +10,7 @@
     var templatesJson = JsonSerializer.Serialize(Model.Templates.Select(t => new
     {
         t.Id, t.Name, t.NameEn, t.IsActive, t.HasConditions,
-        t.CondBranchId, t.CondDepartmentId, t.CondWorkType,
+        t.CondBranchId, t.CondDepartmentId, t.CondWorkType,t.CondMinAmount,t.CondMaxAmount,t.CondChangedFieldKey,
         t.AutoRejectUnknownCommittee, t.CancelLimitDays,
         t.CommentRequiredOnReject, t.AttachmentRequiredOnRequest,
         t.ReminderHours,t.EscalationDays, t.EscalationTo,t.EscalationAlternateUser,t.NotifyJson,
@@ -253,6 +253,15 @@
                 <label>تذكير بعد (ساعات)
                     <input type="number" name="ReminderHours" id="f_ReminderHours" min="1" />
                 </label>
+                <label>المبلغ من
+                    <input type="number" name="CondMinAmount" id="f_CondMinAmount" min="0" step="0.01" />
+                </label>
+                <label>المبلغ إلى
+                    <input type="number" name="CondMaxAmount" id="f_CondMaxAmount" min="0" step="0.01" />
+                </label>
+                <label class="full">عند تغيير حقل معين
+                    <select name="CondChangedFieldKey" id="f_CondChangedFieldKey"><option value="">أي حقل</option>@foreach(var field in DataChangeRequestStore.Catalog){<option value="@field.Key">@field.Label</option>}</select>
+                </label>
                 <label>تصعيد بعد (أيام بلا قرار)
                     <input type="number" name="EscalationDays" id="f_EscalationDays" min="1" />
                 </label>
@@ -351,6 +360,9 @@
                     document.getElementById("f_CondBranchId").value = t.CondBranchId || "";
                     document.getElementById("f_CondDepartmentId").value = t.CondDepartmentId || "";
                     document.getElementById("f_CondWorkType").value = t.CondWorkType || "";
+                    document.getElementById("f_CondMinAmount").value = t.CondMinAmount ?? "";
+                    document.getElementById("f_CondMaxAmount").value = t.CondMaxAmount ?? "";
+                    document.getElementById("f_CondChangedFieldKey").value = t.CondChangedFieldKey || "";
                     document.getElementById("f_AutoReject").checked = !!t.AutoRejectUnknownCommittee;
                     document.getElementById("f_CommentReq").checked = !!t.CommentRequiredOnReject;
                     document.getElementById("f_AttachReq").checked = !!t.AttachmentRequiredOnRequest;

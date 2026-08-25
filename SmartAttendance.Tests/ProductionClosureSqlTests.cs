@@ -815,6 +815,54 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.True(alternateDecision.Ok,alternateDecision.Message); Assert.True(alternateDecision.FinalApproved);
     }
 
+    [SkippableFact]
+    public async Task Approval_template_conditions_resolve_by_amount_and_changed_field()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        var amountName="High amount "+Guid.NewGuid().ToString("N");
+        var fallbackName="Amount fallback "+Guid.NewGuid().ToString("N");
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Loan",Name=amountName,IsActive=true,HasConditions=true,CondMinAmount=1000,
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="High value committee"}}
+        });
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Loan",Name=fallbackName,IsActive=true,
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Normal committee"}}
+        });
+        var highRequest=await FinancialRequestStore.SubmitAsync(db,new FinancialRequestStore.Detail
+        {Kind=FinancialRequestStore.Loan,Amount=1500,InstallmentCount=3,StartYear=2099,StartMonth=7,Reason="high"},_employeeA,"employee-a");
+        var lowRequest=await FinancialRequestStore.SubmitAsync(db,new FinancialRequestStore.Detail
+        {Kind=FinancialRequestStore.Loan,Amount=500,InstallmentCount=1,StartYear=2099,StartMonth=7,Reason="low"},_employeeA,"employee-a");
+        Assert.Equal(amountName,(await ApprovalWorkflowEngine.GetFlowAsync(db,highRequest))!.TemplateName);
+        Assert.Equal(fallbackName,(await ApprovalWorkflowEngine.GetFlowAsync(db,lowRequest))!.TemplateName);
+
+        var fieldName="Email field "+Guid.NewGuid().ToString("N");
+        var fieldFallback="Field fallback "+Guid.NewGuid().ToString("N");
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="InfoChange",Name=fieldName,IsActive=true,HasConditions=true,CondChangedFieldKey="Email",
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Sensitive field committee"}}
+        });
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="InfoChange",Name=fieldFallback,IsActive=true,
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Normal field committee"}}
+        });
+        var fieldRequest=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'تعديل البيانات',N'بريد جديد','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await DataChangeRequestStore.SaveFieldsAsync(db,fieldRequest,new[]{new DataChangeRequestStore.ProposedField{Key="Email",OldValue="old@example.test",NewValue="new@example.test"}});
+        await ApprovalWorkflowEngine.StartAsync(db,fieldRequest,DataChangeRequestStore.RequestTypeLabel,_employeeA);
+        Assert.Equal(fieldName,(await ApprovalWorkflowEngine.GetFlowAsync(db,fieldRequest))!.TemplateName);
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };

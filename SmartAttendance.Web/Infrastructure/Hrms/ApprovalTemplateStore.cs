@@ -53,6 +53,9 @@ public static class ApprovalTemplateStore
         public int? CondBranchId { get; set; }
         public int? CondDepartmentId { get; set; }
         public string? CondWorkType { get; set; }
+        public decimal? CondMinAmount { get; set; }
+        public decimal? CondMaxAmount { get; set; }
+        public string? CondChangedFieldKey { get; set; }
         public bool AutoRejectUnknownCommittee { get; set; }
         public int? CancelLimitDays { get; set; }
         public bool CommentRequiredOnReject { get; set; }
@@ -101,6 +104,7 @@ BEGIN
         CondBranchId int NULL,
         CondDepartmentId int NULL,
         CondWorkType nvarchar(50) NULL,
+        CondMinAmount decimal(18,2) NULL,CondMaxAmount decimal(18,2) NULL,CondChangedFieldKey nvarchar(60) NULL,
         AutoRejectUnknownCommittee bit NOT NULL DEFAULT(0),
         CancelLimitDays int NULL,
         CommentRequiredOnReject bit NOT NULL DEFAULT(0),
@@ -226,6 +230,7 @@ UPDATE ApprovalTemplates SET
     Name = @Name, NameEn = @NameEn, IsActive = @IsActive,
     HasConditions = @HasConditions, CondBranchId = @CondBranchId,
     CondDepartmentId = @CondDepartmentId, CondWorkType = @CondWorkType,
+    CondMinAmount=@CondMinAmount,CondMaxAmount=@CondMaxAmount,CondChangedFieldKey=@CondChangedFieldKey,
     AutoRejectUnknownCommittee = @AutoReject, CancelLimitDays = @CancelLimitDays,
     CommentRequiredOnReject = @CommentReq, AttachmentRequiredOnRequest = @AttachReq,
     ReminderHours=@ReminderHours,EscalationDays = @EscDays, EscalationTo = @EscTo,
@@ -243,13 +248,13 @@ DELETE FROM ApprovalTemplateWatchers WHERE TemplateId=@Id;
                 dbContext,
                 """
 INSERT INTO ApprovalTemplates
-(CompanyId,RequestType, Name, NameEn, IsActive, Priority, HasConditions, CondBranchId, CondDepartmentId, CondWorkType,
+(CompanyId,RequestType, Name, NameEn, IsActive, Priority, HasConditions, CondBranchId, CondDepartmentId, CondWorkType,CondMinAmount,CondMaxAmount,CondChangedFieldKey,
  AutoRejectUnknownCommittee, CancelLimitDays, CommentRequiredOnReject, AttachmentRequiredOnRequest,
  ReminderHours,EscalationDays, EscalationTo, EscalationAlternateUser,NotifyJson)
 VALUES
 (@CompanyId,@RequestType, @Name, @NameEn, @IsActive,
  (SELECT ISNULL(MAX(Priority), 0) + 1 FROM ApprovalTemplates WHERE CompanyId=@CompanyId AND RequestType = @RequestType),
- @HasConditions, @CondBranchId, @CondDepartmentId, @CondWorkType,
+ @HasConditions, @CondBranchId, @CondDepartmentId, @CondWorkType,@CondMinAmount,@CondMaxAmount,@CondChangedFieldKey,
  @AutoReject, @CancelLimitDays, @CommentReq, @AttachReq, @ReminderHours,@EscDays, @EscTo,@EscAltUser,@NotifyJson);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
@@ -309,6 +314,10 @@ VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserNam
         if (template.Steps.Count == 0) return "لجنة الموافقة يجب أن تحتوي خطوة واحدة على الأقل.";
         if(template.ReminderHours is >0&&template.EscalationDays is >0&&template.ReminderHours>=template.EscalationDays*24)
             return "مهلة التذكير يجب أن تسبق مهلة التصعيد.";
+        if(template.CondMinAmount.HasValue&&template.CondMaxAmount.HasValue&&template.CondMaxAmount<template.CondMinAmount)
+            return "حد المبلغ الأعلى لا يمكن أن يقل عن الحد الأدنى.";
+        if(!string.IsNullOrWhiteSpace(template.CondChangedFieldKey)&&!DataChangeRequestStore.Catalog.Any(field=>field.Key.Equals(template.CondChangedFieldKey,StringComparison.OrdinalIgnoreCase)))
+            return "حقل التغيير المشروط غير معروف.";
 
         foreach (var step in template.Steps)
         {
@@ -364,7 +373,7 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
     /// (القالب غير الشرطي ينطبق دائماً). null = لا قالب معرّفاً للنوع.
     /// </summary>
     public static async Task<TemplateRow?> ResolveAsync(
-        ApplicationDbContext dbContext, int companyId, string requestType, int? branchId, int? departmentId, string? workType)
+        ApplicationDbContext dbContext, int companyId, string requestType, int? branchId, int? departmentId, string? workType,int? requestId=null)
     {
         var templates = await ListAsync(dbContext, companyId, requestType);
         foreach (var template in templates.Where(t => t.IsActive))
@@ -376,7 +385,34 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
             var workTypeOk = string.IsNullOrWhiteSpace(template.CondWorkType) ||
                              string.Equals(template.CondWorkType, workType, StringComparison.OrdinalIgnoreCase);
 
-            if (branchOk && departmentOk && workTypeOk) return template;
+            var amountOk=true;
+            if(template.CondMinAmount.HasValue||template.CondMaxAmount.HasValue)
+            {
+                if(requestId is not >0) amountOk=false;
+                else
+                {
+                    var amount=(await HrmsDatabase.QueryAsync(dbContext,"""
+DECLARE @Amount decimal(18,2)=NULL;
+IF OBJECT_ID('FinancialRequestDetails','U') IS NOT NULL
+ EXEC sp_executesql N'SELECT @Out=Amount FROM FinancialRequestDetails WHERE RequestId=@RequestId',N'@RequestId int,@Out decimal(18,2) OUTPUT',@RequestId=@Id,@Out=@Amount OUTPUT;
+SELECT @Amount;
+""",command=>HrmsDatabase.AddParameter(command,"@Id",requestId.Value),reader=>reader.IsDBNull(0)?(decimal?)null:reader.GetDecimal(0))).Single();
+                    amountOk=amount.HasValue&&(!template.CondMinAmount.HasValue||amount>=template.CondMinAmount)&&(!template.CondMaxAmount.HasValue||amount<=template.CondMaxAmount);
+                }
+            }
+            var changedFieldOk=true;
+            if(!string.IsNullOrWhiteSpace(template.CondChangedFieldKey))
+            {
+                if(requestId is not >0) changedFieldOk=false;
+                else changedFieldOk=await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+DECLARE @Found int=0;
+IF OBJECT_ID('DataChangeRequestFields','U') IS NOT NULL
+ EXEC sp_executesql N'SELECT @Out=COUNT(1) FROM DataChangeRequestFields WHERE RequestId=@RequestId AND FieldKey=@FieldKey',N'@RequestId int,@FieldKey nvarchar(60),@Out int OUTPUT',@RequestId=@Id,@FieldKey=@Field,@Out=@Found OUTPUT;
+SELECT @Found;
+""",command=>{HrmsDatabase.AddParameter(command,"@Id",requestId.Value);HrmsDatabase.AddParameter(command,"@Field",template.CondChangedFieldKey);})>0;
+            }
+
+            if (branchOk && departmentOk && workTypeOk&&amountOk&&changedFieldOk) return template;
         }
         return null;
     }
@@ -394,6 +430,9 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
         CondBranchId = HrmsDatabase.GetNullableInt(reader, "CondBranchId"),
         CondDepartmentId = HrmsDatabase.GetNullableInt(reader, "CondDepartmentId"),
         CondWorkType = HrmsDatabase.GetString(reader, "CondWorkType"),
+        CondMinAmount=reader["CondMinAmount"] is decimal min?min:null,
+        CondMaxAmount=reader["CondMaxAmount"] is decimal max?max:null,
+        CondChangedFieldKey=HrmsDatabase.GetString(reader,"CondChangedFieldKey"),
         AutoRejectUnknownCommittee = HrmsDatabase.GetBool(reader, "AutoRejectUnknownCommittee"),
         CancelLimitDays = HrmsDatabase.GetNullableInt(reader, "CancelLimitDays"),
         CommentRequiredOnReject = HrmsDatabase.GetBool(reader, "CommentRequiredOnReject"),
@@ -443,6 +482,9 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
         HrmsDatabase.AddParameter(command, "@CondBranchId", (object?)template.CondBranchId ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CondDepartmentId", (object?)template.CondDepartmentId ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CondWorkType", (object?)template.CondWorkType ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command,"@CondMinAmount",(object?)template.CondMinAmount??DBNull.Value);
+        HrmsDatabase.AddParameter(command,"@CondMaxAmount",(object?)template.CondMaxAmount??DBNull.Value);
+        HrmsDatabase.AddParameter(command,"@CondChangedFieldKey",(object?)template.CondChangedFieldKey??DBNull.Value);
         HrmsDatabase.AddParameter(command, "@AutoReject", template.AutoRejectUnknownCommittee ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@CancelLimitDays", (object?)template.CancelLimitDays ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CommentReq", template.CommentRequiredOnReject ? 1 : 0);
