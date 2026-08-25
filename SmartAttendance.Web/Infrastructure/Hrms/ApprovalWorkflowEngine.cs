@@ -237,7 +237,8 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
     public sealed record ActionResult(bool Ok, string Message, bool FinalApproved = false, bool Rejected = false);
 
     public static async Task<ActionResult> ApproveAsync(
-        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note,
+        IEnumerable<string> actorRoles, int? actorEmployeeId)
     {
         ArgumentNullException.ThrowIfNull(scope);
         // الاعتماد يقدّم الطلب نحو أثرٍ ماليّ (قرض/بدل/زيادة) على موظف. المعرّف من
@@ -253,6 +254,9 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
         {
             return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         }
+
+        if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
+            return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
         var next = flow.Steps.Where(s => s.StepOrder > current.StepOrder && s.Status == "Pending")
                              .OrderBy(s => s.StepOrder)
@@ -326,7 +330,8 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
     }
 
     public static async Task<ActionResult> RejectAsync(
-        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note)
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note,
+        IEnumerable<string> actorRoles, int? actorEmployeeId)
     {
         ArgumentNullException.ThrowIfNull(scope);
         // الرفض كتابةٌ على طلب موظف بمعرّفٍ من النموذج — يُفحَص بالنطاق كالاعتماد.
@@ -340,6 +345,9 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
         {
             return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         }
+
+        if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
+            return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
         if (flow.CommentRequiredOnReject && string.IsNullOrWhiteSpace(note))
         {
@@ -375,6 +383,25 @@ VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepN
                 HrmsDatabase.AddParameter(command, "@StepName", current.DisplayName);
             });
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
+    }
+
+    private static async Task<bool> IsRequesterManagerAsync(
+        ApplicationDbContext dbContext, int requestId, int? actorEmployeeId)
+    {
+        if (actorEmployeeId is not > 0) return false;
+        return await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(1)
+FROM SelfServiceRequests r
+JOIN Employees e ON e.Id = r.EmployeeId AND ISNULL(e.IsDeleted, 0) = 0
+WHERE r.Id = @RequestId AND e.DirectManagerId = @ActorEmployeeId;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@RequestId", requestId);
+                HrmsDatabase.AddParameter(command, "@ActorEmployeeId", actorEmployeeId.Value);
+            }) > 0;
     }
 
     /// <summary>تصعيد الخطوات المتأخرة (تشغيل كسولاً عند فتح شاشة الموافقات) — إشعار واحد لكل طلب.</summary>

@@ -74,9 +74,12 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        // سجّل قرار الحقول قبل البتّ (طلبات تعديل البيانات فقط تتأثر؛ غيرها بلا حقول = بلا أثر).
-        await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
-        var result = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, await ScopeAsync(), id, ActorName(), Note);
+        var result = await ApprovalWorkflowEngine.ApproveAsync(
+            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
+        // لا نكتب قرارات الحقول إلا بعد قبول المحرك لهوية صاحب الخطوة؛ وإلا أمكن
+        // لمستخدم يرى الشاشة أن يغيّر قرارات طلب ثم يترك اعتماده لشخص مخوّل.
+        if (result.Ok)
+            await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
         Message = result.Message;
         MessageIsError = !result.Ok;
         if (result.FinalApproved) await ApplyEffectsAsync(id);
@@ -87,7 +90,8 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
         await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        var result = await ApprovalWorkflowEngine.RejectAsync(_dbContext, await ScopeAsync(), id, ActorName(), Note);
+        var result = await ApprovalWorkflowEngine.RejectAsync(
+            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
         Message = result.Message;
         MessageIsError = !result.Ok;
         await LoadAsync();
@@ -102,7 +106,8 @@ public class IndexModel : PageModel
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
-            var r = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, scope, id, ActorName(), Note);
+            var r = await ApprovalWorkflowEngine.ApproveAsync(
+                _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
             if (r.FinalApproved) { await ApplyEffectsAsync(id); final++; }
         }
@@ -121,7 +126,8 @@ public class IndexModel : PageModel
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
-            var r = await ApprovalWorkflowEngine.RejectAsync(_dbContext, scope, id, ActorName(), Note);
+            var r = await ApprovalWorkflowEngine.RejectAsync(
+                _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
         }
         Message = ok == 0 ? "لم يُرفض أي طلب." : $"تم رفض {ok} طلب.";
@@ -142,6 +148,13 @@ public class IndexModel : PageModel
     }
 
     private string ActorName() => User?.Identity?.Name ?? "HR";
+
+    private IEnumerable<string> ActorRoles() =>
+        User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)
+            .Select(claim => claim.Value);
+
+    private int? ActorEmployeeId() =>
+        int.TryParse(User.FindFirst("EmployeeId")?.Value, out var id) && id > 0 ? id : null;
 
     private async Task LoadAsync()
     {

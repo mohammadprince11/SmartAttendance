@@ -100,7 +100,9 @@ public class FinancialRequestsModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_db);
         var result = await ApprovalWorkflowEngine.ApproveAsync(
-            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note);
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note,
+            User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value),
+            int.TryParse(User.FindFirst("EmployeeId")?.Value, out var actorEmployeeId) ? actorEmployeeId : null);
         var message = result.Message;
 
         if (result.FinalApproved)
@@ -118,7 +120,9 @@ public class FinancialRequestsModel : PageModel
     {
         await HrmsDatabase.EnsureCreatedAsync(_db);
         var result = await ApprovalWorkflowEngine.RejectAsync(
-            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note);
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note,
+            User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value),
+            int.TryParse(User.FindFirst("EmployeeId")?.Value, out var actorEmployeeId) ? actorEmployeeId : null);
         TempData["SuccessMessage"] = result.Message;
         return RedirectToPage();
     }
