@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 using Xunit;
 
 namespace SmartAttendance.Tests;
@@ -16,6 +17,8 @@ public sealed class PayrollConfigIntegrationTests : IAsyncLifetime
         "Server=localhost;Database=SmartAttendance;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 
     private const string Sentinel = "__ITEST__";
+    private const int CompanyId = 91_001;
+    private static readonly CompanyScope Scope = CompanyScope.ForCompanies(new[] { CompanyId });
 
     private ApplicationDbContext _db = null!;
     private bool _dbAvailable;
@@ -66,8 +69,9 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
     {
         if (!_dbAvailable) return;
 
-        await PayrollConfigStore.SaveTaxProfileAsync(_db, new PayrollConfigStore.TaxProfile
+        await PayrollConfigStore.SaveTaxProfileAsync(_db, Scope, new PayrollConfigStore.TaxProfile
         {
+            CompanyId = CompanyId,
             Name = Sentinel,
             ExemptionAmount = 100_000m,
             IsActive = false, // لا نفعّله حتى لا نزاحم ملف الإنتاج النشط
@@ -78,7 +82,7 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
             }
         });
 
-        var saved = (await PayrollConfigStore.ListTaxProfilesAsync(_db))
+        var saved = (await PayrollConfigStore.ListTaxProfilesAsync(_db, Scope, CompanyId))
             .FirstOrDefault(p => p.Name == Sentinel);
 
         Assert.NotNull(saved);
@@ -89,9 +93,9 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
         // خاضع 300k − إعفاء 100k = 200k ⟹ (100k×10%) + (100k×20%) = 30,000
         Assert.Equal(30_000m, PayrollConfigStore.ComputeTax(300_000m, saved));
 
-        await PayrollConfigStore.DeleteTaxProfileAsync(_db, saved.Id);
+        await PayrollConfigStore.DeleteTaxProfileAsync(_db, Scope, saved.Id);
         Assert.DoesNotContain(
-            await PayrollConfigStore.ListTaxProfilesAsync(_db),
+            await PayrollConfigStore.ListTaxProfilesAsync(_db, Scope, CompanyId),
             p => p.Name == Sentinel);
     }
 
@@ -100,17 +104,18 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
     {
         if (!_dbAvailable) return;
 
-        await PayrollConfigStore.SaveTaxProfileAsync(_db, new PayrollConfigStore.TaxProfile
+        await PayrollConfigStore.SaveTaxProfileAsync(_db, Scope, new PayrollConfigStore.TaxProfile
         {
+            CompanyId = CompanyId,
             Name = Sentinel, ExemptionAmount = 0m, IsActive = false,
             Brackets = new() { new() { FromAmount = 0m, ToAmount = null, Rate = 5m } }
         });
-        var first = (await PayrollConfigStore.ListTaxProfilesAsync(_db)).First(p => p.Name == Sentinel);
+        var first = (await PayrollConfigStore.ListTaxProfilesAsync(_db, Scope, CompanyId)).First(p => p.Name == Sentinel);
 
         // تحديث نفس الملف بشرائح مختلفة — يجب أن تُستبدل لا أن تتراكم.
-        await PayrollConfigStore.SaveTaxProfileAsync(_db, new PayrollConfigStore.TaxProfile
+        await PayrollConfigStore.SaveTaxProfileAsync(_db, Scope, new PayrollConfigStore.TaxProfile
         {
-            Id = first.Id, Name = Sentinel, ExemptionAmount = 0m, IsActive = false,
+            Id = first.Id, CompanyId = CompanyId, Name = Sentinel, ExemptionAmount = 0m, IsActive = false,
             Brackets = new()
             {
                 new() { FromAmount = 0m, ToAmount = 50_000m, Rate = 10m },
@@ -118,7 +123,7 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
             }
         });
 
-        var updated = (await PayrollConfigStore.ListTaxProfilesAsync(_db)).First(p => p.Id == first.Id);
+        var updated = (await PayrollConfigStore.ListTaxProfilesAsync(_db, Scope, CompanyId)).First(p => p.Id == first.Id);
         Assert.Equal(2, updated.Brackets.Count); // لا تراكم للشرائح القديمة
     }
 
@@ -129,12 +134,12 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
     {
         if (!_dbAvailable) return;
 
-        await PayrollConfigStore.SaveGosiProfileAsync(_db, new PayrollConfigStore.GosiProfile
+        await PayrollConfigStore.SaveGosiProfileAsync(_db, Scope, new PayrollConfigStore.GosiProfile
         {
-            Name = Sentinel, EmployeeRate = 5m, CompanyRate = 12m, Ceiling = 0m, IsActive = false
+            CompanyId = CompanyId, Name = Sentinel, EmployeeRate = 5m, CompanyRate = 12m, Ceiling = 0m, IsActive = false
         });
 
-        var saved = (await PayrollConfigStore.ListGosiProfilesAsync(_db))
+        var saved = (await PayrollConfigStore.ListGosiProfilesAsync(_db, Scope, CompanyId))
             .FirstOrDefault(p => p.Name == Sentinel);
 
         Assert.NotNull(saved);
@@ -145,9 +150,9 @@ DELETE FROM PayrollGosiProfiles WHERE Name = N'__ITEST__';
         Assert.Equal(50_000m, emp);
         Assert.Equal(120_000m, co);
 
-        await PayrollConfigStore.DeleteGosiProfileAsync(_db, saved.Id);
+        await PayrollConfigStore.DeleteGosiProfileAsync(_db, Scope, saved.Id);
         Assert.DoesNotContain(
-            await PayrollConfigStore.ListGosiProfilesAsync(_db),
+            await PayrollConfigStore.ListGosiProfilesAsync(_db, Scope, CompanyId),
             p => p.Name == Sentinel);
     }
 }

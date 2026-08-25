@@ -304,11 +304,49 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Payroll_profiles_reject_cross_company_reads_updates_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await PayrollConfigStore.EnsureAsync(db);
+
+        var aId = await PayrollConfigStore.SaveTaxProfileAsync(db, scopeA, new PayrollConfigStore.TaxProfile
+        {
+            CompanyId = _companyA, Name = "Company A tax", ExemptionAmount = 10, IsActive = true,
+            Brackets = new() { new() { FromAmount = 0, Rate = 5 } }
+        });
+        var bProfile = new PayrollConfigStore.TaxProfile
+        {
+            CompanyId = _companyB, Name = "Company B tax", ExemptionAmount = 20, IsActive = true,
+            Brackets = new() { new() { FromAmount = 0, Rate = 7 } }
+        };
+        var bId = await PayrollConfigStore.SaveTaxProfileAsync(db, scopeB, bProfile);
+
+        var aRows = await PayrollConfigStore.ListTaxProfilesAsync(db, scopeA, _companyA);
+        Assert.Contains(aRows, profile => profile.Id == aId);
+        Assert.DoesNotContain(aRows, profile => profile.Id == bId);
+
+        bProfile.Id = bId;
+        bProfile.CompanyId = _companyA;
+        bProfile.Name = "Malicious rename";
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            PayrollConfigStore.SaveTaxProfileAsync(db, scopeA, bProfile));
+        Assert.Equal("Company B tax", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Name FROM PayrollTaxProfiles WHERE Id={bId};")));
+
+        await PayrollConfigStore.DeleteTaxProfileAsync(db, scopeA, bId);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PayrollTaxProfiles WHERE Id={bId};"));
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PayrollTaxBrackets WHERE ProfileId={bId};"));
+    }
+
+    [SkippableFact]
     public async Task Allowance_identity_audit_is_unambiguous_and_fk_backed()
     {
         RequireSql();
         await using var db = NewContext();
-        var salaryItemId = await ScalarAsync(db, """
+        var salaryItemId = await ScalarAsync(db, $"""
 INSERT INTO SalaryItems (CompanyId, Name, ItemType, ValueKind, DefaultValue, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, CreatedAt)
 VALUES ({_companyA}, N'Housing', N'Income', N'PerEmployee', 0, 0, 1, 1, 1, 1, 0, 0, 1, 10, SYSUTCDATETIME());
 SELECT CAST(SCOPE_IDENTITY() AS int);

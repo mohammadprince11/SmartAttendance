@@ -122,12 +122,12 @@ public class FinancialInfoModel : PageModel
         if (!await CanViewSalaryAsync(id)) return Forbid();
         if (!await CanEditAsync(id)) return Forbid();
         await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+        var scopeProvider = HttpContext.RequestServices.GetService(typeof(ICompanyScopeProvider)) as ICompanyScopeProvider;
+        var scope = scopeProvider is null ? CompanyScope.DeniedAll() : await scopeProvider.GetAsync(HttpContext.RequestAborted);
 
         try
         {
             // درجات السلم المرئية لنطاق شركات المستخدم (المشتركة + شركاته) — عزل تهيئة 8D–8M.
-            var scopeProvider = HttpContext.RequestServices.GetService(typeof(ICompanyScopeProvider)) as ICompanyScopeProvider;
-            var scope = scopeProvider is null ? CompanyScope.DeniedAll() : await scopeProvider.GetAsync(HttpContext.RequestAborted);
             ScaleGrades = await SalaryScaleStore.ListAsync(_dbContext, scope, activeOnly: true);
         }
         catch
@@ -139,6 +139,7 @@ public class FinancialInfoModel : PageModel
         var employee = await _dbContext.Employees.AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
         if (employee == null) return NotFound();
+        if (!scope.Allows(employee.CompanyId)) return Forbid();
 
         EmployeeId = employee.Id;
         EmployeeName = employee.FullName;
@@ -155,7 +156,7 @@ public class FinancialInfoModel : PageModel
             .ToListAsync();
         ActiveAllowancesTotal = allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
 
-        await LoadProfilesAsync(id, today);
+        await LoadProfilesAsync(id, today, scope, employee.CompanyId);
 
         // اقتراح درجة السلم من الأساسي — عرضٌ لا فرض.
         if (Input.BasicSalary is > 0)
@@ -169,10 +170,10 @@ public class FinancialInfoModel : PageModel
     /// الرقم يُعاد حسابه بالمسير بنفس المركِّب (<see cref="SalaryBaseComposer"/>)
     /// فلا نسخة ثانية من الصيغة هنا؛ وما يُعرض تقديرٌ باليوم لا التزامٌ بقسيمة.
     /// </summary>
-    private async Task LoadProfilesAsync(int employeeId, DateOnly today)
+    private async Task LoadProfilesAsync(int employeeId, DateOnly today, CompanyScope scope, int? companyId)
     {
-        TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext);
-        GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext);
+        TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext, scope, companyId);
+        GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext, scope, companyId);
 
         var rows = await HrConditionFacts.LoadAsync(_dbContext, employeeId);
         var facts = rows.Count > 0
@@ -221,6 +222,9 @@ public class FinancialInfoModel : PageModel
         var employee = await _dbContext.Employees.AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
         if (employee == null) return NotFound();
+        var scopeProvider = HttpContext.RequestServices.GetService(typeof(ICompanyScopeProvider)) as ICompanyScopeProvider;
+        var scope = scopeProvider is null ? CompanyScope.DeniedAll() : await scopeProvider.GetAsync(HttpContext.RequestAborted);
+        if (!scope.Allows(employee.CompanyId)) return Forbid();
 
         EmployeeId = employee.Id;
         EmployeeName = employee.FullName;
@@ -232,9 +236,15 @@ public class FinancialInfoModel : PageModel
         if (salaryErrors.Count > 0)
         {
             ErrorMessage = string.Join(" · ", salaryErrors);
-            await LoadProfilesAsync(id, DateOnly.FromDateTime(DateTime.Today));
+            await LoadProfilesAsync(id, DateOnly.FromDateTime(DateTime.Today), scope, employee.CompanyId);
             return Page();
         }
+
+        var allowedTaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext, scope, employee.CompanyId);
+        var allowedGosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext, scope, employee.CompanyId);
+        if (Input.TaxProfileId is > 0 && allowedTaxProfiles.All(profile => profile.Id != Input.TaxProfileId) ||
+            Input.GosiProfileId is > 0 && allowedGosiProfiles.All(profile => profile.Id != Input.GosiProfileId))
+            return Forbid();
 
         var user = User.Identity?.Name ?? "System";
         var now = DateTime.UtcNow;

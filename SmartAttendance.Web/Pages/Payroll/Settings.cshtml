@@ -5,12 +5,12 @@
 
 @{
     ViewData["Title"] = "الضريبة والضمان";
-    var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Select(p => new
+    var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Where(p => p.CompanyId is > 0).Select(p => new
     {
         p.Id, p.Name, p.ExemptionAmount, p.IsActive, p.ConditionsJson, p.SortOrder,
         Brackets = p.Brackets.Select(b => new { b.FromAmount, b.ToAmount, b.Rate })
     }));
-    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive, g.ConditionsJson, g.SortOrder }));
+    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Where(g => g.CompanyId is > 0).Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive, g.ConditionsJson, g.SortOrder }));
 
     // كتالوج المكوّنات والعضوية المحفوظة والافتراضات — تبني لوحة الوعاء داخل السلايد
     var componentsJson = JsonSerializer.Serialize(
@@ -63,6 +63,16 @@
             <h1>تهيئة الضريبة والضمان</h1>
             <p>الملف النشط من كل نوع يُستخدم بالمسير. الضريبة تصاعدية بشرائح؛ الضمان بنسبة موظف/شركة وسقف.</p>
         </div>
+        <form method="get" style="display:flex;align-items:center;gap:8px">
+            <label for="payroll-company" class="ps-muted">شركة ملفات الضريبة والضمان</label>
+            <select id="payroll-company" name="CompanyId" onchange="this.form.submit()" required>
+                <option value="">اختر الشركة</option>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
+                }
+            </select>
+        </form>
     </header>
 
     <div class="ps-warn">⚠️ القيم المبذورة عراقية <b>مبدئية</b> (ضمان 5%/12% + شرائح 3–15%) — راجعها مع محاسب قبل اعتماد أي مسير حقيقي.</div>
@@ -289,15 +299,19 @@
     <div class="ps-grid">
         @* ----- الضريبة ----- *@
         <div class="ps-sec">
-            <h2>ملفات الضريبة <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="taxOpen(0)">+ ملف</button></h2>
+            <h2>ملفات الضريبة <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="taxOpen(0)" disabled="@(!Model.CompanyId.HasValue)">+ ملف</button></h2>
             @foreach (var p in Model.TaxProfiles)
             {
                 <div class="ps-item @(p.IsActive ? "active" : "")">
                     <div style="display:flex;justify-content:space-between;align-items:center">
                         <div><b>@p.Name</b> @(p.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
                         <div style="white-space:nowrap">
-                            <button type="button" class="ps-btn ghost sm" onclick="taxOpen(@p.Id)">تعديل</button>
-                            <form method="post" asp-page-handler="DeleteTax" style="display:inline"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                            @if (p.CompanyId is > 0)
+                            {
+                                <button type="button" class="ps-btn ghost sm" onclick="taxOpen(@p.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="DeleteTax" asp-route-company-id="@Model.CompanyId" style="display:inline"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                            }
+                            else { <span class="ps-tag">افتراضي مشترك · للقراءة</span> }
                         </div>
                     </div>
                     <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
@@ -310,15 +324,19 @@
 
         @* ----- الضمان ----- *@
         <div class="ps-sec">
-            <h2>ملفات الضمان الاجتماعي <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="gosiOpen(0)">+ ملف</button></h2>
+            <h2>ملفات الضمان الاجتماعي <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="gosiOpen(0)" disabled="@(!Model.CompanyId.HasValue)">+ ملف</button></h2>
             @foreach (var g in Model.GosiProfiles)
             {
                 <div class="ps-item @(g.IsActive ? "active" : "")">
                     <div style="display:flex;justify-content:space-between;align-items:center">
                         <div><b>@g.Name</b> @(g.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
                         <div style="white-space:nowrap">
-                            <button type="button" class="ps-btn ghost sm" onclick="gosiOpen(@g.Id)">تعديل</button>
-                            <form method="post" asp-page-handler="DeleteGosi" style="display:inline"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                            @if (g.CompanyId is > 0)
+                            {
+                                <button type="button" class="ps-btn ghost sm" onclick="gosiOpen(@g.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="DeleteGosi" asp-route-company-id="@Model.CompanyId" style="display:inline"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                            }
+                            else { <span class="ps-tag">افتراضي مشترك · للقراءة</span> }
                         </div>
                     </div>
                     <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
@@ -334,7 +352,7 @@
     <aside class="hrms-slideover wide" id="tax-slide" aria-hidden="true">
         <div class="hrms-slideover-head"><h2 id="tax-title">ملف ضريبة</h2><button type="button" class="hrms-slideover-close" onclick="taxClose()">×</button></div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="SaveTax" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="SaveTax" asp-route-company-id="@Model.CompanyId" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
                 <input type="hidden" name="Id" id="tax-Id" value="0" />
                 <label>اسم الملف *<input type="text" name="Name" id="tax-Name" required /></label>
                 <label>الإعفاء الشهري (يُطرح قبل الشرائح)<input type="number" name="ExemptionAmount" id="tax-Exemption" step="0.01" value="0" /></label>
@@ -379,7 +397,7 @@
     <aside class="hrms-slideover" id="gosi-slide" aria-hidden="true">
         <div class="hrms-slideover-head"><h2 id="gosi-title">ملف ضمان</h2><button type="button" class="hrms-slideover-close" onclick="gosiClose()">×</button></div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="SaveGosi" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="SaveGosi" asp-route-company-id="@Model.CompanyId" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
                 <input type="hidden" name="Id" id="gosi-Id" value="0" />
                 <label>اسم الملف *<input type="text" name="Name" id="gosi-Name" required /></label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">

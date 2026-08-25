@@ -187,8 +187,10 @@ public partial class ProfileModel
     /// </summary>
     private async Task LoadFinancialProfilesAsync(DateOnly today)
     {
-        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext);
-        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var companyId = await AuthorizedEmployeeCompanyIdAsync(scope);
+        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext, scope, companyId);
+        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext, scope, companyId);
 
         var rows = await HrConditionFacts.LoadAsync(_dbContext, Id);
         var facts = rows.Count > 0

@@ -1,4 +1,6 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.EntityFrameworkCore;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -22,6 +24,7 @@ public static class PayrollConfigStore
     public sealed class TaxProfile
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public decimal ExemptionAmount { get; set; }  // إعفاء شهري يُطرح قبل الشرائح
         public bool IsActive { get; set; } = true;
@@ -38,6 +41,7 @@ public static class PayrollConfigStore
     public sealed class GosiProfile
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public decimal EmployeeRate { get; set; }
         public decimal CompanyRate { get; set; }
@@ -76,6 +80,7 @@ BEGIN
     CREATE TABLE PayrollTaxProfiles
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NULL,
         Name nvarchar(150) NOT NULL,
         ExemptionAmount decimal(18,2) NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
@@ -90,6 +95,7 @@ BEGIN
     CREATE TABLE PayrollTaxBrackets
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NULL,
         ProfileId int NOT NULL,
         FromAmount decimal(18,2) NOT NULL DEFAULT(0),
         ToAmount decimal(18,2) NULL,
@@ -133,16 +139,19 @@ END;
     }
 
     // ---------------- الضريبة ----------------
-    public static async Task<List<TaxProfile>> ListTaxProfilesAsync(ApplicationDbContext dbContext)
+    public static async Task<List<TaxProfile>> ListTaxProfilesAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId = null)
     {
         await EnsureAsync(dbContext);
+        var companyPredicate = ProfilePredicate(scope, companyId, "CompanyId");
         var profiles = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM PayrollTaxProfiles ORDER BY Name;",
+            $"SELECT * FROM PayrollTaxProfiles WHERE {companyPredicate} ORDER BY CompanyId DESC, Name;",
             command => { },
             reader => new TaxProfile
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 ExemptionAmount = reader["ExemptionAmount"] is decimal e ? e : 0,
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
@@ -152,7 +161,12 @@ END;
 
         var brackets = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM PayrollTaxBrackets ORDER BY ProfileId, FromAmount;",
+            $"""
+SELECT b.* FROM PayrollTaxBrackets b
+INNER JOIN PayrollTaxProfiles p ON p.Id = b.ProfileId
+WHERE {ProfilePredicate(scope, companyId, "p.CompanyId")}
+ORDER BY b.ProfileId, b.FromAmount;
+""",
             command => { },
             reader => new
             {
@@ -172,21 +186,34 @@ END;
         return profiles;
     }
 
-    public static async Task<TaxProfile?> ActiveTaxProfileAsync(ApplicationDbContext dbContext) =>
-        (await ListTaxProfilesAsync(dbContext)).FirstOrDefault(x => x.IsActive)
-        ?? (await ListTaxProfilesAsync(dbContext)).FirstOrDefault();
+    public static async Task<TaxProfile?> ActiveTaxProfileAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId) =>
+        (await ListTaxProfilesAsync(dbContext, scope, companyId)).FirstOrDefault(x => x.IsActive)
+        ?? (await ListTaxProfilesAsync(dbContext, scope, companyId)).FirstOrDefault();
 
     /// <summary>يحفظ ملف الضريبة وشرائحه ويعيد معرّفه — يحتاجه المستدعي لربط وعاء الاحتساب.</summary>
-    public static async Task<int> SaveTaxProfileAsync(ApplicationDbContext dbContext, TaxProfile profile)
+    public static async Task<int> SaveTaxProfileAsync(ApplicationDbContext dbContext, CompanyScope scope, TaxProfile profile)
     {
         await EnsureAsync(dbContext);
+        if (profile.CompanyId is not > 0 || !scope.Allows(profile.CompanyId))
+            throw new UnauthorizedAccessException("Tax profile company is outside the effective scope.");
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
         int id;
         if (profile.Id > 0)
         {
             id = profile.Id;
+            var authorized = await HrmsDatabase.ScalarAsync<int>(dbContext,
+                $"SELECT COUNT(*) FROM PayrollTaxProfiles WHERE Id=@Id AND {companyPredicate};",
+                command => HrmsDatabase.AddParameter(command, "@Id", id));
+            if (authorized == 0) throw new UnauthorizedAccessException("Tax profile is outside the effective scope.");
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                "UPDATE PayrollTaxProfiles SET Name=@Name, ExemptionAmount=@Exemption, IsActive=@Active, ConditionsJson=@Conditions, SortOrder=@Sort WHERE Id=@Id; DELETE FROM PayrollTaxBrackets WHERE ProfileId=@Id;",
+                $"""
+UPDATE PayrollTaxProfiles SET CompanyId=@CompanyId, Name=@Name, ExemptionAmount=@Exemption, IsActive=@Active, ConditionsJson=@Conditions, SortOrder=@Sort
+WHERE Id=@Id AND {companyPredicate};
+DELETE FROM PayrollTaxBrackets WHERE ProfileId=@Id AND EXISTS
+    (SELECT 1 FROM PayrollTaxProfiles p WHERE p.Id=@Id AND {scope.ToSqlPredicate("p.CompanyId")});
+""",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", id);
@@ -197,7 +224,7 @@ END;
         {
             id = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
-                "INSERT INTO PayrollTaxProfiles (Name, ExemptionAmount, IsActive, ConditionsJson, SortOrder) VALUES (@Name, @Exemption, @Active, @Conditions, @Sort); SELECT CAST(SCOPE_IDENTITY() AS int);",
+                "INSERT INTO PayrollTaxProfiles (CompanyId, Name, ExemptionAmount, IsActive, ConditionsJson, SortOrder) VALUES (@CompanyId, @Name, @Exemption, @Active, @Conditions, @Sort); SELECT CAST(SCOPE_IDENTITY() AS int);",
                 command => AddTax(command, profile));
         }
 
@@ -216,15 +243,20 @@ END;
                 });
         }
 
+        await transaction.CommitAsync();
         return id;
     }
 
-    public static async Task DeleteTaxProfileAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteTaxProfileAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE FROM PayrollTaxBrackets WHERE ProfileId=@Id; DELETE FROM PayrollTaxProfiles WHERE Id=@Id;",
+            $"""
+DELETE FROM PayrollTaxBrackets WHERE ProfileId=@Id AND EXISTS
+    (SELECT 1 FROM PayrollTaxProfiles p WHERE p.Id=@Id AND {scope.ToSqlPredicate("p.CompanyId")});
+DELETE FROM PayrollTaxProfiles WHERE Id=@Id AND {scope.ToSqlPredicate("CompanyId")};
+""",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 
@@ -247,16 +279,18 @@ END;
     }
 
     // ---------------- الضمان الاجتماعي ----------------
-    public static async Task<List<GosiProfile>> ListGosiProfilesAsync(ApplicationDbContext dbContext)
+    public static async Task<List<GosiProfile>> ListGosiProfilesAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId = null)
     {
         await EnsureAsync(dbContext);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM PayrollGosiProfiles ORDER BY Name;",
+            $"SELECT * FROM PayrollGosiProfiles WHERE {ProfilePredicate(scope, companyId, "CompanyId")} ORDER BY CompanyId DESC, Name;",
             command => { },
             reader => new GosiProfile
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 EmployeeRate = reader["EmployeeRate"] is decimal er ? er : 0,
                 CompanyRate = reader["CompanyRate"] is decimal cr ? cr : 0,
@@ -267,19 +301,25 @@ END;
             });
     }
 
-    public static async Task<GosiProfile?> ActiveGosiProfileAsync(ApplicationDbContext dbContext) =>
-        (await ListGosiProfilesAsync(dbContext)).FirstOrDefault(x => x.IsActive)
-        ?? (await ListGosiProfilesAsync(dbContext)).FirstOrDefault();
+    public static async Task<GosiProfile?> ActiveGosiProfileAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId) =>
+        (await ListGosiProfilesAsync(dbContext, scope, companyId)).FirstOrDefault(x => x.IsActive)
+        ?? (await ListGosiProfilesAsync(dbContext, scope, companyId)).FirstOrDefault();
 
     /// <summary>يحفظ ملف الضمان ويعيد معرّفه — يحتاجه المستدعي لربط وعاء الاحتساب.</summary>
-    public static async Task<int> SaveGosiProfileAsync(ApplicationDbContext dbContext, GosiProfile profile)
+    public static async Task<int> SaveGosiProfileAsync(ApplicationDbContext dbContext, CompanyScope scope, GosiProfile profile)
     {
         await EnsureAsync(dbContext);
+        if (profile.CompanyId is not > 0 || !scope.Allows(profile.CompanyId))
+            throw new UnauthorizedAccessException("GOSI profile company is outside the effective scope.");
         if (profile.Id > 0)
         {
+            var authorized = await HrmsDatabase.ScalarAsync<int>(dbContext,
+                $"SELECT COUNT(*) FROM PayrollGosiProfiles WHERE Id=@Id AND {scope.ToSqlPredicate("CompanyId")};",
+                command => HrmsDatabase.AddParameter(command, "@Id", profile.Id));
+            if (authorized == 0) throw new UnauthorizedAccessException("GOSI profile is outside the effective scope.");
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                "UPDATE PayrollGosiProfiles SET Name=@Name, EmployeeRate=@Emp, CompanyRate=@Co, Ceiling=@Ceiling, IsActive=@Active, ConditionsJson=@Conditions, SortOrder=@Sort WHERE Id=@Id;",
+                $"UPDATE PayrollGosiProfiles SET CompanyId=@CompanyId, Name=@Name, EmployeeRate=@Emp, CompanyRate=@Co, Ceiling=@Ceiling, IsActive=@Active, ConditionsJson=@Conditions, SortOrder=@Sort WHERE Id=@Id AND {scope.ToSqlPredicate("CompanyId")};",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", profile.Id);
@@ -291,16 +331,16 @@ END;
 
         return await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "INSERT INTO PayrollGosiProfiles (Name, EmployeeRate, CompanyRate, Ceiling, IsActive, ConditionsJson, SortOrder) VALUES (@Name, @Emp, @Co, @Ceiling, @Active, @Conditions, @Sort); SELECT CAST(SCOPE_IDENTITY() AS int);",
+            "INSERT INTO PayrollGosiProfiles (CompanyId, Name, EmployeeRate, CompanyRate, Ceiling, IsActive, ConditionsJson, SortOrder) VALUES (@CompanyId, @Name, @Emp, @Co, @Ceiling, @Active, @Conditions, @Sort); SELECT CAST(SCOPE_IDENTITY() AS int);",
             command => AddGosi(command, profile));
     }
 
-    public static async Task DeleteGosiProfileAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteGosiProfileAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE FROM PayrollGosiProfiles WHERE Id=@Id;",
+            "DELETE FROM PayrollGosiProfiles WHERE Id=@Id AND " + scope.ToSqlPredicate("CompanyId") + ";",
             command => HrmsDatabase.AddParameter(command, "@Id", id));
     }
 
@@ -315,6 +355,7 @@ END;
 
     private static void AddGosi(System.Data.Common.DbCommand command, GosiProfile profile)
     {
+        HrmsDatabase.AddParameter(command, "@CompanyId", profile.CompanyId!.Value);
         HrmsDatabase.AddParameter(command, "@Name", profile.Name);
         HrmsDatabase.AddParameter(command, "@Emp", profile.EmployeeRate);
         HrmsDatabase.AddParameter(command, "@Co", profile.CompanyRate);
@@ -326,6 +367,7 @@ END;
 
     private static void AddTax(System.Data.Common.DbCommand command, TaxProfile profile)
     {
+        HrmsDatabase.AddParameter(command, "@CompanyId", profile.CompanyId!.Value);
         HrmsDatabase.AddParameter(command, "@Name", profile.Name);
         HrmsDatabase.AddParameter(command, "@Exemption", profile.ExemptionAmount);
         HrmsDatabase.AddParameter(command, "@Active", profile.IsActive ? 1 : 0);
@@ -334,4 +376,15 @@ END;
     }
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static string ProfilePredicate(CompanyScope scope, int? companyId, string column)
+    {
+        if (companyId is > 0)
+        {
+            if (!scope.Allows(companyId)) return "1 = 0";
+            return $"({column} IS NULL OR {column} = {companyId.Value})";
+        }
+
+        return scope.ToSharedConfigSqlPredicate(column);
+    }
 }

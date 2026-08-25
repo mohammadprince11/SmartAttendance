@@ -478,8 +478,8 @@ SELECT SequenceNo FROM @allocated;
         // ملفات الضريبة/الضمان **كلّها** لا الملف النشط وحده: الملف صار خاصيةً لكل
         // موظف (إسناد صريح أو شرط) ⟵ PayrollProfileResolver. من لا إسناد له ولا شرط
         // ينطبق عليه يأخذ الملف النشط تماماً كما قبل هذا التغيير.
-        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(dbContext);
-        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(dbContext);
+        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(dbContext, loanScope, runCompanyForLoans);
+        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(dbContext, loanScope, runCompanyForLoans);
         var taxById = taxProfiles.ToDictionary(profile => profile.Id);
         var gosiById = gosiProfiles.ToDictionary(profile => profile.Id);
         var taxCandidates = PayrollConfigStore.Candidates(taxProfiles);

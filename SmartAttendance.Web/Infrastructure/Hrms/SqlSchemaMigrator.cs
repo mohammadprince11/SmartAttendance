@@ -1535,6 +1535,23 @@ BEGIN
     CREATE INDEX IX_PeopleReports_Company ON PeopleReports (CompanyId, IsSystem, IsDeleted);
 END;
 """),
+        new(
+            "20260826-03-payroll-profile-company-scope",
+            """
+IF OBJECT_ID('PayrollTaxProfiles', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollTaxProfiles', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE PayrollTaxProfiles ADD CompanyId int NULL;
+    CREATE INDEX IX_PayrollTaxProfiles_Company ON PayrollTaxProfiles (CompanyId, IsActive, SortOrder);
+END;
+
+IF OBJECT_ID('PayrollGosiProfiles', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollGosiProfiles', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE PayrollGosiProfiles ADD CompanyId int NULL;
+    CREATE INDEX IX_PayrollGosiProfiles_Company ON PayrollGosiProfiles (CompanyId, IsActive, SortOrder);
+END;
+"""),
     };
 
     /// <summary>
