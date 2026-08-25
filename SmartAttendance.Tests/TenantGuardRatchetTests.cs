@@ -34,7 +34,9 @@ public sealed class TenantGuardRatchetTests
     /// <summary>أي ذكرٍ لأحد هذه يعني أن الصفحة تفرض النطاق بنفسها.</summary>
     private static readonly string[] GuardTokens =
     {
-        "CompanyScope", "EmployeeCompanyGuard", "ConfigTenantScope", "EffectiveScope"
+        "CompanyScope", "EmployeeCompanyGuard", "ConfigTenantScope", "EffectiveScope",
+        // إعداد عالمي لا يملك CompanyId: حارس الأدمن الصريح يعادل نطاقاً غير مقيّد.
+        "IsAdministrator()", "IsAdmin"
     };
 
     /// <summary>
@@ -53,22 +55,14 @@ public sealed class TenantGuardRatchetTests
     /// </summary>
     private static readonly string[] Baseline =
     {
-        "AccessRoles/Index.cshtml.cs",
-        "Branches/Delete.cshtml.cs",
-        "Branding/Index.cshtml.cs",
-        "Companies/Delete.cshtml.cs",
         "CompanyDocuments/Index.cshtml.cs",
-        "Departments/Delete.cshtml.cs",
-        "Devices/Delete.cshtml.cs",
         "Documents/Generate.cshtml.cs",
         "Documents/Requests.cshtml.cs",
         "Documents/Templates.cshtml.cs",
-        "EmployeeProfileSettings/Index.cshtml.cs",
         "Engagement/Announcements.cshtml.cs",
         "Engagement/Feedback.cshtml.cs",
         "Forms/Index.cshtml.cs",
         "Forms/Submissions.cshtml.cs",
-        "Holidays/Delete.cshtml.cs",
         "HrSettings/EmployeeGroups.cshtml.cs",
         "HrSettings/EntityFields.cshtml.cs",
         "HrSettings/Formulas.cshtml.cs",
@@ -84,9 +78,6 @@ public sealed class TenantGuardRatchetTests
         "PositionCategories/Index.cshtml.cs",
         "PositionLevels/Index.cshtml.cs",
         "Positions/Index.cshtml.cs",
-        "Setup/Index.cshtml.cs",
-        // Phase 6 تحقّقت أنها أدمن-فقط بكتالوج الأدوار — لا حارس داخلها مع ذلك.
-        "UserAccess/Index.cshtml.cs"
         // Violations/Index.cshtml.cs — سُدِّد (AUTHZ-006 · FIX-001): فلتر شركةٍ على
         // القوائم الثلاث. أُزيل من خط الأساس فلا يعود دَيناً مقبولاً.
     };

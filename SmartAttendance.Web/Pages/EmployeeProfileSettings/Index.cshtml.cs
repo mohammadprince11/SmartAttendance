@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeeProfileSettings;
 
@@ -13,12 +14,14 @@ namespace SmartAttendance.Web.Pages.EmployeeProfileSettings;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
     private const int FieldLabelMaxLength = 150;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext,ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope=companyScope;
     }
 
     public List<ProfileSectionView> Sections { get; private set; } = new();
@@ -34,16 +37,19 @@ public class IndexModel : PageModel
     [BindProperty]
     public SectionInput Section { get; set; } = new();
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
         await LoadAsync();
+        return Page();
     }
 
     // ---------- Section management (dynamic tabs/groups) ----------
 
     public async Task<IActionResult> OnPostAddSectionAsync()
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         var label = NormalizeLabel(Section.Label);
@@ -75,6 +81,7 @@ VALUES (@Key, @Label, @SortOrder, 0, 1);
 
     public async Task<IActionResult> OnPostUpdateSectionAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         var label = NormalizeLabel(Section.Label);
@@ -106,6 +113,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostToggleSectionAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         await HrmsDatabase.ExecuteAsync(
@@ -124,6 +132,7 @@ WHERE Id = @Id AND IsSystem = 0;
 
     public async Task<IActionResult> OnPostDeleteSectionAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         var fieldCount = await HrmsDatabase.QueryAsync(
@@ -154,6 +163,7 @@ WHERE s.Id = @Id;
 
     public async Task<IActionResult> OnPostAddFieldAsync()
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         Field.SectionKey = NormalizeSectionKey(Field.SectionKey);
@@ -231,6 +241,7 @@ VALUES
 
     public async Task<IActionResult> OnPostUpdateFieldAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         EditField.SectionKey = NormalizeSectionKey(EditField.SectionKey);
@@ -312,6 +323,7 @@ END;
 
     public async Task<IActionResult> OnPostToggleFieldAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         if (id <= 0 || !await FieldExistsAsync(id))
@@ -336,6 +348,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostDeleteFieldAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         if (id <= 0 || !await FieldExistsAsync(id))
@@ -419,6 +432,9 @@ ORDER BY SortOrder, Id;
             })
             .ToList();
     }
+
+    private async Task<bool> IsGlobalAdministratorAsync() =>
+        (await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted;
 
     private async Task EnsureSchemaAsync()
     {

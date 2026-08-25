@@ -16,6 +16,7 @@ using SmartAttendance.Application.Setup.ViewModels;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Setup;
 
@@ -41,6 +42,7 @@ public class IndexModel : PageModel
     private readonly IDepartmentService _departmentService;
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
+    private readonly ICompanyScopeProvider _companyScope;
 
     public IndexModel(
         ISetupService setupService,
@@ -48,7 +50,8 @@ public class IndexModel : PageModel
         IBranchService branchService,
         IDepartmentService departmentService,
         ApplicationDbContext dbContext,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        ICompanyScopeProvider companyScope)
     {
         _setupService = setupService;
         _companyService = companyService;
@@ -56,6 +59,7 @@ public class IndexModel : PageModel
         _departmentService = departmentService;
         _dbContext = dbContext;
         _environment = environment;
+        _companyScope=companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -279,6 +283,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostUpdateBranchAsync()
     {
         var requestedCompanyId = EditBranch.CompanyId;
+        if(!await CanAccessCompanyAsync(requestedCompanyId)) return NotFound();
         var existing = await _branchService.GetEditByIdAsync(EditBranch.Id);
 
         if (existing == null ||
@@ -324,6 +329,7 @@ public class IndexModel : PageModel
         int companyId,
         int branchId)
     {
+        if(!await CanAccessCompanyAsync(companyId)) return NotFound();
         var branch = await _branchService.GetByIdAsync(branchId);
 
         if (branch == null ||
@@ -361,6 +367,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostUpdateDepartmentAsync()
     {
         var requestedCompanyId = EditDepartment.CompanyId;
+        if(!await CanAccessCompanyAsync(requestedCompanyId)) return NotFound();
         var existing = await _departmentService.GetEditByIdAsync(
             EditDepartment.Id);
 
@@ -407,6 +414,7 @@ public class IndexModel : PageModel
         int companyId,
         int departmentId)
     {
+        if(!await CanAccessCompanyAsync(companyId)) return NotFound();
         var department = await _departmentService.GetByIdAsync(
             departmentId);
 
@@ -574,6 +582,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteCutoffAsync(int companyId, int policyId)
     {
+        if(!await CanAccessCompanyAsync(companyId)) return NotFound();
         var result = await _setupService.DeletePayrollCutoffPolicyAsync(companyId, policyId);
 
         TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Success
@@ -706,6 +715,7 @@ public class IndexModel : PageModel
 
     private async Task<bool> LoadSetupAsync(int companyId)
     {
+        if(!await CanAccessCompanyAsync(companyId)) return false;
         Companies = await LoadCompaniesAsync();
         BuildOptions();
 
@@ -727,17 +737,26 @@ public class IndexModel : PageModel
             return false;
         }
 
-        Branches = (await _branchService.GetAllAsync())
-            .Where(x => x.CompanyId == companyId)
+        Branches = await _dbContext.Branches.AsNoTracking()
+            .Where(branch=>!branch.IsDeleted&&branch.CompanyId==companyId)
             .OrderByDescending(x => x.IsActive)
             .ThenBy(x => x.Name)
-            .ToList();
+            .Select(branch=>new BranchListViewModel
+            {
+                Id=branch.Id,Code=branch.Code,Name=branch.Name,Address=branch.Address,IsActive=branch.IsActive,
+                CompanyId=branch.CompanyId,CompanyName=branch.Company.Name
+            }).ToListAsync(HttpContext.RequestAborted);
 
-        Departments = (await _departmentService.GetAllAsync())
-            .Where(x => x.CompanyId == companyId)
+        Departments = await _dbContext.Departments.AsNoTracking()
+            .Where(department=>!department.IsDeleted&&department.CompanyId==companyId)
             .OrderByDescending(x => x.IsActive)
             .ThenBy(x => x.Name)
-            .ToList();
+            .Select(department=>new DepartmentListViewModel
+            {
+                Id=department.Id,Code=department.Code,Name=department.Name,IsActive=department.IsActive,
+                CompanyId=department.CompanyId,CompanyName=department.Company.Name,
+                BranchId=department.BranchId??0,BranchName=department.Branch==null?string.Empty:department.Branch.Name
+            }).ToListAsync(HttpContext.RequestAborted);
 
         var employeeAssignments = await _dbContext.Employees
             .AsNoTracking()
@@ -949,11 +968,21 @@ public class IndexModel : PageModel
 
     private async Task<IReadOnlyList<CompanyListViewModel>> LoadCompaniesAsync()
     {
-        return (await _companyService.GetAllAsync())
+        var scope=await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if(scope.IsDeniedAll) return Array.Empty<CompanyListViewModel>();
+        var allowed=scope.AllowedCompanyIds.ToArray();
+        return await _dbContext.Companies.AsNoTracking()
+            .Where(company=>!company.IsDeleted&&(scope.IsUnrestricted||allowed.Contains(company.Id)))
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)
-            .ToList();
+            .Select(company=>new CompanyListViewModel
+            {
+                Id=company.Id,Code=company.Code,Name=company.Name,Email=company.Email,Phone=company.Phone,IsActive=company.IsActive
+            }).ToListAsync(HttpContext.RequestAborted);
     }
+
+    private async Task<bool> CanAccessCompanyAsync(int companyId) =>
+        (await _companyScope.GetAsync(HttpContext.RequestAborted)).Allows(companyId);
 
     private IActionResult RedirectToSetupSection(int companyId, string sectionId)
     {
