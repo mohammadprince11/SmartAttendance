@@ -135,25 +135,17 @@ public class TransactionsModel : PageModel
         if (Lock != "Locked") Lock = "Open";
         // القفل لكل حركة: التبويب يفلتر بحالة قفل الحركة نفسها
         var scope = await ScopeAsync();
-        Items = await PayrollTransactionStore.ListAsync(_db, scope, Year, Month, Type, Search, Item, Status, locked: Lock == "Locked");
+        Items = await PayrollTransactionStore.ListAsync(
+            _db, scope, Year, Month, Type, Search, Item, Status, Src, locked: Lock == "Locked",
+            employeeId: Emp, paymentType: PayType, department: Dept, branch: Branch,
+            position: JobTitle, dateFrom: DateFrom, dateTo: DateTo, referenceNo: RefNo,
+            minAmount: MinAmount, maxAmount: MaxAmount);
 
         // قوائم الفلاتر (من حركات الفترة قبل تطبيق الفلاتر المتقدمة)
         Sources = Items.Select(x => x.Source).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
         Departments = Items.Select(x => x.Department).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
         Branches = Items.Select(x => x.Branch).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
         JobTitles = Items.Select(x => x.Position).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
-
-        if (Emp is > 0) Items = Items.Where(x => x.EmployeeId == Emp).ToList();
-        if (!string.IsNullOrWhiteSpace(PayType)) Items = Items.Where(x => x.PaymentType == PayType).ToList();
-        if (!string.IsNullOrWhiteSpace(Src)) Items = Items.Where(x => x.Source == Src).ToList();
-        if (!string.IsNullOrWhiteSpace(Dept)) Items = Items.Where(x => x.Department == Dept).ToList();
-        if (!string.IsNullOrWhiteSpace(Branch)) Items = Items.Where(x => x.Branch == Branch).ToList();
-        if (!string.IsNullOrWhiteSpace(JobTitle)) Items = Items.Where(x => x.Position == JobTitle).ToList();
-        if (DateFrom.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value >= DateFrom.Value).ToList();
-        if (DateTo.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value <= DateTo.Value).ToList();
-        if (!string.IsNullOrWhiteSpace(RefNo)) Items = Items.Where(x => x.ReferenceNo.Contains(RefNo.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
-        if (MinAmount.HasValue) Items = Items.Where(x => x.Amount >= MinAmount.Value).ToList();
-        if (MaxAmount.HasValue) Items = Items.Where(x => x.Amount <= MaxAmount.Value).ToList();
 
         var all = await SalaryItemStore.ListAsync(_db);
         Catalog = IsDeduction

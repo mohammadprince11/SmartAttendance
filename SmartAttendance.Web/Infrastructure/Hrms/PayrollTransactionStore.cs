@@ -177,12 +177,44 @@ IF COL_LENGTH('PayrollTransactions','Days') IS NULL ALTER TABLE PayrollTransacti
 
     public static async Task<List<Transaction>> ListAsync(
         ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string txType, string? search,
-        int? salaryItemId = null, string? status = null, string? source = null, bool? locked = null)
+        int? salaryItemId = null, string? status = null, string? source = null, bool? locked = null,
+        int? employeeId = null, string? paymentType = null, string? department = null,
+        string? branch = null, string? position = null, DateOnly? dateFrom = null,
+        DateOnly? dateTo = null, string? referenceNo = null, decimal? minAmount = null,
+        decimal? maxAmount = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<Transaction>();
         await EnsureAsync(dbContext);
-        var rows = await HrmsDatabase.QueryAsync(
+
+        var predicates = new List<string>
+        {
+            "t.[Year] = @Y",
+            "t.[Month] = @M",
+            "t.TxType = @Type",
+            EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")
+        };
+
+        if (locked.HasValue) predicates.Add("ISNULL(t.IsLocked, 0) = @Locked");
+        if (salaryItemId is > 0) predicates.Add("t.SalaryItemId = @SalaryItemId");
+        if (!string.IsNullOrWhiteSpace(status)) predicates.Add("t.Status = @Status");
+        if (!string.IsNullOrWhiteSpace(source)) predicates.Add("t.Source = @Source");
+        if (employeeId is > 0) predicates.Add("t.EmployeeId = @EmployeeId");
+        if (!string.IsNullOrWhiteSpace(paymentType)) predicates.Add("t.PaymentType = @PaymentType");
+        if (!string.IsNullOrWhiteSpace(department)) predicates.Add("d.Name = @Department");
+        if (!string.IsNullOrWhiteSpace(branch)) predicates.Add("b.Name = @Branch");
+        if (!string.IsNullOrWhiteSpace(position)) predicates.Add("e.Position = @Position");
+        if (dateFrom.HasValue) predicates.Add("t.TransactionDate >= @DateFrom");
+        if (dateTo.HasValue) predicates.Add("t.TransactionDate <= @DateTo");
+        if (!string.IsNullOrWhiteSpace(referenceNo)) predicates.Add("t.ReferenceNo LIKE @ReferenceNo");
+        if (minAmount.HasValue) predicates.Add("t.Amount >= @MinAmount");
+        if (maxAmount.HasValue) predicates.Add("t.Amount <= @MaxAmount");
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            predicates.Add("(e.EmployeeNo LIKE @Search OR e.FullName LIKE @Search OR t.ItemName LIKE @Search OR t.ReferenceNo LIKE @Search)");
+        }
+
+        return await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
 SELECT t.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
@@ -191,8 +223,7 @@ FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
-WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
-  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+WHERE {string.Join(" AND ", predicates)}
 ORDER BY t.CreatedAt DESC;
 """,
             command =>
@@ -200,23 +231,23 @@ ORDER BY t.CreatedAt DESC;
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Type", txType);
+                if (locked.HasValue) HrmsDatabase.AddParameter(command, "@Locked", locked.Value ? 1 : 0);
+                if (salaryItemId is > 0) HrmsDatabase.AddParameter(command, "@SalaryItemId", salaryItemId.Value);
+                if (!string.IsNullOrWhiteSpace(status)) HrmsDatabase.AddParameter(command, "@Status", status.Trim());
+                if (!string.IsNullOrWhiteSpace(source)) HrmsDatabase.AddParameter(command, "@Source", source.Trim());
+                if (employeeId is > 0) HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId.Value);
+                if (!string.IsNullOrWhiteSpace(paymentType)) HrmsDatabase.AddParameter(command, "@PaymentType", paymentType.Trim());
+                if (!string.IsNullOrWhiteSpace(department)) HrmsDatabase.AddParameter(command, "@Department", department.Trim());
+                if (!string.IsNullOrWhiteSpace(branch)) HrmsDatabase.AddParameter(command, "@Branch", branch.Trim());
+                if (!string.IsNullOrWhiteSpace(position)) HrmsDatabase.AddParameter(command, "@Position", position.Trim());
+                if (dateFrom.HasValue) HrmsDatabase.AddParameter(command, "@DateFrom", dateFrom.Value.ToDateTime(TimeOnly.MinValue));
+                if (dateTo.HasValue) HrmsDatabase.AddParameter(command, "@DateTo", dateTo.Value.ToDateTime(TimeOnly.MinValue));
+                if (!string.IsNullOrWhiteSpace(referenceNo)) HrmsDatabase.AddParameter(command, "@ReferenceNo", $"%{referenceNo.Trim()}%");
+                if (minAmount.HasValue) HrmsDatabase.AddParameter(command, "@MinAmount", minAmount.Value);
+                if (maxAmount.HasValue) HrmsDatabase.AddParameter(command, "@MaxAmount", maxAmount.Value);
+                if (!string.IsNullOrWhiteSpace(search)) HrmsDatabase.AddParameter(command, "@Search", $"%{search.Trim()}%");
             },
             Read);
-
-        if (locked.HasValue) rows = rows.Where(r => r.IsLocked == locked.Value).ToList();
-        if (salaryItemId is > 0) rows = rows.Where(r => r.SalaryItemId == salaryItemId).ToList();
-        if (!string.IsNullOrWhiteSpace(status)) rows = rows.Where(r => r.Status == status).ToList();
-        if (!string.IsNullOrWhiteSpace(source)) rows = rows.Where(r => r.Source == source).ToList();
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var v = search.Trim();
-            rows = rows.Where(r =>
-                r.EmployeeNo.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.EmployeeName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.ItemName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.ReferenceNo.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-        return rows;
     }
 
     /// <summary>
