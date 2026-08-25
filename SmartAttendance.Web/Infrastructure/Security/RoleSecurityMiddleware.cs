@@ -182,16 +182,16 @@ public class RoleSecurityMiddleware
 
         // أدوار الصفحات اختيارية: بلا دور يبقى التوافق القديم؛ عند إسناد دور تصبح
         // أفعاله قائمة بيضاء مركزية لكل GET/POST، لا مجرد إخفاء أزرار في الواجهة.
-        var pageCode = PageAccessRouteCatalog.ResolvePageCode(path);
+        var handler = context.Request.RouteValues.TryGetValue("handler", out var routeHandler)
+            ? Convert.ToString(routeHandler)
+            : context.Request.Query["handler"].ToString();
+        var pageCode = PageAccessRouteCatalog.ResolvePageCode(path, handler);
         if (pageCode is not null && !RoleRouteCatalog.IsAdmin(role))
         {
             if (!systemUserId.HasValue || systemUserId.Value <= 0) return false;
             var profile = await accessRoleService.ResolveAsync(systemUserId.Value, context.RequestAborted);
             if (profile.HasPagesRole)
             {
-                var handler = context.Request.RouteValues.TryGetValue("handler", out var routeHandler)
-                    ? Convert.ToString(routeHandler)
-                    : context.Request.Query["handler"].ToString();
                 int? postedId = null;
                 if (context.Request.HasFormContentType)
                 {

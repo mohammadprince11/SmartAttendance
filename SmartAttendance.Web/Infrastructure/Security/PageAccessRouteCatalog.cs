@@ -62,12 +62,20 @@ public static class PageAccessRouteCatalog
         new("/payrollreports", "Payroll.Reports")
     }.OrderByDescending(route => route.Prefix.Length).ToList();
 
-    public static string? ResolvePageCode(string? path)
+    public static string? ResolvePageCode(string? path, string? handler = null)
     {
         var normalized = (path ?? string.Empty).TrimEnd('/').ToLowerInvariant();
+        if ((normalized == "/employees" || normalized == "/employees/index") &&
+            ((handler ?? string.Empty).Contains("import", StringComparison.OrdinalIgnoreCase) ||
+             (handler ?? string.Empty).Contains("template", StringComparison.OrdinalIgnoreCase)))
+            return "People.Import";
         return Routes.FirstOrDefault(route =>
             normalized == route.Prefix || normalized.StartsWith(route.Prefix + "/", StringComparison.Ordinal))?.PageCode;
     }
+
+    public static IReadOnlyCollection<string> MappedPageCodes =>
+        Routes.Select(route => route.PageCode).Append("People.Import")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public static string ResolveAction(string method, string? path, string? handler, int? postedId = null)
     {

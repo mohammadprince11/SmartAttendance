@@ -31,6 +31,10 @@ public sealed class PageAccessRouteCatalogTests
     }
 
     [Fact]
+    public void EmployeeImportHandler_UsesDedicatedImportGrant() =>
+        Assert.Equal("People.Import", PageAccessRouteCatalog.ResolvePageCode("/Employees", "Import"));
+
+    [Fact]
     public void EveryMappedCode_ExistsInVisiblePageCatalog()
     {
         // عقد عبر السلوك العام لعينة كل موديول؛ IsValidPage يمنع مفاتيح وهمية بالواجهة.
@@ -40,6 +44,13 @@ public sealed class PageAccessRouteCatalogTests
             "Payroll.Transactions", "Payroll.Reports", "Identity.AccessRoles"
         };
         Assert.All(codes, code => Assert.True(PageCatalog.IsValidPage(code), code));
+    }
+
+    [Fact]
+    public void EveryVisiblePageGrant_HasCentralRouteCoverage()
+    {
+        var visibleCodes = PageCatalog.Modules.SelectMany(module => module.Pages).Select(page => page.Code);
+        Assert.Empty(visibleCodes.Except(PageAccessRouteCatalog.MappedPageCodes, StringComparer.OrdinalIgnoreCase));
     }
 
     [Fact]
