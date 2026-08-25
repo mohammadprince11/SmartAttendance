@@ -1552,6 +1552,16 @@ BEGIN
     CREATE INDEX IX_PayrollGosiProfiles_Company ON PayrollGosiProfiles (CompanyId, IsActive, SortOrder);
 END;
 """),
+        new(
+            "20260826-04-attendance-source-company-scope",
+            """
+IF OBJECT_ID('AttendanceSources', 'U') IS NOT NULL
+   AND COL_LENGTH('AttendanceSources', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE AttendanceSources ADD CompanyId int NULL;
+    CREATE INDEX IX_AttendanceSources_Company ON AttendanceSources (CompanyId, IsSystem, IsActive);
+END;
+"""),
     };
 
     /// <summary>

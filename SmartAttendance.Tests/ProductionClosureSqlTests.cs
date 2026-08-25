@@ -342,6 +342,41 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Attendance_sources_reject_cross_company_reads_updates_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await AttendanceSourceStore.EnsureAsync(db);
+
+        var sourceA = new AttendanceSourceStore.AttendanceSource
+        {
+            CompanyId = _companyA, Name = "Company A import", ReadType = "Excel", IsActive = true
+        };
+        var sourceB = new AttendanceSourceStore.AttendanceSource
+        {
+            CompanyId = _companyB, Name = "Company B import", ReadType = "Excel", IsActive = true
+        };
+        await AttendanceSourceStore.SaveAsync(db, scopeA, sourceA);
+        await AttendanceSourceStore.SaveAsync(db, scopeB, sourceB);
+
+        var aRows = await AttendanceSourceStore.ListAsync(db, scopeA, _companyA);
+        Assert.Contains(aRows, source => source.Name == "Company A import");
+        Assert.DoesNotContain(aRows, source => source.Name == "Company B import");
+
+        var bId = await ScalarAsync(db,
+            $"SELECT Id FROM AttendanceSources WHERE CompanyId={_companyB} AND Name=N'Company B import';");
+        sourceB.Id = bId;
+        sourceB.CompanyId = _companyA;
+        sourceB.Name = "Malicious rename";
+        await AttendanceSourceStore.SaveAsync(db, scopeA, sourceB);
+        await AttendanceSourceStore.DeleteAsync(db, scopeA, _companyA, bId);
+        Assert.Equal("Company B import", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Name FROM AttendanceSources WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
     public async Task Payroll_settings_are_company_specific_with_legacy_fallback()
     {
         RequireSql();
