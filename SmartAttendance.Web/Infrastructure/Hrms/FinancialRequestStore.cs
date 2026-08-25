@@ -243,7 +243,7 @@ VALUES
     /// <summary>قائمة الطلبات المالية للمركز، مع فلاتر النوع/الحالة/البحث.</summary>
     public static async Task<List<Row>> ListAsync(
         ApplicationDbContext db, Security.CompanyScope scope,
-        string? kind = null, string? status = null, string? search = null)
+        string? kind = null, string? status = null, string? search = null, int? employeeId = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<Row>();
@@ -260,9 +260,21 @@ INNER JOIN SelfServiceRequests r ON r.Id = f.RequestId
 INNER JOIN Employees e ON e.Id = r.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 WHERE {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@EmployeeId IS NULL OR r.EmployeeId = @EmployeeId)
+  AND (@Kind IS NULL OR f.Kind = @Kind)
+  AND (@Status IS NULL OR r.Status = @Status)
+  AND (@Search IS NULL OR e.EmployeeNo LIKE N'%' + @Search + N'%'
+       OR e.FullName LIKE N'%' + @Search + N'%'
+       OR f.Reason LIKE N'%' + @Search + N'%')
 ORDER BY r.CreatedAt DESC;
 """,
-            null,
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId is > 0 ? employeeId.Value : DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Kind", string.IsNullOrWhiteSpace(kind) ? DBNull.Value : kind.Trim());
+                HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(status) ? DBNull.Value : status.Trim());
+                HrmsDatabase.AddParameter(command, "@Search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : search.Trim());
+            },
             r => new Row
             {
                 RequestId = HrmsDatabase.GetInt(r, "RequestId"),
@@ -277,26 +289,21 @@ ORDER BY r.CreatedAt DESC;
                 Detail = Map(r)
             });
 
-        if (!string.IsNullOrWhiteSpace(kind)) rows = rows.Where(r => r.Detail.Kind == kind).ToList();
-        if (!string.IsNullOrWhiteSpace(status)) rows = rows.Where(r => r.Status == status).ToList();
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var v = search.Trim();
-            rows = rows.Where(r =>
-                r.EmployeeNo.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.EmployeeName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                (r.Detail.Reason ?? "").Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
         return rows;
     }
 
     /// <summary>حذف طلب مالي معلّق (قبل الاعتماد) — يزيل التفاصيل والسريان وصف الطلب.</summary>
-    public static async Task<bool> DeletePendingAsync(ApplicationDbContext db, int requestId)
+    public static async Task<bool> DeletePendingAsync(
+        ApplicationDbContext db, int requestId, int? expectedEmployeeId = null)
     {
         await EnsureAsync(db);
         var pending = await HrmsDatabase.ScalarAsync<int>(db,
-            "SELECT COUNT(1) FROM SelfServiceRequests WHERE Id=@r AND Status='Pending'",
-            cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+            "SELECT COUNT(1) FROM SelfServiceRequests WHERE Id=@r AND Status='Pending' AND (@e IS NULL OR EmployeeId=@e)",
+            cmd =>
+            {
+                HrmsDatabase.AddParameter(cmd, "@r", requestId);
+                HrmsDatabase.AddParameter(cmd, "@e", expectedEmployeeId is > 0 ? expectedEmployeeId.Value : DBNull.Value);
+            });
         if (pending == 0) return false;
 
         await HrmsDatabase.ExecuteAsync(db, """
@@ -304,9 +311,13 @@ DELETE FROM FinancialRequestDetails WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL DELETE FROM ApprovalRequestSteps WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL DELETE FROM ApprovalRequestFlows WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalHistories','U') IS NOT NULL DELETE FROM ApprovalHistories WHERE RequestId=@r;
-DELETE FROM SelfServiceRequests WHERE Id=@r;
+DELETE FROM SelfServiceRequests WHERE Id=@r AND (@e IS NULL OR EmployeeId=@e);
 """,
-            cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+            cmd =>
+            {
+                HrmsDatabase.AddParameter(cmd, "@r", requestId);
+                HrmsDatabase.AddParameter(cmd, "@e", expectedEmployeeId is > 0 ? expectedEmployeeId.Value : DBNull.Value);
+            });
         return true;
     }
 
