@@ -40,6 +40,7 @@ public static class ApprovalWorkflowEngine
         public int Id { get; set; }
         public int RequestId { get; set; }
         public int StepOrder { get; set; }
+        public int StageOrder { get; set; }
         public string ApproverType { get; set; } = "DirectManager";
         public string? RoleName { get; set; }
         public string? UserName { get; set; }
@@ -58,6 +59,7 @@ public static class ApprovalWorkflowEngine
         public bool Escalated { get; set; }
         public List<StepState> Steps { get; set; } = new();
         public StepState? Current => Steps.FirstOrDefault(s => s.Status == "Current");
+        public IReadOnlyList<StepState> CurrentSteps => Steps.Where(s=>s.Status=="Current").OrderBy(s=>s.StepOrder).ToList();
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -89,6 +91,7 @@ BEGIN
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
         RequestId int NOT NULL,
         StepOrder int NOT NULL,
+        StageOrder int NOT NULL,
         ApproverType nvarchar(20) NOT NULL,
         RoleName nvarchar(50) NULL,
         UserName nvarchar(150) NULL,
@@ -132,9 +135,11 @@ END;
         var steps = template?.Steps.OrderBy(s => s.StepOrder).ToList()
             ?? new List<ApprovalTemplateStore.StepRow>
             {
-                new() { StepOrder = 1, ApproverType = "DirectManager", DisplayName = "المدير المباشر" },
-                new() { StepOrder = 2, ApproverType = "Role", RoleName = "HR Manager", DisplayName = "HR Manager" }
+                new() { StepOrder = 1, StageOrder=1, ApproverType = "DirectManager", DisplayName = "المدير المباشر" },
+                new() { StepOrder = 2, StageOrder=2, ApproverType = "Role", RoleName = "HR Manager", DisplayName = "HR Manager" }
             };
+
+        var firstStage=steps.Min(step=>step.StageOrder>0?step.StageOrder:step.StepOrder);
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,
@@ -161,17 +166,19 @@ VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @Cancel
         {
             var step = steps[i];
             var order = i + 1;
-            var isFirst = i == 0;
+            var stageOrder=step.StageOrder>0?step.StageOrder:order;
+            var isFirst = stageOrder == firstStage;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO ApprovalRequestSteps (RequestId, StepOrder, ApproverType, RoleName, UserName, DisplayName, Status, CurrentSince)
-VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayName, @Status, @CurrentSince);
+INSERT INTO ApprovalRequestSteps (RequestId, StepOrder, StageOrder, ApproverType, RoleName, UserName, DisplayName, Status, CurrentSince)
+VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName, @DisplayName, @Status, @CurrentSince);
 """,
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@RequestId", requestId);
                     HrmsDatabase.AddParameter(command, "@StepOrder", order);
+                    HrmsDatabase.AddParameter(command, "@StageOrder", stageOrder);
                     HrmsDatabase.AddParameter(command, "@ApproverType", step.ApproverType);
                     HrmsDatabase.AddParameter(command, "@RoleName", (object?)step.RoleName ?? DBNull.Value);
                     HrmsDatabase.AddParameter(command, "@UserName", (object?)step.UserName ?? DBNull.Value);
@@ -187,7 +194,7 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
             "UPDATE SelfServiceRequests SET CurrentStep = @Step, Status = 'Pending', UpdatedAt = SYSUTCDATETIME() WHERE Id = @Id;",
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@Step", steps[0].DisplayName);
+                HrmsDatabase.AddParameter(command, "@Step", string.Join(" + ",steps.Where(step=>(step.StageOrder>0?step.StageOrder:step.StepOrder)==firstStage).Select(step=>step.DisplayName)));
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
             });
     }
@@ -236,6 +243,20 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
     }
 
     private sealed record StepAuthorization(bool Allowed, string? DelegatedFrom = null);
+    private sealed record AuthorizedStep(StepState Step,StepAuthorization Authorization);
+
+    private static async Task<AuthorizedStep?> FindAuthorizedCurrentAsync(
+        ApplicationDbContext dbContext,FlowState flow,int requestId,string actor,
+        IEnumerable<string> actorRoles,int? actorEmployeeId)
+    {
+        var roles=actorRoles.ToArray();
+        foreach(var step in flow.CurrentSteps)
+        {
+            var authorization=await ResolveAuthorizationAsync(dbContext,step,requestId,actor,roles,actorEmployeeId);
+            if(authorization.Allowed) return new(step,authorization);
+        }
+        return null;
+    }
 
     /// <summary>
     /// يحسم القرار بالهوية الحالية أولاً، ثم بتفويض زمني نشط داخل شركة الطلب.
@@ -310,6 +331,16 @@ SELECT @Matched;
         return false;
     }
 
+    private static async Task AcquireDecisionLockAsync(ApplicationDbContext dbContext,int requestId)
+    {
+        var result=await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+DECLARE @Result int;
+EXEC @Result=sp_getapplock @Resource=@Resource,@LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=15000;
+SELECT @Result;
+""",command=>HrmsDatabase.AddParameter(command,"@Resource",$"ZYNORA.ApprovalDecision.{requestId}"));
+        if(result<0) throw new TimeoutException("تعذر حجز الطلب للقرار؛ حاول مرة أخرى.");
+    }
+
     public sealed record ActionResult(bool Ok, string Message, bool FinalApproved = false, bool Rejected = false);
 
     public static async Task<ActionResult> ApproveAsync(
@@ -325,8 +356,7 @@ SELECT @Matched;
             return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
 
         var flow = await GetFlowAsync(dbContext, requestId);
-        var current = flow?.Current;
-        if (flow == null || current == null)
+        if (flow == null || flow.CurrentSteps.Count == 0)
         {
             return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         }
@@ -334,15 +364,13 @@ SELECT @Matched;
         if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
             return new ActionResult(false, "لا يمكن لصاحب الطلب اعتماد طلبه بنفسه.");
 
-        var authorization=await ResolveAuthorizationAsync(dbContext,current,requestId,actor,actorRoles,actorEmployeeId);
-        if (!authorization.Allowed)
+        var selected=await FindAuthorizedCurrentAsync(dbContext,flow,requestId,actor,actorRoles,actorEmployeeId);
+        if (selected is null)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
+        var current=selected.Step; var authorization=selected.Authorization;
 
-        var next = flow.Steps.Where(s => s.StepOrder > current.StepOrder && s.Status == "Pending")
-                             .OrderBy(s => s.StepOrder)
-                             .FirstOrDefault();
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await AcquireDecisionLockAsync(dbContext,requestId);
         var claimed = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
@@ -371,7 +399,24 @@ SELECT @Changed;
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
 
-        if (next == null)
+        var refreshed=await GetFlowAsync(dbContext,requestId);
+        if(refreshed!.CurrentSteps.Any(step=>step.StageOrder==current.StageOrder))
+        {
+            var remaining=refreshed.CurrentSteps.Count(step=>step.StageOrder==current.StageOrder);
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                "UPDATE SelfServiceRequests SET CurrentStep=@Step,UpdatedAt=SYSUTCDATETIME() WHERE Id=@Id AND Status='Pending';",
+                command=>
+                {
+                    HrmsDatabase.AddParameter(command,"@Step",$"المرحلة {current.StageOrder}: بانتظار {remaining} قرار");
+                    HrmsDatabase.AddParameter(command,"@Id",requestId);
+                });
+            await transaction.CommitAsync();
+            return new ActionResult(true,$"تم تسجيل قرارك؛ ما زالت المرحلة المتوازية بانتظار {remaining} قرار.");
+        }
+
+        var nextStage=refreshed.Steps.Where(step=>step.Status=="Pending")
+            .OrderBy(step=>step.StageOrder).Select(step=>(int?)step.StageOrder).FirstOrDefault();
+        if (nextStage is null)
         {
             // آخر خطوة → اعتماد نهائي (تحديث أعمدة التوافق القديمة أيضاً).
             await HrmsDatabase.ExecuteAsync(
@@ -396,10 +441,13 @@ VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بع
             return new ActionResult(true, "تم اعتماد الطلب نهائياً — اكتملت اللجنة.", FinalApproved: true);
         }
 
+        var nextSteps=refreshed.Steps.Where(step=>step.Status=="Pending"&&step.StageOrder==nextStage.Value).OrderBy(step=>step.StepOrder).ToList();
+        var nextName=string.Join(" + ",nextSteps.Select(step=>step.DisplayName));
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
-UPDATE ApprovalRequestSteps SET Status = 'Current', CurrentSince = SYSUTCDATETIME() WHERE Id = @NextId;
+UPDATE ApprovalRequestSteps SET Status = 'Current', CurrentSince = SYSUTCDATETIME()
+WHERE RequestId=@Id AND StageOrder=@NextStage AND Status='Pending';
 
 UPDATE SelfServiceRequests
 SET CurrentStep = @NextName, ManagerStatus = 'Approved', ManagerReviewedBy = @Actor, ManagerReviewedAt = SYSUTCDATETIME(),
@@ -407,18 +455,18 @@ SET CurrentStep = @NextName, ManagerStatus = 'Approved', ManagerReviewedBy = @Ac
 WHERE Id = @Id;
 
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
-VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خطوة: ' + @NextName, @TargetRole, '/Approvals');
+VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى مرحلة: ' + @NextName, @TargetRole, '/Approvals');
 """,
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@NextId", next.Id);
-                HrmsDatabase.AddParameter(command, "@NextName", next.DisplayName);
+                HrmsDatabase.AddParameter(command, "@NextStage", nextStage.Value);
+                HrmsDatabase.AddParameter(command, "@NextName", nextName);
                 HrmsDatabase.AddParameter(command, "@Actor", actor);
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
-                HrmsDatabase.AddParameter(command, "@TargetRole", next.ApproverType == "Role" ? next.RoleName ?? "HR" : "HR");
+                HrmsDatabase.AddParameter(command, "@TargetRole", nextSteps.FirstOrDefault(step=>step.ApproverType=="Role")?.RoleName ?? "HR");
             });
         await transaction.CommitAsync();
-        return new ActionResult(true, $"تمت الموافقة وانتقل الطلب إلى: {next.DisplayName}.");
+        return new ActionResult(true, $"تمت الموافقة وانتقل الطلب إلى: {nextName}.");
     }
 
     public static async Task<ActionResult> RejectAsync(
@@ -432,8 +480,7 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
             return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
 
         var flow = await GetFlowAsync(dbContext, requestId);
-        var current = flow?.Current;
-        if (flow == null || current == null)
+        if (flow == null || flow.CurrentSteps.Count==0)
         {
             return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         }
@@ -441,15 +488,18 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
         if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
             return new ActionResult(false, "لا يمكن لصاحب الطلب رفض طلبه من مركز الموافقات.");
 
-        var authorization=await ResolveAuthorizationAsync(dbContext,current,requestId,actor,actorRoles,actorEmployeeId);
-        if (!authorization.Allowed)
+        var selected=await FindAuthorizedCurrentAsync(dbContext,flow,requestId,actor,actorRoles,actorEmployeeId);
+        if (selected is null)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
+        var current=selected.Step; var authorization=selected.Authorization;
 
         if (flow.CommentRequiredOnReject && string.IsNullOrWhiteSpace(note))
         {
             return new ActionResult(false, "قالب الموافقة يشترط كتابة تعليق عند الرفض.");
         }
 
+        await using var transaction=await dbContext.Database.BeginTransactionAsync();
+        await AcquireDecisionLockAsync(dbContext,requestId);
         var claimed = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
@@ -461,7 +511,7 @@ SET @Changed = @@ROWCOUNT;
 
 IF @Changed = 1
 BEGIN
-UPDATE ApprovalRequestSteps SET Status = 'Skipped' WHERE RequestId = @RequestId AND Status = 'Pending';
+UPDATE ApprovalRequestSteps SET Status = 'Skipped' WHERE RequestId = @RequestId AND Status IN ('Pending','Current');
 
 UPDATE SelfServiceRequests
 SET Status = 'Rejected', CurrentStep = 'Rejected', ReviewedBy = @Actor, ReviewNote = @Note,
@@ -488,6 +538,7 @@ SELECT @Changed;
             });
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
+        await transaction.CommitAsync();
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
     }
 
@@ -502,15 +553,16 @@ SELECT @Changed;
                 dbContext, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
             return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
         var flow = await GetFlowAsync(dbContext, requestId);
-        var current = flow?.Current;
-        if (current is null) return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
+        if (flow is null||flow.CurrentSteps.Count==0) return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
             return new ActionResult(false, "لا يمكن لصاحب الطلب إرجاع طلبه من مركز الموافقات.");
-        var authorization=await ResolveAuthorizationAsync(dbContext,current,requestId,actor,actorRoles,actorEmployeeId);
-        if (!authorization.Allowed)
+        var selected=await FindAuthorizedCurrentAsync(dbContext,flow,requestId,actor,actorRoles,actorEmployeeId);
+        if (selected is null)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
+        var current=selected.Step; var authorization=selected.Authorization;
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await AcquireDecisionLockAsync(dbContext,requestId);
         var changed = await HrmsDatabase.ScalarAsync<int>(dbContext, """
 DECLARE @Changed int,@RequestChanged int;
 UPDATE s SET Status='Returned',ActionBy=@Actor,ActionAt=SYSUTCDATETIME(),Note=@Note,DelegatedFrom=@DelegatedFrom
@@ -520,6 +572,8 @@ WHERE s.Id=@StepId AND s.RequestId=@RequestId AND s.Status='Current' AND r.Statu
 SET @Changed=@@ROWCOUNT;
 IF @Changed=1
 BEGIN
+ UPDATE ApprovalRequestSteps SET Status='WaitingRevision'
+ WHERE RequestId=@RequestId AND StageOrder=@StageOrder AND Status='Current';
  UPDATE SelfServiceRequests SET Status='Returned',CurrentStep=N'بانتظار تعديل الموظف',ReviewNote=@Note,ReviewedBy=@Actor,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND Status='Pending';
  SET @RequestChanged=@@ROWCOUNT;
  IF @RequestChanged=1
@@ -539,6 +593,7 @@ SELECT @Changed;
             HrmsDatabase.AddParameter(command,"@StepId",current.Id); HrmsDatabase.AddParameter(command,"@RequestId",requestId);
             HrmsDatabase.AddParameter(command,"@Actor",actor); HrmsDatabase.AddParameter(command,"@Note",note.Trim());
             HrmsDatabase.AddParameter(command,"@StepName",current.DisplayName);
+            HrmsDatabase.AddParameter(command,"@StageOrder",current.StageOrder);
             HrmsDatabase.AddParameter(command,"@DelegatedFrom",(object?)authorization.DelegatedFrom??DBNull.Value);
         });
         if (changed != 1) return new ActionResult(false,"سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
@@ -558,8 +613,8 @@ SELECT @Changed;
         await EnsureAsync(dbContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var changed = await HrmsDatabase.ScalarAsync<int>(dbContext,"""
-DECLARE @StepId int,@StepName nvarchar(150);
-SELECT TOP(1) @StepId=s.Id,@StepName=s.DisplayName
+DECLARE @StepId int,@StepName nvarchar(150),@StageOrder int;
+SELECT TOP(1) @StepId=s.Id,@StepName=s.DisplayName,@StageOrder=s.StageOrder
 FROM ApprovalRequestSteps s WITH(UPDLOCK,ROWLOCK)
 INNER JOIN SelfServiceRequests r ON r.Id=s.RequestId
 WHERE s.RequestId=@RequestId AND r.EmployeeId=@EmployeeId AND r.Status='Returned' AND s.Status='Returned'
@@ -568,7 +623,8 @@ IF @StepId IS NULL BEGIN SELECT 0; RETURN; END;
 UPDATE SelfServiceRequests SET Reason=@Reason,FromDate=COALESCE(@FromDate,FromDate),ToDate=COALESCE(@ToDate,ToDate),
  Status='Pending',CurrentStep=@StepName,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status='Returned';
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
-UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL WHERE Id=@StepId AND Status='Returned';
+UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL
+WHERE RequestId=@RequestId AND StageOrder=@StageOrder AND Status IN ('Returned','WaitingRevision');
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
 INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes) VALUES(@RequestId,@StepName,'Resubmitted',CONVERT(nvarchar(30),@EmployeeId),@Reason);
 SELECT 1;
@@ -677,6 +733,7 @@ SELECT COUNT(*) FROM @Escalated;
         Id = HrmsDatabase.GetInt(reader, "Id"),
         RequestId = HrmsDatabase.GetInt(reader, "RequestId"),
         StepOrder = HrmsDatabase.GetInt(reader, "StepOrder"),
+        StageOrder = HrmsDatabase.GetInt(reader, "StageOrder"),
         ApproverType = HrmsDatabase.GetString(reader, "ApproverType"),
         RoleName = HrmsDatabase.GetString(reader, "RoleName"),
         UserName = HrmsDatabase.GetString(reader, "UserName"),

@@ -171,6 +171,7 @@ public class ApprovalTemplatesModel : PageModel
         var stepTypes = form["StepType"];
         var stepRoles = form["StepRole"];
         var stepUsers = form["StepUser"];
+        var stepStages = form["StepStage"];
         for (var i = 0; i < stepTypes.Count; i++)
         {
             var approverType = stepTypes[i] ?? "DirectManager";
@@ -179,6 +180,7 @@ public class ApprovalTemplatesModel : PageModel
             template.Steps.Add(new ApprovalTemplateStore.StepRow
             {
                 ApproverType = approverType,
+                StageOrder = stepStages.Count>i&&int.TryParse(stepStages[i],out var stage)&&stage>0?stage:i+1,
                 RoleName = approverType == "Role" ? role : null,
                 UserName = approverType == "User" ? user : null,
                 DisplayName = approverType switch

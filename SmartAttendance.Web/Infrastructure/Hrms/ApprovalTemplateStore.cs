@@ -67,6 +67,7 @@ public static class ApprovalTemplateStore
     public sealed class StepRow
     {
         public int StepOrder { get; set; }
+        public int StageOrder { get; set; }
         public string ApproverType { get; set; } = "DirectManager"; // DirectManager | Role | User
         public string? RoleName { get; set; }
         public string? UserName { get; set; }
@@ -116,6 +117,7 @@ BEGIN
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
         TemplateId int NOT NULL,
         StepOrder int NOT NULL,
+        StageOrder int NOT NULL,
         ApproverType nvarchar(20) NOT NULL,
         RoleName nvarchar(50) NULL,
         UserName nvarchar(150) NULL,
@@ -232,20 +234,26 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         }
 
         var order = 0;
+        var stageOrder = 0;
+        int? previousRawStage = null;
         foreach (var step in template.Steps)
         {
             order++;
             var stepOrder = order;
+            var rawStage=step.StageOrder>0?step.StageOrder:stepOrder;
+            if(previousRawStage is null||rawStage!=previousRawStage) stageOrder++;
+            previousRawStage=rawStage;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO ApprovalTemplateSteps (TemplateId, StepOrder, ApproverType, RoleName, UserName, DisplayName)
-VALUES (@TemplateId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayName);
+INSERT INTO ApprovalTemplateSteps (TemplateId, StepOrder, StageOrder, ApproverType, RoleName, UserName, DisplayName)
+VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName, @DisplayName);
 """,
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@TemplateId", id);
                     HrmsDatabase.AddParameter(command, "@StepOrder", stepOrder);
+                    HrmsDatabase.AddParameter(command, "@StageOrder", stageOrder);
                     HrmsDatabase.AddParameter(command, "@ApproverType", step.ApproverType);
                     HrmsDatabase.AddParameter(command, "@RoleName", (object?)step.RoleName ?? DBNull.Value);
                     HrmsDatabase.AddParameter(command, "@UserName", (object?)step.UserName ?? DBNull.Value);
@@ -379,6 +387,7 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
             reader => new StepRow
             {
                 StepOrder = HrmsDatabase.GetInt(reader, "StepOrder"),
+                StageOrder = HrmsDatabase.GetInt(reader, "StageOrder"),
                 ApproverType = HrmsDatabase.GetString(reader, "ApproverType") ?? "DirectManager",
                 RoleName = HrmsDatabase.GetString(reader, "RoleName"),
                 UserName = HrmsDatabase.GetString(reader, "UserName"),

@@ -28,7 +28,8 @@ public sealed class ApprovalStepAuthorizationContractTests
         var source = File.ReadAllText(Path.Combine(
             directory!.FullName, "SmartAttendance.Web", "Infrastructure", "Hrms", "ApprovalWorkflowEngine.cs"));
 
-        Assert.Equal(3, Count(source, "ResolveAuthorizationAsync(dbContext,current"));
+        Assert.Equal(3, Count(source, "FindAuthorizedCurrentAsync(dbContext,flow"));
+        Assert.Contains("ResolveAuthorizationAsync(dbContext,step", source, StringComparison.Ordinal);
         Assert.Contains("CanAct(step,actor,roles", source, StringComparison.Ordinal);
         Assert.Contains("e.DirectManagerId = @ActorEmployeeId", source, StringComparison.Ordinal);
     }

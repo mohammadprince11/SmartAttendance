@@ -14,7 +14,7 @@
         t.AutoRejectUnknownCommittee, t.CancelLimitDays,
         t.CommentRequiredOnReject, t.AttachmentRequiredOnRequest,
         t.EscalationDays, t.EscalationTo, t.NotifyJson,
-        Steps = t.Steps.Select(s => new { s.ApproverType, s.RoleName, s.UserName, s.DisplayName }),
+        Steps = t.Steps.Select(s => new { s.ApproverType, s.RoleName, s.UserName, s.DisplayName, s.StageOrder }),
         Watchers = t.Watchers.Select(w => w.UserName)
     }));
 }
@@ -222,6 +222,7 @@
                     @foreach (var user in Model.Users) { <option value="@user">@user</option> }
                 </select>
                 <button type="button" class="nxhs-modal-cancel" onclick="aptAddStep()">+ إضافة خطوة</button>
+                <label class="nxhs-check-line"><input type="checkbox" id="aptParallel" /> <b>موازية مع الخطوة السابقة</b></label>
             </div>
             <div class="apt-steps" id="aptSteps"></div>
 
@@ -293,13 +294,18 @@
             document.getElementById("aptStepUser").style.display = t === "User" ? "" : "none";
         }
 
-        function aptAddStep(type, role, user, display) {
+        function aptAddStep(type, role, user, display, stage) {
             type = type || document.getElementById("aptStepType").value;
             role = role !== undefined ? role : document.getElementById("aptStepRole").value;
             user = user !== undefined ? user : document.getElementById("aptStepUser").value;
             display = display || (type === "Role" ? role : type === "User" ? user : "المدير المباشر");
 
             var wrap = document.getElementById("aptSteps");
+            var previous = wrap.lastElementChild;
+            if (stage === undefined || stage === null) {
+                var previousStage = previous ? parseInt(previous.querySelector('input[name="StepStage"]').value || "1") : 0;
+                stage = previous && document.getElementById("aptParallel").checked ? previousStage : previousStage + 1;
+            }
             var row = document.createElement("div");
             row.className = "apt-step";
             row.innerHTML =
@@ -307,6 +313,7 @@
                 '<input type="hidden" name="StepType" value="' + type + '" />' +
                 '<input type="hidden" name="StepRole" value="' + (type === "Role" ? role : "") + '" />' +
                 '<input type="hidden" name="StepUser" value="' + (type === "User" ? user : "") + '" />' +
+                '<input type="hidden" name="StepStage" value="' + stage + '" />' +
                 '<button type="button" onclick="this.parentElement.remove(); aptNumber();">×</button>';
             wrap.appendChild(row);
             aptNumber();
@@ -314,7 +321,11 @@
 
         function aptNumber() {
             var rows = document.querySelectorAll("#aptSteps .apt-step .num");
-            rows.forEach(function (n, i) { n.textContent = i + 1; });
+            rows.forEach(function (n, i) {
+                var row=n.closest('.apt-step');
+                var stage=row.querySelector('input[name="StepStage"]').value;
+                n.textContent = stage + "." + (i + 1);
+            });
         }
 
         function aptOpen(id) {
@@ -341,7 +352,7 @@
                     document.getElementById("f_EscalationTo").value = t.EscalationTo || "";
                     document.getElementById("f_CancelLimitDays").value = t.CancelLimitDays || "";
                     (t.Steps || []).forEach(function (s) {
-                        aptAddStep(s.ApproverType, s.RoleName || "", s.UserName || "", s.DisplayName);
+                        aptAddStep(s.ApproverType, s.RoleName || "", s.UserName || "", s.DisplayName, s.StageOrder || 0);
                     });
                     var watchers = t.Watchers || [];
                     Array.prototype.forEach.call(document.getElementById("f_Watchers").options, function (o) {

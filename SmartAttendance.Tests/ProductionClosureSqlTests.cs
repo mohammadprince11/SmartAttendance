@@ -698,6 +698,78 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.False(denied.Ok);
     }
 
+    [SkippableFact]
+    public async Task Approval_parallel_stage_waits_for_every_actor_then_advances_once()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.AsNoTracking().SingleAsync(x=>x.Id==_employeeA);
+        var actors=Enumerable.Range(1,3).Select(index=>new Employee
+        {
+            EmployeeNo=$"PAR-{index}-"+Guid.NewGuid().ToString("N")[..6],FullName=$"Parallel Actor {index}",
+            CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,
+            HireDate=new DateOnly(2090,1,1),IsActive=true
+        }).ToArray();
+        db.AddRange(actors); await db.SaveChangesAsync();
+        var users=actors.Select((actor,index)=>new SystemUser
+        {
+            FullName=actor.FullName,UserName=$"parallel-{index+1}-{actor.Id}",Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,
+            IsActive=true,EmployeeId=actor.Id
+        }).ToArray();
+        db.SystemUsers.AddRange(users); await db.SaveChangesAsync();
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="CustomRequest",Name="SQL parallel "+Guid.NewGuid().ToString("N"),IsActive=true,
+            Steps=
+            {
+                new(){StageOrder=1,ApproverType="User",UserName=users[0].UserName,DisplayName="Parallel A"},
+                new(){StageOrder=1,ApproverType="User",UserName=users[1].UserName,DisplayName="Parallel B"},
+                new(){StageOrder=2,ApproverType="User",UserName=users[2].UserName,DisplayName="Final C"}
+            }
+        });
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'CustomRequest',N'مرحلة متوازية','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,requestId,"CustomRequest",_employeeA);
+        var initial=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        Assert.Equal(2,initial.CurrentSteps.Count);
+        Assert.All(initial.CurrentSteps,step=>Assert.Equal(1,step.StageOrder));
+
+        var first=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[0].UserName,null,Array.Empty<string>(),actors[0].Id);
+        Assert.True(first.Ok,first.Message); Assert.False(first.FinalApproved);
+        var earlyFinal=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[2].UserName,null,Array.Empty<string>(),actors[2].Id);
+        Assert.False(earlyFinal.Ok);
+        var second=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[1].UserName,null,Array.Empty<string>(),actors[1].Id);
+        Assert.True(second.Ok,second.Message); Assert.False(second.FinalApproved);
+        var advanced=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        Assert.Single(advanced.CurrentSteps); Assert.Equal(2,advanced.CurrentSteps[0].StageOrder);
+        var final=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[2].UserName,null,Array.Empty<string>(),actors[2].Id);
+        Assert.True(final.Ok,final.Message); Assert.True(final.FinalApproved);
+        Assert.Equal("Approved",await ScalarObjectAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={requestId};"));
+
+        var raceId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'CustomRequest',N'اختبار التزامن','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,raceId,"CustomRequest",_employeeA);
+        var decisions=await Task.WhenAll(Enumerable.Range(0,2).Select(async index=>
+        {
+            await using var concurrentDb=NewContext();
+            return await ApprovalWorkflowEngine.ApproveAsync(concurrentDb,CompanyScope.ForCompanies(new[]{_companyA}),
+                raceId,users[index].UserName,null,Array.Empty<string>(),actors[index].Id);
+        }));
+        Assert.All(decisions,decision=>Assert.True(decision.Ok,decision.Message));
+        await using var verificationDb=NewContext();
+        var raceFlow=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(verificationDb,raceId));
+        Assert.Single(raceFlow.CurrentSteps); Assert.Equal(2,raceFlow.CurrentSteps[0].StageOrder);
+        Assert.Equal(2,await RawIntAsync(verificationDb,$"SELECT COUNT(*) FROM ApprovalRequestSteps WHERE RequestId={raceId} AND StageOrder=1 AND Status='Approved';"));
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };

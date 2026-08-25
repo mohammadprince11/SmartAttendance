@@ -1938,6 +1938,22 @@ BEGIN
  CREATE INDEX IX_ApprovalDelegations_ActiveDelegate ON ApprovalDelegations(CompanyId,DelegateUserName,IsActive,StartsAt,EndsAt);
 END;
 """),
+        new(
+            "20260826-13-approval-parallel-stages",
+            """
+IF OBJECT_ID('ApprovalTemplateSteps','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplateSteps','StageOrder') IS NULL
+BEGIN
+ ALTER TABLE ApprovalTemplateSteps ADD StageOrder int NULL;
+ UPDATE ApprovalTemplateSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL;
+ ALTER TABLE ApprovalTemplateSteps ALTER COLUMN StageOrder int NOT NULL;
+END;
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL AND COL_LENGTH('ApprovalRequestSteps','StageOrder') IS NULL
+BEGIN
+ ALTER TABLE ApprovalRequestSteps ADD StageOrder int NULL;
+ UPDATE ApprovalRequestSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL;
+ ALTER TABLE ApprovalRequestSteps ALTER COLUMN StageOrder int NOT NULL;
+END;
+"""),
     };
 
     /// <summary>
