@@ -1677,6 +1677,42 @@ BEGIN
     CREATE INDEX IX_DevicePunchInbox_Queue ON DevicePunchInbox(CompanyId,Status,CreatedAt);
 END;
 """),
+        new(
+            "20260826-07-accounting-adapter",
+            """
+IF OBJECT_ID('AccountingAccountMappings', 'U') IS NULL
+BEGIN
+    CREATE TABLE AccountingAccountMappings
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_AccountingAccountMappings PRIMARY KEY,
+        CompanyId int NOT NULL,
+        AccountRole nvarchar(60) NOT NULL,
+        AccountCode nvarchar(100) NOT NULL,
+        AccountName nvarchar(200) NOT NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_AccountingMappings_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_AccountingMappings_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_AccountingMappings_Role UNIQUE(CompanyId,AccountRole)
+    );
+END;
+
+IF OBJECT_ID('AccountingJournalExports', 'U') IS NULL
+BEGIN
+    CREATE TABLE AccountingJournalExports
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_AccountingJournalExports PRIMARY KEY,
+        CompanyId int NOT NULL,
+        RunId int NOT NULL,
+        Format nvarchar(20) NOT NULL,
+        PayloadHash char(64) NOT NULL,
+        ExportedBy nvarchar(150) NOT NULL,
+        ExportedAt datetime2 NOT NULL,
+        CONSTRAINT FK_AccountingJournalExports_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT FK_AccountingJournalExports_Run FOREIGN KEY(RunId) REFERENCES PayrollRuns(Id)
+    );
+    CREATE INDEX IX_AccountingJournalExports_Run ON AccountingJournalExports(CompanyId,RunId,ExportedAt);
+END;
+"""),
     };
 
     /// <summary>

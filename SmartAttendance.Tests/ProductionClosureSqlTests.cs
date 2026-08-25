@@ -465,6 +465,25 @@ WHERE ExternalId=N'sql-device-missing';
     }
 
     [SkippableFact]
+    public async Task Accounting_mappings_are_isolated_by_company()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await AccountingMappingStore.SaveAsync(
+            db, scopeA, _companyA, AccountingJournalAdapter.PayrollExpense, "A-5100", "A payroll");
+        await AccountingMappingStore.SaveAsync(
+            db, scopeB, _companyB, AccountingJournalAdapter.PayrollExpense, "B-5100", "B payroll");
+
+        var aRows = await AccountingMappingStore.ListAsync(db, scopeA, _companyA);
+        Assert.Single(aRows, mapping => mapping.AccountCode == "A-5100");
+        Assert.DoesNotContain(aRows, mapping => mapping.AccountCode == "B-5100");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            AccountingMappingStore.ListAsync(db, scopeA, _companyB));
+    }
+
+    [SkippableFact]
     public async Task Payroll_settings_are_company_specific_with_legacy_fallback()
     {
         RequireSql();

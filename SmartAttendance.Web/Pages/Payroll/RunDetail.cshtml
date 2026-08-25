@@ -89,8 +89,8 @@
             <p>@Model.CompanyName · الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—") @(Model.Run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-            @* ملف البنك: متاح بعد القفل — قبله الأرقام قابلة لإعادة الاحتساب *@
-            @if (Model.Run.Status is "Locked" or "Issued" or "PayslipSent")
+            @* ملف البنك بعد الإصدار فقط؛ القفل يثبت الأرقام لكنه ليس إذن صرف. *@
+            @if (Model.Run.Status is "Issued" or "PayslipSent")
             {
                 <span style="display:inline-flex;gap:6px;align-items:center">
                     <select id="bankTemplate" class="pd-btn ghost" style="cursor:pointer">
@@ -102,10 +102,18 @@
                     <a class="pd-btn ghost" href="/Payroll/BankTemplates" title="إدارة قوالب البنوك">⚙</a>
                 </span>
             }
+            @if (Model.Run.Status is "Issued" or "PayslipSent")
+            {
+                <span style="display:inline-flex;gap:6px">
+                    <a class="pd-btn" href="/Payroll/RunDetail?id=@Model.Id&handler=ExportAccountingJournal&format=csv">📒 قيد CSV</a>
+                    <a class="pd-btn ghost" href="/Payroll/RunDetail?id=@Model.Id&handler=ExportAccountingJournal&format=json">JSON</a>
+                    <a class="pd-btn ghost" href="/Integrations/Accounting?CompanyId=@Model.Run.CompanyId" title="خرائط الحسابات">⚙</a>
+                </span>
+            }
             else
             {
                 <span class="pd-btn ghost" style="opacity:.55;cursor:not-allowed"
-                      title="اقفل الدفعة أولاً — قبل القفل الأرقام قابلة لإعادة الاحتساب">🏦 ملف البنك</span>
+                      title="أصدر الدفعة للصرف أولاً">🏦 ملف البنك</span>
             }
             <a class="pd-btn ghost" href="/Payroll/Runs">← عودة للمسيرات</a>
         </div>

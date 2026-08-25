@@ -30,6 +30,7 @@ public sealed class PageAccessRouteCatalogTests
     [InlineData("POST", "/MissingPunchRequests", "Delete", "Delete")]
     [InlineData("POST", "/Approvals", "Approve", "Approve")]
     [InlineData("GET", "/Payroll/RunDetail", "BankFile", "Export")]
+    [InlineData("GET", "/Payroll/RunDetail", "ExportAccountingJournal", "Export")]
     [InlineData("POST", "/Payroll/Runs", "Issue", "Approve")]
     [InlineData("POST", "/Payroll/Runs", "Send", "Export")]
     [InlineData("POST", "/Payroll/Runs", "Lock", "Close")]

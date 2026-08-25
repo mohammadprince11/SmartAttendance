@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.Integrations;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -98,5 +99,47 @@ public class RunDetailModel : PageModel
 
         var safeName = template.Name.Replace(' ', '-');
         return File(bytes, "text/csv", $"BankFile-{safeName}-{run.BatchNo}.csv");
+    }
+
+    public async Task<IActionResult> OnGetExportAccountingJournalAsync(string format = "csv")
+    {
+        if (!await CanAccessAsync()) return RedirectToPage("Runs");
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        AccountingJournalAdapter.Journal? journal;
+        try
+        {
+            journal = await AccountingJournalStore.BuildForRunAsync(_db, scope, Id);
+        }
+        catch (InvalidOperationException exception)
+        {
+            TempData["PayrollMessage"] = exception.Message;
+            TempData["PayrollOk"] = false;
+            return RedirectToPage("RunDetail", new { id = Id });
+        }
+        if (journal is null)
+        {
+            TempData["PayrollMessage"] = "القيد المحاسبي متاح لمسير صادر فقط وضمن شركتك.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage("RunDetail", new { id = Id });
+        }
+        var run = await PayrollRunStore.GetRunAsync(_db, Id);
+        if (run?.CompanyId is not > 0) return Forbid();
+        var useJson = format.Equals("json", StringComparison.OrdinalIgnoreCase);
+        var bytes = useJson ? AccountingJournalAdapter.Json(journal) : AccountingJournalAdapter.Csv(journal);
+        var exportFormat = useJson ? "json" : "csv";
+        await using var transaction = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        await AccountingJournalStore.RecordExportAsync(
+            _db, scope, run.CompanyId.Value, run.Id, exportFormat, bytes,
+            User.Identity?.Name ?? "system");
+        await WebhookStore.EnqueueAsync(_db, run.CompanyId.Value, "accounting.journal.exported",
+            new
+            {
+                eventType = "accounting.journal.exported", runId = run.Id, run.BatchNo,
+                format = exportFormat, journal.TotalDebit, journal.TotalCredit,
+                occurredAt = DateTimeOffset.UtcNow
+            }, $"accounting.journal.exported:{run.Id}:{exportFormat}:{Guid.NewGuid():N}");
+        await transaction.CommitAsync(HttpContext.RequestAborted);
+        return File(bytes, useJson ? "application/json" : "text/csv; charset=utf-8",
+            $"Journal-{run.BatchNo}.{exportFormat}");
     }
 }
