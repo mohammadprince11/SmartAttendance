@@ -235,6 +235,81 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
         };
     }
 
+    private sealed record StepAuthorization(bool Allowed, string? DelegatedFrom = null);
+
+    /// <summary>
+    /// يحسم القرار بالهوية الحالية أولاً، ثم بتفويض زمني نشط داخل شركة الطلب.
+    /// اسم المفوّض يُعاد منفصلاً كي يُختم في الخطوة وسجل القرار ولا يضيع أثر النيابة.
+    /// </summary>
+    private static async Task<StepAuthorization> ResolveAuthorizationAsync(
+        ApplicationDbContext dbContext, StepState step, int requestId, string actor,
+        IEnumerable<string> actorRoles, int? actorEmployeeId)
+    {
+        var roles=actorRoles.ToArray();
+        if(CanAct(step,actor,roles,await IsRequesterManagerAsync(dbContext,requestId,actorEmployeeId)))
+            return new(true);
+
+        foreach(var delegator in await ApprovalDelegationStore.ActiveDelegatorsAsync(dbContext,requestId,actor))
+        {
+            if(await DelegatorCanActAsync(dbContext,step,requestId,delegator))
+                return new(true,delegator);
+        }
+        return new(false);
+    }
+
+    private static async Task<bool> DelegatorCanActAsync(
+        ApplicationDbContext dbContext, StepState step, int requestId, string delegator)
+    {
+        // مفوّض صاحب صلاحية التجاوز ينقل مهام موافقاته خلال النافذة فقط.
+        if(await LoginUserHasRoleAsync(dbContext,delegator,"Admin","HR Manager")) return true;
+        if(step.ApproverType.Equals("User",StringComparison.OrdinalIgnoreCase))
+            return string.Equals(step.UserName,delegator,StringComparison.OrdinalIgnoreCase);
+        if(step.ApproverType.Equals("Role",StringComparison.OrdinalIgnoreCase))
+            return !string.IsNullOrWhiteSpace(step.RoleName) &&
+                   await LoginUserHasRoleAsync(dbContext,delegator,step.RoleName!);
+        if(!step.ApproverType.Equals("DirectManager",StringComparison.OrdinalIgnoreCase)) return false;
+
+        return await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+SELECT COUNT(1)
+FROM SelfServiceRequests r
+INNER JOIN Employees requester ON requester.Id=r.EmployeeId AND ISNULL(requester.IsDeleted,0)=0
+INNER JOIN SystemUsers u ON u.UserName=@Delegator AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+INNER JOIN Employees manager ON manager.Id=u.EmployeeId AND ISNULL(manager.IsDeleted,0)=0
+WHERE r.Id=@RequestId AND requester.DirectManagerId=manager.Id AND requester.CompanyId=manager.CompanyId;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@Delegator",delegator);
+        })>0;
+    }
+
+    private static async Task<bool> LoginUserHasRoleAsync(
+        ApplicationDbContext dbContext,string userName,params string[] roles)
+    {
+        if(roles.Length==0) return false;
+        // AppLoginUsers قد لا يوجد في قاعدة اختبار مكوّن منفصل؛ dynamic SQL يمنع
+        // ربط الاسم وقت compilation، والفشل عند غياب جدول الدخول يكون مغلقاً.
+        var normalized=roles.Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        for(var i=0;i<normalized.Length;i++)
+        {
+            var matched=await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+DECLARE @Matched int=0;
+IF OBJECT_ID('AppLoginUsers','U') IS NOT NULL
+BEGIN
+ DECLARE @Sql nvarchar(max)=N'SELECT @Out=COUNT(1) FROM AppLoginUsers WHERE Username=@User AND IsActive=1 AND Role=@Role';
+ EXEC sp_executesql @Sql,N'@User nvarchar(100),@Role nvarchar(50),@Out int OUTPUT',@User=@UserName,@Role=@RoleName,@Out=@Matched OUTPUT;
+END;
+SELECT @Matched;
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command,"@UserName",userName);
+                HrmsDatabase.AddParameter(command,"@RoleName",normalized[i]);
+            });
+            if(matched>0) return true;
+        }
+        return false;
+    }
+
     public sealed record ActionResult(bool Ok, string Message, bool FinalApproved = false, bool Rejected = false);
 
     public static async Task<ActionResult> ApproveAsync(
@@ -259,7 +334,8 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
         if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
             return new ActionResult(false, "لا يمكن لصاحب الطلب اعتماد طلبه بنفسه.");
 
-        if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
+        var authorization=await ResolveAuthorizationAsync(dbContext,current,requestId,actor,actorRoles,actorEmployeeId);
+        if (!authorization.Allowed)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
         var next = flow.Steps.Where(s => s.StepOrder > current.StepOrder && s.Status == "Pending")
@@ -273,12 +349,13 @@ VALUES (@RequestId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNam
 DECLARE @Changed int;
 UPDATE ApprovalRequestSteps
 SET Status = 'Approved', ActionBy = @Actor, ActionAt = SYSUTCDATETIME(), Note = @Note
+    , DelegatedFrom = @DelegatedFrom
 WHERE Id = @StepId AND Status = 'Current';
 SET @Changed = @@ROWCOUNT;
 
 IF @Changed = 1
-INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes)
-VALUES (@RequestId, @StepName, 'Approved', @Actor, @Note);
+INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes, DelegatedFrom)
+VALUES (@RequestId, @StepName, 'Approved', @Actor, @Note, @DelegatedFrom);
 
 SELECT @Changed;
 """,
@@ -289,6 +366,7 @@ SELECT @Changed;
                 HrmsDatabase.AddParameter(command, "@Note", (object?)note ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@RequestId", requestId);
                 HrmsDatabase.AddParameter(command, "@StepName", current.DisplayName);
+                HrmsDatabase.AddParameter(command, "@DelegatedFrom", (object?)authorization.DelegatedFrom ?? DBNull.Value);
             });
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
@@ -363,7 +441,8 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
         if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
             return new ActionResult(false, "لا يمكن لصاحب الطلب رفض طلبه من مركز الموافقات.");
 
-        if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
+        var authorization=await ResolveAuthorizationAsync(dbContext,current,requestId,actor,actorRoles,actorEmployeeId);
+        if (!authorization.Allowed)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
         if (flow.CommentRequiredOnReject && string.IsNullOrWhiteSpace(note))
@@ -376,7 +455,7 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى خط
             """
 DECLARE @Changed int;
 UPDATE ApprovalRequestSteps
-SET Status = 'Rejected', ActionBy = @Actor, ActionAt = SYSUTCDATETIME(), Note = @Note
+SET Status = 'Rejected', ActionBy = @Actor, ActionAt = SYSUTCDATETIME(), Note = @Note, DelegatedFrom=@DelegatedFrom
 WHERE Id = @StepId AND Status = 'Current';
 SET @Changed = @@ROWCOUNT;
 
@@ -389,8 +468,8 @@ SET Status = 'Rejected', CurrentStep = 'Rejected', ReviewedBy = @Actor, ReviewNo
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @RequestId;
 
-INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes)
-VALUES (@RequestId, @StepName, 'Rejected', @Actor, @Note);
+INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes, DelegatedFrom)
+VALUES (@RequestId, @StepName, 'Rejected', @Actor, @Note, @DelegatedFrom);
 
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
 VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepName, 'Employee', '/SelfServices');
@@ -405,6 +484,7 @@ SELECT @Changed;
                 HrmsDatabase.AddParameter(command, "@Actor", actor);
                 HrmsDatabase.AddParameter(command, "@Note", (object?)note ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@StepName", current.DisplayName);
+                HrmsDatabase.AddParameter(command, "@DelegatedFrom", (object?)authorization.DelegatedFrom ?? DBNull.Value);
             });
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
@@ -426,13 +506,14 @@ SELECT @Changed;
         if (current is null) return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
         if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
             return new ActionResult(false, "لا يمكن لصاحب الطلب إرجاع طلبه من مركز الموافقات.");
-        if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
+        var authorization=await ResolveAuthorizationAsync(dbContext,current,requestId,actor,actorRoles,actorEmployeeId);
+        if (!authorization.Allowed)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var changed = await HrmsDatabase.ScalarAsync<int>(dbContext, """
 DECLARE @Changed int,@RequestChanged int;
-UPDATE s SET Status='Returned',ActionBy=@Actor,ActionAt=SYSUTCDATETIME(),Note=@Note
+UPDATE s SET Status='Returned',ActionBy=@Actor,ActionAt=SYSUTCDATETIME(),Note=@Note,DelegatedFrom=@DelegatedFrom
 FROM ApprovalRequestSteps s
 INNER JOIN SelfServiceRequests r WITH(UPDLOCK,HOLDLOCK) ON r.Id=s.RequestId
 WHERE s.Id=@StepId AND s.RequestId=@RequestId AND s.Status='Current' AND r.Status='Pending';
@@ -443,12 +524,12 @@ BEGIN
  SET @RequestChanged=@@ROWCOUNT;
  IF @RequestChanged=1
  BEGIN
-  INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes) VALUES(@RequestId,@StepName,'Returned',@Actor,@Note);
+  INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes,DelegatedFrom) VALUES(@RequestId,@StepName,'Returned',@Actor,@Note,@DelegatedFrom);
   INSERT INTO SystemNotifications(Title,Message,TargetRole,Url) VALUES(N'طلب يحتاج تعديلاً',N'أُعيد طلبك للتعديل: '+@Note,'Employee','/EmployeePortal?tab=requests');
  END
  ELSE
  BEGIN
-  UPDATE ApprovalRequestSteps SET Status='Current',ActionBy=NULL,ActionAt=NULL,Note=NULL WHERE Id=@StepId AND Status='Returned';
+  UPDATE ApprovalRequestSteps SET Status='Current',ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL WHERE Id=@StepId AND Status='Returned';
   SET @Changed=0;
  END
 END;
@@ -458,6 +539,7 @@ SELECT @Changed;
             HrmsDatabase.AddParameter(command,"@StepId",current.Id); HrmsDatabase.AddParameter(command,"@RequestId",requestId);
             HrmsDatabase.AddParameter(command,"@Actor",actor); HrmsDatabase.AddParameter(command,"@Note",note.Trim());
             HrmsDatabase.AddParameter(command,"@StepName",current.DisplayName);
+            HrmsDatabase.AddParameter(command,"@DelegatedFrom",(object?)authorization.DelegatedFrom??DBNull.Value);
         });
         if (changed != 1) return new ActionResult(false,"سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
         await transaction.CommitAsync();
@@ -486,7 +568,7 @@ IF @StepId IS NULL BEGIN SELECT 0; RETURN; END;
 UPDATE SelfServiceRequests SET Reason=@Reason,FromDate=COALESCE(@FromDate,FromDate),ToDate=COALESCE(@ToDate,ToDate),
  Status='Pending',CurrentStep=@StepName,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status='Returned';
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
-UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL WHERE Id=@StepId AND Status='Returned';
+UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL WHERE Id=@StepId AND Status='Returned';
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
 INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes) VALUES(@RequestId,@StepName,'Resubmitted',CONVERT(nvarchar(30),@EmployeeId),@Reason);
 SELECT 1;

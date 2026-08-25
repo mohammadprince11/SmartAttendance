@@ -1900,6 +1900,44 @@ BEGIN
     CREATE INDEX IX_ApprovalTemplates_CompanyType ON ApprovalTemplates(CompanyId,RequestType,IsActive,Priority);
 END;
 """),
+        new(
+            "20260826-12-approval-temporary-delegations",
+            """
+IF OBJECT_ID('ApprovalRequestFlows','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalRequestFlows(RequestId int NOT NULL CONSTRAINT PK_ApprovalRequestFlows PRIMARY KEY,TemplateId int NULL,TemplateName nvarchar(150) NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Name DEFAULT(N''),CommentRequiredOnReject bit NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Comment DEFAULT(0),AttachmentRequiredOnRequest bit NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Attachment DEFAULT(0),CancelLimitDays int NULL,EscalationDays int NULL,EscalationTo nvarchar(30) NULL,Escalated bit NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Escalated DEFAULT(0),CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Created DEFAULT(SYSUTCDATETIME()));
+END;
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalRequestSteps(Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalRequestSteps PRIMARY KEY,RequestId int NOT NULL,StepOrder int NOT NULL,ApproverType nvarchar(20) NOT NULL,RoleName nvarchar(50) NULL,UserName nvarchar(150) NULL,DisplayName nvarchar(150) NOT NULL,Status nvarchar(20) NOT NULL CONSTRAINT DF_ApprovalRequestSteps_Status DEFAULT('Pending'),CurrentSince datetime2 NULL,ActionBy nvarchar(150) NULL,ActionAt datetime2 NULL,Note nvarchar(500) NULL,DelegatedFrom nvarchar(100) NULL);
+ CREATE INDEX IX_ApprovalRequestSteps_Request ON ApprovalRequestSteps(RequestId,StepOrder);
+END;
+ELSE IF COL_LENGTH('ApprovalRequestSteps','DelegatedFrom') IS NULL
+ ALTER TABLE ApprovalRequestSteps ADD DelegatedFrom nvarchar(100) NULL;
+
+IF OBJECT_ID('ApprovalHistories','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalHistories(Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalHistories PRIMARY KEY,RequestId int NOT NULL,StepName nvarchar(80) NOT NULL,Action nvarchar(30) NOT NULL,ActionBy nvarchar(150) NULL,ActionAt datetime2 NOT NULL CONSTRAINT DF_ApprovalHistories_ActionAt DEFAULT(SYSUTCDATETIME()),Notes nvarchar(max) NULL,DelegatedFrom nvarchar(100) NULL);
+END;
+ELSE IF COL_LENGTH('ApprovalHistories','DelegatedFrom') IS NULL
+ ALTER TABLE ApprovalHistories ADD DelegatedFrom nvarchar(100) NULL;
+
+IF OBJECT_ID('ApprovalDelegations','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalDelegations
+ (
+  Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalDelegations PRIMARY KEY,
+  CompanyId int NOT NULL,DelegatorUserName nvarchar(100) NOT NULL,DelegateUserName nvarchar(100) NOT NULL,
+  StartsAt datetime2 NOT NULL,EndsAt datetime2 NOT NULL,IsActive bit NOT NULL CONSTRAINT DF_ApprovalDelegations_Active DEFAULT(1),
+  CreatedBy nvarchar(150) NOT NULL,CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalDelegations_Created DEFAULT(SYSUTCDATETIME()),
+  RevokedAt datetime2 NULL,RevokedBy nvarchar(150) NULL,
+  CONSTRAINT FK_ApprovalDelegations_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+  CONSTRAINT CK_ApprovalDelegations_Window CHECK(EndsAt>StartsAt),
+  CONSTRAINT CK_ApprovalDelegations_DifferentUsers CHECK(DelegatorUserName<>DelegateUserName)
+ );
+ CREATE INDEX IX_ApprovalDelegations_ActiveDelegate ON ApprovalDelegations(CompanyId,DelegateUserName,IsActive,StartsAt,EndsAt);
+END;
+"""),
     };
 
     /// <summary>

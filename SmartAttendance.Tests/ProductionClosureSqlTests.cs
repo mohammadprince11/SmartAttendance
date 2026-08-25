@@ -651,6 +651,53 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalHistories WHERE RequestId={requestId} AND Action IN ('Returned','Resubmitted');"));
     }
 
+    [SkippableFact]
+    public async Task Approval_temporary_delegation_is_time_tenant_and_revocation_safe()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.SingleAsync(x=>x.Id==_employeeA);
+        var manager=new Employee{EmployeeNo="DG-M-"+Guid.NewGuid().ToString("N")[..8],FullName="Delegating Manager",CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,HireDate=new DateOnly(2090,1,1),IsActive=true};
+        var substitute=new Employee{EmployeeNo="DG-S-"+Guid.NewGuid().ToString("N")[..8],FullName="Temporary Delegate",CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,HireDate=new DateOnly(2090,1,1),IsActive=true};
+        db.AddRange(manager,substitute); await db.SaveChangesAsync();
+        employee.DirectManagerId=manager.Id;
+        db.SystemUsers.AddRange(
+            new SystemUser{FullName=manager.FullName,UserName="manager-a-"+manager.Id,Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,IsActive=true,EmployeeId=manager.Id},
+            new SystemUser{FullName=substitute.FullName,UserName="delegate-a-"+substitute.Id,Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,IsActive=true,EmployeeId=substitute.Id});
+        await db.SaveChangesAsync();
+        var managerUser="manager-a-"+manager.Id; var delegateUser="delegate-a-"+substitute.Id;
+        var scopeA=CompanyScope.ForCompanies(new[]{_companyA});
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(()=>ApprovalDelegationStore.CreateAsync(
+            db,CompanyScope.ForCompanies(new[]{_companyB}),_companyA,managerUser,delegateUser,DateTime.UtcNow.AddMinutes(-1),DateTime.UtcNow.AddDays(2),"sql-test"));
+        var delegation=await ApprovalDelegationStore.CreateAsync(db,scopeA,_companyA,managerUser,delegateUser,
+            DateTime.UtcNow.AddMinutes(-1),DateTime.UtcNow.AddDays(2),"sql-test");
+        Assert.True(delegation.Ok,delegation.Message);
+
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'إجازة',N'اختبار التفويض','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,requestId,"إجازة",_employeeA);
+        var approved=await ApprovalWorkflowEngine.ApproveAsync(db,scopeA,requestId,delegateUser,"delegated",Array.Empty<string>(),substitute.Id);
+        Assert.True(approved.Ok,approved.Message);
+        Assert.Equal(delegateUser,await ScalarObjectAsync(db,$"SELECT ActionBy FROM ApprovalRequestSteps WHERE RequestId={requestId} AND StepOrder=1;"));
+        Assert.Equal(managerUser,await ScalarObjectAsync(db,$"SELECT DelegatedFrom FROM ApprovalRequestSteps WHERE RequestId={requestId} AND StepOrder=1;"));
+        Assert.Equal(managerUser,await ScalarObjectAsync(db,$"SELECT TOP(1) DelegatedFrom FROM ApprovalHistories WHERE RequestId={requestId} ORDER BY Id DESC;"));
+
+        Assert.True(await ApprovalDelegationStore.RevokeAsync(db,scopeA,_companyA,delegation.Id,"sql-test"));
+        var secondId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'إجازة',N'بعد الإلغاء','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,secondId,"إجازة",_employeeA);
+        var denied=await ApprovalWorkflowEngine.ApproveAsync(db,scopeA,secondId,delegateUser,null,Array.Empty<string>(),substitute.Id);
+        Assert.False(denied.Ok);
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };

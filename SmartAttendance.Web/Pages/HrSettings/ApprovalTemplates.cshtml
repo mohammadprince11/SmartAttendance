@@ -71,6 +71,30 @@
         <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
     }
 
+    <section class="nxhs-panel apt-delegations">
+        <header class="nxhs-search-head">
+            <div><h2>التفويض المؤقت</h2><p class="nxhs-helper">ينتهي آلياً حسب المنطقة الزمنية للشركة (@Model.CompanyTimeZoneId)، ويُختم القرار باسم المنفذ والمفوِّض.</p></div>
+        </header>
+        <form method="post" asp-page-handler="CreateDelegation" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" class="apt-delegation-form">
+            <label>المفوِّض<select name="delegatorUserName" required><option value="">اختر</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select></label>
+            <label>المفوَّض إليه<select name="delegateUserName" required><option value="">اختر</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select></label>
+            <label>من<input type="datetime-local" name="startsAt" required /></label>
+            <label>إلى<input type="datetime-local" name="endsAt" required /></label>
+            <button type="submit" class="nxhs-modal-delete">حفظ التفويض</button>
+        </form>
+        @if(Model.Delegations.Count>0)
+        {
+            <div class="nxhs-table-wrap"><table class="nxhs-table"><thead><tr><th>من</th><th>إلى</th><th>النافذة</th><th>الحالة</th><th></th></tr></thead><tbody>
+            @foreach(var delegation in Model.Delegations)
+            {
+                <tr><td>@delegation.DelegatorUserName</td><td>@delegation.DelegateUserName</td><td>@Model.CompanyTime(delegation.StartsAt) — @Model.CompanyTime(delegation.EndsAt)</td><td>@(delegation.IsActive&&delegation.EndsAt>DateTime.UtcNow?"نشط":"منتهٍ")</td><td>
+                @if(delegation.IsActive&&delegation.EndsAt>DateTime.UtcNow){<form method="post" asp-page-handler="RevokeDelegation" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" data-zyconfirm="إلغاء التفويض؟"><input type="hidden" name="id" value="@delegation.Id" /><button class="nxhs-delete-trigger">إلغاء</button></form>}
+                </td></tr>
+            }
+            </tbody></table></div>
+        }
+    </section>
+
     <div class="apt-layout">
         <aside class="nxhs-panel apt-catalog">
             @foreach (var module in modules)

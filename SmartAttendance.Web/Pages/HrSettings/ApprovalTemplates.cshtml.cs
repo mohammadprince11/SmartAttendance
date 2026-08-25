@@ -38,6 +38,8 @@ public class ApprovalTemplatesModel : PageModel
     public List<Option> Departments { get; set; } = new();
     public List<string> WorkTypes { get; set; } = new();
     public List<string> Users { get; set; } = new();
+    public List<ApprovalDelegationStore.Row> Delegations { get; set; } = new();
+    public string CompanyTimeZoneId { get; set; } = "UTC";
 
     public async Task OnGetAsync()
     {
@@ -54,6 +56,7 @@ public class ApprovalTemplatesModel : PageModel
         Counts = await ApprovalTemplateStore.CountsAsync(_dbContext, scope, CompanyId.Value);
         Templates = await ApprovalTemplateStore.ListAsync(_dbContext, CompanyId.Value, Type);
         await LoadLookupsAsync();
+        Delegations = await ApprovalDelegationStore.ListAsync(_dbContext, scope, CompanyId.Value);
     }
 
     private async Task LoadLookupsAsync()
@@ -77,6 +80,51 @@ public class ApprovalTemplatesModel : PageModel
             .OrderBy(u => u.UserName)
             .Select(u => u.UserName)
             .ToListAsync();
+
+        CompanyTimeZoneId = await _dbContext.Companies.AsNoTracking()
+            .Where(company => company.Id == CompanyId)
+            .Select(company => company.TimeZoneId)
+            .FirstOrDefaultAsync() ?? "UTC";
+    }
+
+    public async Task<IActionResult> OnPostCreateDelegationAsync(
+        string delegatorUserName,string delegateUserName,DateTime startsAt,DateTime endsAt)
+    {
+        var scope=await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if(CompanyId is not >0||!scope.Allows(CompanyId.Value)) return Forbid();
+        var zoneId=await _dbContext.Companies.AsNoTracking().Where(x=>x.Id==CompanyId)
+            .Select(x=>x.TimeZoneId).FirstOrDefaultAsync()??"UTC";
+        var result=await ApprovalDelegationStore.CreateAsync(_dbContext,scope,CompanyId.Value,
+            delegatorUserName,delegateUserName,CompanyLocalToUtc(startsAt,zoneId),CompanyLocalToUtc(endsAt,zoneId),
+            User.Identity?.Name??"HR");
+        TempData["SuccessMessage"]=result.Message;
+        return RedirectToPage(new{Type,CompanyId});
+    }
+
+    public async Task<IActionResult> OnPostRevokeDelegationAsync(int id)
+    {
+        var scope=await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if(CompanyId is not >0||!scope.Allows(CompanyId.Value)) return Forbid();
+        var changed=await ApprovalDelegationStore.RevokeAsync(_dbContext,scope,CompanyId.Value,id,User.Identity?.Name??"HR");
+        TempData["SuccessMessage"]=changed?"تم إلغاء التفويض.":"التفويض غير موجود أو ملغى مسبقاً.";
+        return RedirectToPage(new{Type,CompanyId});
+    }
+
+    public string CompanyTime(DateTime utc)
+    {
+        var value=DateTime.SpecifyKind(utc,DateTimeKind.Utc);
+        return TimeZoneInfo.ConvertTimeFromUtc(value,FindZone(CompanyTimeZoneId)).ToString("yyyy-MM-dd HH:mm");
+    }
+
+    private static DateTime CompanyLocalToUtc(DateTime local,string zoneId)
+        => TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local,DateTimeKind.Unspecified),FindZone(zoneId));
+
+    private static TimeZoneInfo FindZone(string? zoneId)
+    {
+        if(string.IsNullOrWhiteSpace(zoneId)) return TimeZoneInfo.Utc;
+        try{return TimeZoneInfo.FindSystemTimeZoneById(zoneId);}
+        catch(TimeZoneNotFoundException){return TimeZoneInfo.Utc;}
+        catch(InvalidTimeZoneException){return TimeZoneInfo.Utc;}
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
