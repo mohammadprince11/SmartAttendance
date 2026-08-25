@@ -41,4 +41,20 @@ public sealed class PageAccessRouteCatalogTests
         };
         Assert.All(codes, code => Assert.True(PageCatalog.IsValidPage(code), code));
     }
+
+    [Fact]
+    public void MainNavigation_CombinesCompatibilityRoutesWithPageRoleVisibility()
+    {
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SmartAttendance.slnx")))
+            directory = directory.Parent;
+        Assert.NotNull(directory);
+        var layout = File.ReadAllText(Path.Combine(
+            directory!.FullName, "SmartAttendance.Web", "Pages", "Shared", "_Layout.cshtml"));
+
+        Assert.Contains("PageAccessRouteCatalog.ResolvePageCode(path)", layout, StringComparison.Ordinal);
+        Assert.Contains("CanModule(\"People\")", layout, StringComparison.Ordinal);
+        Assert.Contains("CanModule(\"Attendance\")", layout, StringComparison.Ordinal);
+        Assert.Contains("CanModule(\"Payroll\")", layout, StringComparison.Ordinal);
+    }
 }

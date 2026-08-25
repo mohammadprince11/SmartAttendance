@@ -162,11 +162,18 @@
             ? await AccessRoleService.ResolveAsync(systemUserId, Context.RequestAborted)
             : null;
         Func<string, bool> CanPage = code => accessProfile == null || accessProfile.CanViewPage(code);
+        Func<string, bool> CanModule = module => PageCatalog.Modules
+            .First(item => item.Key.Equals(module, StringComparison.OrdinalIgnoreCase))
+            .Pages.Any(page => CanPage(page.Code));
 
         // إخفاء ما سيمنعه الحارس: نفس مصدر الحقيقة الذي ينفّذه RoleSecurityMiddleware.
         // بدونها كان الدور غير الأدمن يرى روابط تنتهي كلها بـ«لا صلاحية».
         Func<string, bool> CanRoute = path =>
-            SmartAttendance.Web.Infrastructure.Security.RoleRouteCatalog.IsAllowed(loginRole, path);
+        {
+            if (!SmartAttendance.Web.Infrastructure.Security.RoleRouteCatalog.IsAllowed(loginRole, path)) return false;
+            var pageCode = PageAccessRouteCatalog.ResolvePageCode(path);
+            return pageCode is null || CanPage(pageCode);
+        };
 
         var canViewOrganization = isAdminRole ||
             loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase) ||
@@ -299,7 +306,7 @@
                         <span>أدوار الوصول</span>
                     </a>
                 }
-                @if (hasVisiblePeopleNavigation && CanPage("People.Directory"))
+                @if ((hasVisiblePeopleNavigation || accessProfile?.HasPagesRole == true) && CanModule("People"))
                 {
                     <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
                         <summary data-nav-area="people" data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
@@ -577,7 +584,7 @@
                     </details>
                 }
 
-                @if (CanPage("Attendance.Operations"))
+                @if (CanModule("Attendance"))
                 {
                 <details name="nexora-main-menu" class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
                     <summary data-nav-area="attendance" data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
@@ -767,7 +774,7 @@
                 </details>
                 }
 
-                @if (CanPage("Payroll.TaxSocial"))
+                @if (CanModule("Payroll"))
                 {
                 <details name="nexora-main-menu" class="nexora-nav-group" @(payrollOpen ? "open" : "")>
                     <summary data-nav-area="payroll" data-sidebar-label="&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;">
