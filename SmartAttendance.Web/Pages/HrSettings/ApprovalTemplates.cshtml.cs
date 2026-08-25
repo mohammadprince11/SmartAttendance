@@ -127,9 +127,9 @@ public class ApprovalTemplatesModel : PageModel
             });
         }
 
-        if (template.Steps.Count == 0)
+        if (ApprovalTemplateStore.Validate(template) is { } validationError)
         {
-            TempData["SuccessMessage"] = "لجنة الموافقة يجب أن تحتوي خطوة واحدة على الأقل.";
+            TempData["SuccessMessage"] = validationError;
             return RedirectToPage(new { Type });
         }
 

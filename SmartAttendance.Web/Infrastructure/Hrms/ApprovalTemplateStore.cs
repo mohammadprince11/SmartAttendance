@@ -180,6 +180,8 @@ END;
 
     public static async Task<int> SaveAsync(ApplicationDbContext dbContext, TemplateRow template)
     {
+        var validationError = Validate(template);
+        if (validationError is not null) throw new ArgumentException(validationError, nameof(template));
         await EnsureAsync(dbContext);
 
         int id;
@@ -256,6 +258,27 @@ VALUES (@TemplateId, @StepOrder, @ApproverType, @RoleName, @UserName, @DisplayNa
         }
 
         return id;
+    }
+
+    public static string? Validate(TemplateRow? template)
+    {
+        if (template is null) return "بيانات القالب مطلوبة.";
+        if (!RequestTypes.Any(type => type.Key.Equals(template.RequestType, StringComparison.OrdinalIgnoreCase)))
+            return "نوع الطلب غير معروف.";
+        if (string.IsNullOrWhiteSpace(template.Name)) return "اسم القالب مطلوب.";
+        if (template.Steps.Count == 0) return "لجنة الموافقة يجب أن تحتوي خطوة واحدة على الأقل.";
+
+        foreach (var step in template.Steps)
+        {
+            if (step.ApproverType is not ("DirectManager" or "Role" or "User"))
+                return "نوع صاحب الموافقة غير صحيح.";
+            if (step.ApproverType == "Role" && string.IsNullOrWhiteSpace(step.RoleName))
+                return "يجب تحديد الدور لكل خطوة من نوع دور.";
+            if (step.ApproverType == "User" && string.IsNullOrWhiteSpace(step.UserName))
+                return "يجب تحديد المستخدم لكل خطوة من نوع مستخدم.";
+        }
+
+        return null;
     }
 
     public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
