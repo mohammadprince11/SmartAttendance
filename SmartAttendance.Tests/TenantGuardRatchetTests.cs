@@ -84,7 +84,6 @@ public sealed class TenantGuardRatchetTests
         // LeaveRequests/Delete.cshtml.cs — سُدِّد (AUTHZ-003): النطاق يُفرض داخل
         // LeaveRequestService لا بالصفحة. أُزيل من خط الأساس فلا يعود دَيناً مقبولاً.
         "Notifications/Bell.cshtml.cs",
-        "Payroll/BankTemplates.cshtml.cs",
         "Payroll/SalaryItems.cshtml.cs",
         "Payroll/Settings.cshtml.cs",
         "PositionCategories/Index.cshtml.cs",

@@ -54,7 +54,8 @@ public class RunDetailModel : PageModel
         if (Run == null) return RedirectToPage("Runs");
         Lines = await PayrollRunStore.ListLinesAsync(_db, Id);
         Exclusions = await PayrollRunStore.ListExclusionsAsync(_db, Id);
-        BankTemplates = await BankFileTemplateStore.ActiveAsync(_db);
+        BankTemplates = await BankFileTemplateStore.ActiveAsync(
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), Run.CompanyId);
         CompanyName = Run.CompanyId is > 0
             ? await HrmsDatabase.ScalarAsync<string>(_db,
                 "SELECT ISNULL(Name, N'الشركة') FROM Companies WHERE Id=@Id AND ISNULL(IsDeleted,0)=0;",
@@ -81,10 +82,11 @@ public class RunDetailModel : PageModel
             return RedirectToPage("RunDetail", new { id = Id });
         }
 
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var template = templateId is > 0
-            ? await BankFileTemplateStore.GetAsync(_db, templateId.Value)
-            : await BankFileTemplateStore.DefaultAsync(_db);
-        template ??= await BankFileTemplateStore.DefaultAsync(_db);
+            ? await BankFileTemplateStore.GetAsync(_db, scope, templateId.Value, run.CompanyId)
+            : await BankFileTemplateStore.DefaultAsync(_db, scope, run.CompanyId);
+        template ??= await BankFileTemplateStore.DefaultAsync(_db, scope, run.CompanyId);
         if (template == null) return RedirectToPage("Runs");
 
         var rows = await PayrollRunStore.BankFileRowsAsync(_db, Id);

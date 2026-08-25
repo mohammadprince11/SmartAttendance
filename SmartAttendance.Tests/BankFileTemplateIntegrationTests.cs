@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 using Xunit;
 
 namespace SmartAttendance.Tests;
@@ -19,6 +20,7 @@ public sealed class BankFileTemplateIntegrationTests : IAsyncLifetime
 
     private ApplicationDbContext _db = null!;
     private bool _dbAvailable;
+    private static readonly CompanyScope Scope = CompanyScope.Unrestricted();
 
     private static ApplicationDbContext NewContext() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(ConnectionString).Options);
@@ -56,7 +58,7 @@ public sealed class BankFileTemplateIntegrationTests : IAsyncLifetime
     {
         if (!_dbAvailable) return;
 
-        var (ok, _) = await BankFileTemplateStore.SaveAsync(_db, new BankFileTemplateStore.Template
+        var (ok, _) = await BankFileTemplateStore.SaveAsync(_db, Scope, new BankFileTemplateStore.Template
         {
             Name = Sentinel,
             BankName = "مصرف الاختبار",
@@ -68,7 +70,7 @@ public sealed class BankFileTemplateIntegrationTests : IAsyncLifetime
         });
         Assert.True(ok);
 
-        var saved = (await BankFileTemplateStore.ListAsync(_db)).FirstOrDefault(t => t.Name == Sentinel);
+        var saved = (await BankFileTemplateStore.ListAsync(_db, Scope)).FirstOrDefault(t => t.Name == Sentinel);
         Assert.NotNull(saved);
         Assert.Equal("Semicolon", saved!.Delimiter);
         Assert.Equal(new[] { "no", "name", "iban", "net" }, saved.Columns);
@@ -84,8 +86,8 @@ public sealed class BankFileTemplateIntegrationTests : IAsyncLifetime
         });
         Assert.Contains("9001;موظف الاختبار;IQ55;750000.00", content);
 
-        await BankFileTemplateStore.DeleteAsync(_db, saved.Id);
-        Assert.DoesNotContain(await BankFileTemplateStore.ListAsync(_db), t => t.Name == Sentinel);
+        await BankFileTemplateStore.DeleteAsync(_db, Scope, saved.Id);
+        Assert.DoesNotContain(await BankFileTemplateStore.ListAsync(_db, Scope), t => t.Name == Sentinel);
     }
 
     [Fact]
@@ -93,14 +95,14 @@ public sealed class BankFileTemplateIntegrationTests : IAsyncLifetime
     {
         if (!_dbAvailable) return;
 
-        await BankFileTemplateStore.SaveAsync(_db, new BankFileTemplateStore.Template
+        await BankFileTemplateStore.SaveAsync(_db, Scope, new BankFileTemplateStore.Template
         {
             Name = Sentinel, Delimiter = "Comma", IncludeHeader = false,
             ColumnsCsv = "no,net", IsDefault = false, IsActive = true
         });
-        var listed = (await BankFileTemplateStore.ListAsync(_db)).First(t => t.Name == Sentinel);
+        var listed = (await BankFileTemplateStore.ListAsync(_db, Scope)).First(t => t.Name == Sentinel);
 
-        var fetched = await BankFileTemplateStore.GetAsync(_db, listed.Id);
+        var fetched = await BankFileTemplateStore.GetAsync(_db, Scope, listed.Id, null);
         Assert.NotNull(fetched);
         Assert.Equal(Sentinel, fetched!.Name);
         Assert.False(fetched.IncludeHeader);
@@ -111,13 +113,13 @@ public sealed class BankFileTemplateIntegrationTests : IAsyncLifetime
     {
         if (!_dbAvailable) return;
 
-        var (noName, _) = await BankFileTemplateStore.SaveAsync(_db, new BankFileTemplateStore.Template
+        var (noName, _) = await BankFileTemplateStore.SaveAsync(_db, Scope, new BankFileTemplateStore.Template
         {
             Name = "", ColumnsCsv = "no,net"
         });
         Assert.False(noName);
 
-        var (noCols, _) = await BankFileTemplateStore.SaveAsync(_db, new BankFileTemplateStore.Template
+        var (noCols, _) = await BankFileTemplateStore.SaveAsync(_db, Scope, new BankFileTemplateStore.Template
         {
             Name = Sentinel, ColumnsCsv = ""
         });

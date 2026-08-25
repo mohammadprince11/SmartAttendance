@@ -1,14 +1,15 @@
 using System.Globalization;
 using System.Text;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 /// <summary>
 /// قوالب ملفات البنوك (نمط كيان — تصدير المسير للبنك بتنسيق كل بنك): كل قالب يحدّد
 /// الأعمدة وترتيبها ورؤوسها المخصصة والفاصل وإدراج صف الترويسة، فوق صفوف ملف البنك
-/// (<see cref="PayrollRunStore.BankFileRowsAsync"/>). self-healing + قوالب مبذورة
-/// «تحتاج تأكيد التنسيق الفعلي للبنك».
+/// (<see cref="PayrollRunStore.BankFileRowsAsync"/>). القالب العام فقط يُبذر؛ أي تنسيق
+/// خاص ببنك يجب أن يدخله مسؤول مخوّل بعد اعتماده من البنك.
 /// </summary>
 public static class BankFileTemplateStore
 {
@@ -39,6 +40,7 @@ public static class BankFileTemplateStore
     public sealed class Template
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? BankName { get; set; }
         public string Delimiter { get; set; } = "Comma";
@@ -81,55 +83,65 @@ BEGIN
         HeadersCsv nvarchar(1000) NULL,
         IsDefault bit NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
+        CompanyId int NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
 
-    -- قوالب مبذورة (⚠️ تحتاج تأكيد التنسيق الفعلي لكل بنك)
+    -- قالب عام محايد فقط؛ لا نبذر تنسيق بنك غير موثق.
     INSERT INTO BankFileTemplates (Name, BankName, Delimiter, IncludeHeader, ColumnsCsv, IsDefault)
-    VALUES
-      (N'افتراضي (عام)', NULL, N'Comma', 1, N'no,name,method,bank,branch,iban,card,net,payable', 1),
-      (N'الرافدين (نموذج)', N'مصرف الرافدين', N'Comma', 1, N'no,name,iban,net', 0),
-      (N'الرشيد (نموذج)', N'مصرف الرشيد', N'Comma', 1, N'no,name,card,net', 0);
+    VALUES (N'افتراضي (عام)', NULL, N'Comma', 1, N'no,name,method,bank,branch,iban,card,net,payable', 1);
 END;
 """);
     }
 
-    public static async Task<List<Template>> ListAsync(ApplicationDbContext db)
+    public static async Task<List<Template>> ListAsync(
+        ApplicationDbContext db, CompanyScope scope, int? companyId = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new();
+        if (companyId is > 0 && !CanUseCompany(scope, companyId.Value)) return new();
         await EnsureAsync(db);
+        var scopePredicate = scope.IsUnrestricted
+            ? "1=1"
+            : $"(CompanyId IS NULL OR {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")})";
         return await HrmsDatabase.QueryAsync(
             db,
-            "SELECT * FROM BankFileTemplates ORDER BY IsDefault DESC, Name;",
-            command => { },
+            $"SELECT * FROM BankFileTemplates WHERE {scopePredicate} AND (@CompanyId IS NULL OR CompanyId IS NULL OR CompanyId=@CompanyId) ORDER BY IsDefault DESC, Name;",
+            command => HrmsDatabase.AddParameter(command, "@CompanyId", companyId is > 0 ? companyId.Value : DBNull.Value),
             Read);
     }
 
-    public static async Task<List<Template>> ActiveAsync(ApplicationDbContext db) =>
-        (await ListAsync(db)).Where(t => t.IsActive).ToList();
+    public static async Task<List<Template>> ActiveAsync(ApplicationDbContext db, CompanyScope scope, int? companyId) =>
+        (await ListAsync(db, scope, companyId)).Where(t => t.IsActive).ToList();
 
-    public static async Task<Template?> GetAsync(ApplicationDbContext db, int id)
+    public static async Task<Template?> GetAsync(ApplicationDbContext db, CompanyScope scope, int id, int? companyId)
     {
-        await EnsureAsync(db);
-        return (await HrmsDatabase.QueryAsync(
-            db,
-            "SELECT * FROM BankFileTemplates WHERE Id = @Id;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id),
-            Read)).FirstOrDefault();
+        return (await ListAsync(db, scope, companyId)).FirstOrDefault(template => template.Id == id);
     }
 
-    public static async Task<Template?> DefaultAsync(ApplicationDbContext db) =>
-        (await ActiveAsync(db)).FirstOrDefault(t => t.IsDefault) ?? (await ActiveAsync(db)).FirstOrDefault();
-
-    public static async Task<(bool Ok, string Message)> SaveAsync(ApplicationDbContext db, Template t)
+    public static async Task<Template?> DefaultAsync(ApplicationDbContext db, CompanyScope scope, int? companyId)
     {
+        var active = await ActiveAsync(db, scope, companyId);
+        return active.FirstOrDefault(t => t.CompanyId == companyId && t.IsDefault)
+            ?? active.FirstOrDefault(t => t.CompanyId == companyId)
+            ?? active.FirstOrDefault(t => t.CompanyId is null && t.IsDefault)
+            ?? active.FirstOrDefault(t => t.CompanyId is null);
+    }
+
+    public static async Task<(bool Ok, string Message)> SaveAsync(ApplicationDbContext db, CompanyScope scope, Template t)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll || (t.CompanyId is > 0 && !CanUseCompany(scope, t.CompanyId.Value)) ||
+            (t.CompanyId is null && !scope.IsUnrestricted))
+            return (false, "الشركة خارج نطاق صلاحيتك.");
         await EnsureAsync(db);
         if (string.IsNullOrWhiteSpace(t.Name)) return (false, "اسم القالب مطلوب.");
         if (t.Columns.Count == 0) return (false, "اختر عموداً واحداً على الأقل.");
 
         // قالب افتراضي واحد فقط
         if (t.IsDefault)
-            await HrmsDatabase.ExecuteAsync(db, "UPDATE BankFileTemplates SET IsDefault = 0 WHERE Id <> @Id;",
-                command => HrmsDatabase.AddParameter(command, "@Id", t.Id));
+            await HrmsDatabase.ExecuteAsync(db, "UPDATE BankFileTemplates SET IsDefault = 0 WHERE Id <> @Id AND ((CompanyId=@CompanyId) OR (CompanyId IS NULL AND @CompanyId IS NULL));",
+                command => { HrmsDatabase.AddParameter(command, "@Id", t.Id); HrmsDatabase.AddParameter(command, "@CompanyId", (object?)t.CompanyId ?? DBNull.Value); });
 
         if (t.Id > 0)
         {
@@ -137,7 +149,8 @@ END;
                 db,
                 """
 UPDATE BankFileTemplates SET Name=@Name, BankName=@Bank, Delimiter=@Delim, IncludeHeader=@Header,
-    ColumnsCsv=@Cols, HeadersCsv=@Heads, IsDefault=@Default, IsActive=@Active WHERE Id=@Id;
+    ColumnsCsv=@Cols, HeadersCsv=@Heads, IsDefault=@Default, IsActive=@Active
+WHERE Id=@Id AND ((CompanyId=@CompanyId) OR (CompanyId IS NULL AND @CompanyId IS NULL));
 """,
                 command => { HrmsDatabase.AddParameter(command, "@Id", t.Id); Add(command, t); });
             return (true, "تم تحديث القالب.");
@@ -146,18 +159,24 @@ UPDATE BankFileTemplates SET Name=@Name, BankName=@Bank, Delimiter=@Delim, Inclu
         await HrmsDatabase.ExecuteAsync(
             db,
             """
-INSERT INTO BankFileTemplates (Name, BankName, Delimiter, IncludeHeader, ColumnsCsv, HeadersCsv, IsDefault, IsActive)
-VALUES (@Name, @Bank, @Delim, @Header, @Cols, @Heads, @Default, @Active);
+INSERT INTO BankFileTemplates (Name, BankName, Delimiter, IncludeHeader, ColumnsCsv, HeadersCsv, IsDefault, IsActive, CompanyId)
+VALUES (@Name, @Bank, @Delim, @Header, @Cols, @Heads, @Default, @Active, @CompanyId);
 """,
             command => Add(command, t));
         return (true, "أُنشئ القالب.");
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext db, int id)
+    public static async Task<bool> DeleteAsync(ApplicationDbContext db, CompanyScope scope, int id)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return false;
         await EnsureAsync(db);
-        await HrmsDatabase.ExecuteAsync(db, "DELETE FROM BankFileTemplates WHERE Id = @Id;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+        var predicate = scope.IsUnrestricted
+            ? "1=1"
+            : EmployeeCompanyGuard.ListFilter(scope, "CompanyId");
+        return await HrmsDatabase.ScalarAsync<int>(db,
+            $"DELETE FROM BankFileTemplates WHERE Id = @Id AND {predicate}; SELECT @@ROWCOUNT;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id)) == 1;
     }
 
     /// <summary>بناء محتوى ملف البنك لدفعة حسب القالب (نص CSV/DSV).</summary>
@@ -201,6 +220,7 @@ VALUES (@Name, @Bank, @Delim, @Header, @Cols, @Heads, @Default, @Active);
     private static Template Read(System.Data.Common.DbDataReader reader) => new()
     {
         Id = HrmsDatabase.GetInt(reader, "Id"),
+        CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId"),
         Name = HrmsDatabase.GetString(reader, "Name"),
         BankName = HrmsDatabase.GetString(reader, "BankName") is { Length: > 0 } bn ? bn : null,
         Delimiter = HrmsDatabase.GetString(reader, "Delimiter") is { Length: > 0 } d ? d : "Comma",
@@ -221,5 +241,9 @@ VALUES (@Name, @Bank, @Delim, @Header, @Cols, @Heads, @Default, @Active);
         HrmsDatabase.AddParameter(command, "@Heads", string.IsNullOrWhiteSpace(t.HeadersCsv) ? DBNull.Value : t.HeadersCsv);
         HrmsDatabase.AddParameter(command, "@Default", t.IsDefault ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@Active", t.IsActive ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@CompanyId", (object?)t.CompanyId ?? DBNull.Value);
     }
+
+    private static bool CanUseCompany(CompanyScope scope, int companyId) =>
+        companyId > 0 && (scope.IsUnrestricted || scope.AllowedCompanyIds.Contains(companyId));
 }

@@ -7,7 +7,7 @@
     ViewData["Title"] = "قوالب ملفات البنوك";
     var acc = "#2dd4bf";
     var tplJson = JsonSerializer.Serialize(Model.Templates.Select(t => new {
-        t.Id, t.Name, t.BankName, t.Delimiter, t.IncludeHeader, t.IsDefault, t.IsActive,
+        t.Id, t.CompanyId, t.Name, t.BankName, t.Delimiter, t.IncludeHeader, t.IsDefault, t.IsActive,
         Columns = t.Columns, Headers = t.Headers
     }));
     var fieldsJson = JsonSerializer.Serialize(Model.Fields.Select(f => new { f.Key, f.Label }));
@@ -63,6 +63,21 @@
         <button type="button" class="bt-btn" onclick="btOpen(0)">+ قالب جديد</button>
     </header>
 
+    <form method="get" class="bt-card" style="padding:12px 16px">
+        <label>الشركة
+            <select name="CompanyId" onchange="this.form.submit()">
+                @if (Model.Companies.Count > 1)
+                {
+                    <option value="">كل الشركات المصرح بها</option>
+                }
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+        </label>
+    </form>
+
     @if (TempData["BtMessage"] != null)
     {
         <div class="bt-alert @((TempData["BtOk"] as bool?) == false ? "err" : "")">@TempData["BtMessage"]</div>
@@ -80,6 +95,7 @@
                 <div class="bt-row">
                     <div style="min-width:0">
                         <span class="bt-name">@t.Name</span>
+                        <span class="bt-chip">@(t.CompanyId is null ? "عام" : Model.Companies.FirstOrDefault(c => c.Id == t.CompanyId)?.Name ?? $"شركة #{t.CompanyId}")</span>
                         @if (t.IsDefault) { <span class="bt-chip def">افتراضي</span> }
                         @if (!t.IsActive) { <span class="bt-chip off">معطّل</span> }
                         <div class="bt-meta">@(string.IsNullOrWhiteSpace(t.BankName) ? "بلا بنك محدد" : t.BankName) · فاصل: @BankFileTemplateStore.Delimiters.FirstOrDefault(d => d.Key == t.Delimiter).Label · @(t.IncludeHeader ? "بترويسة" : "بلا ترويسة")</div>
@@ -108,6 +124,7 @@
         <div class="hrms-slideover-body">
             <form method="post" asp-page-handler="Save" class="bt-form" style="display:flex;flex-direction:column;gap:12px" onsubmit="return btCollect()">
                 <input type="hidden" name="Id" id="bt-Id" value="0" />
+                <input type="hidden" name="CompanyId" id="bt-CompanyId" value="@Model.CompanyId" />
                 <input type="hidden" name="HeadersJoined" id="bt-HeadersJoined" />
                 <div class="bt-grid2">
                     <label>اسم القالب *<input name="Name" id="bt-Name" required placeholder="مثال: الرافدين" /></label>
@@ -175,6 +192,7 @@
         function btOpen(id, t){
             var f = document.querySelector('#bt-slide form'); f.reset();
             document.getElementById('bt-Id').value = (t && t.Id) || 0;
+            document.getElementById('bt-CompanyId').value = (t && t.CompanyId) || '@(Model.CompanyId?.ToString() ?? "")';
             document.getElementById('bt-title').textContent = (t && t.Id) ? 'تعديل قالب بنك' : 'قالب بنك جديد';
             if (t && t.Id){
                 document.getElementById('bt-Name').value = t.Name;

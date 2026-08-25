@@ -1497,6 +1497,24 @@ BEGIN
     );
 END;
 """),
+
+        new(
+            "20260825-01-bank-template-company-scope",
+            """
+IF OBJECT_ID('BankFileTemplates', 'U') IS NOT NULL
+   AND COL_LENGTH('BankFileTemplates', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE BankFileTemplates ADD CompanyId int NULL;
+    CREATE INDEX IX_BankFileTemplates_Company ON BankFileTemplates (CompanyId, IsActive, IsDefault);
+END;
+
+-- القالبان زُرعا تاريخياً بوصفهما نموذجين غير مؤكدين؛ يمنع تعطيلهما تصديراً بنكياً
+-- بتنسيق تخميني، مع إبقاء الصفوف للمراجعة والتدقيق بدلاً من حذفها.
+IF OBJECT_ID('BankFileTemplates', 'U') IS NOT NULL
+    UPDATE BankFileTemplates
+    SET IsActive = 0
+    WHERE Name IN (N'الرافدين (نموذج)', N'الرشيد (نموذج)') AND CompanyId IS NULL;
+"""),
     };
 
     /// <summary>
