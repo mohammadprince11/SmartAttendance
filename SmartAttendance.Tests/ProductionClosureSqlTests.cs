@@ -938,6 +938,35 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.Equal("Rejected",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={unknownId}"));
     }
 
+    [SkippableFact]
+    public async Task Payroll_calculation_refuses_unapproved_month_attendance_before_writing_lines()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
+
+        var (created, _, runId) = await PayrollRunStore.CreateRunAsync(
+            db,
+            scope,
+            _companyA,
+            2026,
+            7,
+            PayrollRunScope.ModeAll,
+            Array.Empty<int>());
+        Assert.True(created);
+        Assert.True(runId > 0);
+
+        var (calculated, message) = await PayrollRunStore.CalculateAsync(
+            db, runId, "payroll-operator-a");
+
+        Assert.False(calculated);
+        Assert.Contains("اعتماد حضور شهري", message);
+        Assert.Equal(0, await RawIntAsync(
+            db, $"SELECT COUNT(*) FROM PayrollRunLines WHERE RunId={runId};"));
+        Assert.Equal("Draft", await ScalarStringAsync(
+            db, $"SELECT Status FROM PayrollRuns WHERE Id={runId};"));
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };

@@ -438,6 +438,41 @@ SELECT SequenceNo FROM @allocated;
         var loanScope = runCompanyForLoans is > 0
             ? CompanyScope.ForCompanies(new[] { runCompanyForLoans.Value })
             : CompanyScope.Unrestricted();
+        var runScope = loanScope;
+
+        // بوابة مصدر الحقيقة: لا أثر حضور في الراتب من شهر ما زال قيد المراجعة.
+        // نبني الملخص أولاً (فقط صفوف UnderReview تتحدث)، ثم نتحقق من أن كل موظف
+        // داخل نطاق الدفعة له اعتماد شهري Approved/Locked. يجب أن يسبق هذا أي أثر
+        // مالي مثل ترحيل قسط قرض، كي يكون فشل البوابة بلا كتابة جزئية.
+        await MonthAttendanceStore.BuildMonthAsync(
+            dbContext, loanScope, run.Year, run.Month);
+        var unapprovedAttendance = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            """
+SELECT COUNT(*)
+FROM Employees e
+WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
+  AND (@Company IS NULL OR e.CompanyId=@Company)
+  AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId)
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId AND rs.EmployeeId=e.Id))
+  AND NOT EXISTS (
+      SELECT 1 FROM EmployeeMonthAttendance m
+      WHERE m.EmployeeId=e.Id AND m.[Year]=@Year AND m.[Month]=@Month
+        AND m.Status IN (N'Approved',N'Locked'));
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyForLoans ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@RunId", runId);
+                HrmsDatabase.AddParameter(command, "@Year", run.Year);
+                HrmsDatabase.AddParameter(command, "@Month", run.Month);
+            });
+        if (unapprovedAttendance > 0)
+        {
+            return (false,
+                $"تعذّر الاحتساب: {unapprovedAttendance} موظفاً ضمن الدفعة لا يملك اعتماد حضور شهرياً. اعتمد/اقفل الشهر من شاشة الحضور الشهري أولاً.");
+        }
+
         Task<string> GetPayrollSetting(string key, string fallback) => runCompanyForLoans is > 0
             ? HrSettingsStore.GetCompanyAsync(dbContext, runCompanyForLoans.Value, key, fallback)
             : HrSettingsStore.GetAsync(dbContext, key, fallback);
@@ -544,10 +579,6 @@ SELECT SequenceNo FROM @allocated;
         var scopeSet = new HashSet<int>(scope);
         var outsideScope = PayrollRunScope.OutsideCandidates(scope, employees.Select(e => e.Id).ToList()).Count;
         var candidates = employees.Where(e => PayrollRunScope.Includes(scopeSet, e.Id)).ToList();
-        var runScope = runCompanyId is > 0
-            ? CompanyScope.ForCompanies(new[] { runCompanyId.Value })
-            : CompanyScope.Unrestricted();
-
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
             "SELECT f.EmployeeId, ISNULL(f.BasicSalary,0) AS BasicSalary, ISNULL(f.StopSalaryCalc,0) AS StopSalaryCalc, f.TaxProfileId, f.GosiProfileId, f.SocialSecuritySalary, f.CurrentTaxSalary, f.TaxBaseMode, f.GosiBaseMode FROM EmployeeFinancialInfos f INNER JOIN Employees e ON e.Id=f.EmployeeId WHERE ISNULL(f.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1 AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=f.EmployeeId));",
@@ -591,13 +622,7 @@ SELECT SequenceNo FROM @allocated;
             }))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
-        // بناء الاعتماد الشهري من الحضور اليومي المحلَّل تلقائياً قبل قراءته — نفس منطق
-        // ترحيل أقساط القروض أعلاه: كان البناء خطوة يدوية بشاشة الاعتماد الشهري تُنسى،
-        // فيقرأ المسير جدولاً فارغاً/متقادماً ⟹ معامل الحضور = 1 فلا يُخصم الغياب ولا
-        // الإجازة بلا راتب بصمت (استحقاق زائد). النداء idempotent وآمن للبوابة: MERGE
-        // يحدّث صفوف UnderReview فقط ويُدرج الناقصين، ولا يدوس الأشهر المعتمدة/المقفلة.
-        await MonthAttendanceStore.BuildMonthAsync(dbContext, runScope, run.Year, run.Month);
-        var months = (await MonthAttendanceStore.ListAsync(dbContext, runScope, run.Year, run.Month))
+        var months = (await MonthAttendanceStore.ListAsync(dbContext, loanScope, run.Year, run.Month))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.First());
 
         // المخالفات مع **قاعدة جزائها**: الوعاء والمقام صارا بياناتٍ على القاعدة لا
