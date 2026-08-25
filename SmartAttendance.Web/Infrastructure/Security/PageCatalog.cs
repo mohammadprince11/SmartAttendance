@@ -31,12 +31,18 @@ public static class PageCatalog
 
     public static readonly IReadOnlyList<CatalogModule> Modules = new List<CatalogModule>
     {
+        new("Dashboard", "الرئيسية", new[]
+        {
+            new CatalogPage("Dashboard.Main", "لوحة البيانات"),
+        }),
         new("Setup", "إعداد الشركة", new[]
         {
+            new CatalogPage("Setup.Overview", "مركز إعداد الشركة"),
             new CatalogPage("Setup.Company", "بيانات الشركة"),
             new CatalogPage("Setup.Branches", "الفروع"),
             new CatalogPage("Setup.Departments", "الأقسام"),
             new CatalogPage("Setup.Positions", "المناصب"),
+            new CatalogPage("Setup.Branding", "الهوية والمظهر"),
         }),
         new("Identity", "إدارة المستخدمين", new[]
         {

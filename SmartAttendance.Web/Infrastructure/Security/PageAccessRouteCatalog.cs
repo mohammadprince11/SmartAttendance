@@ -8,6 +8,8 @@ public static class PageAccessRouteCatalog
     // الأطول أولاً: صفحات ملف الموظف المتخصصة يجب ألا تسقط على People.Directory.
     private static readonly IReadOnlyList<Route> Routes = new List<Route>
     {
+        new("/index", "Dashboard.Main"), new("/", "Dashboard.Main"),
+        new("/setup", "Setup.Overview"), new("/branding", "Setup.Branding"),
         new("/employees/peopledashboard", "People.Dashboard"),
         new("/employees/profile", "People.Profile"), new("/employees/edit", "People.Profile"),
         new("/employees/evaluations", "People.Evaluations"),
@@ -94,6 +96,7 @@ public static class PageAccessRouteCatalog
     public static string? ResolvePageCode(string? path, string? handler = null)
     {
         var normalized = (path ?? string.Empty).TrimEnd('/').ToLowerInvariant();
+        if (normalized.Length == 0) normalized = "/";
         if ((normalized == "/employees" || normalized == "/employees/index") &&
             ((handler ?? string.Empty).Contains("import", StringComparison.OrdinalIgnoreCase) ||
              (handler ?? string.Empty).Contains("template", StringComparison.OrdinalIgnoreCase)))
