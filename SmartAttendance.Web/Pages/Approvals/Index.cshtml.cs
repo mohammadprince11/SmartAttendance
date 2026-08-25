@@ -158,12 +158,11 @@ public class IndexModel : PageModel
 
     private async Task LoadAsync()
     {
-        await LoadFilterOptionsAsync();
-
         // 🔴 كانت هذه الشاشة تسرد وتعدّ طلبات **كل الشركات**: مستخدم مقيَّد يرى طلبات
         // موظفي شركاتٍ أخرى ويبتّها. الحصر بوصل الطلب بموظفه ثم بنطاق المستخدم.
         var scope = await ScopeAsync();
         var scopeFilter = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+        await LoadFilterOptionsAsync(scope);
 
         var counts = await HrmsDatabase.QueryAsync(
             _dbContext,
@@ -278,19 +277,20 @@ ORDER BY r.CreatedAt DESC;
         }
     }
 
-    private async Task LoadFilterOptionsAsync()
+    private async Task LoadFilterOptionsAsync(CompanyScope scope)
     {
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
         Departments = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT Id, Name FROM Departments ORDER BY Name",
+            $"SELECT Id,Name FROM Departments WHERE IsDeleted=0 AND {companyPredicate} ORDER BY Name",
             null, r => new Lookup(HrmsDatabase.GetInt(r, "Id"), HrmsDatabase.GetString(r, "Name")));
         Branches = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT Id, Name FROM Branches ORDER BY Name",
+            $"SELECT Id,Name FROM Branches WHERE IsDeleted=0 AND {companyPredicate} ORDER BY Name",
             null, r => new Lookup(HrmsDatabase.GetInt(r, "Id"), HrmsDatabase.GetString(r, "Name")));
         Positions = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT DISTINCT Position FROM Employees WHERE ISNULL(Position,'') <> '' ORDER BY Position",
+            $"SELECT DISTINCT Position FROM Employees WHERE IsDeleted=0 AND {companyPredicate} AND ISNULL(Position,'')<>'' ORDER BY Position",
             null, r => HrmsDatabase.GetString(r, "Position"));
         RequestTypes = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT DISTINCT RequestType FROM SelfServiceRequests WHERE ISNULL(RequestType,'') <> '' ORDER BY RequestType",
+            $"SELECT DISTINCT r.RequestType FROM SelfServiceRequests r INNER JOIN Employees e ON e.Id=r.EmployeeId WHERE e.IsDeleted=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")} AND ISNULL(r.RequestType,'')<>'' ORDER BY r.RequestType",
             null, r => HrmsDatabase.GetString(r, "RequestType"));
     }
 
