@@ -54,7 +54,6 @@ public sealed class TenantGuardRatchetTests
     private static readonly string[] Baseline =
     {
         "AccessRoles/Index.cshtml.cs",
-        "AttendanceSettings/Index.cshtml.cs",
         "Branches/Delete.cshtml.cs",
         "Branding/Index.cshtml.cs",
         "Companies/Delete.cshtml.cs",
