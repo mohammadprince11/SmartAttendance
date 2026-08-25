@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -167,10 +168,15 @@ public static class HrConditionFacts
     public static async Task<List<EmployeeRow>> LoadAsync(
         ApplicationDbContext db,
         int? employeeId = null,
-        int? companyId = null)
+        int? companyId = null,
+        CompanyScope? authorizationScope = null)
     {
+        if (authorizationScope?.IsDeniedAll == true) return new();
         var filter = employeeId is null ? string.Empty : " AND e.Id = @EmployeeId";
         var companyFilter = companyId is null ? string.Empty : " AND e.CompanyId = @CompanyId";
+        var authorizationFilter = authorizationScope is null
+            ? "1=1"
+            : EmployeeCompanyGuard.ListFilter(authorizationScope, "e.CompanyId");
 
         var rows = await HrmsDatabase.QueryAsync(
             db,
@@ -186,7 +192,7 @@ FROM Employees e
 LEFT JOIN EmployeeFinancialInfos fi
        ON fi.EmployeeId = e.Id AND ISNULL(fi.IsDeleted, 0) = 0
 LEFT JOIN EmployeeCompensations ec ON ec.EmployeeId = e.Id
-WHERE ISNULL(e.IsDeleted, 0) = 0{filter}{companyFilter};
+WHERE ISNULL(e.IsDeleted, 0) = 0 AND {authorizationFilter}{filter}{companyFilter};
 """,
             command =>
             {
@@ -225,28 +231,35 @@ WHERE ISNULL(e.IsDeleted, 0) = 0{filter}{companyFilter};
                 BankName = HrmsDatabase.GetString(reader, "BankName")
             });
 
-        await AttachCustomFieldsAsync(db, rows, employeeId);
+        await AttachCustomFieldsAsync(db, rows, employeeId, companyId, authorizationScope);
         return rows;
     }
 
     private static async Task AttachCustomFieldsAsync(
         ApplicationDbContext db,
         List<EmployeeRow> rows,
-        int? employeeId)
+        int? employeeId,
+        int? companyId,
+        CompanyScope? authorizationScope)
     {
         if (rows.Count == 0)
         {
             return;
         }
 
-        var filter = employeeId is null ? string.Empty : " WHERE EmployeeId = @EmployeeId";
+        var employeeFilter = employeeId is null ? string.Empty : " AND f.EmployeeId = @EmployeeId";
+        var companyFilter = companyId is null ? string.Empty : " AND e.CompanyId = @CompanyId";
+        var authorizationFilter = authorizationScope is null
+            ? "1=1"
+            : EmployeeCompanyGuard.ListFilter(authorizationScope, "e.CompanyId");
 
         var values = await HrmsDatabase.QueryAsync(
             db,
-            $"SELECT EmployeeId, FieldKey, FieldValue FROM EmployeeCustomFields{filter};",
+            $"SELECT f.EmployeeId, f.FieldKey, f.FieldValue FROM EmployeeCustomFields f INNER JOIN Employees e ON e.Id=f.EmployeeId WHERE {authorizationFilter}{employeeFilter}{companyFilter};",
             command =>
             {
                 if (employeeId is not null) HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                if (companyId is not null) HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
             },
             reader => (
                 EmployeeId: HrmsDatabase.GetInt(reader, "EmployeeId"),
