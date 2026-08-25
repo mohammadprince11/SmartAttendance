@@ -8,8 +8,14 @@ public static class PageAccessRouteCatalog
     // الأطول أولاً: صفحات ملف الموظف المتخصصة يجب ألا تسقط على People.Directory.
     private static readonly IReadOnlyList<Route> Routes = new List<Route>
     {
+        new("/employees/peopledashboard", "People.Dashboard"),
         new("/employees/profile", "People.Profile"), new("/employees/edit", "People.Profile"),
+        new("/employees/evaluations", "People.Evaluations"),
+        new("/employees/temporaryheads", "People.TemporaryHeads"),
         new("/employees/financialinfo", "Payroll.FinancialInfo"),
+        new("/contracts", "People.Contracts"), new("/forms", "People.Forms"),
+        new("/acknowledgments", "People.Acknowledgments"),
+        new("/companydocuments", "People.CompanyDocuments"),
         new("/employeeupdates", "People.Updates"), new("/engagement", "People.Engagement"),
         new("/violations", "People.Violations"), new("/assetsmanagement", "People.Assets"),
         new("/employeetasks", "People.Tasks"), new("/leavebalances", "People.LeaveBalances"),
@@ -30,6 +36,15 @@ public static class PageAccessRouteCatalog
         new("/hrsettings/entityfields", "HrSettings.EntityFields"),
         new("/hrsettings/employeegroups", "HrSettings.EmployeeGroups"),
         new("/hrsettings/lookups", "HrSettings.Lookups"),
+        new("/hrsettings/violationconfiguration", "HrSettings.ViolationConfiguration"),
+        new("/hrsettings/formulas", "HrSettings.Formulas"),
+        new("/hrsettings/probationperiod", "HrSettings.ProbationPeriod"),
+        new("/hrsettings/noticeperiod", "HrSettings.NoticePeriod"),
+        new("/hrsettings/selfservicesettings", "HrSettings.SelfService"),
+        new("/hrsettings/terminationreasons", "HrSettings.TerminationReasons"),
+        new("/hrsettings/notificationcenter", "HrSettings.Notifications"),
+        new("/hrsettings/employeecodeschema", "HrSettings.EmployeeCodeSchema"),
+        new("/hrsettings/fieldcontrol", "HrSettings.FieldControl"),
 
         new("/attendanceoperations", "Attendance.Operations"),
         new("/attendancerecords", "Attendance.Records"),
@@ -50,6 +65,10 @@ public static class PageAccessRouteCatalog
         new("/monthattendance", "Attendance.MonthAttendance"),
         new("/weekattendance", "Attendance.WeekAttendance"),
         new("/attendancereports", "Attendance.Reports"), new("/devices", "Attendance.Devices"),
+        new("/shiftoverrides", "Attendance.ShiftOverrides"),
+        new("/roster", "Attendance.Roster"), new("/biometrickeys", "Attendance.BiometricKeys"),
+        new("/holidays", "Attendance.Holidays"),
+        new("/employeegeolocations", "Attendance.GeoLocations"),
 
         new("/payroll/runs", "Payroll.Runs"), new("/payroll/transactions", "Payroll.Transactions"),
         new("/payroll/overtime", "Payroll.Overtime"),
@@ -59,7 +78,15 @@ public static class PageAccessRouteCatalog
         new("/payrollprovisions", "Payroll.Provisions"), new("/payroll/salaryitems", "Payroll.SalaryItems"),
         new("/payroll/settings", "Payroll.Settings"), new("/banktemplates", "Payroll.BankTemplates"),
         new("/payroll/taxsocial", "Payroll.TaxSocial"), new("/payroll/payment", "Payroll.Payment"),
-        new("/payrollreports", "Payroll.Reports")
+        new("/payrollreports", "Payroll.Reports"),
+        new("/payroll/analytics", "Payroll.Analytics"),
+        new("/payroll/payslipinquiry", "Payroll.PayslipInquiry"),
+        new("/payroll/simulator", "Payroll.Simulator"),
+        new("/payroll/transactionsauditor", "Payroll.Auditor"),
+        new("/payroll/salarysheet", "Payroll.SalarySheet"),
+        new("/payroll/financialrequests", "Payroll.FinancialRequests"),
+        new("/payroll/loans", "Payroll.Loans"), new("/payroll/salaryscale", "Payroll.SalaryScale"),
+        new("/payroll/terminationsettlement", "Payroll.TerminationSettlement")
     }.OrderByDescending(route => route.Prefix.Length).ToList();
 
     public static string? ResolvePageCode(string? path, string? handler = null)

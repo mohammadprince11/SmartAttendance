@@ -12,6 +12,10 @@ public sealed class PageAccessRouteCatalogTests
     [InlineData("/Payroll/Transactions", "Payroll.Transactions")]
     [InlineData("/AttendanceReports", "Attendance.Reports")]
     [InlineData("/Employees/Profile/42", "People.Profile")]
+    [InlineData("/Contracts/Movements", "People.Contracts")]
+    [InlineData("/Roster", "Attendance.Roster")]
+    [InlineData("/Payroll/Loans", "Payroll.Loans")]
+    [InlineData("/HrSettings/NotificationCenter", "HrSettings.Notifications")]
     public void LiveRoutes_MapToStablePageCodes(string path, string expected) =>
         Assert.Equal(expected, PageAccessRouteCatalog.ResolvePageCode(path));
 
