@@ -501,7 +501,7 @@ WHERE Id = @Id;
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
 
-        int saved = 0, added = 0, removed = 0;
+        int saved = 0, added = 0;
 
         for (var i = 0; rowName is not null && i < rowName.Length; i++)
         {

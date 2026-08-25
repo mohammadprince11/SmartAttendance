@@ -475,7 +475,9 @@ Tab = NormalizeTab(tab);
                 FullName = e.FullName ?? string.Empty,
                 Position = e.Position ?? string.Empty,
                 DepartmentName = e.Department.Name ?? string.Empty,
-                BranchName = e.Department.Branch.Name ?? string.Empty
+                BranchName = e.Department.Branch == null
+                    ? string.Empty
+                    : e.Department.Branch.Name ?? string.Empty
             })
             .ToListAsync(HttpContext.RequestAborted);
     }

@@ -40,7 +40,7 @@ public class AttendanceOperationsScopeTests
         // لا يبقى استعلام «SELECT TOP 1 Id FROM Employees WHERE EmployeeNo» إلا داخل
         // الحاسم المنطوق بالنطاق (مرّة واحدة).
         var matches = Regex.Matches(source, @"SELECT TOP 1 Id FROM Employees WHERE EmployeeNo");
-        Assert.Equal(1, matches.Count);
+        Assert.Single(matches.Cast<Match>());
     }
 
     [Fact]

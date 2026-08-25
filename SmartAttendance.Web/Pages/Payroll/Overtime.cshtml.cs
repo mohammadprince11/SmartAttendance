@@ -145,7 +145,7 @@ public class OvertimeModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0)
         {
             await PayrollTransactionStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
@@ -250,7 +250,7 @@ public class OvertimeModel : PageModel
 
     public async Task<IActionResult> OnPostLockSelectedAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, true); TempData["PayrollMessage"] = $"أُقفلت {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Year, Month, Lock = "Locked" });
@@ -258,7 +258,7 @@ public class OvertimeModel : PageModel
 
     public async Task<IActionResult> OnPostUnlockSelectedAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, false); TempData["PayrollMessage"] = $"فُتح قفل {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Year, Month, Lock = "Open" });

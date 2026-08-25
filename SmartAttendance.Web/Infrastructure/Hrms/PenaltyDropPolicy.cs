@@ -64,7 +64,7 @@ public static class PenaltyDropPolicy
             ? Anchors.First(a => string.Equals(a.Key, anchor, StringComparison.OrdinalIgnoreCase)).Key
             : AnchorActionDate;
 
-    private static DateOnly Add(DateOnly from, int amount, string unit) => NormalizeUnit(unit) switch
+    private static DateOnly Add(DateOnly from, int amount, string? unit) => NormalizeUnit(unit) switch
     {
         UnitDays => from.AddDays(amount),
         UnitYears => from.AddYears(amount),

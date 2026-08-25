@@ -68,7 +68,7 @@ public class RaisesModel : PageModel
     /// <summary>تطبيق جماعي (= قفل) للزيادات المحددة قيد الانتظار.</summary>
     public async Task<IActionResult> OnPostApplyManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         var n = await SalaryRaiseStore.ApplyManyAsync(_db, await ScopeAsync(), ids, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = $"طُبّقت {n} زيادة وحُدّثت رواتبها الأساسية.";
@@ -78,7 +78,7 @@ public class RaisesModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         await SalaryRaiseStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
         TempData["PayrollMessage"] = $"تم حذف {ids.Count} زيادة.";

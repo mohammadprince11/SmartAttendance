@@ -84,7 +84,7 @@ public class IndexModel : EngagementPageModel
         await LoadPollsAsync();
         await LoadFeedbackAsync();
 
-        if (!ValidTabs.Contains(Tab))
+        if (Tab is null || !ValidTabs.Contains(Tab))
         {
             Tab = "work";
         }
