@@ -98,6 +98,16 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostReturnAsync(int id)
+    {
+        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
+        var result = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
+        Message=result.Message; MessageIsError=!result.Ok;
+        await LoadAsync();
+        return Page();
+    }
+
     /// <summary>اعتماد مجمّع: يقدّم كل طلب محدَّد خطوةً واحدة، ويُفعّل الأثر لِمَن اكتملت لجنته.</summary>
     public async Task<IActionResult> OnPostBulkApproveAsync()
     {

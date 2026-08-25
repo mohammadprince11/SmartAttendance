@@ -497,6 +497,7 @@
                                 <input asp-for="Note" class="apv-note" placeholder="ملاحظة@(flow!.CommentRequiredOnReject ? " (إلزامية للرفض)" : " (اختياري)")" />
                                 <div class="apv-decide">
                                     <button asp-page-handler="Approve" asp-route-id="@request.Id" class="apv-act ok">✓ موافقة</button>
+                                    <button asp-page-handler="Return" asp-route-id="@request.Id" class="apv-act" title="يتطلب كتابة سبب">↩ إعادة للتعديل</button>
                                     <button asp-page-handler="Reject" asp-route-id="@request.Id" class="apv-act no">✕ رفض</button>
                                 </div>
                             }

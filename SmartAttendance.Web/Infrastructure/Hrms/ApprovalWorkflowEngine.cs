@@ -411,6 +411,96 @@ SELECT @Changed;
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
     }
 
+    /// <summary>يعيد الطلب لصاحبه للتعديل مع تجميد الخطوة الحالية حتى إعادة التقديم.</summary>
+    public static async Task<ActionResult> ReturnForRevisionAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note,
+        IEnumerable<string> actorRoles, int? actorEmployeeId)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+            return new ActionResult(false, "سبب الإرجاع للتعديل إلزامي.");
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                dbContext, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
+            return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
+        var flow = await GetFlowAsync(dbContext, requestId);
+        var current = flow?.Current;
+        if (current is null) return new ActionResult(false, "لا توجد خطوة حالية لهذا الطلب.");
+        if (await IsRequesterAsync(dbContext, requestId, actor, actorEmployeeId))
+            return new ActionResult(false, "لا يمكن لصاحب الطلب إرجاع طلبه من مركز الموافقات.");
+        if (!CanAct(current, actor, actorRoles, await IsRequesterManagerAsync(dbContext, requestId, actorEmployeeId)))
+            return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var changed = await HrmsDatabase.ScalarAsync<int>(dbContext, """
+DECLARE @Changed int,@RequestChanged int;
+UPDATE s SET Status='Returned',ActionBy=@Actor,ActionAt=SYSUTCDATETIME(),Note=@Note
+FROM ApprovalRequestSteps s
+INNER JOIN SelfServiceRequests r WITH(UPDLOCK,HOLDLOCK) ON r.Id=s.RequestId
+WHERE s.Id=@StepId AND s.RequestId=@RequestId AND s.Status='Current' AND r.Status='Pending';
+SET @Changed=@@ROWCOUNT;
+IF @Changed=1
+BEGIN
+ UPDATE SelfServiceRequests SET Status='Returned',CurrentStep=N'بانتظار تعديل الموظف',ReviewNote=@Note,ReviewedBy=@Actor,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND Status='Pending';
+ SET @RequestChanged=@@ROWCOUNT;
+ IF @RequestChanged=1
+ BEGIN
+  INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes) VALUES(@RequestId,@StepName,'Returned',@Actor,@Note);
+  INSERT INTO SystemNotifications(Title,Message,TargetRole,Url) VALUES(N'طلب يحتاج تعديلاً',N'أُعيد طلبك للتعديل: '+@Note,'Employee','/EmployeePortal?tab=requests');
+ END
+ ELSE
+ BEGIN
+  UPDATE ApprovalRequestSteps SET Status='Current',ActionBy=NULL,ActionAt=NULL,Note=NULL WHERE Id=@StepId AND Status='Returned';
+  SET @Changed=0;
+ END
+END;
+SELECT @Changed;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@StepId",current.Id); HrmsDatabase.AddParameter(command,"@RequestId",requestId);
+            HrmsDatabase.AddParameter(command,"@Actor",actor); HrmsDatabase.AddParameter(command,"@Note",note.Trim());
+            HrmsDatabase.AddParameter(command,"@StepName",current.DisplayName);
+        });
+        if (changed != 1) return new ActionResult(false,"سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
+        await transaction.CommitAsync();
+        return new ActionResult(true,"أُعيد الطلب إلى الموظف للتعديل وإعادة التقديم.");
+    }
+
+    /// <summary>إعادة تقديم الموظف تحفظ لقطة المسار الأصلية وتعيد نفس الخطوة الحالية.</summary>
+    public static async Task<ActionResult> ResubmitReturnedAsync(
+        ApplicationDbContext dbContext, int requestId, int employeeId,
+        string reason, DateTime? fromDate, DateTime? toDate)
+    {
+        if (employeeId <= 0 || string.IsNullOrWhiteSpace(reason))
+            return new ActionResult(false,"اكتب تفاصيل التعديل قبل إعادة التقديم.");
+        if (fromDate.HasValue && toDate.HasValue && toDate.Value.Date < fromDate.Value.Date)
+            return new ActionResult(false,"تاريخ النهاية لا يمكن أن يسبق البداية.");
+        await EnsureAsync(dbContext);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var changed = await HrmsDatabase.ScalarAsync<int>(dbContext,"""
+DECLARE @StepId int,@StepName nvarchar(150);
+SELECT TOP(1) @StepId=s.Id,@StepName=s.DisplayName
+FROM ApprovalRequestSteps s WITH(UPDLOCK,ROWLOCK)
+INNER JOIN SelfServiceRequests r ON r.Id=s.RequestId
+WHERE s.RequestId=@RequestId AND r.EmployeeId=@EmployeeId AND r.Status='Returned' AND s.Status='Returned'
+ORDER BY s.StepOrder;
+IF @StepId IS NULL BEGIN SELECT 0; RETURN; END;
+UPDATE SelfServiceRequests SET Reason=@Reason,FromDate=COALESCE(@FromDate,FromDate),ToDate=COALESCE(@ToDate,ToDate),
+ Status='Pending',CurrentStep=@StepName,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status='Returned';
+IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
+UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL WHERE Id=@StepId AND Status='Returned';
+IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
+INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes) VALUES(@RequestId,@StepName,'Resubmitted',CONVERT(nvarchar(30),@EmployeeId),@Reason);
+SELECT 1;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command,"@RequestId",requestId); HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId);
+            HrmsDatabase.AddParameter(command,"@Reason",reason.Trim()); HrmsDatabase.AddParameter(command,"@FromDate",(object?)fromDate??DBNull.Value);
+            HrmsDatabase.AddParameter(command,"@ToDate",(object?)toDate??DBNull.Value);
+        });
+        if (changed != 1) return new ActionResult(false,"الطلب ليس معاداً إليك أو سبق إعادة تقديمه.");
+        await transaction.CommitAsync();
+        return new ActionResult(true,"أُعيد تقديم الطلب إلى نفس خطوة الموافقة.");
+    }
+
     /// <summary>
     /// الأنواع الداينمكية تحمل أسماء تفصيلية (إجازة سنوية/مغادرة شخصية)، بينما
     /// القوالب مفاتيح موديول ثابتة. التطبيع هنا يمنع سقوطها الصامت للمسار الافتراضي.

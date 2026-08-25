@@ -19,7 +19,7 @@ public sealed class ApprovalStepAuthorizationContractTests
             SmartAttendance.Web.Infrastructure.Hrms.ApprovalWorkflowEngine.ResolveRequestTypeKey(requestType));
 
     [Fact]
-    public void ApproveAndReject_EnforceCurrentStepActorInsideEngine()
+    public void ApproveRejectAndReturn_EnforceCurrentStepActorInsideEngine()
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SmartAttendance.slnx")))
@@ -28,7 +28,7 @@ public sealed class ApprovalStepAuthorizationContractTests
         var source = File.ReadAllText(Path.Combine(
             directory!.FullName, "SmartAttendance.Web", "Infrastructure", "Hrms", "ApprovalWorkflowEngine.cs"));
 
-        Assert.Equal(2, Count(source, "!CanAct(current, actor, actorRoles"));
+        Assert.Equal(3, Count(source, "!CanAct(current, actor, actorRoles"));
         Assert.Contains("e.DirectManagerId = @ActorEmployeeId", source, StringComparison.Ordinal);
     }
 

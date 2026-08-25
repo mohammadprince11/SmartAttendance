@@ -340,6 +340,17 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
+    public async Task<IActionResult> OnPostResubmitReturnedAsync(
+        int id, string revisedReason, DateTime? revisedFrom, DateTime? revisedTo)
+    {
+        var employeeId=await ResolveEmployeeIdAsync();
+        if (employeeId<=0) return Forbid();
+        var result=await ApprovalWorkflowEngine.ResubmitReturnedAsync(
+            _dbContext,id,employeeId,revisedReason??string.Empty,revisedFrom,revisedTo);
+        StatusMessage=result.Message;
+        return RedirectToPage(new { tab="requests" });
+    }
+
     /// <summary>
     /// طلب إجازة مُهيكل من الشاشة المنبثقة (المرحلة 1: سنوية/مرضية). يتحقّق من
     /// رصيد السنوية، يحسب عدد الأيام، يحفظ مرفق صورة اختياري، ثم يبدأ سريان الموافقات.
@@ -1504,6 +1515,7 @@ ORDER BY CreatedAt DESC, Id DESC;
         if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)) return "مرفوض";
         if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase)) return "قيد الموافقة";
         if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "ملغي";
+        if (status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "معاد للتعديل";
         return string.IsNullOrWhiteSpace(status) ? "-" : status;
     }
 
@@ -1520,7 +1532,7 @@ ORDER BY CreatedAt DESC, Id DESC;
     {
         if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Answered", StringComparison.OrdinalIgnoreCase)) return "live";
         if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Open", StringComparison.OrdinalIgnoreCase)) return "pending";
-        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "danger";
+        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) || status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "danger";
         return string.Empty;
     }
 

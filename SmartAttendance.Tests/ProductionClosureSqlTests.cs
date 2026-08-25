@@ -603,6 +603,54 @@ VALUES ({_employeeA}, {salaryItemId}, N'Housing', 1600000, '2095-01-01', 0, SYSU
         Assert.Equal(1, await RawIntAsync(db, "SELECT COUNT(*) FROM sys.foreign_keys WHERE name='FK_EmployeeAllowances_SalaryItems_SalaryItemId';"));
     }
 
+    [SkippableFact]
+    public async Task Approval_return_and_resubmit_are_tenant_safe_and_keep_the_original_snapshot()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var requestId = await ScalarAsync(db, $"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,FromDate,ToDate,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'إجازة','2099-05-01','2099-05-02',N'السبب الأصلي','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db, requestId, "إجازة", _employeeA);
+        var original = Assert.IsType<ApprovalWorkflowEngine.FlowState>(
+            await ApprovalWorkflowEngine.GetFlowAsync(db, requestId));
+        var originalTemplate = original.TemplateName;
+        var originalSteps = original.Steps.Select(x => (x.StepOrder, x.ApproverType, x.RoleName, x.UserName, x.DisplayName)).ToArray();
+
+        var missingNote = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyA }), requestId, "hr-a", " ", new[] { "HR Manager" }, null);
+        Assert.False(missingNote.Ok);
+        var wrongTenant = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyB }), requestId, "hr-b", "fix", new[] { "HR Manager" }, null);
+        Assert.False(wrongTenant.Ok);
+        var selfReturn = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyA }), requestId, "employee-a", "fix", new[] { "Admin" }, _employeeA);
+        Assert.False(selfReturn.Ok);
+
+        var returned = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyA }), requestId, "hr-a", "أكمل التفاصيل", new[] { "HR Manager" }, null);
+        Assert.True(returned.Ok, returned.Message);
+        Assert.Equal("Returned", await ScalarObjectAsync(db, $"SELECT Status FROM SelfServiceRequests WHERE Id={requestId};"));
+
+        var wrongOwner = await ApprovalWorkflowEngine.ResubmitReturnedAsync(
+            db, requestId, _employeeB, "تعديل غير مصرح", new DateTime(2099, 5, 3), new DateTime(2099, 5, 4));
+        Assert.False(wrongOwner.Ok);
+        var resubmitted = await ApprovalWorkflowEngine.ResubmitReturnedAsync(
+            db, requestId, _employeeA, "السبب المعدل", new DateTime(2099, 5, 3), new DateTime(2099, 5, 4));
+        Assert.True(resubmitted.Ok, resubmitted.Message);
+
+        var current = Assert.IsType<ApprovalWorkflowEngine.FlowState>(
+            await ApprovalWorkflowEngine.GetFlowAsync(db, requestId));
+        Assert.Equal(originalTemplate, current.TemplateName);
+        Assert.Equal(originalSteps, current.Steps.Select(x => (x.StepOrder, x.ApproverType, x.RoleName, x.UserName, x.DisplayName)).ToArray());
+        Assert.NotNull(current.Current);
+        Assert.Equal("Pending", await ScalarObjectAsync(db, $"SELECT Status FROM SelfServiceRequests WHERE Id={requestId};"));
+        Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalHistories WHERE RequestId={requestId} AND Action IN ('Returned','Resubmitted');"));
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
         var a = new Company { Name = "SQL Company A", Code = "SQL-A" };
