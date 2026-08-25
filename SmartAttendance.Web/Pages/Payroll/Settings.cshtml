@@ -89,7 +89,7 @@
             هل يُحتسب الضمان والضريبة على الراتب الأساسي <b>الكامل</b> أم على المُنقَّص بأيام الحضور؟
             (لا يؤثّر على من له «راتب ضمان/ضريبة مُعرَّف بالموظف» — ذاك يبقى ثابتاً.)
         </p>
-        <form method="post" asp-page-handler="SaveGosiTaxBase" style="display:flex;flex-direction:column;gap:8px">
+        <form method="post" asp-page-handler="SaveGosiTaxBase" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-direction:column;gap:8px">
             @foreach (var opt in new[] { ("Prorated", "على الأساسي بعد الحضور", "السلوك الحالي — يُنقَّص الأساسي بالحضور أولاً ثم يُحتسب الضمان/الضريبة عليه (يقلّ الاستقطاع بالغياب)."), ("FullBasic", "على الأساسي الكامل", "الضمان/الضريبة على الأساسي الكامل قبل الحضور — لا يتأثران بالغياب، والحضور يُخصم من الصافي فقط. (القاعدة القانونية المعتادة.)") })
             {
                 <label class="ps-item @(Model.GosiTaxBaseMode == opt.Item1 ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
@@ -112,7 +112,7 @@
             هذه السياسة تحكم <b>ماذا يحدث لموظف بلا بيانات حضور</b> وكيف يُنسَّب من له بيانات.
             <b>الحالة تُعلَن بالقسيمة وبرسالة الاحتساب مهما كان النمط.</b>
         </p>
-        <form method="post" asp-page-handler="SaveAttendanceLink" style="display:flex;flex-direction:column;gap:8px">
+        <form method="post" asp-page-handler="SaveAttendanceLink" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-direction:column;gap:8px">
             @foreach (var m in new[] { AttendanceSalaryLink.Lenient, AttendanceSalaryLink.PresentDays, AttendanceSalaryLink.Strict, AttendanceSalaryLink.Hours })
             {
                 <label class="ps-item @(Model.AttendanceLinkMode == m ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
@@ -171,7 +171,7 @@
             <b>المؤهَّلة لكل وعاء</b> (تُعلَّم العلاوة من «عناصر الراتب»). المقام والساعات
             المعيارية بدل الثابتين المخفيّين ÷ 30 و÷ 8. <b>الافتراضات تُبقي أرقام اليوم حرفياً.</b>
         </p>
-        <form method="post" asp-page-handler="SaveBasePolicy" style="display:flex;flex-direction:column;gap:10px">
+        <form method="post" asp-page-handler="SaveBasePolicy" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-direction:column;gap:10px">
             <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                 <b style="min-width:230px">وعاء الأوفرتايم</b>
                 <select name="overtimeBaseMode" style="min-width:260px">
@@ -211,7 +211,7 @@
             بداية السنة المالية تحكم التجميعات السنوية بالتقارير. عدد الرواتب الإضافية توثيقيّ الآن —
             مسيرها الموازي يمسّ محرّك الاحتساب فيُبنى بطلب صريح. الساعات المعيارية أعلاه (أوعية الراتب والمقام).
         </p>
-        <form method="post" asp-page-handler="SaveFiscalYear" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <form method="post" asp-page-handler="SaveFiscalYear" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
             <label style="display:flex;align-items:center;gap:6px;margin:0">
                 <b>تبدأ السنة المالية من شهر</b>
                 <input type="number" name="fiscalYearStartMonth" min="1" max="12" value="@Model.FiscalYearStartMonth" style="width:80px" />
@@ -233,7 +233,7 @@
             الفاعل، العنوان). عند التفعيل يُطلق أيضاً <b>إشعار جرس فوري</b> للدور المستهدف —
             خفض نسبة ضمان أو تغيير مقام الأيام قبل مسير واحد لا يمرّ بصمت.
         </p>
-        <form method="post" asp-page-handler="SaveMonitor" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <form method="post" asp-page-handler="SaveMonitor" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
             <select name="monitorEnabled" style="min-width:220px">
                 <option value="false" selected="@(!Model.ConfigMonitorEnabled)">تسجيل بالتدقيق فقط (الافتراضي)</option>
                 <option value="true" selected="@(Model.ConfigMonitorEnabled)">تسجيل + إشعار فوري</option>
@@ -253,7 +253,7 @@
             عند التفعيل لا تُصدَر دفعة إلا بعد «اعتماد اللجنة» عليها وهي مقفلة — يُسجَّل المعتمِد
             والوقت والملاحظة على الدفعة، وإلغاء القفل يُسقط الاعتماد لأن الأرقام تتغيّر.
         </p>
-        <form method="post" asp-page-handler="SaveApproval" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <form method="post" asp-page-handler="SaveApproval" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
             <select name="requireCommitteeApproval" style="min-width:260px">
                 <option value="false" selected="@(!Model.RequireCommitteeApproval)">الإصدار مباشرة (الافتراضي)</option>
                 <option value="true" selected="@(Model.RequireCommitteeApproval)">يتطلب إصدار الرواتب اعتماد اللجنة</option>
@@ -270,7 +270,7 @@
             الضريبة والضمان القانونيان لا يُسقَّفان. <b>صفر = بلا سقف (السلوك القائم).</b>
             المتجاوز لا يُبتلَع: يُعلَن بسطرٍ بالقسيمة (اقتطاع مُرحَّل · إضافي فوق الحد).
         </p>
-        <form method="post" asp-page-handler="SaveCaps" style="display:flex;flex-direction:column;gap:10px">
+        <form method="post" asp-page-handler="SaveCaps" asp-route-company-id="@Model.CompanyId" style="display:flex;flex-direction:column;gap:10px">
             <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
                 <b style="min-width:230px">سقف الاقتطاع الشهري — مبلغ</b>
                 <input type="number" name="deductionCapAmount" step="0.01" min="0" style="width:140px"

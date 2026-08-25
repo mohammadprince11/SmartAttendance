@@ -342,6 +342,21 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Payroll_settings_are_company_specific_with_legacy_fallback()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        const string key = "Payroll.Acceptance.Isolation";
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetAsync(db, key, "legacy");
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetCompanyAsync(db, _companyA, key, "A");
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetCompanyAsync(db, _companyB, key, "B");
+
+        Assert.Equal("A", await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetCompanyAsync(db, _companyA, key));
+        Assert.Equal("B", await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetCompanyAsync(db, _companyB, key));
+        Assert.Equal("legacy", await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetCompanyAsync(db, 999_999, key));
+    }
+
+    [SkippableFact]
     public async Task Allowance_identity_audit_is_unambiguous_and_fk_backed()
     {
         RequireSql();

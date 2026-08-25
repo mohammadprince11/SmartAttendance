@@ -40,9 +40,10 @@ public class SalaryScaleModel : PageModel
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         Grades = await SalaryScaleStore.ListAsync(_db, scope);
-        Dim1Label = await HrSettingsStore.GetAsync(_db, SalaryScaleStore.KeyDim1Label, "الفئة");
-        Dim2Label = await HrSettingsStore.GetAsync(_db, SalaryScaleStore.KeyDim2Label, "الدرجة");
-        Dim3Label = await HrSettingsStore.GetAsync(_db, SalaryScaleStore.KeyDim3Label, "المرتبة");
+        var companyId = ConfigTenantScope.OwningCompany(scope);
+        Dim1Label = companyId is > 0 ? await HrSettingsStore.GetCompanyAsync(_db, companyId.Value, SalaryScaleStore.KeyDim1Label, "الفئة") : "الفئة";
+        Dim2Label = companyId is > 0 ? await HrSettingsStore.GetCompanyAsync(_db, companyId.Value, SalaryScaleStore.KeyDim2Label, "الدرجة") : "الدرجة";
+        Dim3Label = companyId is > 0 ? await HrSettingsStore.GetCompanyAsync(_db, companyId.Value, SalaryScaleStore.KeyDim3Label, "المرتبة") : "المرتبة";
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -71,11 +72,14 @@ public class SalaryScaleModel : PageModel
 
     public async Task<IActionResult> OnPostSaveLabelsAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var companyId = ConfigTenantScope.OwningCompany(scope);
+        if (companyId is not > 0) return Forbid();
         var actor = User?.Identity?.Name ?? "system";
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-        await PayrollConfigChangeMonitor.SetAndTrackAsync(_db, SalaryScaleStore.KeyDim1Label, Dim1Label?.Trim(), actor, ip);
-        await PayrollConfigChangeMonitor.SetAndTrackAsync(_db, SalaryScaleStore.KeyDim2Label, Dim2Label?.Trim(), actor, ip);
-        await PayrollConfigChangeMonitor.SetAndTrackAsync(_db, SalaryScaleStore.KeyDim3Label, Dim3Label?.Trim(), actor, ip);
+        await PayrollConfigChangeMonitor.SetAndTrackAsync(_db, companyId.Value, SalaryScaleStore.KeyDim1Label, Dim1Label?.Trim(), actor, ip);
+        await PayrollConfigChangeMonitor.SetAndTrackAsync(_db, companyId.Value, SalaryScaleStore.KeyDim2Label, Dim2Label?.Trim(), actor, ip);
+        await PayrollConfigChangeMonitor.SetAndTrackAsync(_db, companyId.Value, SalaryScaleStore.KeyDim3Label, Dim3Label?.Trim(), actor, ip);
         Message = "حُفظت أسماء الأبعاد."; MessageOk = true;
         return RedirectToPage();
     }

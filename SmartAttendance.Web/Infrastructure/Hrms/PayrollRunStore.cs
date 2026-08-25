@@ -437,11 +437,14 @@ SELECT SequenceNo FROM @allocated;
         var loanScope = runCompanyForLoans is > 0
             ? CompanyScope.ForCompanies(new[] { runCompanyForLoans.Value })
             : CompanyScope.Unrestricted();
+        Task<string> GetPayrollSetting(string key, string fallback) => runCompanyForLoans is > 0
+            ? HrSettingsStore.GetCompanyAsync(dbContext, runCompanyForLoans.Value, key, fallback)
+            : HrSettingsStore.GetAsync(dbContext, key, fallback);
         await LoanStore.EnsureAsync(dbContext);
         await LoanStore.PostDueInstallmentsAsync(dbContext, loanScope, run.Year, run.Month, userName);
 
         // سياسة ربط الراتب بالحضور تُقرأ مرّة للتشغيل كلّه.
-        var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext);
+        var linkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(dbContext, runCompanyForLoans);
         // مقام تنسيب الأساسي = **سياسة WorkingDays** (مثلاً 1→30 = 30 يوماً) لا رقم مثبَّت.
         // بلا سياسة WorkingDays نشطة ⟹ 0 = المقام القديم (أيام الدوام) بلا تغيير.
         // «ماكو شي ثابت، كلها سياسة» — والحضور نفسه يقرأ سياسة Attendance (21→20).
@@ -473,7 +476,7 @@ SELECT SequenceNo FROM @allocated;
         // فلا تتغيّر قسيمة قائمة. «FullBasic» ⟹ الضمان/الضريبة على الأساسي الكامل، والحضور
         // يُخصم من الصافي فقط (وعاء الضمان لا يتأثر بالحضور — القاعدة القانونية المعتادة).
         var gosiTaxOnFullBasic =
-            (await HrSettingsStore.GetAsync(dbContext, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic";
+            (await GetPayrollSetting("Payroll.GosiTaxBase", "Prorated")) == "FullBasic";
 
         // ملفات الضريبة/الضمان **كلّها** لا الملف النشط وحده: الملف صار خاصيةً لكل
         // موظف (إسناد صريح أو شرط) ⟵ PayrollProfileResolver. من لا إسناد له ولا شرط
@@ -695,16 +698,16 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
         // تعيد أرقام المحرك القائم حرفياً — يُفعَّل الجديد بإعدادٍ صريح.
         // الحدود القصوى الشهرية (نظير كيان) — تُقرأ مرّة للدفعة؛ الافتراضي 0 = بلا أثر.
         var caps = PayrollCapsPolicy.Parse(
-            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
-            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
-            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
-            await HrSettingsStore.GetAsync(dbContext, PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
+            await GetPayrollSetting(PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
+            await GetPayrollSetting(PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
+            await GetPayrollSetting(PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
+            await GetPayrollSetting(PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
 
-        var overtimeBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
-        var unpaidLeaveBaseMode = await HrSettingsStore.GetAsync(dbContext, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
-        var salaryDaysBasis = await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
+        var overtimeBaseMode = await GetPayrollSetting("Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
+        var unpaidLeaveBaseMode = await GetPayrollSetting("Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
+        var salaryDaysBasis = await GetPayrollSetting(PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
         var standardDailyHours = PayrollDivisorPolicy.DailyHours(
-            await HrSettingsStore.GetAsync(dbContext, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+            await GetPayrollSetting(PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
 
         // القيم الثابتة المسمّاة تُقرأ مرّة للدفعة كلّها لا لكل موظف.
         var salaryConstants = formulaItems.Count > 0
@@ -1564,12 +1567,14 @@ ORDER BY e.EmployeeNo;
     /// </summary>
     public static async Task<(bool, string)> IssueAsync(ApplicationDbContext dbContext, int runId)
     {
+        var run = await GetRunAsync(dbContext, runId);
         var requireApproval = bool.TryParse(
-            await HrSettingsStore.GetAsync(dbContext, KeyRequireCommitteeApproval, "False"), out var r) && r;
+            run?.CompanyId is > 0
+                ? await HrSettingsStore.GetCompanyAsync(dbContext, run.CompanyId.Value, KeyRequireCommitteeApproval, "False")
+                : await HrSettingsStore.GetAsync(dbContext, KeyRequireCommitteeApproval, "False"), out var r) && r;
 
         if (requireApproval)
         {
-            var run = await GetRunAsync(dbContext, runId);
             if (run is not null && !run.IsApproved)
                 return (false, "الإصدار يتطلب اعتماد اللجنة أولاً (تهيئة الرواتب) — استخدم «اعتماد اللجنة» على الدفعة المقفلة.");
         }

@@ -13,6 +13,7 @@ public sealed class PayrollProfileCompanyScopeTests
         var settings = Read(root, "SmartAttendance.Web", "Pages", "Payroll", "Settings.cshtml.cs");
         var runStore = Read(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs");
         var financial = Read(root, "SmartAttendance.Web", "Pages", "Employees", "FinancialInfo.cshtml.cs");
+        var settingsStore = Read(root, "SmartAttendance.Web", "Infrastructure", "HrSettings", "HrSettingsStore.cs");
 
         Assert.Contains("20260826-03-payroll-profile-company-scope", migration, StringComparison.Ordinal);
         Assert.Contains("ProfilePredicate(scope, companyId", store, StringComparison.Ordinal);
@@ -21,6 +22,9 @@ public sealed class PayrollProfileCompanyScopeTests
         Assert.Contains("ICompanyScopeProvider", settings, StringComparison.Ordinal);
         Assert.Contains("runCompanyForLoans", runStore, StringComparison.Ordinal);
         Assert.Contains("allowedTaxProfiles.All", financial, StringComparison.Ordinal);
+        Assert.Contains("GetCompanyAsync", settingsStore, StringComparison.Ordinal);
+        Assert.Contains("GetPayrollSetting", runStore, StringComparison.Ordinal);
+        Assert.Contains("CanWriteCompanyAsync", settings, StringComparison.Ordinal);
         Assert.DoesNotContain("ListTaxProfilesAsync(_dbContext);", financial, StringComparison.Ordinal);
     }
 

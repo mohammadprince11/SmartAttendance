@@ -48,12 +48,13 @@ public static class PayrollConfigChangeMonitor
     /// الحفظ نفسه عبر <see cref="HrSettingsStore.SetAsync"/> — لا مسار كتابة ثانٍ.
     /// </summary>
     public static async Task<bool> SetAndTrackAsync(
-        ApplicationDbContext db, string key, string? newValue, string actor, string? ipAddress)
+        ApplicationDbContext db, int companyId, string key, string? newValue, string actor, string? ipAddress)
     {
-        var oldValue = await HrSettingsStore.GetAsync(db, key, string.Empty);
+        if (companyId <= 0) throw new ArgumentOutOfRangeException(nameof(companyId));
+        var oldValue = await HrSettingsStore.GetCompanyAsync(db, companyId, key, string.Empty);
         var normalizedNew = newValue ?? string.Empty;
 
-        await HrSettingsStore.SetAsync(db, key, normalizedNew);
+        await HrSettingsStore.SetCompanyAsync(db, companyId, key, normalizedNew);
 
         if (string.Equals(oldValue, normalizedNew, StringComparison.Ordinal))
             return false;
@@ -66,18 +67,18 @@ VALUES ('PayrollConfig', @Key, 'Change Payroll Setting', @Old, @New, @Actor, @Ip
 """,
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@Key", key);
+                HrmsDatabase.AddParameter(command, "@Key", $"Company:{companyId}:{key}");
                 HrmsDatabase.AddParameter(command, "@Old", HrmsDatabase.JsonLine(("Value", oldValue)));
                 HrmsDatabase.AddParameter(command, "@New", HrmsDatabase.JsonLine(("Value", normalizedNew)));
                 HrmsDatabase.AddParameter(command, "@Actor", actor);
                 HrmsDatabase.AddParameter(command, "@Ip", (object?)ipAddress ?? DBNull.Value);
             });
 
-        var notify = bool.TryParse(await HrSettingsStore.GetAsync(db, KeyEnabled, "False"), out var on) && on;
+        var notify = bool.TryParse(await HrSettingsStore.GetCompanyAsync(db, companyId, KeyEnabled, "False"), out var on) && on;
         if (!notify)
             return true;
 
-        var role = await HrSettingsStore.GetAsync(db, KeyTargetRole, DefaultTargetRole);
+        var role = await HrSettingsStore.GetCompanyAsync(db, companyId, KeyTargetRole, DefaultTargetRole);
         var label = LabelOf(key);
         var oldShown = string.IsNullOrEmpty(oldValue) ? "—" : oldValue;
 
@@ -85,13 +86,14 @@ VALUES ('PayrollConfig', @Key, 'Change Payroll Setting', @Old, @New, @Actor, @Ip
             db,
             """
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
-VALUES (N'⚙️ تغيير بإعدادات الرواتب', @Message, @Role, '/Payroll/Settings');
+VALUES (N'⚙️ تغيير بإعدادات الرواتب', @Message, @Role, @Url);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Message",
                     $"غيّر {actor} «{label}» من ({oldShown}) إلى ({normalizedNew}). راجع قبل المسير القادم.");
                 HrmsDatabase.AddParameter(command, "@Role", string.IsNullOrWhiteSpace(role) ? DefaultTargetRole : role.Trim());
+                HrmsDatabase.AddParameter(command, "@Url", $"/Payroll/Settings?CompanyId={companyId}");
             });
 
         return true;
