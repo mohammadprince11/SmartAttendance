@@ -55,9 +55,11 @@ public class RunDetailModel : PageModel
         Lines = await PayrollRunStore.ListLinesAsync(_db, Id);
         Exclusions = await PayrollRunStore.ListExclusionsAsync(_db, Id);
         BankTemplates = await BankFileTemplateStore.ActiveAsync(_db);
-        CompanyName = await HrmsDatabase.ScalarAsync<string>(_db,
-            "SELECT TOP 1 ISNULL(Name, N'الشركة') FROM Companies WHERE ISNULL(IsDeleted,0)=0 ORDER BY Id;")
-            ?? "الشركة";
+        CompanyName = Run.CompanyId is > 0
+            ? await HrmsDatabase.ScalarAsync<string>(_db,
+                "SELECT ISNULL(Name, N'الشركة') FROM Companies WHERE Id=@Id AND ISNULL(IsDeleted,0)=0;",
+                command => HrmsDatabase.AddParameter(command, "@Id", Run.CompanyId.Value)) ?? "الشركة"
+            : "الشركة";
         return Page();
     }
 
@@ -72,6 +74,12 @@ public class RunDetailModel : PageModel
 
         var run = await PayrollRunStore.GetRunAsync(_db, Id);
         if (run == null) return RedirectToPage("Runs");
+        if (run.Status is not ("Issued" or "PayslipSent"))
+        {
+            TempData["PayrollMessage"] = "ملف البنك متاح بعد اعتماد الدفعة للصرف فقط.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage("RunDetail", new { id = Id });
+        }
 
         var template = templateId is > 0
             ? await BankFileTemplateStore.GetAsync(_db, templateId.Value)

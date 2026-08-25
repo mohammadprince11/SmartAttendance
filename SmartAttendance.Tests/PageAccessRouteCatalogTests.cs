@@ -15,6 +15,8 @@ public sealed class PageAccessRouteCatalogTests
     [InlineData("/Contracts/Movements", "People.Contracts")]
     [InlineData("/Roster", "Attendance.Roster")]
     [InlineData("/Payroll/Loans", "Payroll.Loans")]
+    [InlineData("/Payroll/RunDetail", "Payroll.Runs")]
+    [InlineData("/Payroll/BankTemplates", "Payroll.BankTemplates")]
     [InlineData("/HrSettings/NotificationCenter", "HrSettings.Notifications")]
     public void LiveRoutes_MapToStablePageCodes(string path, string expected) =>
         Assert.Equal(expected, PageAccessRouteCatalog.ResolvePageCode(path));
@@ -23,7 +25,12 @@ public sealed class PageAccessRouteCatalogTests
     [InlineData("GET", "/LeaveRequests", null, "View")]
     [InlineData("POST", "/LeaveRequests/Create", null, "Create")]
     [InlineData("POST", "/MissingPunchRequests", "Delete", "Delete")]
-    [InlineData("POST", "/Approvals", "Approve", "Edit")]
+    [InlineData("POST", "/Approvals", "Approve", "Approve")]
+    [InlineData("GET", "/Payroll/RunDetail", "BankFile", "Export")]
+    [InlineData("POST", "/Payroll/Runs", "Issue", "Approve")]
+    [InlineData("POST", "/Payroll/Runs", "Send", "Export")]
+    [InlineData("POST", "/Payroll/Runs", "Lock", "Close")]
+    [InlineData("POST", "/Payroll/Runs", "Reopen", "Close")]
     public void HttpOperation_MapsToCrudAction(string method, string path, string? handler, string expected) =>
         Assert.Equal(expected, PageAccessRouteCatalog.ResolveAction(method, path, handler));
 
@@ -71,5 +78,13 @@ public sealed class PageAccessRouteCatalogTests
         Assert.Contains("CanModule(\"People\")", layout, StringComparison.Ordinal);
         Assert.Contains("CanModule(\"Attendance\")", layout, StringComparison.Ordinal);
         Assert.Contains("CanModule(\"Payroll\")", layout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SensitiveLifecycleActions_AreIndependentPageGrants()
+    {
+        Assert.Contains("Approve", PageCatalog.Actions);
+        Assert.Contains("Export", PageCatalog.Actions);
+        Assert.Contains("Close", PageCatalog.Actions);
     }
 }

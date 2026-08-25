@@ -1587,6 +1587,9 @@ ORDER BY e.EmployeeNo;
         if (run is null) return (false, "الدفعة غير موجودة.");
         if (run.Status != "Locked") return (false, "الاعتماد يكون على دفعة مقفلة فقط.");
         if (run.IsApproved) return (false, $"الدفعة معتمدة أصلاً بواسطة {run.ApprovedBy}.");
+        if (!string.IsNullOrWhiteSpace(run.CalculatedBy) &&
+            run.CalculatedBy.Equals(approver, StringComparison.OrdinalIgnoreCase))
+            return (false, "فصل الواجبات يمنع مشغّل احتساب المسير من اعتماد الدفعة نفسها.");
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,

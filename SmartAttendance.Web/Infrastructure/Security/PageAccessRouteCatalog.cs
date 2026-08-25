@@ -70,13 +70,15 @@ public static class PageAccessRouteCatalog
         new("/holidays", "Attendance.Holidays"),
         new("/employeegeolocations", "Attendance.GeoLocations"),
 
-        new("/payroll/runs", "Payroll.Runs"), new("/payroll/transactions", "Payroll.Transactions"),
+        new("/payroll/rundetail", "Payroll.Runs"), new("/payroll/runs", "Payroll.Runs"),
+        new("/payroll/transactions", "Payroll.Transactions"),
         new("/payroll/overtime", "Payroll.Overtime"),
         new("/payroll/salarydaysadjustment", "Payroll.SalaryDaysAdjustment"),
         new("/payroll/leaveencashment", "Payroll.LeaveEncashment"),
         new("/payroll/raises", "Payroll.Raises"), new("/payroll/endofservice", "Payroll.EndOfService"),
         new("/payrollprovisions", "Payroll.Provisions"), new("/payroll/salaryitems", "Payroll.SalaryItems"),
-        new("/payroll/settings", "Payroll.Settings"), new("/banktemplates", "Payroll.BankTemplates"),
+        new("/payroll/settings", "Payroll.Settings"),
+        new("/payroll/banktemplates", "Payroll.BankTemplates"), new("/banktemplates", "Payroll.BankTemplates"),
         new("/payroll/taxsocial", "Payroll.TaxSocial"), new("/payroll/payment", "Payroll.Payment"),
         new("/payrollreports", "Payroll.Reports"),
         new("/payroll/analytics", "Payroll.Analytics"),
@@ -106,8 +108,15 @@ public static class PageAccessRouteCatalog
 
     public static string ResolveAction(string method, string? path, string? handler, int? postedId = null)
     {
-        if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method)) return "View";
         var operation = handler ?? string.Empty;
+        if (ContainsAny(operation, "export", "bankfile", "download", "sendpayslip") ||
+            operation.Equals("Send", StringComparison.OrdinalIgnoreCase))
+            return "Export";
+        if (ContainsAny(operation, "approve", "reject", "issue"))
+            return "Approve";
+        if (ContainsAny(operation, "lock", "unlock", "reopen", "close"))
+            return "Close";
+        if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method)) return "View";
         if (operation.Contains("delete", StringComparison.OrdinalIgnoreCase) ||
             operation.Contains("remove", StringComparison.OrdinalIgnoreCase)) return "Delete";
         if ((path ?? string.Empty).Contains("/create", StringComparison.OrdinalIgnoreCase) ||
@@ -117,4 +126,7 @@ public static class PageAccessRouteCatalog
             return "Create";
         return "Edit";
     }
+
+    private static bool ContainsAny(string value, params string[] candidates) =>
+        candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
 }

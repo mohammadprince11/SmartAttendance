@@ -12,7 +12,10 @@ public static class PageCatalog
 
     public sealed record CatalogModule(string Key, string Label, IReadOnlyList<CatalogPage> Pages);
 
-    public static readonly IReadOnlyList<string> Actions = new[] { "View", "Create", "Edit", "Delete" };
+    public static readonly IReadOnlyList<string> Actions = new[]
+    {
+        "View", "Create", "Edit", "Delete", "Approve", "Export", "Close"
+    };
 
     public static readonly IReadOnlyDictionary<string, string> ActionLabels =
         new Dictionary<string, string>
@@ -21,6 +24,9 @@ public static class PageCatalog
             ["Create"] = "إضافة",
             ["Edit"] = "تعديل",
             ["Delete"] = "حذف",
+            ["Approve"] = "اعتماد",
+            ["Export"] = "تصدير",
+            ["Close"] = "إغلاق/إعادة فتح",
         };
 
     public static readonly IReadOnlyList<CatalogModule> Modules = new List<CatalogModule>
