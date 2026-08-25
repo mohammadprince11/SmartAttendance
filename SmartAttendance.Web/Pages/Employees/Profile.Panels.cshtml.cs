@@ -134,20 +134,21 @@ public partial class ProfileModel
             .Where(r => r.EmployeeId == Id)
             .OrderByDescending(r => r.ToDate).ThenByDescending(r => r.Id).ToListAsync();
 
-        FinancialInfo = await _dbContext.EmployeeFinancialInfos.AsNoTracking()
-            .FirstOrDefaultAsync(f => f.EmployeeId == Id);
-
-        await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
-        Allowances = await _dbContext.EmployeeAllowances.AsNoTracking()
-            .Where(a => a.EmployeeId == Id)
-            .OrderByDescending(a => a.FromDate).ToListAsync();
-
         var today = DateOnly.FromDateTime(DateTime.Today);
-        ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
+        if (CanViewSalary)
+        {
+            FinancialInfo = await _dbContext.EmployeeFinancialInfos.AsNoTracking()
+                .FirstOrDefaultAsync(f => f.EmployeeId == Id);
 
-        await LoadFinancialProfilesAsync(today);
+            await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
+            Allowances = await _dbContext.EmployeeAllowances.AsNoTracking()
+                .Where(a => a.EmployeeId == Id)
+                .OrderByDescending(a => a.FromDate).ToListAsync();
 
-        SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext);
+            ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
+            await LoadFinancialProfilesAsync(today);
+            SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext);
+        }
 
         await HrLookups.EnsureSchemaAsync(_dbContext);
 
@@ -390,6 +391,9 @@ public partial class ProfileModel
     // ---- العلاوات: حفظ (إضافة/تعديل) وحذف — نفس نمط المعالين ----
     public async Task<IActionResult> OnPostSaveAllowanceAsync()
     {
+        if (!await HasEmployeeActionPermissionAsync(PeoplePermissionCodes.EditCompensation, Id))
+            return Forbid();
+
         await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
         if (!await _dbContext.Employees.AnyAsync(e => e.Id == Id && !e.IsDeleted)) return NotFound();
         var salaryItem = Allowance.SalaryItemId > 0
@@ -428,6 +432,9 @@ public partial class ProfileModel
 
     public async Task<IActionResult> OnPostDeleteAllowanceAsync(int recordId)
     {
+        if (!await HasEmployeeActionPermissionAsync(PeoplePermissionCodes.EditCompensation, Id))
+            return Forbid();
+
         var a = await _dbContext.EmployeeAllowances.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == Id);
         if (a != null)
         {

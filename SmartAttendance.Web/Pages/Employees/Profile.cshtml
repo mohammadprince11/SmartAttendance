@@ -698,8 +698,10 @@
                         _ => finText(fin?.PaymentMethod)
                     };
                 }
-                @* الحقول الحساسة: بطاقة الرواتب تظهر فقط للأدوار المخوّلة (Sensitive.SalaryRoles) *@
-                <article class="z360-card" hidden="@(!Model.CanViewSalary)">
+                @* الحقول الحساسة لا تُصيَّر إطلاقاً لغير المخوّل؛ hidden وحدها تسرّبها في DOM. *@
+                @if (Model.CanViewSalary)
+                {
+                <article class="z360-card">
                     <div class="z360-card-head">
                         <h3>المعلومات المالية</h3>
                         <a class="z360-card-tool" asp-page="./FinancialInfo" asp-route-id="@Model.Id" title="تعديل المعلومات المالية">✎</a>
@@ -719,6 +721,7 @@
                         <div class="z360-field"><span>طريقة الدفع</span><strong>@payText</strong></div>
                     </div>
                 </article>
+                }
 
             </section>
 
@@ -1181,8 +1184,10 @@
                                 }
                             </section>
 
-                            @* ---------- العلاوات (نمط كيان) — حساسة: للأدوار المخوّلة فقط ---------- *@
-                            <section class="z360-file-card" hidden="@(!Model.CanViewSalary)">
+                            @* ---------- العلاوات: لا تُصيَّر في HTML لغير المخوّل ---------- *@
+                            @if (Model.CanViewSalary)
+                            {
+                            <section class="z360-file-card">
                                 <div class="z360-file-card-head">
                                     <h4>العلاوات</h4>
                                     <button type="button" class="z360-upload-label" title="إضافة علاوة"
@@ -1225,6 +1230,7 @@
                                     <div class="z360-empty">لا توجد علاوات — أضف أول علاوة من زر +.</div>
                                 }
                             </section>
+                            }
 
                             @* ---------- العقود (نمط كيان: متعددة، التجديد صف جديد) ---------- *@
                             <section class="z360-file-card">

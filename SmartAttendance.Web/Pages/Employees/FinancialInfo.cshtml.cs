@@ -90,9 +90,11 @@ public class FinancialInfoModel : PageModel
 
         var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
         return await _permissionAuthorizationService.CanAccessEmployeeAsync(
-            systemUserId, PeoplePermissionCodes.ViewCompensation, employeeId,
-            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewCompensation),
-            HttpContext.RequestAborted);
+                   systemUserId, PeoplePermissionCodes.ViewCompensation, employeeId,
+                   PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewCompensation),
+                   HttpContext.RequestAborted) ||
+               await AccessRoleStore.HasSensitiveFieldAsync(
+                   _dbContext, systemUserId, SensitiveFieldCatalog.Salary);
     }
 
     /// <summary>

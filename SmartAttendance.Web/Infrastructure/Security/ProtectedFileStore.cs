@@ -46,6 +46,27 @@ public static class ProtectedFileStore
     }
 
     /// <summary>
+    /// يستخرج تصنيف مفتاح أنشأه النظام لموظف بعينه. يُستخدم قبل التنزيل لإضافة
+    /// صلاحيات خاصة بالتصنيف (مثل الملفات المالية) فوق صلاحية الملف العامة.
+    /// </summary>
+    public static bool TryGetCategory(string? storageKey, int employeeId, out string category)
+    {
+        category = string.Empty;
+        if (employeeId <= 0 || string.IsNullOrWhiteSpace(storageKey)) return false;
+
+        var key = storageKey.Trim().Replace('\\', '/');
+        var prefix = $"employee-{employeeId}/";
+        if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var fileName = key[prefix.Length..];
+        var separator = fileName.IndexOf('_');
+        if (separator <= 0 || fileName.Contains('/')) return false;
+
+        category = fileName[..separator];
+        return category.All(character => char.IsLetterOrDigit(character) || character == '-');
+    }
+
+    /// <summary>
     /// يحوّل مفتاح التخزين لمسار فيزيائي ويؤكد بقاءه <b>داخل</b> الجذر المحمي
     /// بعد التطبيع — يرفض <c>..</c> والمسارات المطلقة وأي مفتاح فارغ.
     /// </summary>
