@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Forms;
 
@@ -12,8 +13,13 @@ namespace SmartAttendance.Web.Pages.Forms;
 public class SubmissionsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public SubmissionsModel(ApplicationDbContext db) => _db = db;
+    public SubmissionsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
+    {
+        _db = db;
+        _companyScope = companyScope;
+    }
 
     [BindProperty(SupportsGet = true, Name = "form")] public int? TemplateFilter { get; set; }
     [BindProperty(SupportsGet = true, Name = "open")] public int? OpenId { get; set; }
@@ -29,13 +35,16 @@ public class SubmissionsModel : PageModel
 
     public async Task OnGetAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         Templates = await FormTemplateStore.LoadTemplatesAsync(_db);
         Submissions = await FormSubmissionStore.LoadAsync(
-            _db, templateId: TemplateFilter, status: StatusFilter == "All" ? null : StatusFilter);
+            _db, templateId: TemplateFilter,
+            status: StatusFilter == "All" ? null : StatusFilter,
+            scope: scope);
 
         if (OpenId is > 0)
         {
-            Opened = await FormSubmissionStore.FindAsync(_db, OpenId.Value);
+            Opened = await FormSubmissionStore.FindAsync(_db, OpenId.Value, scope);
             if (Opened is not null)
             {
                 Answers = await FormSubmissionStore.LoadAnswersAsync(_db, Opened.Id);
@@ -45,7 +54,7 @@ public class SubmissionsModel : PageModel
         // تحليل التقييم يُحسب لقالبٍ محدَّد فقط — متوسّطٌ عبر قوالب مختلفة بلا معنى.
         if (TemplateFilter is > 0)
         {
-            RatingAverages = await FormSubmissionStore.RatingAveragesAsync(_db, TemplateFilter.Value);
+            RatingAverages = await FormSubmissionStore.RatingAveragesAsync(_db, TemplateFilter.Value, scope);
         }
     }
 
@@ -57,7 +66,11 @@ public class SubmissionsModel : PageModel
             return RedirectToPage(new { form = TemplateFilter, statusFilter = StatusFilter });
         }
 
-        await FormSubmissionStore.ReviewAsync(_db, id, approve, User.Identity?.Name, note);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!await FormSubmissionStore.ReviewAsync(_db, id, approve, User.Identity?.Name, note, scope))
+        {
+            return NotFound();
+        }
 
         TempData["SuccessMessage"] = approve ? "اعتُمد." : "رُفض مع تسجيل السبب.";
         return RedirectToPage(new { form = TemplateFilter, statusFilter = StatusFilter });

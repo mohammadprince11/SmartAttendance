@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -10,6 +11,7 @@ namespace SmartAttendance.Web.Pages.CompanyDocuments;
 /// وثائق الشركة وفئاتها — وثائق **مشتركة** (لوائح · نماذج · تعاميم) تمييزاً عن
 /// وثائق الموظف. الجمهور بمحرّك الشروط العام.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;

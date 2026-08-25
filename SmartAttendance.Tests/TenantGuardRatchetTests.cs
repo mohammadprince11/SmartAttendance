@@ -36,7 +36,7 @@ public sealed class TenantGuardRatchetTests
     {
         "CompanyScope", "EmployeeCompanyGuard", "ConfigTenantScope", "EffectiveScope",
         // إعداد عالمي لا يملك CompanyId: حارس الأدمن الصريح يعادل نطاقاً غير مقيّد.
-        "IsAdministrator()", "IsAdmin"
+        "IsAdministrator()", "IsAdmin", "Authorize(Roles", "BackOfficeNotificationScope"
     };
 
     /// <summary>
@@ -55,29 +55,8 @@ public sealed class TenantGuardRatchetTests
     /// </summary>
     private static readonly string[] Baseline =
     {
-        "CompanyDocuments/Index.cshtml.cs",
-        "Documents/Generate.cshtml.cs",
-        "Documents/Requests.cshtml.cs",
-        "Documents/Templates.cshtml.cs",
-        "Engagement/Announcements.cshtml.cs",
-        "Engagement/Feedback.cshtml.cs",
-        "Forms/Index.cshtml.cs",
-        "Forms/Submissions.cshtml.cs",
-        "HrSettings/EmployeeGroups.cshtml.cs",
-        "HrSettings/EntityFields.cshtml.cs",
-        "HrSettings/Formulas.cshtml.cs",
-        "HrSettings/Lookups.cshtml.cs",
-        "HrSettings/NotificationCenter.cshtml.cs",
-        "HrSettings/ProbationPeriod.cshtml.cs",
-        "HrSettings/RequestTypes.cshtml.cs",
-        "HrSettings/TerminationReasons.cshtml.cs",
-        "HrSettings/ViolationConfiguration.cshtml.cs",
         // LeaveRequests/Delete.cshtml.cs — سُدِّد (AUTHZ-003): النطاق يُفرض داخل
         // LeaveRequestService لا بالصفحة. أُزيل من خط الأساس فلا يعود دَيناً مقبولاً.
-        "Notifications/Bell.cshtml.cs",
-        "PositionCategories/Index.cshtml.cs",
-        "PositionLevels/Index.cshtml.cs",
-        "Positions/Index.cshtml.cs",
         // Violations/Index.cshtml.cs — سُدِّد (AUTHZ-006 · FIX-001): فلتر شركةٍ على
         // القوائم الثلاث. أُزيل من خط الأساس فلا يعود دَيناً مقبولاً.
     };

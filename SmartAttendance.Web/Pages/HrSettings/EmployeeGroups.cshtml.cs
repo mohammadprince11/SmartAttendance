@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.HrSettings;
 
@@ -11,6 +13,7 @@ namespace SmartAttendance.Web.Pages.HrSettings;
 /// (فرع/قسم/نوع دوام/فعال فقط) وتُحسب عضويتها حيّاً — تُستهدف لاحقاً
 /// بالإعلانات والتقارير والطلبات. جدول ذاتي الإنشاء EmployeeGroups.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class EmployeeGroupsModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

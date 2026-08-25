@@ -3,6 +3,7 @@ using SmartAttendance.Application.Announcements.Models;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Engagement;
 
@@ -80,6 +81,18 @@ public class AnnouncementsModel : EngagementPageModel
             return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
         }
 
+        if (!await IsTargetWithinCompanyScopeAsync(
+                targetType,
+                Announcement.EmployeeIds,
+                Announcement.DepartmentId,
+                Announcement.BranchId))
+        {
+            StatusMessage = "الجهة المستهدفة خارج نطاق شركاتك.";
+            return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
+        }
+
+        var scope = await GetCompanyScopeAsync();
+
         var request = new AnnouncementCreateRequest
         {
             LanguageCode = "ar",
@@ -91,7 +104,10 @@ public class AnnouncementsModel : EngagementPageModel
             PublishNow = Announcement.PublishNow,
             CommentsEnabled = false,
             ReactionsEnabled = true,
-            AllEmployees = targetType.Equals("All", StringComparison.OrdinalIgnoreCase),
+            AllEmployees = targetType.Equals("All", StringComparison.OrdinalIgnoreCase) && scope.IsUnrestricted,
+            CompanyIds = targetType.Equals("All", StringComparison.OrdinalIgnoreCase) && !scope.IsUnrestricted
+                ? scope.AllowedCompanyIds.ToArray()
+                : Array.Empty<int>(),
             BranchIds = targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase) &&
                         Announcement.BranchId.HasValue
                 ? new[] { Announcement.BranchId.Value }
@@ -116,6 +132,8 @@ public class AnnouncementsModel : EngagementPageModel
 
     public async Task<IActionResult> OnPostArchiveAsync(int id)
     {
+        if (!await CanManageAnnouncementAsync(id)) return NotFound();
+
         var result = await AnnouncementService.ArchiveAsync(
             id,
             BuildAnnouncementActor(),
@@ -127,6 +145,8 @@ public class AnnouncementsModel : EngagementPageModel
 
     public async Task<IActionResult> OnPostToggleAsync(int id, bool publish)
     {
+        if (!await CanManageAnnouncementAsync(id)) return NotFound();
+
         var result = publish
             ? await AnnouncementService.PublishAsync(
                 id,

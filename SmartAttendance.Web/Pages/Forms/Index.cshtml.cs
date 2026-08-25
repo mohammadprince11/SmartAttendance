@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Forms;
 
@@ -12,6 +14,7 @@ namespace SmartAttendance.Web.Pages.Forms;
 /// (أثبته الفحص الحيّ). ونوع طلب أو استبيان جديد يصير **إعداداً بالواجهة** بدل
 /// صفحة Razor + جدول + Store + معالج + نشر.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;

@@ -16,11 +16,16 @@ public class RequestsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public RequestsModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    public RequestsModel(
+        ApplicationDbContext db,
+        IWebHostEnvironment environment,
+        ICompanyScopeProvider companyScope)
     {
         _db = db;
         _environment = environment;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)] public string StatusFilter { get; set; } = "Pending";
@@ -30,15 +35,17 @@ public class RequestsModel : PageModel
 
     public async Task OnGetAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var status = StatusFilter == "All" ? null : StatusFilter;
-        Requests = await DocumentRequestStore.LoadAsync(_db, status: status);
-        PendingCount = await DocumentRequestStore.PendingCountAsync(_db);
+        Requests = await DocumentRequestStore.LoadAsync(_db, status: status, scope: scope);
+        PendingCount = await DocumentRequestStore.PendingCountAsync(_db, scope);
     }
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var (ok, documentId, message) = await DocumentRequestStore.ApproveAsync(
-            _db, id, User.Identity?.Name, DateOnly.FromDateTime(DateTime.Today));
+            _db, id, User.Identity?.Name, DateOnly.FromDateTime(DateTime.Today), scope);
 
         if (!ok)
         {
@@ -52,7 +59,9 @@ public class RequestsModel : PageModel
 
     public async Task<IActionResult> OnPostRejectAsync(int id, string? note)
     {
-        var (ok, message) = await DocumentRequestStore.RejectAsync(_db, id, User.Identity?.Name, note);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var (ok, message) = await DocumentRequestStore.RejectAsync(
+            _db, id, User.Identity?.Name, note, scope);
 
         if (ok) TempData["SuccessMessage"] = message;
         else TempData["ErrorMessage"] = message;
@@ -63,7 +72,8 @@ public class RequestsModel : PageModel
     /// <summary>مرفق الطلب — من الجذر المحميّ، لا رابط مباشر.</summary>
     public async Task<IActionResult> OnGetAttachmentAsync(int id)
     {
-        var request = await DocumentRequestStore.FindAsync(_db, id);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var request = await DocumentRequestStore.FindAsync(_db, id, scope);
         if (request is null || !request.HasAttachment)
         {
             return NotFound();

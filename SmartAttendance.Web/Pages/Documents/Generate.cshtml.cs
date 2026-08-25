@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Pages.Shared;
 
 namespace SmartAttendance.Web.Pages.Documents;
@@ -15,11 +16,16 @@ namespace SmartAttendance.Web.Pages.Documents;
 public class GenerateModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public GenerateModel(ApplicationDbContext db, Infrastructure.Security.IProtectedFileService protectedFiles)
+    public GenerateModel(
+        ApplicationDbContext db,
+        IProtectedFileService protectedFiles,
+        ICompanyScopeProvider companyScope)
     {
         _db = db;
         _protectedFiles = protectedFiles;
+        _companyScope = companyScope;
     }
 
     private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
@@ -57,6 +63,8 @@ public class GenerateModel : PageModel
     {
         await LoadAsync();
 
+        if (!await ValidateSelectedEmployeeScopeAsync()) return Page();
+
         if (Resolve() is not { } pair)
         {
             return Page();
@@ -78,6 +86,8 @@ public class GenerateModel : PageModel
     public async Task<IActionResult> OnPostIssueAsync()
     {
         await LoadAsync();
+
+        if (!await ValidateSelectedEmployeeScopeAsync()) return Page();
 
         if (Resolve() is not { } pair)
         {
@@ -123,7 +133,7 @@ public class GenerateModel : PageModel
 
         var byCode = PayrollRunScope.BuildCodeMap(await HrmsDatabase.QueryAsync(
             _db,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo FROM Employees WHERE ISNULL(IsDeleted, 0) = 0;",
+            $"SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo FROM Employees e WHERE ISNULL(IsDeleted, 0) = 0 AND {EmployeeCompanyGuard.ListFilter(await _companyScope.GetAsync(HttpContext.RequestAborted), "e.CompanyId")};",
             command => { },
             reader => (HrmsDatabase.GetString(reader, "EmployeeNo"), HrmsDatabase.GetInt(reader, "Id"))));
 
@@ -155,6 +165,13 @@ public class GenerateModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                _db, "GeneratedDocuments", "Id", id, scope, HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
+
         await DocumentTemplateStore.DeleteGeneratedAsync(_db, id);
         TempData["SuccessMessage"] = "حُذفت الوثيقة من الأرشيف.";
         return RedirectToPage(new { templateId = TemplateId });
@@ -175,11 +192,28 @@ public class GenerateModel : PageModel
 
     private async Task LoadAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         Templates = await DocumentTemplateStore.LoadTemplatesAsync(_db, activeOnly: true);
-        Archive = await DocumentTemplateStore.LoadGeneratedAsync(_db, templateId: TemplateId);
+        Archive = await DocumentTemplateStore.LoadGeneratedAsync(_db, templateId: TemplateId, scope: scope);
 
-        var identity = await EmployeePickerLookup.LoadAsync(_db, SelectedEmployeeId);
+        var identity = SelectedEmployeeId > 0 && await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, SelectedEmployeeId, scope, HttpContext.RequestAborted)
+            ? await EmployeePickerLookup.LoadAsync(_db, SelectedEmployeeId)
+            : null;
         SelectedEmployeeCode = identity?.Code;
         SelectedEmployeeName = identity?.Name;
+    }
+
+    private async Task<bool> ValidateSelectedEmployeeScopeAsync()
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, SelectedEmployeeId, scope, HttpContext.RequestAborted))
+        {
+            return true;
+        }
+
+        TempData["ErrorMessage"] = "الموظف غير موجود أو خارج نطاق صلاحيتك.";
+        return false;
     }
 }

@@ -1989,7 +1989,8 @@ END;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL AND COL_LENGTH('ApprovalRequestFlows','NotifyJson') IS NULL
     ALTER TABLE ApprovalRequestFlows ADD NotifyJson nvarchar(max) NULL;
 
-IF OBJECT_ID('ApprovalRequestWatchers','U') IS NULL
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+   AND OBJECT_ID('ApprovalRequestWatchers','U') IS NULL
 BEGIN
  CREATE TABLE ApprovalRequestWatchers
  (

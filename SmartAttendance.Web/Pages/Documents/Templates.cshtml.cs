@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -12,6 +13,7 @@ namespace SmartAttendance.Web.Pages.Documents;
 /// الفجوة التي يسدّها: شهادات الراتب وكتب التعريف وخطابات التجربة كانت تُكتب
 /// بـWord **خارج النظام** — بلا مرجع ولا أرشيف ولا بيانات محدَّثة.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class TemplatesModel : PageModel
 {
     private readonly ApplicationDbContext _db;

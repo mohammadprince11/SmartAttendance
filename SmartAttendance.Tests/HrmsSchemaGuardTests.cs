@@ -90,6 +90,31 @@ public class HrmsSchemaGuardTests
     }
 
     [Fact]
+    public void مراقبو_الموافقات_لا_ينشئون_مفتاحا_إلى_جدول_طلبات_غائب()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
+            dir = dir.Parent;
+        var source = File.ReadAllText(Path.Combine(
+            Assert.IsType<DirectoryInfo>(dir).FullName,
+            "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs"));
+        var migrationStart = source.IndexOf(
+            "20260826-16-approval-policy-snapshots",
+            StringComparison.Ordinal);
+        Assert.True(migrationStart > 0);
+
+        var block = source[migrationStart..];
+        var parentGuard = block.IndexOf(
+            "IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL",
+            StringComparison.Ordinal);
+        var watcherCreate = block.IndexOf(
+            "CREATE TABLE ApprovalRequestWatchers",
+            StringComparison.Ordinal);
+
+        Assert.True(parentGuard >= 0 && watcherCreate > parentGuard);
+    }
+
+    [Fact]
     public void هجرة_المراحل_لا_تربط_العمود_قبل_إضافته()
     {
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());

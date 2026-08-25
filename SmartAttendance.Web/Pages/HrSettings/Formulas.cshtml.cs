@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.HrSettings;
 
@@ -12,6 +14,7 @@ namespace SmartAttendance.Web.Pages.HrSettings;
 /// تُكتب الصيغة داخل عنصر راتب ولا تُختبر إلا بتشغيل مسير كامل، وخطأٌ فيها يعني
 /// عنصراً يُتخطّى بصمت. هذه الصفحة تجعل الصيغة **تُجرَّب بقيم قبل أن تُستعمل**.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class FormulasModel : PageModel
 {
     private readonly ApplicationDbContext _db;

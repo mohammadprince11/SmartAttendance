@@ -73,8 +73,14 @@ public abstract class EngagementPageModel : PageModel
 
     protected async Task LoadAnnouncementsAsync()
     {
+        var scope = await GetCompanyScopeAsync();
         var items = await AnnouncementService.GetManagementListAsync(
             Search,
+            new AnnouncementManagementScope
+            {
+                IsUnrestricted = scope.IsUnrestricted,
+                AllowedCompanyIds = scope.AllowedCompanyIds.ToArray()
+            },
             HttpContext.RequestAborted);
 
         Announcements = items
@@ -161,7 +167,11 @@ ORDER BY p.PublishDate DESC, p.Id DESC;
 
     protected async Task LoadFeedbackAsync()
     {
-        var where = string.IsNullOrWhiteSpace(Search) ? string.Empty : "WHERE f.Title LIKE @Search OR f.Message LIKE @Search OR e.FullName LIKE @Search";
+        var scope = await GetCompanyScopeAsync();
+        var scopeFilter = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+        var where = string.IsNullOrWhiteSpace(Search)
+            ? $"WHERE {scopeFilter}"
+            : $"WHERE {scopeFilter} AND (f.Title LIKE @Search OR f.Message LIKE @Search OR e.FullName LIKE @Search)";
         FeedbackItems = await HrmsDatabase.QueryAsync(
             DbContext,
             $"""
@@ -219,15 +229,19 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
         //     وهما صفحتا معالِجات لا واجهة — `OnGet` فيهما يعيد التوجيه هنا.)
         Employees = new List<EmployeeOption>();
 
+        var scope = await GetCompanyScopeAsync();
+        var departmentScope = EmployeeCompanyGuard.ListFilter(scope, "CompanyId");
+        var branchScope = EmployeeCompanyGuard.ListFilter(scope, "CompanyId");
+
         Departments = await HrmsDatabase.QueryAsync(
             DbContext,
-            "SELECT Id, Name FROM Departments ORDER BY Name;",
+            $"SELECT Id, Name FROM Departments WHERE {departmentScope} ORDER BY Name;",
             null,
             reader => new DepartmentOption { Id = HrmsDatabase.GetInt(reader, "Id"), Name = HrmsDatabase.GetString(reader, "Name") });
 
         Branches = await HrmsDatabase.QueryAsync(
             DbContext,
-            "SELECT Id, Name FROM Branches ORDER BY Name;",
+            $"SELECT Id, Name FROM Branches WHERE {branchScope} ORDER BY Name;",
             null,
             reader => new BranchOption { Id = HrmsDatabase.GetInt(reader, "Id"), Name = HrmsDatabase.GetString(reader, "Name") });
     }
@@ -251,6 +265,92 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
         }
 
         return null;
+    }
+
+    protected async Task<bool> IsTargetWithinCompanyScopeAsync(
+        string targetType,
+        int[]? employeeIds,
+        int? departmentId,
+        int? branchId)
+    {
+        var scope = await GetCompanyScopeAsync();
+        if (scope.IsUnrestricted) return true;
+
+        if (targetType.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            return !scope.IsDeniedAll;
+        }
+
+        if (targetType.Equals("Employee", StringComparison.OrdinalIgnoreCase))
+        {
+            var requested = (employeeIds ?? Array.Empty<int>()).Where(id => id > 0).Distinct().ToArray();
+            var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
+                DbContext, requested, scope, HttpContext.RequestAborted);
+            return requested.Length > 0 && allowed.Count == requested.Length;
+        }
+
+        if (targetType.Equals("Department", StringComparison.OrdinalIgnoreCase) && departmentId is > 0)
+        {
+            var count = await HrmsDatabase.ScalarAsync<int>(
+                DbContext,
+                $"SELECT COUNT(*) FROM Departments WHERE Id=@Id AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")};",
+                command => HrmsDatabase.AddParameter(command, "@Id", departmentId.Value));
+            return count == 1;
+        }
+
+        if (targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase) && branchId is > 0)
+        {
+            var count = await HrmsDatabase.ScalarAsync<int>(
+                DbContext,
+                $"SELECT COUNT(*) FROM Branches WHERE Id=@Id AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")};",
+                command => HrmsDatabase.AddParameter(command, "@Id", branchId.Value));
+            return count == 1;
+        }
+
+        return false;
+    }
+
+    protected async Task<bool> CanManageAnnouncementAsync(int announcementId)
+    {
+        var scope = await GetCompanyScopeAsync();
+        if (scope.IsUnrestricted) return true;
+        if (announcementId <= 0 || scope.IsDeniedAll) return false;
+
+        var allowed = scope.AllowedCompanyIds.OrderBy(id => id).ToArray();
+        var companyFilter = string.Join(", ", allowed);
+        var count = await HrmsDatabase.ScalarAsync<int>(
+            DbContext,
+            $"""
+SELECT COUNT(*)
+FROM AnnouncementGroups g
+WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
+  AND EXISTS (
+      SELECT 1 FROM AnnouncementAudienceRules r
+      LEFT JOIN Branches b ON b.Id=r.BranchId
+      LEFT JOIN Departments d ON d.Id=r.DepartmentId
+      LEFT JOIN HrJobPositions p ON p.Id=r.PositionId
+      LEFT JOIN Employees e ON e.Id=r.EmployeeId
+      WHERE r.AnnouncementGroupId=g.Id AND r.IsExcluded=0
+        AND (r.CompanyId IN ({companyFilter}) OR b.CompanyId IN ({companyFilter})
+             OR d.CompanyId IN ({companyFilter}) OR p.CompanyId IN ({companyFilter})
+             OR e.CompanyId IN ({companyFilter})))
+  AND NOT EXISTS (
+      SELECT 1 FROM AnnouncementAudienceRules r
+      LEFT JOIN Branches b ON b.Id=r.BranchId
+      LEFT JOIN Departments d ON d.Id=r.DepartmentId
+      LEFT JOIN HrJobPositions p ON p.Id=r.PositionId
+      LEFT JOIN Employees e ON e.Id=r.EmployeeId
+      WHERE r.AnnouncementGroupId=g.Id AND r.IsExcluded=0
+        AND (r.AudienceType=1 OR
+             (r.CompanyId IS NOT NULL AND r.CompanyId NOT IN ({companyFilter})) OR
+             (r.BranchId IS NOT NULL AND b.CompanyId NOT IN ({companyFilter})) OR
+             (r.DepartmentId IS NOT NULL AND d.CompanyId NOT IN ({companyFilter})) OR
+             (r.PositionId IS NOT NULL AND p.CompanyId NOT IN ({companyFilter})) OR
+             (r.EmployeeId IS NOT NULL AND (e.CompanyId IS NULL OR e.CompanyId NOT IN ({companyFilter})))))
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", announcementId));
+
+        return count == 1;
     }
 
     protected static string BuildTargetValue(string targetType, int[]? employeeIds, int? departmentId, int? branchId)

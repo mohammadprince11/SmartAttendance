@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -103,8 +104,15 @@ VALUES (@SubmissionId, @FieldId, @Label, @Control, @Answer, @Sort);
 
     /// <summary>مراجعة تعبئة (للطلبات). المحسوم لا يُعاد حسمه.</summary>
     public static async Task<bool> ReviewAsync(
-        ApplicationDbContext db, int submissionId, bool approve, string? reviewer, string? note)
+        ApplicationDbContext db, int submissionId, bool approve, string? reviewer, string? note,
+        CompanyScope? scope = null)
     {
+        if (scope is not null && !await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, "FormSubmissions", "Id", submissionId, scope))
+        {
+            return false;
+        }
+
         var status = approve ? StatusApproved : StatusRejected;
 
         await HrmsDatabase.ExecuteAsync(
@@ -128,9 +136,11 @@ WHERE Id = @Id AND Status = N'Submitted';
     // ── القراءة ────────────────────────────────────────────────────────────────
 
     public static async Task<List<Submission>> LoadAsync(
-        ApplicationDbContext db, int? templateId = null, int? employeeId = null, string? status = null)
+        ApplicationDbContext db, int? templateId = null, int? employeeId = null, string? status = null,
+        CompanyScope? scope = null)
     {
         var filters = new List<string>();
+        if (scope is not null) filters.Add(EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId"));
         if (templateId is not null) filters.Add("s.TemplateId = @TemplateId");
         if (employeeId is not null) filters.Add("s.EmployeeId = @EmployeeId");
         if (!string.IsNullOrWhiteSpace(status)) filters.Add("s.Status = @Status");
@@ -168,8 +178,9 @@ ORDER BY CASE WHEN s.Status = N'Submitted' THEN 0 ELSE 1 END, s.Id DESC;
                 HrmsDatabase.GetString(reader, "ReviewNote")));
     }
 
-    public static async Task<Submission?> FindAsync(ApplicationDbContext db, int id) =>
-        (await LoadAsync(db)).FirstOrDefault(row => row.Id == id);
+    public static async Task<Submission?> FindAsync(
+        ApplicationDbContext db, int id, CompanyScope? scope = null) =>
+        (await LoadAsync(db, scope: scope)).FirstOrDefault(row => row.Id == id);
 
     public static async Task<List<Answer>> LoadAnswersAsync(ApplicationDbContext db, int submissionId) =>
         await HrmsDatabase.QueryAsync(
@@ -221,15 +232,20 @@ FROM FormAnswers WHERE SubmissionId = @Id ORDER BY SortOrder, Id;
     /// يسحب المتوسّط لأسفل ويكذب على قارئه.
     /// </summary>
     public static async Task<Dictionary<string, (decimal Average, int Count)>> RatingAveragesAsync(
-        ApplicationDbContext db, int templateId)
+        ApplicationDbContext db, int templateId, CompanyScope? scope = null)
     {
+        var scopeFilter = scope is null
+            ? "1 = 1"
+            : EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT a.FieldLabel, a.Answer
 FROM FormAnswers a
 INNER JOIN FormSubmissions s ON s.Id = a.SubmissionId
-WHERE s.TemplateId = @TemplateId AND a.ControlType = N'Rating';
+INNER JOIN Employees e ON e.Id = s.EmployeeId
+WHERE s.TemplateId = @TemplateId AND a.ControlType = N'Rating'
+  AND {scopeFilter};
 """,
             command => HrmsDatabase.AddParameter(command, "@TemplateId", templateId),
             reader => (

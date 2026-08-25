@@ -24,6 +24,15 @@ public sealed class AnnouncementService : IAnnouncementService
 
     public async Task<IReadOnlyList<AnnouncementManagementItem>> GetManagementListAsync(
         string? search,
+        CancellationToken cancellationToken = default) =>
+        await GetManagementListAsync(
+            search,
+            AnnouncementManagementScope.Unrestricted(),
+            cancellationToken);
+
+    public async Task<IReadOnlyList<AnnouncementManagementItem>> GetManagementListAsync(
+        string? search,
+        AnnouncementManagementScope scope,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.AnnouncementGroups
@@ -42,6 +51,34 @@ public sealed class AnnouncementService : IAnnouncementService
                 .ThenInclude(x => x.Employee)
             .Include(x => x.Recipients)
             .AsQueryable();
+
+        if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.Where(id => id > 0).Distinct().ToArray();
+
+            // A restricted manager may manage only announcements whose complete included
+            // audience is inside the company boundary. Global/legacy "All" announcements
+            // remain visible only to an unrestricted administrator.
+            query = query.Where(group =>
+                group.AudienceRules.Any(rule =>
+                    !rule.IsExcluded &&
+                    ((rule.CompanyId.HasValue && allowedCompanyIds.Contains(rule.CompanyId.Value)) ||
+                     (rule.Branch != null && allowedCompanyIds.Contains(rule.Branch.CompanyId)) ||
+                     (rule.Department != null && allowedCompanyIds.Contains(rule.Department.CompanyId)) ||
+                     (rule.Position != null && allowedCompanyIds.Contains(rule.Position.CompanyId)) ||
+                     (rule.Employee != null && rule.Employee.CompanyId.HasValue &&
+                      allowedCompanyIds.Contains(rule.Employee.CompanyId.Value)))) &&
+                !group.AudienceRules.Any(rule =>
+                    !rule.IsExcluded &&
+                    (rule.AudienceType == AnnouncementAudienceType.All ||
+                     (rule.CompanyId.HasValue && !allowedCompanyIds.Contains(rule.CompanyId.Value)) ||
+                     (rule.Branch != null && !allowedCompanyIds.Contains(rule.Branch.CompanyId)) ||
+                     (rule.Department != null && !allowedCompanyIds.Contains(rule.Department.CompanyId)) ||
+                     (rule.Position != null && !allowedCompanyIds.Contains(rule.Position.CompanyId)) ||
+                     (rule.Employee != null &&
+                      (!rule.Employee.CompanyId.HasValue ||
+                       !allowedCompanyIds.Contains(rule.Employee.CompanyId.Value))))));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
