@@ -26,6 +26,7 @@ public class RoleSecurityMiddleware
         ApplicationDbContext dbContext,
         ILoginIdentityService loginIdentityService,
         IPermissionAuthorizationService permissionAuthorizationService,
+        IAccessRoleService accessRoleService,
         Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         await EnsureLoginDatabaseCreatedAsync(dbContext);
@@ -112,6 +113,7 @@ public class RoleSecurityMiddleware
             context,
             dbContext,
             permissionAuthorizationService,
+            accessRoleService,
             path,
             role,
             employeeId,
@@ -163,6 +165,7 @@ public class RoleSecurityMiddleware
         HttpContext context,
         ApplicationDbContext dbContext,
         IPermissionAuthorizationService permissionAuthorizationService,
+        IAccessRoleService accessRoleService,
         string path,
         string role,
         string? employeeId,
@@ -176,6 +179,32 @@ public class RoleSecurityMiddleware
             path,
             role,
             employeeId);
+
+        // أدوار الصفحات اختيارية: بلا دور يبقى التوافق القديم؛ عند إسناد دور تصبح
+        // أفعاله قائمة بيضاء مركزية لكل GET/POST، لا مجرد إخفاء أزرار في الواجهة.
+        var pageCode = PageAccessRouteCatalog.ResolvePageCode(path);
+        if (pageCode is not null && !RoleRouteCatalog.IsAdmin(role))
+        {
+            if (!systemUserId.HasValue || systemUserId.Value <= 0) return false;
+            var profile = await accessRoleService.ResolveAsync(systemUserId.Value, context.RequestAborted);
+            if (profile.HasPagesRole)
+            {
+                var handler = context.Request.RouteValues.TryGetValue("handler", out var routeHandler)
+                    ? Convert.ToString(routeHandler)
+                    : context.Request.Query["handler"].ToString();
+                int? postedId = null;
+                if (context.Request.HasFormContentType)
+                {
+                    var form = await context.Request.ReadFormAsync(context.RequestAborted);
+                    var rawId = form["Id"].FirstOrDefault() ?? form["id"].FirstOrDefault();
+                    if (int.TryParse(rawId, out var parsedId)) postedId = parsedId;
+                }
+                var action = PageAccessRouteCatalog.ResolveAction(
+                    context.Request.Method, path, handler, postedId);
+                if (!profile.Can(pageCode, action)) return false;
+                compatibilityAllowed = true;
+            }
+        }
 
         var requirement = PeopleRoutePermissionResolver.Resolve(context, path);
 

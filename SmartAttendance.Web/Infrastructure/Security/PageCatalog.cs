@@ -49,6 +49,8 @@ public static class PageCatalog
             new CatalogPage("People.Assets", "إدارة العهد"),
             new CatalogPage("People.Tasks", "مهام التعيين والإنهاء"),
             new CatalogPage("People.LeaveBalances", "أرصدة الإجازات"),
+            new CatalogPage("People.LeaveRequests", "طلبات الإجازات"),
+            new CatalogPage("People.Approvals", "مركز الموافقات"),
             new CatalogPage("People.Alerts", "التنبيهات والانتهاءات"),
             new CatalogPage("People.Documents", "مركز الوثائق"),
             new CatalogPage("People.Organization", "الهياكل التنظيمية"),
@@ -105,6 +107,7 @@ public static class PageCatalog
             new CatalogPage("Payroll.TaxSocial", "الضرائب والضمان"),
             new CatalogPage("Payroll.FinancialInfo", "تحديث المعلومات المالية"),
             new CatalogPage("Payroll.Payment", "معلومات الدفع"),
+            new CatalogPage("Payroll.Reports", "تقارير الرواتب"),
         }),
     };
 
