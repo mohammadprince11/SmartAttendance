@@ -1609,6 +1609,74 @@ BEGIN
         ON WebhookDeliveries(Status, NextAttemptAt, AttemptCount) INCLUDE(SubscriptionId, CompanyId);
 END;
 """),
+        new(
+            "20260826-06-device-connector-inbox",
+            """
+IF OBJECT_ID('IntegrationApiKeys', 'U') IS NULL
+BEGIN
+    CREATE TABLE IntegrationApiKeys
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_IntegrationApiKeys PRIMARY KEY,
+        CompanyId int NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        TokenHash char(64) NOT NULL,
+        ScopesCsv nvarchar(500) NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_IntegrationApiKeys_Active DEFAULT(1),
+        ExpiresAt datetime2 NULL,
+        LastUsedAt datetime2 NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_IntegrationApiKeys_Created DEFAULT(SYSUTCDATETIME()),
+        RevokedAt datetime2 NULL,
+        CONSTRAINT FK_IntegrationApiKeys_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_IntegrationApiKeys_Hash UNIQUE(TokenHash)
+    );
+    CREATE INDEX IX_IntegrationApiKeys_Company ON IntegrationApiKeys(CompanyId,IsActive);
+END;
+
+IF OBJECT_ID('DeviceConnectorHeartbeats', 'U') IS NULL
+BEGIN
+    CREATE TABLE DeviceConnectorHeartbeats
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_DeviceConnectorHeartbeats PRIMARY KEY,
+        CompanyId int NOT NULL,
+        ConnectorKey nvarchar(100) NOT NULL,
+        LastSeenAt datetime2 NOT NULL,
+        LastSuccessAt datetime2 NULL,
+        LastError nvarchar(1000) NULL,
+        LastBatchCount int NOT NULL CONSTRAINT DF_DeviceHeartbeat_Count DEFAULT(0),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DeviceHeartbeat_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_DeviceConnectorHeartbeats_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_DeviceConnectorHeartbeats_CompanyKey UNIQUE(CompanyId,ConnectorKey)
+    );
+END;
+
+IF OBJECT_ID('DevicePunchInbox', 'U') IS NULL
+BEGIN
+    CREATE TABLE DevicePunchInbox
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_DevicePunchInbox PRIMARY KEY,
+        CompanyId int NOT NULL,
+        IntegrationKeyId int NOT NULL,
+        ConnectorKey nvarchar(100) NOT NULL,
+        ExternalId nvarchar(200) NOT NULL,
+        EmployeeNo nvarchar(100) NOT NULL,
+        PunchedAt datetimeoffset NOT NULL,
+        PunchType nvarchar(20) NULL,
+        DeviceCode nvarchar(100) NULL,
+        PayloadHash char(64) NOT NULL,
+        Status nvarchar(20) NOT NULL,
+        AttemptCount int NOT NULL CONSTRAINT DF_DevicePunchInbox_Attempts DEFAULT(0),
+        NextAttemptAt datetime2 NOT NULL CONSTRAINT DF_DevicePunchInbox_Next DEFAULT(SYSUTCDATETIME()),
+        LastError nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DevicePunchInbox_Created DEFAULT(SYSUTCDATETIME()),
+        ProcessedAt datetime2 NULL,
+        CONSTRAINT FK_DevicePunchInbox_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT FK_DevicePunchInbox_Key FOREIGN KEY(IntegrationKeyId) REFERENCES IntegrationApiKeys(Id),
+        CONSTRAINT UQ_DevicePunchInbox_External UNIQUE(CompanyId,IntegrationKeyId,ExternalId)
+    );
+    CREATE INDEX IX_DevicePunchInbox_Queue ON DevicePunchInbox(CompanyId,Status,CreatedAt);
+END;
+"""),
     };
 
     /// <summary>

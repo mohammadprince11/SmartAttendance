@@ -413,6 +413,58 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Device_connector_key_inbox_processor_and_dead_letter_are_tenant_safe()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        var token = await IntegrationApiKeyStore.IssueAsync(
+            db, scopeA, _companyA, "SQL device A", "attendance.write");
+        var identity = await IntegrationApiKeyStore.ValidateAsync(db, token, "attendance.write");
+        Assert.NotNull(identity);
+        Assert.Equal(_companyA, identity!.CompanyId);
+        Assert.Null(await IntegrationApiKeyStore.ValidateAsync(db, token, "payroll.write"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            IntegrationApiKeyStore.ListAsync(db, scopeB, _companyA));
+
+        var employeeNo = Assert.Single(await RawStringsAsync(
+            db, $"SELECT EmployeeNo FROM Employees WHERE Id={_employeeA};"));
+        var punchAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var batch = new[]
+        {
+            new DevicePunchInboxStore.Punch("sql-device-a-1", employeeNo, punchAt, "In", "gate-a")
+        };
+        var first = await DevicePunchInboxStore.IngestAsync(db, identity, "sql-gateway-a", batch);
+        var duplicate = await DevicePunchInboxStore.IngestAsync(db, identity, "sql-gateway-a", batch);
+        Assert.Equal(1, first.Accepted);
+        Assert.Equal(1, duplicate.Duplicate);
+        Assert.Equal(1, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM DevicePunchInbox WHERE CompanyId={_companyA} AND ExternalId=N'sql-device-a-1';"));
+
+        var processed = await DevicePunchProcessorService.ProcessBatchAsync(db, CancellationToken.None);
+        Assert.Equal(1, processed.Processed);
+        Assert.Equal(1, await RawIntAsync(db, $"""
+SELECT COUNT(*) FROM AttendanceRecords r
+INNER JOIN Employees e ON e.Id=r.EmployeeId
+WHERE e.CompanyId={_companyA} AND r.Notes LIKE N'%sql-device-a-1%';
+"""));
+
+        await DevicePunchInboxStore.IngestAsync(db, identity, "sql-gateway-a",
+            new[] { new DevicePunchInboxStore.Punch("sql-device-missing", "NO-SUCH-EMPLOYEE", punchAt, "Out", "gate-a") });
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await ExecuteAsync(db, """
+UPDATE DevicePunchInbox SET NextAttemptAt=DATEADD(minute,-1,SYSUTCDATETIME())
+WHERE ExternalId=N'sql-device-missing';
+""");
+            await DevicePunchProcessorService.ProcessBatchAsync(db, CancellationToken.None);
+        }
+        Assert.Equal("DeadLetter", Assert.Single(await RawStringsAsync(db,
+            "SELECT Status FROM DevicePunchInbox WHERE ExternalId=N'sql-device-missing';")));
+    }
+
+    [SkippableFact]
     public async Task Payroll_settings_are_company_specific_with_legacy_fallback()
     {
         RequireSql();
