@@ -83,6 +83,7 @@ public class IndexModel : PageModel
     public PeopleReportsStore.SavedReport? Current { get; set; }
     public List<PeopleReportCatalog.ReportColumn> RunColumns { get; set; } = new();
     public List<Dictionary<string, string>> RunRows { get; set; } = new();
+    public string? RunGroupColumnKey { get; set; }
 
     // مرشحات التقرير (المختارة بالباني) + قيمها الحالية من الـ query string.
     // المفاتيح بـ RunFilterValues: <key> للنص/القائمة، و<key>_from / <key>_to لنطاق التاريخ.
@@ -188,7 +189,8 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostCreateReportAsync(
         string name, string? description, string datasetKey, string columnsCsv, string visibility,
-        int companyId, int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false)
+        int companyId, int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false,
+        string? groupColumnKey = null, string? sortColumnKey = null, bool sortDescending = false)
     {
         if (!await LoadReportAccessAsync()) return Forbid();
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
@@ -214,6 +216,8 @@ public class IndexModel : PageModel
         }
 
         var validFilters = ValidKeys(filterColumnsCsv, dataset);
+        var validGroup = ValidKey(groupColumnKey, dataset);
+        var validSort = ValidKey(sortColumnKey, dataset);
 
         var isShared = string.Equals(visibility, "everyone", StringComparison.OrdinalIgnoreCase);
         var isSpecific = string.Equals(visibility, "specific", StringComparison.OrdinalIgnoreCase);
@@ -227,14 +231,16 @@ public class IndexModel : PageModel
         {
             await PeopleReportsStore.UpdateOwnAsync(
                 _dbContext, scope, companyId, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
-                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees,
+                validGroup, validSort, sortDescending);
             Message = "تم تحديث التقرير.";
         }
         else
         {
             await PeopleReportsStore.CreateAsync(
                 _dbContext, scope, companyId, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
-                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees,
+                validGroup, validSort, sortDescending);
             Message = "تم حفظ التقرير.";
         }
 
@@ -247,6 +253,11 @@ public class IndexModel : PageModel
             .Where(c => dataset.Columns.Any(dc => dc.Key.Equals(c, StringComparison.OrdinalIgnoreCase)))
             .Distinct()
             .ToList();
+
+    private static string? ValidKey(string? key, PeopleReportCatalog.ReportDataset dataset) =>
+        dataset.Columns.Any(column => column.Key.Equals(key?.Trim(), StringComparison.OrdinalIgnoreCase))
+            ? key!.Trim()
+            : null;
 
     /// <summary>
     /// «أنشئ نسخة» — نمط كيان المتكرّر بكل شاشاته: الاستنساخ بديلٌ عن البناء من
@@ -289,7 +300,10 @@ public class IndexModel : PageModel
             CurrentUser,
             isShared: false,
             sharedWithCsv: null,
-            filterColumnsCsv: source.FilterColumnsCsv);
+            filterColumnsCsv: source.FilterColumnsCsv,
+            groupColumnKey: source.GroupColumnKey,
+            sortColumnKey: source.SortColumnKey,
+            sortDescending: source.SortDescending);
 
         Message = "تم إنشاء نسخة بتبويب «تقاريري».";
         return Redirect(SelfPath + "#mine");
@@ -537,6 +551,29 @@ public class IndexModel : PageModel
                     }
                     break;
             }
+        }
+
+        RunGroupColumnKey = ValidKey(report.GroupColumnKey, dataset);
+        var sortKey = ValidKey(report.SortColumnKey, dataset);
+        if (!string.IsNullOrEmpty(RunGroupColumnKey) || !string.IsNullOrEmpty(sortKey))
+        {
+            var indexed = RunRows.Select((row, index) => (Row: row, Index: index));
+            IOrderedEnumerable<(Dictionary<string, string> Row, int Index)>? ordered = null;
+            if (!string.IsNullOrEmpty(RunGroupColumnKey))
+            {
+                ordered = indexed.OrderBy(item => item.Row.GetValueOrDefault(RunGroupColumnKey, ""), StringComparer.CurrentCultureIgnoreCase);
+            }
+            if (!string.IsNullOrEmpty(sortKey))
+            {
+                ordered = ordered == null
+                    ? (report.SortDescending
+                        ? indexed.OrderByDescending(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase)
+                        : indexed.OrderBy(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase))
+                    : (report.SortDescending
+                        ? ordered.ThenByDescending(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase)
+                        : ordered.ThenBy(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase));
+            }
+            RunRows = (ordered ?? indexed.OrderBy(item => item.Index)).ThenBy(item => item.Index).Select(item => item.Row).ToList();
         }
     }
 

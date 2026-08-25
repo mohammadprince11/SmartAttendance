@@ -14,6 +14,7 @@ public sealed class PeopleReportsCompanyScopeTests
         var migration = Read(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs");
 
         Assert.Contains("20260826-02-people-report-company-scope", migration, StringComparison.Ordinal);
+        Assert.Contains("20260826-08-report-group-sort", migration, StringComparison.Ordinal);
         Assert.Contains("scope.ToSqlPredicate(\"CompanyId\")", store, StringComparison.Ordinal);
         Assert.Contains("IsSystem = 1 AND CompanyId IS NULL", store, StringComparison.Ordinal);
         Assert.Contains("!scope.Allows(companyId)", store, StringComparison.Ordinal);
@@ -23,6 +24,10 @@ public sealed class PeopleReportsCompanyScopeTests
         Assert.Contains("LoadAllAsync(_dbContext, employeeScope)", portal, StringComparison.Ordinal);
         Assert.DoesNotContain("LoadAllAsync(_dbContext);", page, StringComparison.Ordinal);
         Assert.DoesNotContain("LoadAllAsync(_dbContext);", portal, StringComparison.Ordinal);
+        Assert.Contains("ValidKey(groupColumnKey, dataset)", page, StringComparison.Ordinal);
+        Assert.Contains("ValidKey(sortColumnKey, dataset)", page, StringComparison.Ordinal);
+        Assert.Contains("GroupColumnKey = @GroupColumn", store, StringComparison.Ordinal);
+        Assert.Contains("SortColumnKey = @SortColumn", store, StringComparison.Ordinal);
     }
 
     private static string Read(string root, params string[] parts) =>

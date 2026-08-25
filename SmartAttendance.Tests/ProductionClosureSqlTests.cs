@@ -289,12 +289,17 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
 
         await PeopleReportsStore.EnsureSchemaAsync(db);
         await PeopleReportsStore.CreateAsync(
-            db, scopeA, _companyA, "Company A custom report", null, "employees", "no,name", "owner-a", false);
+            db, scopeA, _companyA, "Company A custom report", null, "employees", "no,name", "owner-a", false,
+            groupColumnKey: "department", sortColumnKey: "name", sortDescending: true);
         await PeopleReportsStore.CreateAsync(
             db, scopeB, _companyB, "Company B custom report", null, "employees", "no,name", "owner-b", false);
 
         var aRows = await PeopleReportsStore.LoadAllAsync(db, scopeA);
         Assert.Contains(aRows, report => report.Name == "Company A custom report");
+        var configured = Assert.Single(aRows.Where(report => report.Name == "Company A custom report"));
+        Assert.Equal("department", configured.GroupColumnKey);
+        Assert.Equal("name", configured.SortColumnKey);
+        Assert.True(configured.SortDescending);
         Assert.DoesNotContain(aRows, report => report.Name == "Company B custom report");
 
         var bId = await ScalarAsync(db,

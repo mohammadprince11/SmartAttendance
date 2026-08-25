@@ -23,6 +23,9 @@
             datasetKey = r.DatasetKey,
             columns = r.Columns,
             filterColumns = r.FilterColumns,
+            groupColumnKey = r.GroupColumnKey ?? "",
+            sortColumnKey = r.SortColumnKey ?? "",
+            sortDescending = r.SortDescending,
             isShared = r.IsShared,
             shareWithEmployees = r.ShareWithEmployees,
             sharedWith = r.SharedWith
@@ -506,6 +509,23 @@
                 </div>
             </div>
 
+            <div class="hrms-form-grid">
+                <div class="hrms-field">
+                    <label>تجميع النتائج حسب (اختياري)</label>
+                    <select name="groupColumnKey" id="rep-group-column"><option value="">بدون تجميع</option></select>
+                </div>
+                <div class="hrms-field">
+                    <label>ترتيب النتائج حسب (اختياري)</label>
+                    <select name="sortColumnKey" id="rep-sort-column"><option value="">الترتيب الأصلي</option></select>
+                </div>
+                <div class="hrms-field">
+                    <label style="display:flex;align-items:center;gap:8px">
+                        <input type="checkbox" name="sortDescending" value="true" id="rep-sort-desc" />
+                        ترتيب تنازلي
+                    </label>
+                </div>
+            </div>
+
             <input type="hidden" name="columnsCsv" id="rep-columns-csv" />
             <input type="hidden" name="filterColumnsCsv" id="rep-filters-csv" />
             <button type="submit" class="hrms-btn-primary">حفظ التقرير</button>
@@ -708,6 +728,21 @@
             var ds = REP_DATASETS.find(function (d) { return d.key === key; });
             repColumnsPicker.fill(key, ds);
             repFiltersPicker.fill(key, ds);
+            repFillOrderOptions(ds);
+        }
+
+        function repFillOrderOptions(ds) {
+            ['rep-group-column', 'rep-sort-column'].forEach(function (id) {
+                var select = document.getElementById(id);
+                var previous = select.value;
+                select.innerHTML = '<option value="">' + (id === 'rep-group-column' ? 'بدون تجميع' : 'الترتيب الأصلي') + '</option>';
+                (ds ? ds.columns : []).forEach(function (column) {
+                    var option = document.createElement('option');
+                    option.value = column.key; option.textContent = column.label;
+                    select.appendChild(option);
+                });
+                if ([...select.options].some(function (option) { return option.value === previous; })) select.value = previous;
+            });
         }
 
         function repCollectColumns() {
@@ -733,10 +768,16 @@
             document.getElementById('rep-name').value = '';
             document.getElementById('rep-description').value = '';
             repVisibility.value = 'me';
+            document.getElementById('rep-group-column').value = '';
+            document.getElementById('rep-sort-column').value = '';
+            document.getElementById('rep-sort-desc').checked = false;
             [...repSharedWith.options].forEach(function (o) { o.selected = false; });
             repColumnsPicker.clearMemory();
             repFiltersPicker.clearMemory();
             repFill();
+            document.getElementById('rep-group-column').value = r.groupColumnKey || '';
+            document.getElementById('rep-sort-column').value = r.sortColumnKey || '';
+            document.getElementById('rep-sort-desc').checked = !!r.sortDescending;
             repSyncVisibility();
         }
 
@@ -823,6 +864,7 @@
         var runColumnsJson = JsonSerializer.Serialize(
             Model.RunColumns.Select(c => new { key = c.Key, label = c.Label, kind = c.Filter.ToString() }));
         var runRowsJson = JsonSerializer.Serialize(Model.RunRows);
+        var runGroupKeyJson = JsonSerializer.Serialize(Model.RunGroupColumnKey ?? "");
 
         <script src="~/lib/ag-grid/ag-grid-community.min.js"></script>
         <script>
@@ -833,6 +875,7 @@
 
                 var RUN_COLUMNS = @Html.Raw(runColumnsJson);
                 var RUN_ROWS = @Html.Raw(runRowsJson);
+                var RUN_GROUP_KEY = @Html.Raw(runGroupKeyJson);
 
                 if ((document.documentElement.getAttribute('data-theme') || 'dark') !== 'light') {
                     el.className = 'ag-theme-quartz-dark';
@@ -860,6 +903,20 @@
                     }
                     return def;
                 });
+
+                if (RUN_GROUP_KEY) {
+                    var groupColumn = RUN_COLUMNS.find(function (column) { return column.key === RUN_GROUP_KEY; });
+                    columnDefs.unshift({
+                        headerName: 'المجموعة', minWidth: 180, pinned: 'right', sortable: false, filter: false,
+                        valueGetter: function (p) {
+                            if (!p.data) return '';
+                            var current = p.data[RUN_GROUP_KEY] || 'غير محدد';
+                            var previous = p.node.rowIndex > 0 ? RUN_ROWS[p.node.rowIndex - 1] : null;
+                            return !previous || (previous[RUN_GROUP_KEY] || 'غير محدد') !== current ? current : '';
+                        },
+                        cellClass: 'rep-group-cell'
+                    });
+                }
 
                 window.repRunGridApi = agGrid.createGrid(el, {
                     rowData: RUN_ROWS,

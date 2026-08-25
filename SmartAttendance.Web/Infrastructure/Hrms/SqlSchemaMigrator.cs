@@ -1713,6 +1713,19 @@ BEGIN
     CREATE INDEX IX_AccountingJournalExports_Run ON AccountingJournalExports(CompanyId,RunId,ExportedAt);
 END;
 """),
+        new(
+            "20260826-08-report-group-sort",
+            """
+IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PeopleReports', 'GroupColumnKey') IS NULL
+        ALTER TABLE PeopleReports ADD GroupColumnKey nvarchar(60) NULL;
+    IF COL_LENGTH('PeopleReports', 'SortColumnKey') IS NULL
+        ALTER TABLE PeopleReports ADD SortColumnKey nvarchar(60) NULL;
+    IF COL_LENGTH('PeopleReports', 'SortDescending') IS NULL
+        ALTER TABLE PeopleReports ADD SortDescending bit NOT NULL CONSTRAINT DF_PeopleReports_SortDescending DEFAULT(0);
+END;
+"""),
     };
 
     /// <summary>
