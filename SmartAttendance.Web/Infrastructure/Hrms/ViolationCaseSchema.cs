@@ -6,8 +6,6 @@ public static class ViolationCaseSchema
 {
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
     {
-        await HrmsDatabase.EnsureCreatedAsync(dbContext);
-
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """

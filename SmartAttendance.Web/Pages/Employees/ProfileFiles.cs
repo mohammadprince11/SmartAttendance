@@ -119,32 +119,9 @@ WHERE Id = @FileId AND EmployeeId = @EmployeeId;
         return RedirectToPage(new { id });
     }
 
-    private async Task EnsureProfileFilesTableAsync()
-    {
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF OBJECT_ID(N'[dbo].[EmployeeProfileFiles]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[EmployeeProfileFiles]
-    (
-        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [EmployeeId] int NOT NULL,
-        [Category] nvarchar(50) NOT NULL,
-        [FileName] nvarchar(260) NOT NULL,
-        [StoredPath] nvarchar(500) NOT NULL,
-        [ContentType] nvarchar(120) NULL,
-        [SizeBytes] bigint NOT NULL CONSTRAINT DF_EmployeeProfileFiles_SizeBytes DEFAULT 0,
-        [UploadedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileFiles_UploadedAt DEFAULT SYSUTCDATETIME(),
-        [UploadedBy] nvarchar(150) NULL,
-        [ProtectedKey] nvarchar(400) NULL
-    );
-
-    CREATE INDEX IX_EmployeeProfileFiles_Employee_Category
-    ON [dbo].[EmployeeProfileFiles] ([EmployeeId], [Category], [UploadedAt]);
-END;
-""");
-    }
+    // Compatibility shim for the partial-page handlers. The table belongs to the
+    // numbered SQL migrator (20260826-18), not to an upload/list request.
+    private Task EnsureProfileFilesTableAsync() => Task.CompletedTask;
 
     private async Task<string> SaveProfileAreaFileAsync(int employeeId, string category, IFormFile? file)
     {

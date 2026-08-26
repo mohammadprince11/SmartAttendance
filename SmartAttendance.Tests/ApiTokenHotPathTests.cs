@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace SmartAttendance.Tests;
@@ -95,5 +96,75 @@ public class ApiTokenHotPathTests
             .ToArray();
 
         Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void CoreHrmsSchema_IsStartupOwned_NotOperationalServiceOwned()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var web = Path.Combine(dir!.FullName, "SmartAttendance.Web");
+        var allowedOwners = new[]
+        {
+            Path.Combine(web, "Program.cs"),
+            Path.Combine(web, "Infrastructure", "Security", "LoginDatabase.cs"),
+            Path.Combine(web, "Infrastructure", "Hrms", "HrmsDatabase.cs")
+        };
+        var offenders = Directory.GetFiles(web, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !allowedOwners.Contains(path, StringComparer.OrdinalIgnoreCase))
+            .Where(path => File.ReadAllText(path).Contains(
+                "HrmsDatabase.EnsureCreatedAsync", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(web, path))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void RazorPages_DoNotOwnPersistentSchemaDdl()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var web = Path.Combine(dir!.FullName, "SmartAttendance.Web");
+        var requestRoots = new[] { Path.Combine(web, "Pages"), Path.Combine(web, "Controllers") };
+        var persistentDdl = new Regex(
+            @"(?im)^\s*(?:ALTER\s+TABLE|CREATE\s+TABLE\s+(?!#))",
+            RegexOptions.CultureInvariant);
+        var offenders = requestRoots
+            .SelectMany(path => Directory.GetFiles(path, "*.cs", SearchOption.AllDirectories))
+            .Where(path => persistentDdl.IsMatch(File.ReadAllText(path)))
+            .Select(path => Path.GetRelativePath(web, path))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void FormerPageSchemas_AreNumberedMigrations()
+    {
+        var migrator = RepoFile(
+            "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs");
+
+        Assert.Contains("20260826-18-employee-profile-files", migrator);
+        Assert.Contains("20260826-19-employee-groups", migrator);
+        Assert.Contains("20260826-20-employee-profile-dynamic-schema", migrator);
+        Assert.Contains("20260826-21-employee-update-effective-date", migrator);
+    }
+
+    [Fact]
+    public void EmployeeGroups_GlobalTable_RequiresUnrestrictedCompanyScope()
+    {
+        var page = RepoFile(
+            "SmartAttendance.Web", "Pages", "HrSettings", "EmployeeGroups.cshtml.cs");
+
+        Assert.Contains("ICompanyScopeProvider", page);
+        Assert.Contains(".IsUnrestricted", page);
+        Assert.Contains("if (!await IsGlobalAdministratorAsync()) return Forbid();", page);
     }
 }

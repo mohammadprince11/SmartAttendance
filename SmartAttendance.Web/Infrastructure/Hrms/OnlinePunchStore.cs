@@ -183,8 +183,6 @@ public static class OnlinePunchStore
         ApplicationDbContext db, int employeeId, string punchType, DateTime punchAt, int? semanticId,
         double? latitude = null, double? longitude = null, bool biometricVerified = false)
     {
-        await HrmsDatabase.EnsureCreatedAsync(db);
-
         // إنفاذ التأكيد البيولوجي (محروس بالإعداد، الافتراضي معطّل): «من أنت» قبل
         // «وين أنت» — الموظف صاحب مفتاح WebAuthn نشط يجب أن يقدّم إثباتاً لحظياً،
         // وموظف بلا مفتاح نشط لا تنطبق عليه القاعدة (نفس نمط إنفاذ النطاق الجغرافي).
@@ -316,8 +314,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<OnlinePunch>();
-        await HrmsDatabase.EnsureCreatedAsync(db);
-
         var rows = await HrmsDatabase.QueryAsync(
             db,
             $"""
@@ -376,7 +372,6 @@ ORDER BY ar.CheckIn DESC;
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return 0;
-        await HrmsDatabase.EnsureCreatedAsync(db);
         if (ids.Count == 0) return 0;
         var total = 0;
         foreach (var chunk in ids.Chunk(200))
