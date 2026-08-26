@@ -39,15 +39,29 @@ public sealed class PayrollAdjustmentRunContractTests
     }
 
     [Fact]
-    public void Payslip_data_rows_use_a_theme_independent_white_paper()
+    public void Payslip_matches_the_dynamic_kayan_ledger_contract()
     {
         var css = File.ReadAllText(Path.Combine(
             FindRoot(), "SmartAttendance.Web", "wwwroot", "css", "pages", "rundetail-261651ce56.css"));
 
         Assert.Contains("--pd-slip-paper:var(--zy-white)", css);
         Assert.Contains("background:var(--pd-slip-paper) !important", css);
-        Assert.Contains("background:var(--pd-slip-paper); color:var(--pd-slip-ink)", css);
-        Assert.Contains("var(--zy-on-primary,var(--pd-slip-ink))", css);
+        Assert.Contains("#pd-slide.hrms-slideover.wide { width:min(1120px,96vw); }", css);
+        Assert.Contains(".pd-slip-info-grid", css);
+        Assert.Contains(".pd-slip-ledger", css);
+        Assert.Contains("@page { size:A4 landscape", css);
+
+        var page = File.ReadAllText(Path.Combine(
+            FindRoot(), "SmartAttendance.Web", "Pages", "Payroll", "RunDetail.cshtml"));
+        Assert.Contains("class=\"pd-slip-doc pd-slip-kayan\" data-zy-preserve", page);
+        Assert.Contains("<th>الدخل</th><th>أيام</th><th>المبلغ</th><th>الاستقطاعات</th>", page);
+        Assert.Contains("NetInWords = TerminationSettlementPolicy.CurrencyAmountInWords", page);
+
+        var store = File.ReadAllText(Path.Combine(
+            FindRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs"));
+        Assert.Contains("ISNULL(e.NationalId, N'') AS NationalId", store);
+        Assert.Contains("FROM EmployeeFinancialInfos f", store);
+        Assert.Contains("ISNULL(b.Name, N'') AS BranchName", store);
 
         var tokens = File.ReadAllText(Path.Combine(
             FindRoot(), "SmartAttendance.Web", "wwwroot", "css", "zynora-migrated-color-tokens.css"));

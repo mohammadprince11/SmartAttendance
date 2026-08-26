@@ -144,6 +144,15 @@ public class TerminationSettlementPolicyTests
         Assert.Equal("خمسة ريال", TerminationSettlementPolicy.AmountInWords(5m, "ريال", "هللة"));
     }
 
+    [Theory]
+    [InlineData("IQD", "دينار عراقي")]
+    [InlineData("SAR", "ريال سعودي")]
+    [InlineData("USD", "دولار أمريكي")]
+    public void CurrencyAmountInWords_UsesThePayslipCurrency(string code, string expectedCurrency)
+    {
+        Assert.Contains(expectedCurrency, TerminationSettlementPolicy.CurrencyAmountInWords(250m, code));
+    }
+
     // ── مدة الخدمة ─────────────────────────────────────────────────────────────
 
     [Fact]

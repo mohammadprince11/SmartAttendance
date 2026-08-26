@@ -71,7 +71,8 @@ public class PayslipInquiryModel : PageModel
                 Current = lines.FirstOrDefault(l => l.EmployeeId == EmployeeId.Value);
                 CurrentPeriodText = s.PeriodText;
                 if (Current != null)
-                    NetInWords = TerminationSettlementPolicy.AmountInWords(Current.NetSalary, "دينار أردني", "فلس");
+                    NetInWords = TerminationSettlementPolicy.CurrencyAmountInWords(
+                        Current.NetSalary, Current.PayrollCurrency);
 
                 var (py, pm) = Month.Value == 1 ? (Year.Value - 1, 12) : (Year.Value, Month.Value - 1);
                 Previous = (await PayrollRunStore.PayslipHistoryAsync(_db, scope, EmployeeId.Value, py, pm)).FirstOrDefault();

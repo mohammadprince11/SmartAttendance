@@ -125,6 +125,25 @@ public static class TerminationSettlementPolicy
         return negative ? $"سالب {result}" : result;
     }
 
+    /// <summary>تفقيط مبلغ القسيمة باسم العملة الفعلي بدلاً من اسم ثابت.</summary>
+    public static string CurrencyAmountInWords(decimal amount, string? currencyCode)
+    {
+        var (currency, fraction) = (currencyCode ?? string.Empty).Trim().ToUpperInvariant() switch
+        {
+            "IQD" => ("دينار عراقي", "فلس"),
+            "JOD" => ("دينار أردني", "قرش"),
+            "SAR" => ("ريال سعودي", "هللة"),
+            "AED" => ("درهم إماراتي", "فلس"),
+            "USD" => ("دولار أمريكي", "سنت"),
+            "EUR" => ("يورو", "سنت"),
+            "GBP" => ("جنيه إسترليني", "بنس"),
+            { Length: > 0 } code => (code, "جزء"),
+            _ => ("وحدة نقدية", "جزء")
+        };
+
+        return AmountInWords(amount, currency, fraction);
+    }
+
     private static string ThreeGroups(long number)
     {
         if (number == 0) return string.Empty;

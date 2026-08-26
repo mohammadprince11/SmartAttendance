@@ -1,19 +1,26 @@
 @page "/Payroll/RunDetail"
 @model SmartAttendance.Web.Pages.Payroll.RunDetailModel
 @using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
 
 @{
     ViewData["Title"] = "تفاصيل المسير";
+    var periodStart = new DateOnly(Model.Run?.Year ?? DateTime.Today.Year, Model.Run?.Month ?? DateTime.Today.Month, 1);
+    var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+    var periodRange = $"{periodStart:yyyy/MM/dd} - {periodEnd:yyyy/MM/dd}";
     var payslipJson = JsonSerializer.Serialize(Model.Lines.Select(l => new
     {
-        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.Department, l.Position,
+        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.NationalId, l.Department, l.Branch, l.Position,
+        HireDateText = l.HireDate?.ToString("yyyy/MM/dd") ?? "—",
+        l.BankName, l.UnitNo, l.SocialSecurityNo, l.PaymentMethod,
         l.BasicSalary, l.TotalAllowances, l.GrossSalary,
         l.TaxAmount, l.GosiEmployee, l.GosiCompany, l.OtherDeductions,
         l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays, l.DaysBasis,
         l.AttendanceBase, l.AttendanceFactor, l.TaxBase, l.TaxBaseSource, l.GosiBase, l.GosiBaseSource,
         l.SourceCurrency, l.PayrollCurrency, l.ExchangeRate, l.ExchangeRateDate,
-        Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount }),
-        Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount })
+        NetInWords = TerminationSettlementPolicy.CurrencyAmountInWords(l.NetSalary, l.PayrollCurrency),
+        Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount, c.Kind }),
+        Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount, c.Kind })
     }));
 }
 <link rel="stylesheet" href="~/css/pages/rundetail-261651ce56.css" asp-append-version="true" />
@@ -162,69 +169,137 @@
         var PD_PERIOD = "@Model.Run.PeriodText";
         var PD_BATCH = "@Model.Run.BatchNoText";
         var PD_CO = @Html.Raw(JsonSerializer.Serialize(Model.CompanyName));
+        var PD_PERIOD_RANGE = @Html.Raw(JsonSerializer.Serialize(periodRange));
 
         function fmt(n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function esc(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function valueOrDash(v) { return v == null || String(v).trim() === '' ? '—' : esc(v); }
+        function money(n, currency) { return fmt(n) + (currency ? ' ' + esc(currency) : ''); }
+        function slipInfo(label, value) {
+            return '<div class="pd-slip-info"><b>' + esc(label) + '</b><span>' + valueOrDash(value) + '</span></div>';
+        }
+        function paymentLabel(value) {
+            var key = String(value || '').toLowerCase();
+            if (key.indexOf('bank') >= 0) return 'تحويل بنكي';
+            if (key.indexOf('cash') >= 0) return 'نقدي';
+            if (key.indexOf('cheque') >= 0 || key.indexOf('check') >= 0) return 'شيك';
+            return value || '—';
+        }
         function traceSrc(s) {
             if (s === 'Employee') return 'راتب مُدخَل بالملف المالي';
             if (s === 'EmployeeMissing') return '⚠ مُعرَّف بلا قيمة — من المكوّنات مؤقتاً';
             return 'مُركَّب من المكوّنات';
         }
 
+        function hasKind(rows, kind) {
+            return rows.some(function (row) { return String(row.Kind || '').toLowerCase() === kind.toLowerCase(); });
+        }
+
+        function sumRows(rows) {
+            return rows.reduce(function (total, row) { return total + Number(row.Amount || 0); }, 0);
+        }
+
+        function normalizedLedger(l) {
+            var earnings = (l.Earnings || []).map(function (row) {
+                return { ItemName: row.ItemName, Amount: Number(row.Amount || 0), Kind: row.Kind || '' };
+            });
+            var deductions = (l.Deductions || []).map(function (row) {
+                return { ItemName: row.ItemName, Amount: Number(row.Amount || 0), Kind: row.Kind || '' };
+            });
+
+            if (Number(l.BasicSalary || 0) !== 0 && !hasKind(earnings, 'Basic'))
+                earnings.unshift({ ItemName: 'الراتب المستحق', Amount: Number(l.BasicSalary), Kind: 'Basic' });
+
+            var earningsGap = Number(l.GrossSalary || 0) - sumRows(earnings);
+            if (Math.abs(earningsGap) >= 0.01)
+                earnings.push({ ItemName: 'تسوية الاستحقاقات', Amount: earningsGap, Kind: 'Adjustment' });
+
+            if (Number(l.TaxAmount || 0) !== 0 && !hasKind(deductions, 'Tax'))
+                deductions.push({ ItemName: 'ضريبة الدخل', Amount: Number(l.TaxAmount), Kind: 'Tax' });
+            if (Number(l.GosiEmployee || 0) !== 0 && !hasKind(deductions, 'Gosi'))
+                deductions.push({ ItemName: 'الضمان الاجتماعي', Amount: Number(l.GosiEmployee), Kind: 'Gosi' });
+
+            var deductionsGap = Number(l.TotalDeductions || 0) - sumRows(deductions);
+            if (Math.abs(deductionsGap) >= 0.01)
+                deductions.push({ ItemName: 'خصومات أخرى', Amount: deductionsGap, Kind: 'Other' });
+
+            return { earnings: earnings, deductions: deductions };
+        }
+
+        function ledgerRows(l, ledger, paidDays) {
+            var count = Math.max(ledger.earnings.length, ledger.deductions.length, 1);
+            var html = '';
+            for (var i = 0; i < count; i++) {
+                var earn = ledger.earnings[i];
+                var deduction = ledger.deductions[i];
+                var earnName = earn ? (String(earn.Kind).toLowerCase() === 'basic' ? 'الراتب المستحق' : earn.ItemName) : '';
+                var earnDays = earn && String(earn.Kind).toLowerCase() === 'basic' ? paidDays : '';
+                html += '<tr>' +
+                    '<td>' + (earn ? valueOrDash(earnName) : '') + '</td>' +
+                    '<td class="days">' + (earnDays === '' ? '' : esc(earnDays)) + '</td>' +
+                    '<td class="amount">' + (earn ? money(earn.Amount, l.PayrollCurrency) : '') + '</td>' +
+                    '<td>' + (deduction ? valueOrDash(deduction.ItemName) : '') + '</td>' +
+                    '<td class="days"></td>' +
+                    '<td class="amount">' + (deduction ? money(deduction.Amount, l.PayrollCurrency) : '') + '</td>' +
+                '</tr>';
+            }
+            return html;
+        }
+
         function pdSlip(empId) {
             var l = PD_DATA.find(function (x) { return x.EmployeeId === empId; });
             if (!l) return;
-            var earnRows = (l.Earnings || []).map(function (c) {
-                return '<div class="row"><span>' + c.ItemName + '</span><b>' + fmt(c.Amount) + '</b></div>';
-            }).join('');
-            var dedRows = (l.Deductions || []).map(function (c) {
-                return '<div class="row"><span>' + c.ItemName + '</span><b>' + fmt(c.Amount) + '</b></div>';
-            }).join('');
-            if (!dedRows) dedRows = '<div class="row"><span>لا استقطاعات</span><b>0.00</b></div>';
+            var basis = Number(l.DaysBasis || 0) > 0 ? Number(l.DaysBasis) : Number(l.WorkDays || 0);
+            var paidDays = basis > 0 ? Math.round(basis * (Number(l.AttendanceFactor) || 1)) : 0;
+            var ledger = normalizedLedger(l);
 
             var html =
-              '<div class="pd-slip-doc">' +
-                '<div class="pd-slip-top">' +
-                  '<div class="co">' + PD_CO + '<small>قسيمة راتب رسمية</small></div>' +
-                  '<div class="lbl"><b>' + PD_PERIOD + '</b><span>دفعة ' + PD_BATCH + '</span></div>' +
+              '<div class="pd-slip-doc pd-slip-kayan" data-zy-preserve>' +
+                '<div class="pd-slip-kayan-head">' +
+                  '<div><span>استعلام قسائم الراتب</span><h3>' + valueOrDash(PD_CO) + '</h3></div>' +
+                  '<div class="period"><b>' + esc(PD_PERIOD) + '</b><span>دفعة ' + esc(PD_BATCH) + '</span></div>' +
                 '</div>' +
-                '<div class="pd-slip-emp">' +
-                  '<div><span>الموظف</span> <b>' + l.EmployeeName + '</b></div>' +
-                  '<div><span>الرقم الوظيفي</span> <b>' + l.EmployeeNo + '</b></div>' +
-                  '<div><span>القسم</span> <b>' + (l.Department || '—') + '</b></div>' +
-                  '<div><span>المنصب</span> <b>' + (l.Position || '—') + '</b></div>' +
-                  // «0 / 0» كانت تعني «لا بيانات حضور» وتُدفع كاملاً بلا تمييز عن الدوام
-                  // الكامل. الحالة تُعلَن الآن نصّاً بالقسيمة نفسها لا تُترك للتخمين.
-                  (l.WorkDays > 0
-                    ? (function(){ var basis = l.DaysBasis > 0 ? l.DaysBasis : l.WorkDays;
-                        return '<div><span>أيام مدفوعة (مكافئة)</span> <b>' + Math.round(basis * (Number(l.AttendanceFactor) || 1)) + ' / ' + basis + '</b></div>' +
-                      '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>'; })()
-                    : '<div class="zyu-51377a917eb3"><span>الحضور</span> <b class="zyu-c42b22562633">بلا بيانات حضور لهذا الشهر — دُفع الأساسي كاملاً</b></div>') +
+                '<div class="pd-slip-info-grid">' +
+                  slipInfo('رمز الموظف', l.EmployeeNo) +
+                  slipInfo('الاسم الكامل', l.EmployeeName) +
+                  slipInfo('رقم الهوية', l.NationalId) +
+                  slipInfo('المسمى الوظيفي', l.Position) +
+                  slipInfo('وحدة العمل', PD_CO) +
+                  slipInfo('الوحدة الهرمية', l.Department) +
+                  slipInfo('تاريخ التعيين', l.HireDateText) +
+                  slipInfo('الراتب الأساسي', money(l.BasicSalary, l.PayrollCurrency)) +
+                  slipInfo('فترة الراتب', PD_PERIOD_RANGE) +
+                  slipInfo('البنك', l.BankName) +
+                  slipInfo('رقم الوحدة', l.UnitNo) +
+                  slipInfo('رقم الضمان الاجتماعي', l.SocialSecurityNo) +
+                  slipInfo('طريقة الدفع', paymentLabel(l.PaymentMethod)) +
+                  slipInfo('إجمالي العلاوات', money(l.TotalAllowances, l.PayrollCurrency)) +
+                  slipInfo('الراتب الكلي', money(l.GrossSalary, l.PayrollCurrency)) +
+                  slipInfo('الفرع', l.Branch) +
+                  slipInfo('العملة', l.PayrollCurrency) +
+                  slipInfo('الأيام المدفوعة', basis > 0 ? paidDays + ' / ' + basis : 'بلا بيانات حضور') +
                 '</div>' +
-                '<div class="pd-slip-cols">' +
-                  '<div class="pd-slip-box earn"><h4>الاستحقاقات</h4>' + earnRows +
-                    '<div class="sum"><span>إجمالي الاستحقاقات</span><b>' + fmt(l.GrossSalary) + '</b></div></div>' +
-                  '<div class="pd-slip-box ded"><h4>الاستقطاعات</h4>' + dedRows +
-                    '<div class="sum"><span>إجمالي الاستقطاعات</span><b>' + fmt(l.TotalDeductions) + '</b></div></div>' +
+                '<div class="pd-slip-ledger-wrap"><table class="pd-slip-ledger">' +
+                  '<thead><tr><th>الدخل</th><th>أيام</th><th>المبلغ</th><th>الاستقطاعات</th><th>أيام</th><th>المبلغ</th></tr></thead>' +
+                  '<tbody>' + ledgerRows(l, ledger, paidDays) +
+                    '<tr class="total"><td colspan="2">مجموع الدخل</td><td class="amount">' + money(l.GrossSalary, l.PayrollCurrency) + '</td>' +
+                    '<td colspan="2">مجموع الاستقطاعات</td><td class="amount">' + money(l.TotalDeductions, l.PayrollCurrency) + '</td></tr>' +
+                    '<tr class="net"><td colspan="2">صافي الراتب</td><td class="amount">' + money(l.NetSalary, l.PayrollCurrency) + '</td><td colspan="3"></td></tr>' +
+                    '<tr class="words"><td colspan="6">' + valueOrDash(l.NetInWords) + ' فقط لا غير</td></tr>' +
+                  '</tbody></table>' +
                 '</div>' +
-                '<div class="pd-slip-net"><span>صافي الراتب المستحق</span><b>' + fmt(l.NetSalary) + ' ' + (l.PayrollCurrency || '') + '</b></div>' +
-                // أثر الاحتساب (Phase 15): من أين جاء كل وعاء ولماذا — للموارد البشرية.
-                '<div class="pd-slip-trace">' +
-                  '<h4>أثر الاحتساب</h4>' +
-                  '<div class="row"><span>وعاء الحضور</span><b>' + fmt(l.AttendanceBase) + ' × معامل ' + Number(l.AttendanceFactor || 1).toFixed(4) + '</b></div>' +
-                  '<div class="row"><span>وعاء الضريبة</span><b>' + fmt(l.TaxBase) + ' <small>(' + traceSrc(l.TaxBaseSource) + ')</small></b></div>' +
-                  '<div class="row"><span>وعاء الضمان</span><b>' + fmt(l.GosiBase) + ' <small>(' + traceSrc(l.GosiBaseSource) + ')</small></b></div>' +
-                  ((l.SourceCurrency && l.PayrollCurrency && l.SourceCurrency !== l.PayrollCurrency)
-                    ? '<div class="row"><span>تحويل العملة</span><b>1 ' + l.SourceCurrency + ' = ' + Number(l.ExchangeRate).toFixed(8) + ' ' + l.PayrollCurrency + ' <small>(' + (l.ExchangeRateDate || '—') + ')</small></b></div>'
-                    : '') +
-                '</div>' +
-                '<div class="pd-slip-emp2">' +
-                  '<div>مساهمة الشركة (ضمان): <b>' + fmt(l.GosiCompany) + '</b></div>' +
-                  '<div>التكلفة الكلية على صاحب العمل: <b>' + fmt(l.EmployerCost) + '</b></div>' +
-                '</div>' +
-                '<div class="pd-slip-sign">' +
-                  '<div><div class="line"></div>توقيع الموظف</div>' +
-                  '<div><div class="line"></div>الموارد البشرية / المالية</div>' +
-                '</div>' +
+                '<details class="pd-slip-audit"><summary>تفاصيل أثر الاحتساب</summary>' +
+                  '<div><span>وعاء الحضور</span><b>' + money(l.AttendanceBase, l.PayrollCurrency) + ' × ' + Number(l.AttendanceFactor || 1).toFixed(4) + '</b></div>' +
+                  '<div><span>وعاء الضريبة</span><b>' + money(l.TaxBase, l.PayrollCurrency) + ' · ' + esc(traceSrc(l.TaxBaseSource)) + '</b></div>' +
+                  '<div><span>وعاء الضمان</span><b>' + money(l.GosiBase, l.PayrollCurrency) + ' · ' + esc(traceSrc(l.GosiBaseSource)) + '</b></div>' +
+                  '<div><span>مساهمة الشركة</span><b>' + money(l.GosiCompany, l.PayrollCurrency) + '</b></div>' +
+                  '<div><span>تكلفة صاحب العمل</span><b>' + money(l.EmployerCost, l.PayrollCurrency) + '</b></div>' +
+                '</details>' +
+                '<div class="pd-slip-kayan-actions"><button type="button" onclick="window.print()">طباعة</button></div>' +
               '</div>';
 
             document.getElementById('pd-slip').innerHTML = html;

@@ -114,8 +114,15 @@ public static class PayrollRunStore
         public int EmployeeId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
+        public string NationalId { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
+        public string Branch { get; set; } = string.Empty;
         public string Position { get; set; } = string.Empty;
+        public DateOnly? HireDate { get; set; }
+        public string BankName { get; set; } = string.Empty;
+        public string UnitNo { get; set; } = string.Empty;
+        public string SocialSecurityNo { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
         public decimal BasicSalary { get; set; }
         public decimal TotalAllowances { get; set; }
         public decimal GrossSalary { get; set; }
@@ -1562,10 +1569,21 @@ ORDER BY x.ReasonCode, e.EmployeeNo;
             dbContext,
             """
 SELECT l.*, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
-       ISNULL(e.Position, N'') AS Position, ISNULL(d.Name, N'') AS DepartmentName
+       ISNULL(e.NationalId, N'') AS NationalId, e.HireDate,
+       ISNULL(e.Position, N'') AS Position, ISNULL(d.Name, N'') AS DepartmentName,
+       ISNULL(b.Name, N'') AS BranchName, ISNULL(fi.BankName, N'') AS BankName,
+       ISNULL(fi.UnitNo, N'') AS UnitNo, ISNULL(fi.SocialSecurityNo, N'') AS SocialSecurityNo,
+       ISNULL(fi.PaymentMethod, N'') AS PaymentMethod
 FROM PayrollRunLines l
 INNER JOIN Employees e ON e.Id = l.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
+LEFT JOIN Branches b ON b.Id = e.BranchId
+OUTER APPLY (
+    SELECT TOP 1 f.BankName, f.UnitNo, f.SocialSecurityNo, f.PaymentMethod
+    FROM EmployeeFinancialInfos f
+    WHERE f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0)=0
+    ORDER BY f.Id DESC
+) fi
 WHERE l.RunId = @RunId
 ORDER BY e.EmployeeNo;
 """,
@@ -1577,8 +1595,15 @@ ORDER BY e.EmployeeNo;
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
+                NationalId = HrmsDatabase.GetString(reader, "NationalId"),
                 Department = HrmsDatabase.GetString(reader, "DepartmentName"),
+                Branch = HrmsDatabase.GetString(reader, "BranchName"),
                 Position = HrmsDatabase.GetString(reader, "Position"),
+                HireDate = HrmsDatabase.GetDateOnly(reader, "HireDate"),
+                BankName = HrmsDatabase.GetString(reader, "BankName"),
+                UnitNo = HrmsDatabase.GetString(reader, "UnitNo"),
+                SocialSecurityNo = HrmsDatabase.GetString(reader, "SocialSecurityNo"),
+                PaymentMethod = HrmsDatabase.GetString(reader, "PaymentMethod"),
                 BasicSalary = reader["BasicSalary"] is decimal b ? b : 0,
                 TotalAllowances = reader["TotalAllowances"] is decimal a ? a : 0,
                 GrossSalary = reader["GrossSalary"] is decimal g ? g : 0,
