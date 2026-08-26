@@ -127,6 +127,29 @@ public class SmokeTests : PageTest
             var overflow = await Page.EvaluateAsync<bool>(
                 "document.documentElement.scrollWidth > document.documentElement.clientWidth + 2");
             Assert.That(overflow, Is.False, $"Horizontal overflow on {surface.Path}");
+
+            var accessibilityIssues = await Page.EvaluateAsync<string[]>("""
+                () => {
+                  const issues = [];
+                  const ids = [...document.querySelectorAll('[id]')]
+                    .map(x => x.id).filter(Boolean);
+                  const duplicates = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+                  if (duplicates.length) issues.push('duplicate ids: ' + duplicates.join(','));
+                  if ([...document.images].some(img => !img.hasAttribute('alt')))
+                    issues.push('image without alt');
+                  if ([...document.querySelectorAll('button')].some(button =>
+                        !((button.innerText || button.getAttribute('aria-label') || button.title || '').trim())))
+                    issues.push('unnamed button');
+                  if ([...document.querySelectorAll('input:not([type=hidden]),select,textarea')].some(control => {
+                        const labelled = control.labels && control.labels.length > 0;
+                        return !(labelled || control.getAttribute('aria-label') ||
+                          control.getAttribute('aria-labelledby') || control.getAttribute('placeholder') || control.title);
+                      })) issues.push('unnamed form control');
+                  return issues;
+                }
+                """);
+            Assert.That(accessibilityIssues, Is.Empty,
+                $"Accessibility smoke failed on {surface.Path}: {string.Join("; ", accessibilityIssues)}");
         }
     }
 
