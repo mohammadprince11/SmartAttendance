@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Companies.ViewModels;
@@ -11,10 +11,10 @@ namespace SmartAttendance.Infrastructure.Services;
 public class CompanyService : ICompanyService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
     private readonly ApplicationDbContext _dbContext;
 
-    public CompanyService(IUnitOfWork unitOfWork, IMapper mapper, ApplicationDbContext dbContext)
+    public CompanyService(IUnitOfWork unitOfWork, IModelMapper mapper, ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

@@ -1,4 +1,4 @@
-using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.EmployeeShifts.Services;
 using SmartAttendance.Application.EmployeeShifts.ViewModels;
@@ -11,9 +11,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public class EmployeeShiftService : IEmployeeShiftService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
 
-    public EmployeeShiftService(IUnitOfWork unitOfWork, IMapper mapper)
+    public EmployeeShiftService(IUnitOfWork unitOfWork, IModelMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

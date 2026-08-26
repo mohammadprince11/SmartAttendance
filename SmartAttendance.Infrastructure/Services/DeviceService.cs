@@ -1,4 +1,4 @@
-using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Devices.Services;
@@ -10,9 +10,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public class DeviceService : IDeviceService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
 
-    public DeviceService(IUnitOfWork unitOfWork, IMapper mapper)
+    public DeviceService(IUnitOfWork unitOfWork, IModelMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

@@ -1,4 +1,4 @@
-using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Employees.ViewModels;
@@ -18,9 +18,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public class LeaveRequestService : ILeaveRequestService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
 
-    public LeaveRequestService(IUnitOfWork unitOfWork, IMapper mapper)
+    public LeaveRequestService(IUnitOfWork unitOfWork, IModelMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

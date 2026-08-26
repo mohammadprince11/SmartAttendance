@@ -6,33 +6,23 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceProcessing.Services;
-using SmartAttendance.Application.AttendanceRecords.Mappings;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceReports.Services;
-using SmartAttendance.Application.Branches.Mappings;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
-using SmartAttendance.Application.Companies.Mappings;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Companies.Services;
-using SmartAttendance.Application.Departments.Mappings;
 using SmartAttendance.Application.Departments.Services;
-using SmartAttendance.Application.Devices.Mappings;
 using SmartAttendance.Application.Devices.Services;
 using SmartAttendance.Application.EmployeePermissions.Services;
-using SmartAttendance.Application.EmployeeShifts.Mappings;
 using SmartAttendance.Application.EmployeeShifts.Services;
-using SmartAttendance.Application.Employees.Mappings;
 using SmartAttendance.Application.Employees.Services;
-using SmartAttendance.Application.Holidays.Mappings;
 using SmartAttendance.Application.Holidays.Services;
-using SmartAttendance.Application.LeaveRequests.Mappings;
 using SmartAttendance.Application.LeaveRequests.Services;
 using SmartAttendance.Application.MasterDataImports.Services;
-using SmartAttendance.Application.Permissions.Mappings;
 using SmartAttendance.Application.Permissions.Services;
 using SmartAttendance.Application.Setup.Services;
-using SmartAttendance.Application.Shifts.Mappings;
 using SmartAttendance.Application.Shifts.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
@@ -354,21 +344,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// AutoMapper
-builder.Services.AddAutoMapper(cfg =>
-{
-    cfg.AddProfile<CompanyProfile>();
-    cfg.AddProfile<BranchProfile>();
-    cfg.AddProfile<DepartmentProfile>();
-    cfg.AddProfile<EmployeeProfile>();
-    cfg.AddProfile<DeviceProfile>();
-    cfg.AddProfile<ShiftProfile>();
-    cfg.AddProfile<EmployeeShiftProfile>();
-    cfg.AddProfile<AttendanceRecordProfile>();
-    cfg.AddProfile<HolidayProfile>();
-    cfg.AddProfile<LeaveRequestProfile>();
-    cfg.AddProfile<PermissionProfile>();
-});
+builder.Services.AddSingleton<IModelMapper, ConventionModelMapper>();
 
 // Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
