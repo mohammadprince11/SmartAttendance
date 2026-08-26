@@ -39,6 +39,22 @@ public sealed class PayrollAdjustmentRunContractTests
     }
 
     [Fact]
+    public void Payslip_data_rows_use_a_theme_independent_white_paper()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            FindRoot(), "SmartAttendance.Web", "wwwroot", "css", "pages", "rundetail-261651ce56.css"));
+
+        Assert.Contains("--pd-slip-paper:var(--zy-white)", css);
+        Assert.Contains("background:var(--pd-slip-paper) !important", css);
+        Assert.Contains("background:var(--pd-slip-paper); color:var(--pd-slip-ink)", css);
+        Assert.Contains("var(--zy-on-primary,var(--pd-slip-ink))", css);
+
+        var tokens = File.ReadAllText(Path.Combine(
+            FindRoot(), "SmartAttendance.Web", "wwwroot", "css", "zynora-migrated-color-tokens.css"));
+        Assert.Contains("--zy-white: #fff", tokens);
+    }
+
+    [Fact]
     public void Negative_or_zero_bank_settlements_are_not_payable()
     {
         Assert.False(new PayrollRunStore.BankFileRow { Iban = "IQ00", NetSalary = -10 }.IsPayable);
