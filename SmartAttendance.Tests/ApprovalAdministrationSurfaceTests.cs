@@ -13,11 +13,26 @@ public sealed class ApprovalAdministrationSurfaceTests
 
         Assert.Contains("data-nav-area=\"approvals\"", layout, StringComparison.Ordinal);
         Assert.Contains("/Approvals/Reports", layout, StringComparison.Ordinal);
+        Assert.Contains("/Approvals/Committees", layout, StringComparison.Ordinal);
         Assert.Contains("data-nav-area=\"settings\"", layout, StringComparison.Ordinal);
         Assert.Contains("/AuditLogs/Index", layout, StringComparison.Ordinal);
         Assert.Contains("data-zy-command-search", layout, StringComparison.Ordinal);
         Assert.Contains(".nexora-nav a[href]", search, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ApprovalCenter_ExposesRequestSourcesAndScopedDecisionHistory()
+    {
+        var root = FindRoot();
+        var model = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Approvals", "Index.cshtml.cs"));
+        var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Approvals", "Index.cshtml"));
+        var engine = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "ApprovalWorkflowEngine.cs"));
+
+        Assert.Contains("r.RequestSource = @Source", model, StringComparison.Ordinal);
+        Assert.Contains("GetHistoriesAsync(_dbContext, scope", model, StringComparison.Ordinal);
+        Assert.Contains("EmployeeCompanyGuard.ListFilter(scope, \"e.CompanyId\")", engine, StringComparison.Ordinal);
+        Assert.Contains("apv-history", page, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -45,6 +45,8 @@ public static class ApprovalWorkflowEngine
         public string ApproverType { get; set; } = "DirectManager";
         public string? RoleName { get; set; }
         public string? UserName { get; set; }
+        public int? CommitteeGroupId { get; set; }
+        public int? ExternalCommitteeId { get; set; }
         public string DisplayName { get; set; } = string.Empty;
         public string Status { get; set; } = "Pending";
         public DateTime? CurrentSince { get; set; }
@@ -70,6 +72,18 @@ public static class ApprovalWorkflowEngine
         public List<StepState> Steps { get; set; } = new();
         public StepState? Current => Steps.FirstOrDefault(s => s.Status == "Current");
         public IReadOnlyList<StepState> CurrentSteps => Steps.Where(s=>s.Status=="Current").OrderBy(s=>s.StepOrder).ToList();
+    }
+
+    public sealed class HistoryState
+    {
+        public int Id { get; set; }
+        public int RequestId { get; set; }
+        public string StepName { get; set; } = string.Empty;
+        public string Action { get; set; } = string.Empty;
+        public string? ActionBy { get; set; }
+        public DateTime ActionAt { get; set; }
+        public string? Notes { get; set; }
+        public string? DelegatedFrom { get; set; }
     }
 
     public static async Task EnsureAsync(ApplicationDbContext dbContext)
@@ -184,6 +198,7 @@ END;
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
+DELETE m FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId=@RequestId;
 DELETE FROM ApprovalRequestSteps WHERE RequestId = @RequestId;
 DELETE FROM ApprovalRequestWatchers WHERE RequestId = @RequestId;
 DELETE FROM ApprovalRequestFlows WHERE RequestId = @RequestId;
@@ -223,11 +238,12 @@ VALUES (@RequestId, @TemplateId, @TemplateName, @CommentReq, @AttachReq, @Cancel
             var order = i + 1;
             var stageOrder=step.StageOrder>0?step.StageOrder:order;
             var isFirst = stageOrder == firstStage;
-            await HrmsDatabase.ExecuteAsync(
+            var requestStepId = await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
-INSERT INTO ApprovalRequestSteps (RequestId, StepOrder, StageOrder, ApproverType, RoleName, UserName, DisplayName, Status, CurrentSince)
-VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName, @DisplayName, @Status, @CurrentSince);
+INSERT INTO ApprovalRequestSteps (RequestId, StepOrder, StageOrder, ApproverType, RoleName, UserName, CommitteeGroupId, ExternalCommitteeId, DisplayName, Status, CurrentSince)
+VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName, @CommitteeGroupId, @ExternalCommitteeId, @DisplayName, @Status, @CurrentSince);
+SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command =>
                 {
@@ -237,10 +253,29 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
                     HrmsDatabase.AddParameter(command, "@ApproverType", step.ApproverType);
                     HrmsDatabase.AddParameter(command, "@RoleName", (object?)step.RoleName ?? DBNull.Value);
                     HrmsDatabase.AddParameter(command, "@UserName", (object?)step.UserName ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@CommitteeGroupId", (object?)step.CommitteeGroupId ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@ExternalCommitteeId", (object?)step.ExternalCommitteeId ?? DBNull.Value);
                     HrmsDatabase.AddParameter(command, "@DisplayName", step.DisplayName);
                     HrmsDatabase.AddParameter(command, "@Status", isFirst ? "Current" : "Pending");
                     HrmsDatabase.AddParameter(command, "@CurrentSince", isFirst ? DateTime.UtcNow : (object)DBNull.Value);
                 });
+            if (step.ApproverType == "CommitteeGroup" && step.CommitteeGroupId is > 0)
+            {
+                await HrmsDatabase.ExecuteAsync(dbContext, """
+INSERT INTO ApprovalRequestStepMembers(StepId,UserName)
+SELECT @StepId,u.UserName
+FROM ApprovalCommitteeGroupMembers m
+INNER JOIN ApprovalCommitteeGroups g ON g.Id=m.GroupId AND g.CompanyId=@CompanyId
+INNER JOIN SystemUsers u ON u.UserName=m.UserName AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+INNER JOIN Employees e ON e.Id=u.EmployeeId AND e.CompanyId=@CompanyId AND ISNULL(e.IsDeleted,0)=0
+WHERE m.GroupId=@GroupId;
+""", command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@StepId", requestStepId);
+                    HrmsDatabase.AddParameter(command, "@GroupId", step.CommitteeGroupId.Value);
+                    HrmsDatabase.AddParameter(command, "@CompanyId", employeeInfo.CompanyId);
+                });
+            }
         }
 
         // توافق: CurrentStep بالجدول القديم = اسم الخطوة الحالية.
@@ -253,6 +288,8 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
             });
 
+        await NotifyCurrentApproversAsync(dbContext, requestId, "طلب بانتظار موافقتك",
+            $"تم تقديم الطلب رقم {requestId} وهو بانتظار قرارك.");
         await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Submit", "طلب جديد",
             $"تم تقديم الطلب رقم {requestId} وبدأ مسار الموافقة.");
         return new ActionResult(true, "تم بدء مسار الموافقة.");
@@ -289,6 +326,69 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
             command => HrmsDatabase.AddParameter(command, "@Id", requestId),
             ReadStep);
         return flow;
+    }
+
+    /// <summary>سجل قرار الطلب، مع حارس شركة صريح حتى لا يصبح الطلب المعرّف وحده باب IDOR.</summary>
+    public static Task<List<HistoryState>> GetHistoryAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId)
+    {
+        var scopeFilter = Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+        return HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT h.Id,h.StepName,h.Action,h.ActionBy,h.ActionAt,h.Notes,h.DelegatedFrom
+FROM ApprovalHistories h
+INNER JOIN SelfServiceRequests r ON r.Id=h.RequestId
+INNER JOIN Employees e ON e.Id=r.EmployeeId
+WHERE h.RequestId=@RequestId AND {scopeFilter}
+ORDER BY h.ActionAt,h.Id;
+""",
+            command => HrmsDatabase.AddParameter(command, "@RequestId", requestId),
+            reader => new HistoryState
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                RequestId = requestId,
+                StepName = HrmsDatabase.GetString(reader, "StepName"),
+                Action = HrmsDatabase.GetString(reader, "Action"),
+                ActionBy = HrmsDatabase.GetString(reader, "ActionBy"),
+                ActionAt = HrmsDatabase.GetDateTime(reader, "ActionAt") ?? DateTime.MinValue,
+                Notes = HrmsDatabase.GetString(reader, "Notes"),
+                DelegatedFrom = HrmsDatabase.GetString(reader, "DelegatedFrom")
+            });
+    }
+
+    /// <summary>تحميل مجمّع للسجل لتفادي استعلام مستقل لكل بطاقة في مركز الموافقات.</summary>
+    public static async Task<Dictionary<int, List<HistoryState>>> GetHistoriesAsync(
+        ApplicationDbContext dbContext, Security.CompanyScope scope, IEnumerable<int> requestIds)
+    {
+        var ids = requestIds.Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0) return new();
+        var parameters = ids.Select((_, index) => $"@Request{index}").ToArray();
+        var scopeFilter = Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+        var rows = await HrmsDatabase.QueryAsync(dbContext, $"""
+SELECT h.Id,h.RequestId,h.StepName,h.Action,h.ActionBy,h.ActionAt,h.Notes,h.DelegatedFrom
+FROM ApprovalHistories h
+INNER JOIN SelfServiceRequests r ON r.Id=h.RequestId
+INNER JOIN Employees e ON e.Id=r.EmployeeId
+WHERE h.RequestId IN ({string.Join(",", parameters)}) AND {scopeFilter}
+ORDER BY h.RequestId,h.ActionAt,h.Id;
+""", command =>
+        {
+            for (var index = 0; index < ids.Length; index++)
+                HrmsDatabase.AddParameter(command, parameters[index], ids[index]);
+        }, reader => new HistoryState
+        {
+            Id = HrmsDatabase.GetInt(reader, "Id"),
+            RequestId = HrmsDatabase.GetInt(reader, "RequestId"),
+            StepName = HrmsDatabase.GetString(reader, "StepName"),
+            Action = HrmsDatabase.GetString(reader, "Action"),
+            ActionBy = HrmsDatabase.GetString(reader, "ActionBy"),
+            ActionAt = HrmsDatabase.GetDateTime(reader, "ActionAt") ?? DateTime.MinValue,
+            Notes = HrmsDatabase.GetString(reader, "Notes"),
+            DelegatedFrom = HrmsDatabase.GetString(reader, "DelegatedFrom")
+        });
+        return ids.ToDictionary(id => id,
+            id => rows.Where(row => row.RequestId == id).ToList());
     }
 
     /// <summary>هل يحق للمستخدم الحالي البتّ بالخطوة الحالية؟ (Admin/HR Manager تجاوز إداري)</summary>
@@ -336,6 +436,8 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
         var roles=actorRoles.ToArray();
         if(CanAct(step,actor,roles,await IsRequesterManagerAsync(dbContext,requestId,actorEmployeeId)))
             return new(true);
+        if (step.ApproverType == "CommitteeGroup" && await IsFrozenCommitteeMemberAsync(dbContext, step.Id, actor))
+            return new(true);
 
         foreach(var delegator in await ApprovalDelegationStore.ActiveDelegatorsAsync(dbContext,requestId,actor))
         {
@@ -355,6 +457,8 @@ VALUES (@RequestId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName
         if(step.ApproverType.Equals("Role",StringComparison.OrdinalIgnoreCase))
             return !string.IsNullOrWhiteSpace(step.RoleName) &&
                    await LoginUserHasRoleAsync(dbContext,delegator,step.RoleName!);
+        if (step.ApproverType.Equals("CommitteeGroup", StringComparison.OrdinalIgnoreCase))
+            return await IsFrozenCommitteeMemberAsync(dbContext, step.Id, delegator);
         if(!step.ApproverType.Equals("DirectManager",StringComparison.OrdinalIgnoreCase)) return false;
 
         return await HrmsDatabase.ScalarAsync<int>(dbContext,"""
@@ -370,6 +474,19 @@ WHERE r.Id=@RequestId AND requester.DirectManagerId=manager.Id AND requester.Com
             HrmsDatabase.AddParameter(command,"@Delegator",delegator);
         })>0;
     }
+
+    private static Task<bool> IsFrozenCommitteeMemberAsync(
+        ApplicationDbContext dbContext, int stepId, string userName) => IsFrozenCommitteeMemberCoreAsync(dbContext, stepId, userName);
+
+    private static async Task<bool> IsFrozenCommitteeMemberCoreAsync(
+        ApplicationDbContext dbContext, int stepId, string userName) =>
+        await HrmsDatabase.ScalarAsync<int>(dbContext, """
+SELECT COUNT(1) FROM ApprovalRequestStepMembers WHERE StepId=@StepId AND UserName=@UserName;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command, "@StepId", stepId);
+            HrmsDatabase.AddParameter(command, "@UserName", userName);
+        }) > 0;
 
     private static async Task<bool> LoginUserHasRoleAsync(
         ApplicationDbContext dbContext,string userName,params string[] roles)
@@ -525,8 +642,6 @@ SET CurrentStep = @NextName, ManagerStatus = 'Approved', ManagerReviewedBy = @Ac
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 
-INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
-VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى مرحلة: ' + @NextName, @TargetRole, '/Approvals');
 """,
             command =>
             {
@@ -534,9 +649,9 @@ VALUES (N'طلب بانتظار موافقتك', N'وصل الطلب إلى مر
                 HrmsDatabase.AddParameter(command, "@NextName", nextName);
                 HrmsDatabase.AddParameter(command, "@Actor", actor);
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
-                HrmsDatabase.AddParameter(command, "@TargetRole", nextSteps.FirstOrDefault(step=>step.ApproverType=="Role")?.RoleName ?? "HR");
             });
         await transaction.CommitAsync();
+        await NotifyCurrentApproversAsync(dbContext, requestId, "طلب بانتظار موافقتك", $"وصل الطلب إلى مرحلة: {nextName}.");
         await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "انتقال طلب",
             $"انتقل الطلب رقم {requestId} إلى مرحلة: {nextName}.");
         return new ActionResult(true, $"تمت الموافقة وانتقل الطلب إلى: {nextName}.");
@@ -821,6 +936,33 @@ WHERE u.UserName=@UserName AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0 AND e.Co
                 });
                 if(found==0) unresolved.Add(step.DisplayName);
             }
+            else if (step.ApproverType.Equals("CommitteeGroup", StringComparison.OrdinalIgnoreCase))
+            {
+                var found = await HrmsDatabase.ScalarAsync<int>(dbContext, """
+SELECT COUNT(1)
+FROM ApprovalCommitteeGroups g
+INNER JOIN ApprovalCommitteeGroupMembers m ON m.GroupId=g.Id
+INNER JOIN SystemUsers u ON u.UserName=m.UserName AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+INNER JOIN Employees e ON e.Id=u.EmployeeId AND e.CompanyId=g.CompanyId AND ISNULL(e.IsDeleted,0)=0
+WHERE g.Id=@GroupId AND g.CompanyId=@CompanyId AND g.IsActive=1;
+""", command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@GroupId", (object?)step.CommitteeGroupId ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
+                });
+                if (found == 0) unresolved.Add(step.DisplayName);
+            }
+            else if (step.ApproverType.Equals("ExternalCommittee", StringComparison.OrdinalIgnoreCase))
+            {
+                var found = await HrmsDatabase.ScalarAsync<int>(dbContext, """
+SELECT COUNT(1) FROM ApprovalExternalCommittees WHERE Id=@CommitteeId AND CompanyId=@CompanyId AND IsActive=1;
+""", command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@CommitteeId", (object?)step.ExternalCommitteeId ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
+                });
+                if (found == 0) unresolved.Add(step.DisplayName);
+            }
         }
         return unresolved.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
@@ -890,6 +1032,13 @@ WHERE r.Id=@RequestId;
                     await InsertNotificationAsync(dbContext,title,message,step.RoleName,null,"/Approvals");
                 else if(step.ApproverType=="User")
                     await InsertNotificationAsync(dbContext,title,message,null,step.UserName,"/Approvals");
+                else if(step.ApproverType=="CommitteeGroup")
+                {
+                    foreach (var user in await FrozenCommitteeMembersAsync(dbContext, step.Id))
+                        await InsertNotificationAsync(dbContext,title,message,null,user,"/Approvals");
+                }
+                else if(step.ApproverType=="ExternalCommittee")
+                    await InsertNotificationAsync(dbContext,title,message,"HR Manager",null,"/Approvals");
                 else if(step.ApproverType=="DirectManager")
                 {
                     var users=await HrmsDatabase.QueryAsync(dbContext,"""
@@ -904,6 +1053,45 @@ WHERE r.Id=@RequestId;
             }
         }
     }
+
+    private static async Task NotifyCurrentApproversAsync(
+        ApplicationDbContext dbContext, int requestId, string title, string message)
+    {
+        var flow = await GetFlowAsync(dbContext, requestId);
+        if (flow is null) return;
+        foreach (var step in flow.CurrentSteps)
+        {
+            if (step.ApproverType == "Role")
+                await InsertNotificationAsync(dbContext, title, message, step.RoleName, null, "/Approvals");
+            else if (step.ApproverType == "User")
+                await InsertNotificationAsync(dbContext, title, message, null, step.UserName, "/Approvals");
+            else if (step.ApproverType == "CommitteeGroup")
+            {
+                foreach (var user in await FrozenCommitteeMembersAsync(dbContext, step.Id))
+                    await InsertNotificationAsync(dbContext, title, message, null, user, "/Approvals");
+            }
+            else if (step.ApproverType == "ExternalCommittee")
+                await InsertNotificationAsync(dbContext, title, message, "HR Manager", null, "/Approvals");
+            else if (step.ApproverType == "DirectManager")
+            {
+                var users = await HrmsDatabase.QueryAsync(dbContext, """
+SELECT u.UserName FROM SelfServiceRequests r
+INNER JOIN Employees requester ON requester.Id=r.EmployeeId AND ISNULL(requester.IsDeleted,0)=0
+INNER JOIN Employees manager ON manager.Id=requester.DirectManagerId AND manager.CompanyId=requester.CompanyId AND ISNULL(manager.IsDeleted,0)=0
+INNER JOIN SystemUsers u ON u.EmployeeId=manager.Id AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+WHERE r.Id=@RequestId;
+""", command => HrmsDatabase.AddParameter(command, "@RequestId", requestId),
+                    reader => HrmsDatabase.GetString(reader, "UserName"));
+                foreach (var user in users) await InsertNotificationAsync(dbContext, title, message, null, user, "/Approvals");
+            }
+        }
+    }
+
+    private static Task<List<string>> FrozenCommitteeMembersAsync(ApplicationDbContext dbContext, int stepId) =>
+        HrmsDatabase.QueryAsync(dbContext,
+            "SELECT UserName FROM ApprovalRequestStepMembers WHERE StepId=@StepId ORDER BY Id;",
+            command => HrmsDatabase.AddParameter(command, "@StepId", stepId),
+            reader => HrmsDatabase.GetString(reader, "UserName"));
 
     private static async Task InsertNotificationAsync(ApplicationDbContext dbContext,string title,string message,string? role,string? user,string url)
     {
@@ -999,11 +1187,11 @@ WHERE r.Id = @RequestId
         var rows=await HrmsDatabase.QueryAsync(
             dbContext,
             """
-DECLARE @Reminded TABLE(RequestId int,StepName nvarchar(150),ApproverType nvarchar(20),RoleName nvarchar(50),UserName nvarchar(150));
+DECLARE @Reminded TABLE(StepId int,RequestId int,StepName nvarchar(150),ApproverType nvarchar(20),RoleName nvarchar(50),UserName nvarchar(150));
 DECLARE @Escalated TABLE(RequestId int,StepName nvarchar(150),TargetRole nvarchar(50),TargetUser nvarchar(100));
 
 UPDATE s SET ReminderSentAt=SYSUTCDATETIME()
-OUTPUT inserted.RequestId,inserted.DisplayName,inserted.ApproverType,inserted.RoleName,inserted.UserName INTO @Reminded
+OUTPUT inserted.Id,inserted.RequestId,inserted.DisplayName,inserted.ApproverType,inserted.RoleName,inserted.UserName INTO @Reminded
 FROM ApprovalRequestSteps s
 INNER JOIN ApprovalRequestFlows f ON f.RequestId=s.RequestId
 WHERE s.Status='Current' AND s.ReminderSentAt IS NULL AND s.CurrentSince IS NOT NULL
@@ -1011,7 +1199,7 @@ WHERE s.Status='Current' AND s.ReminderSentAt IS NULL AND s.CurrentSince IS NOT 
 
 INSERT INTO SystemNotifications(Title,Message,TargetRole,TargetUser,Url)
 SELECT N'تذكير موافقة',N'الطلب رقم '+CAST(m.RequestId AS nvarchar(20))+N' بانتظار قرارك: '+m.StepName,
- CASE WHEN m.ApproverType='Role' THEN m.RoleName WHEN m.ApproverType='DirectManager' AND managerUser.UserName IS NULL THEN 'HR' END,
+ CASE WHEN m.ApproverType='Role' THEN m.RoleName WHEN m.ApproverType='DirectManager' AND managerUser.UserName IS NULL THEN 'HR' WHEN m.ApproverType='ExternalCommittee' THEN 'HR Manager' END,
  CASE WHEN m.ApproverType='User' THEN m.UserName WHEN m.ApproverType='DirectManager' THEN managerUser.UserName END,'/Approvals'
 FROM @Reminded m
 LEFT JOIN SelfServiceRequests r ON r.Id=m.RequestId
@@ -1020,6 +1208,13 @@ OUTER APPLY(SELECT TOP(1) u.UserName FROM SystemUsers u
  INNER JOIN Employees manager ON manager.Id=u.EmployeeId AND ISNULL(manager.IsDeleted,0)=0
  WHERE manager.Id=requester.DirectManagerId AND manager.CompanyId=requester.CompanyId
  AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0) managerUser;
+
+INSERT INTO SystemNotifications(Title,Message,TargetUser,Url)
+SELECT N'تذكير موافقة',N'الطلب رقم '+CAST(m.RequestId AS nvarchar(20))+N' بانتظار قرارك: '+m.StepName,
+       member.UserName,'/Approvals'
+FROM @Reminded m
+INNER JOIN ApprovalRequestStepMembers member ON member.StepId=m.StepId
+WHERE m.ApproverType='CommitteeGroup';
 
 UPDATE s SET EscalatedAt=SYSUTCDATETIME(),EscalatedToRole=COALESCE(f.EscalationTo,'HR Manager'),EscalatedToUser=f.EscalationAlternateUser
 OUTPUT inserted.RequestId,inserted.DisplayName,inserted.EscalatedToRole,inserted.EscalatedToUser INTO @Escalated
@@ -1050,6 +1245,8 @@ SELECT (SELECT COUNT(*) FROM @Reminded) AS Reminded,(SELECT COUNT(*) FROM @Escal
         ApproverType = HrmsDatabase.GetString(reader, "ApproverType"),
         RoleName = HrmsDatabase.GetString(reader, "RoleName"),
         UserName = HrmsDatabase.GetString(reader, "UserName"),
+        CommitteeGroupId = HrmsDatabase.GetNullableInt(reader, "CommitteeGroupId"),
+        ExternalCommitteeId = HrmsDatabase.GetNullableInt(reader, "ExternalCommitteeId"),
         DisplayName = HrmsDatabase.GetString(reader, "DisplayName"),
         Status = HrmsDatabase.GetString(reader, "Status"),
         CurrentSince = HrmsDatabase.GetDateTime(reader, "CurrentSince")

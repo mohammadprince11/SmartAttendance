@@ -44,9 +44,9 @@ public static class ShiftRequestStore
             db,
             """
 INSERT INTO SelfServiceRequests
-    (EmployeeId, RequestType, RequestDate, FromDate, ToDate, ShiftTypeId, Reason, Status, CurrentStep, CreatedBy)
+    (EmployeeId, RequestType, RequestDate, FromDate, ToDate, ShiftTypeId, Reason, Status, CurrentStep, CreatedBy, RequestSource)
 VALUES
-    (@Employee, @Type, CAST(GETDATE() AS date), @From, @To, @Shift, @Reason, N'Pending', N'Direct Manager', @Actor);
+    (@Employee, @Type, CAST(GETDATE() AS date), @From, @To, @Shift, @Reason, N'Pending', N'Direct Manager', @Actor, N'SelfService');
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 

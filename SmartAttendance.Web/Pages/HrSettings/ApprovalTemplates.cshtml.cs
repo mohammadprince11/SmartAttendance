@@ -38,6 +38,8 @@ public class ApprovalTemplatesModel : PageModel
     public List<Option> Departments { get; set; } = new();
     public List<string> WorkTypes { get; set; } = new();
     public List<string> Users { get; set; } = new();
+    public List<ApprovalCommitteeStore.GroupRow> CommitteeGroups { get; set; } = new();
+    public List<ApprovalCommitteeStore.ExternalRow> ExternalCommittees { get; set; } = new();
     public List<ApprovalDelegationStore.Row> Delegations { get; set; } = new();
     public string CompanyTimeZoneId { get; set; } = "UTC";
 
@@ -55,11 +57,11 @@ public class ApprovalTemplatesModel : PageModel
 
         Counts = await ApprovalTemplateStore.CountsAsync(_dbContext, scope, CompanyId.Value);
         Templates = await ApprovalTemplateStore.ListAsync(_dbContext, CompanyId.Value, Type);
-        await LoadLookupsAsync();
+        await LoadLookupsAsync(scope);
         Delegations = await ApprovalDelegationStore.ListAsync(_dbContext, scope, CompanyId.Value);
     }
 
-    private async Task LoadLookupsAsync()
+    private async Task LoadLookupsAsync(CompanyScope scope)
     {
         Branches = await _dbContext.Branches.AsNoTracking()
             .Where(b => !b.IsDeleted && b.IsActive && b.CompanyId == CompanyId)
@@ -80,6 +82,9 @@ public class ApprovalTemplatesModel : PageModel
             .OrderBy(u => u.UserName)
             .Select(u => u.UserName)
             .ToListAsync();
+
+        CommitteeGroups = await ApprovalCommitteeStore.ListGroupsAsync(_dbContext, scope, CompanyId!.Value, activeOnly: true);
+        ExternalCommittees = await ApprovalCommitteeStore.ListExternalAsync(_dbContext, scope, CompanyId.Value, activeOnly: true);
 
         CompanyTimeZoneId = await _dbContext.Companies.AsNoTracking()
             .Where(company => company.Id == CompanyId)
@@ -179,22 +184,34 @@ public class ApprovalTemplatesModel : PageModel
         var stepTypes = form["StepType"];
         var stepRoles = form["StepRole"];
         var stepUsers = form["StepUser"];
+        var stepCommitteeGroups = form["StepCommitteeGroup"];
+        var stepExternalCommittees = form["StepExternalCommittee"];
         var stepStages = form["StepStage"];
+        var groups = await ApprovalCommitteeStore.ListGroupsAsync(_dbContext, scope, CompanyId.Value, activeOnly: true);
+        var externalCommittees = await ApprovalCommitteeStore.ListExternalAsync(_dbContext, scope, CompanyId.Value, activeOnly: true);
+        var groupNames = groups.ToDictionary(group => group.Id, group => group.Name);
+        var externalNames = externalCommittees.ToDictionary(committee => committee.Id, committee => committee.Name);
         for (var i = 0; i < stepTypes.Count; i++)
         {
             var approverType = stepTypes[i] ?? "DirectManager";
             var role = stepRoles.Count > i ? NullIfEmpty(stepRoles[i]) : null;
             var user = stepUsers.Count > i ? NullIfEmpty(stepUsers[i]) : null;
+            var groupId = stepCommitteeGroups.Count > i ? ParseNullableInt(stepCommitteeGroups[i]) : null;
+            var externalId = stepExternalCommittees.Count > i ? ParseNullableInt(stepExternalCommittees[i]) : null;
             template.Steps.Add(new ApprovalTemplateStore.StepRow
             {
                 ApproverType = approverType,
                 StageOrder = stepStages.Count>i&&int.TryParse(stepStages[i],out var stage)&&stage>0?stage:i+1,
                 RoleName = approverType == "Role" ? role : null,
                 UserName = approverType == "User" ? user : null,
+                CommitteeGroupId = approverType == "CommitteeGroup" ? groupId : null,
+                ExternalCommitteeId = approverType == "ExternalCommittee" ? externalId : null,
                 DisplayName = approverType switch
                 {
                     "Role" => role ?? "دور",
                     "User" => user ?? "مستخدم",
+                    "CommitteeGroup" => groupId.HasValue && groupNames.TryGetValue(groupId.Value, out var groupName) ? groupName : "مجموعة لجنة",
+                    "ExternalCommittee" => externalId.HasValue && externalNames.TryGetValue(externalId.Value, out var externalName) ? externalName : "لجنة خارجية",
                     _ => "المدير المباشر"
                 }
             });
@@ -214,8 +231,15 @@ public class ApprovalTemplatesModel : PageModel
             }
         }
 
-        await ApprovalTemplateStore.SaveAsync(_dbContext, scope, template);
-        TempData["SuccessMessage"] = template.Id > 0 ? "تم تحديث القالب." : "تم إنشاء القالب.";
+        try
+        {
+            await ApprovalTemplateStore.SaveAsync(_dbContext, scope, template);
+            TempData["SuccessMessage"] = template.Id > 0 ? "تم تحديث القالب." : "تم إنشاء القالب.";
+        }
+        catch (ArgumentException exception)
+        {
+            TempData["SuccessMessage"] = exception.Message;
+        }
         return RedirectToPage(new { Type, CompanyId });
     }
 

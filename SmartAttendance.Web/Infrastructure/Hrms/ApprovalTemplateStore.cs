@@ -73,9 +73,11 @@ public static class ApprovalTemplateStore
     {
         public int StepOrder { get; set; }
         public int StageOrder { get; set; }
-        public string ApproverType { get; set; } = "DirectManager"; // DirectManager | Role | User
+        public string ApproverType { get; set; } = "DirectManager"; // DirectManager | Role | User | CommitteeGroup | ExternalCommittee
         public string? RoleName { get; set; }
         public string? UserName { get; set; }
+        public int? CommitteeGroupId { get; set; }
+        public int? ExternalCommitteeId { get; set; }
         public string DisplayName { get; set; } = string.Empty;
     }
 
@@ -217,6 +219,47 @@ AND u.UserName IN ({string.Join(",",parameters)});
             });
             if(count!=referencedUsers.Length) throw new ArgumentException("أحد مستخدمي المسار غير نشط أو خارج شركة القالب.",nameof(template));
         }
+        var committeeGroupIds = template.Steps.Where(step => step.ApproverType == "CommitteeGroup")
+            .Select(step => step.CommitteeGroupId).Where(id => id is > 0).Select(id => id!.Value).Distinct().ToArray();
+        if (committeeGroupIds.Length > 0)
+        {
+            var parameters = committeeGroupIds.Select((_, index) => $"@Group{index}").ToArray();
+            var count = await HrmsDatabase.ScalarAsync<int>(dbContext, $"""
+SELECT COUNT(DISTINCT g.Id)
+FROM ApprovalCommitteeGroups g
+WHERE g.CompanyId=@CompanyId AND g.IsActive=1
+  AND EXISTS(
+      SELECT 1 FROM ApprovalCommitteeGroupMembers m
+      INNER JOIN SystemUsers u ON u.UserName=m.UserName AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
+      INNER JOIN Employees e ON e.Id=u.EmployeeId AND e.CompanyId=g.CompanyId AND ISNULL(e.IsDeleted,0)=0
+      WHERE m.GroupId=g.Id)
+  AND g.Id IN ({string.Join(",", parameters)});
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command, "@CompanyId", template.CompanyId);
+                for (var index = 0; index < committeeGroupIds.Length; index++)
+                    HrmsDatabase.AddParameter(command, parameters[index], committeeGroupIds[index]);
+            });
+            if (count != committeeGroupIds.Length)
+                throw new ArgumentException("إحدى مجموعات اللجان غير نشطة، بلا أعضاء، أو خارج شركة القالب.", nameof(template));
+        }
+        var externalCommitteeIds = template.Steps.Where(step => step.ApproverType == "ExternalCommittee")
+            .Select(step => step.ExternalCommitteeId).Where(id => id is > 0).Select(id => id!.Value).Distinct().ToArray();
+        if (externalCommitteeIds.Length > 0)
+        {
+            var parameters = externalCommitteeIds.Select((_, index) => $"@External{index}").ToArray();
+            var count = await HrmsDatabase.ScalarAsync<int>(dbContext, $"""
+SELECT COUNT(DISTINCT c.Id) FROM ApprovalExternalCommittees c
+WHERE c.CompanyId=@CompanyId AND c.IsActive=1 AND c.Id IN ({string.Join(",", parameters)});
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command, "@CompanyId", template.CompanyId);
+                for (var index = 0; index < externalCommitteeIds.Length; index++)
+                    HrmsDatabase.AddParameter(command, parameters[index], externalCommitteeIds[index]);
+            });
+            if (count != externalCommitteeIds.Length)
+                throw new ArgumentException("إحدى اللجان الخارجية غير نشطة أو خارج شركة القالب.", nameof(template));
+        }
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         int id;
@@ -274,8 +317,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO ApprovalTemplateSteps (TemplateId, StepOrder, StageOrder, ApproverType, RoleName, UserName, DisplayName)
-VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName, @DisplayName);
+INSERT INTO ApprovalTemplateSteps (TemplateId, StepOrder, StageOrder, ApproverType, RoleName, UserName, CommitteeGroupId, ExternalCommitteeId, DisplayName)
+VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserName, @CommitteeGroupId, @ExternalCommitteeId, @DisplayName);
 """,
                 command =>
                 {
@@ -285,6 +328,8 @@ VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserNam
                     HrmsDatabase.AddParameter(command, "@ApproverType", step.ApproverType);
                     HrmsDatabase.AddParameter(command, "@RoleName", (object?)step.RoleName ?? DBNull.Value);
                     HrmsDatabase.AddParameter(command, "@UserName", (object?)step.UserName ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@CommitteeGroupId", (object?)step.CommitteeGroupId ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@ExternalCommitteeId", (object?)step.ExternalCommitteeId ?? DBNull.Value);
                     HrmsDatabase.AddParameter(command, "@DisplayName", step.DisplayName);
                 });
         }
@@ -321,12 +366,16 @@ VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserNam
 
         foreach (var step in template.Steps)
         {
-            if (step.ApproverType is not ("DirectManager" or "Role" or "User"))
+            if (step.ApproverType is not ("DirectManager" or "Role" or "User" or "CommitteeGroup" or "ExternalCommittee"))
                 return "نوع صاحب الموافقة غير صحيح.";
             if (step.ApproverType == "Role" && string.IsNullOrWhiteSpace(step.RoleName))
                 return "يجب تحديد الدور لكل خطوة من نوع دور.";
             if (step.ApproverType == "User" && string.IsNullOrWhiteSpace(step.UserName))
                 return "يجب تحديد المستخدم لكل خطوة من نوع مستخدم.";
+            if (step.ApproverType == "CommitteeGroup" && step.CommitteeGroupId is not > 0)
+                return "يجب تحديد مجموعة اللجنة لكل خطوة من نوع مجموعة داخلية.";
+            if (step.ApproverType == "ExternalCommittee" && step.ExternalCommitteeId is not > 0)
+                return "يجب تحديد اللجنة الخارجية لكل خطوة من هذا النوع.";
         }
 
         return null;
@@ -457,6 +506,8 @@ SELECT @Found;
                 ApproverType = HrmsDatabase.GetString(reader, "ApproverType") ?? "DirectManager",
                 RoleName = HrmsDatabase.GetString(reader, "RoleName"),
                 UserName = HrmsDatabase.GetString(reader, "UserName"),
+                CommitteeGroupId = HrmsDatabase.GetNullableInt(reader, "CommitteeGroupId"),
+                ExternalCommitteeId = HrmsDatabase.GetNullableInt(reader, "ExternalCommitteeId"),
                 DisplayName = HrmsDatabase.GetString(reader, "DisplayName") ?? string.Empty
             });
 

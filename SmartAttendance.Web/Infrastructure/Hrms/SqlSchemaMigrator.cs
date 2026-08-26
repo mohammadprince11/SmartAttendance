@@ -2148,6 +2148,98 @@ IF OBJECT_ID(N'[dbo].[EmployeeUpdateBatches]', N'U') IS NOT NULL
    AND COL_LENGTH('EmployeeUpdateBatches', 'EffectiveDate') IS NULL
     ALTER TABLE EmployeeUpdateBatches ADD EffectiveDate date NULL;
 """),
+
+        // مصدر الطلب ثابت وقابل للتدقيق: لا نستنتجه من اسم المستخدم أو نوع الطلب.
+        // الصفوف التاريخية تبقى Legacy بدل ادّعاء أنها ذاتية أو إدارية بلا دليل.
+        new(
+            "20260826-22-approval-request-source",
+            """
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NULL
+        ALTER TABLE SelfServiceRequests ADD RequestSource nvarchar(20) NOT NULL
+            CONSTRAINT DF_SelfServiceRequests_RequestSource DEFAULT(N'Legacy');
+    IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('SelfServiceRequests') AND name='CK_SelfServiceRequests_RequestSource')
+        EXEC sp_executesql N'
+        ALTER TABLE SelfServiceRequests ADD CONSTRAINT CK_SelfServiceRequests_RequestSource
+            CHECK(RequestSource IN (N''SelfService'',N''Admin'',N''Legacy''));';
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SelfServiceRequests') AND name='IX_SelfServiceRequests_Source')
+        EXEC sp_executesql N'CREATE INDEX IX_SelfServiceRequests_Source ON SelfServiceRequests(RequestSource,Status,CreatedAt);';
+END;
+"""),
+
+        // لجان موافقات قابلة لإعادة الاستخدام + لجان خارجية. أعضاء اللجنة الداخلية
+        // يُجمَّدون على الطلب في ApprovalRequestStepMembers لحظة بدء المسار.
+        new(
+            "20260826-23-approval-committees",
+            """
+IF OBJECT_ID('ApprovalCommitteeGroups','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalCommitteeGroups
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalCommitteeGroups PRIMARY KEY,
+        CompanyId int NOT NULL,Name nvarchar(150) NOT NULL,Description nvarchar(500) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ApprovalCommitteeGroups_Active DEFAULT(1),
+        CreatedBy nvarchar(150) NOT NULL,CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalCommitteeGroups_Created DEFAULT(SYSUTCDATETIME()),UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_ApprovalCommitteeGroups_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_ApprovalCommitteeGroups_Name UNIQUE(CompanyId,Name)
+    );
+    CREATE INDEX IX_ApprovalCommitteeGroups_Company ON ApprovalCommitteeGroups(CompanyId,IsActive);
+END;
+
+IF OBJECT_ID('ApprovalCommitteeGroupMembers','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalCommitteeGroupMembers
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalCommitteeGroupMembers PRIMARY KEY,
+        GroupId int NOT NULL,UserName nvarchar(150) NOT NULL,SortOrder int NOT NULL CONSTRAINT DF_ApprovalCommitteeGroupMembers_Sort DEFAULT(0),
+        CONSTRAINT FK_ApprovalCommitteeGroupMembers_Group FOREIGN KEY(GroupId) REFERENCES ApprovalCommitteeGroups(Id),
+        CONSTRAINT UQ_ApprovalCommitteeGroupMembers_User UNIQUE(GroupId,UserName)
+    );
+END;
+
+IF OBJECT_ID('ApprovalExternalCommittees','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalExternalCommittees
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalExternalCommittees PRIMARY KEY,
+        CompanyId int NOT NULL,Name nvarchar(150) NOT NULL,ContactName nvarchar(150) NULL,ContactEmail nvarchar(320) NULL,Notes nvarchar(1000) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ApprovalExternalCommittees_Active DEFAULT(1),
+        CreatedBy nvarchar(150) NOT NULL,CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalExternalCommittees_Created DEFAULT(SYSUTCDATETIME()),UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_ApprovalExternalCommittees_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_ApprovalExternalCommittees_Name UNIQUE(CompanyId,Name)
+    );
+    CREATE INDEX IX_ApprovalExternalCommittees_Company ON ApprovalExternalCommittees(CompanyId,IsActive);
+END;
+
+IF OBJECT_ID('ApprovalTemplateSteps','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ApprovalTemplateSteps','CommitteeGroupId') IS NULL ALTER TABLE ApprovalTemplateSteps ADD CommitteeGroupId int NULL;
+    IF COL_LENGTH('ApprovalTemplateSteps','ExternalCommitteeId') IS NULL ALTER TABLE ApprovalTemplateSteps ADD ExternalCommitteeId int NULL;
+    IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_ApprovalTemplateSteps_CommitteeGroup')
+        ALTER TABLE ApprovalTemplateSteps ADD CONSTRAINT FK_ApprovalTemplateSteps_CommitteeGroup FOREIGN KEY(CommitteeGroupId) REFERENCES ApprovalCommitteeGroups(Id);
+    IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_ApprovalTemplateSteps_ExternalCommittee')
+        ALTER TABLE ApprovalTemplateSteps ADD CONSTRAINT FK_ApprovalTemplateSteps_ExternalCommittee FOREIGN KEY(ExternalCommitteeId) REFERENCES ApprovalExternalCommittees(Id);
+END;
+
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ApprovalRequestSteps','CommitteeGroupId') IS NULL ALTER TABLE ApprovalRequestSteps ADD CommitteeGroupId int NULL;
+    IF COL_LENGTH('ApprovalRequestSteps','ExternalCommitteeId') IS NULL ALTER TABLE ApprovalRequestSteps ADD ExternalCommitteeId int NULL;
+END;
+
+IF OBJECT_ID('ApprovalRequestStepMembers','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalRequestStepMembers
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalRequestStepMembers PRIMARY KEY,
+        StepId int NOT NULL,UserName nvarchar(150) NOT NULL,
+        CONSTRAINT FK_ApprovalRequestStepMembers_Step FOREIGN KEY(StepId) REFERENCES ApprovalRequestSteps(Id),
+        CONSTRAINT UQ_ApprovalRequestStepMembers_User UNIQUE(StepId,UserName)
+    );
+    CREATE INDEX IX_ApprovalRequestStepMembers_User ON ApprovalRequestStepMembers(UserName,StepId);
+END;
+"""),
     };
 
     /// <summary>

@@ -88,7 +88,7 @@ public class FinancialRequestsModel : PageModel
             return RedirectToPage();
         }
 
-        var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, CurrentUser);
+        var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, CurrentUser, "Admin");
         TempData["SuccessMessage"] = requestId > 0
             ? $"تم إنشاء طلب {FinancialRequestStore.KindLabel(kind)} وإرساله للجنة الموافقة."
             : "تعذّر إنشاء الطلب.";

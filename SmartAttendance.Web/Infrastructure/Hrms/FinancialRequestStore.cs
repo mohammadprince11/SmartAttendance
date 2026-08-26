@@ -135,18 +135,20 @@ ORDER BY e.FullName;
     /// وصف التفاصيل المالية، ثم يبدأ سريان الموافقة عبر <see cref="ApprovalWorkflowEngine.StartAsync"/>
     /// (قالب النوع من كتالوج القوالب). يرجع رقم الطلب. المُقدِّم قد يكون HR (نيابةً) أو الموظف نفسه.
     /// </summary>
-    public static async Task<int> SubmitAsync(ApplicationDbContext db, Detail detail, int employeeId, string createdBy)
+    public static async Task<int> SubmitAsync(
+        ApplicationDbContext db, Detail detail, int employeeId, string createdBy, string requestSource)
     {
         await EnsureAsync(db);
         var kind = KindOf(detail.Kind) ?? Catalog[0];
         detail.Kind = kind.Key;
         if (detail.InstallmentCount < 1) detail.InstallmentCount = 1;
 
+        requestSource = requestSource is "Admin" or "SelfService" ? requestSource : "Legacy";
         var requestId = await HrmsDatabase.ScalarAsync<int>(db, """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, RequestDate, Reason, Status, CurrentStep, CreatedBy)
+(EmployeeId, RequestType, RequestDate, Reason, Status, CurrentStep, CreatedBy, RequestSource)
 VALUES
-(@Emp, @Type, CAST(SYSUTCDATETIME() AS date), @Reason, 'Pending', 'Direct Manager', @By);
+(@Emp, @Type, CAST(SYSUTCDATETIME() AS date), @Reason, 'Pending', 'Direct Manager', @By, @Source);
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 
@@ -164,6 +166,7 @@ SELECT @RequestId;
                 HrmsDatabase.AddParameter(cmd, "@Type", kind.Label);
                 HrmsDatabase.AddParameter(cmd, "@Reason", (object?)detail.Reason ?? DBNull.Value);
                 HrmsDatabase.AddParameter(cmd, "@By", createdBy);
+                HrmsDatabase.AddParameter(cmd, "@Source", requestSource);
             });
 
         if (requestId <= 0) return 0;
@@ -309,6 +312,7 @@ ORDER BY r.CreatedAt DESC;
 
         await HrmsDatabase.ExecuteAsync(db, """
 DELETE FROM FinancialRequestDetails WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestStepMembers','U') IS NOT NULL DELETE m FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId=@r;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL DELETE FROM ApprovalRequestSteps WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestWatchers','U') IS NOT NULL DELETE FROM ApprovalRequestWatchers WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL DELETE FROM ApprovalRequestFlows WHERE RequestId=@r;

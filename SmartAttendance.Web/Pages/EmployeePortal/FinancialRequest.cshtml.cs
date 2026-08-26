@@ -70,7 +70,8 @@ public class FinancialRequestModel : PageModel
             Reason = string.IsNullOrWhiteSpace(form["Reason"]) ? null : form["Reason"].ToString().Trim()
         };
 
-        var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, User.Identity?.Name ?? "Employee");
+        var requestId = await FinancialRequestStore.SubmitAsync(
+            _db, detail, employeeId, User.Identity?.Name ?? "Employee", "SelfService");
         StatusMessage = requestId > 0
             ? $"تم إرسال طلب {FinancialRequestStore.KindLabel(kind)} وهو الآن قيد المراجعة."
             : "تعذّر إرسال الطلب.";

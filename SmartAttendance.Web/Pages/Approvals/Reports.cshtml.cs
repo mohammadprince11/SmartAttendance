@@ -25,6 +25,7 @@ public sealed class ReportsModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)] public string Status { get; set; } = "All";
+    [BindProperty(SupportsGet = true)] public string Source { get; set; } = "All";
     [BindProperty(SupportsGet = true)] public string? RequestType { get; set; }
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     [BindProperty(SupportsGet = true)] public DateOnly? From { get; set; }
@@ -69,6 +70,7 @@ public sealed class ReportsModel : PageModel
     {
         var requestedStatus = Status ?? string.Empty;
         Status = AllowedStatuses.Contains(requestedStatus) ? requestedStatus : "All";
+        Source = Source is "SelfService" or "Admin" or "Legacy" ? Source : "All";
         if (From.HasValue && To.HasValue && From > To) (From, To) = (To, From);
 
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
@@ -76,6 +78,7 @@ public sealed class ReportsModel : PageModel
         var filter = $"""
 WHERE {scopeFilter}
   AND (@Status = 'All' OR ISNULL(r.Status,'Pending') = @Status)
+  AND (@Source = 'All' OR r.RequestSource = @Source)
   AND (@RequestType IS NULL OR r.RequestType = @RequestType)
   AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
   AND (@From IS NULL OR CAST(r.CreatedAt AS date) >= @From)
@@ -85,6 +88,7 @@ WHERE {scopeFilter}
         void Parameters(System.Data.Common.DbCommand command)
         {
             HrmsDatabase.AddParameter(command, "@Status", Status);
+            HrmsDatabase.AddParameter(command, "@Source", Source);
             HrmsDatabase.AddParameter(command, "@RequestType", DbValue(RequestType));
             HrmsDatabase.AddParameter(command, "@Search", DbValue(Search));
             HrmsDatabase.AddParameter(command, "@From", DateValue(From));

@@ -234,8 +234,8 @@ FROM SelfServiceRequests WHERE EmployeeId = @Id ORDER BY CreatedAt DESC;
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _db,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @From, @To, @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @From, @To, @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -311,8 +311,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _db,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>

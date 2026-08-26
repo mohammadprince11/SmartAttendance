@@ -901,6 +901,66 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     }
 
     [SkippableFact]
+    public async Task Approval_committee_members_are_tenant_scoped_and_frozen_on_the_request()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var requester = await db.Employees.AsNoTracking().SingleAsync(employee => employee.Id == _employeeA);
+        var actors = Enumerable.Range(1, 2).Select(index => new Employee
+        {
+            EmployeeNo = $"COM-{index}-" + Guid.NewGuid().ToString("N")[..6],
+            FullName = $"Committee Actor {index}", CompanyId = _companyA,
+            BranchId = requester.BranchId, DepartmentId = requester.DepartmentId,
+            HireDate = new DateOnly(2090, 1, 1), IsActive = true
+        }).ToArray();
+        db.AddRange(actors);
+        await db.SaveChangesAsync();
+        var users = actors.Select((actor, index) => new SystemUser
+        {
+            FullName = actor.FullName, UserName = $"committee-{index + 1}-{actor.Id}",
+            Role = SmartAttendance.Domain.Enums.SystemUserRole.Viewer,
+            IsActive = true, EmployeeId = actor.Id
+        }).ToArray();
+        db.SystemUsers.AddRange(users);
+        await db.SaveChangesAsync();
+
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => ApprovalCommitteeStore.SaveGroupAsync(
+            db, scopeB, _companyA, 0, "Cross tenant", null, new[] { users[0].UserName }, "admin-b"));
+
+        var groupId = await ApprovalCommitteeStore.SaveGroupAsync(db, scopeA, _companyA, 0,
+            "SQL committee " + Guid.NewGuid().ToString("N"), "Frozen membership",
+            users.Select(user => user.UserName).ToArray(), "admin-a");
+        await ApprovalTemplateStore.SaveAsync(db, scopeA, new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId = _companyA, RequestType = "CustomRequest", Name = "Committee template",
+            IsActive = true,
+            Steps = { new() { StageOrder = 1, ApproverType = "CommitteeGroup", CommitteeGroupId = groupId, DisplayName = "Internal committee" } }
+        });
+        var requestId = await ScalarAsync(db, $"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy,RequestSource)
+VALUES({_employeeA},N'CustomRequest',N'اختبار لجنة','Pending',N'employee-a',N'SelfService');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var started = await ApprovalWorkflowEngine.StartAsync(db, requestId, "CustomRequest", _employeeA);
+        Assert.True(started.Ok, started.Message);
+        Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId={requestId};"));
+
+        await ApprovalCommitteeStore.SaveGroupAsync(db, scopeA, _companyA, groupId,
+            "SQL committee edited " + Guid.NewGuid().ToString("N"), "Only second member remains",
+            new[] { users[1].UserName }, "admin-a");
+        Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId={requestId};"));
+
+        var approved = await ApprovalWorkflowEngine.ApproveAsync(db, scopeA, requestId,
+            users[0].UserName, "frozen member decision", Array.Empty<string>(), actors[0].Id);
+        Assert.True(approved.Ok, approved.Message);
+        Assert.True(approved.FinalApproved);
+        Assert.Equal("SelfService", await ScalarStringAsync(db, $"SELECT RequestSource FROM SelfServiceRequests WHERE Id={requestId};"));
+    }
+
+    [SkippableFact]
     public async Task Approval_sla_reminds_once_then_grants_the_configured_alternate()
     {
         RequireSql();
@@ -965,9 +1025,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Normal committee"}}
         });
         var highRequest=await FinancialRequestStore.SubmitAsync(db,new FinancialRequestStore.Detail
-        {Kind=FinancialRequestStore.Loan,Amount=1500,InstallmentCount=3,StartYear=2099,StartMonth=7,Reason="high"},_employeeA,"employee-a");
+        {Kind=FinancialRequestStore.Loan,Amount=1500,InstallmentCount=3,StartYear=2099,StartMonth=7,Reason="high"},_employeeA,"employee-a","SelfService");
         var lowRequest=await FinancialRequestStore.SubmitAsync(db,new FinancialRequestStore.Detail
-        {Kind=FinancialRequestStore.Loan,Amount=500,InstallmentCount=1,StartYear=2099,StartMonth=7,Reason="low"},_employeeA,"employee-a");
+        {Kind=FinancialRequestStore.Loan,Amount=500,InstallmentCount=1,StartYear=2099,StartMonth=7,Reason="low"},_employeeA,"employee-a","SelfService");
         Assert.Equal(amountName,(await ApprovalWorkflowEngine.GetFlowAsync(db,highRequest))!.TemplateName);
         Assert.Equal(fallbackName,(await ApprovalWorkflowEngine.GetFlowAsync(db,lowRequest))!.TemplateName);
 

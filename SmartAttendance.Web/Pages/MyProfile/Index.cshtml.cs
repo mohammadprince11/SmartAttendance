@@ -396,6 +396,9 @@ BEGIN SET @columns += N', Stage'; SET @values += N', ''Manager'''; END
 IF COL_LENGTH('SelfServiceRequests','CreatedAt') IS NOT NULL
 BEGIN SET @columns += N', CreatedAt'; SET @values += N', SYSUTCDATETIME()'; END
 
+IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NOT NULL
+BEGIN SET @columns += N', RequestSource'; SET @values += N', ''SelfService'''; END
+
 DECLARE @sql nvarchar(max) = N'INSERT INTO SelfServiceRequests (' + @columns + N') VALUES (' + @values + N'); SELECT CAST(SCOPE_IDENTITY() AS int);';
 
 EXEC sp_executesql @sql,

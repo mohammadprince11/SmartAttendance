@@ -839,9 +839,12 @@
                         <div class="nexora-nav-group-links" data-ky-title="الموافقات">
                             <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2"><span>الموافقات</span></div>
                             <a asp-page="/Approvals/Index" class="nexora-nav-link @(IsCurrent("/Approvals") || IsCurrent("/Approvals/Index") ? "active nexora-active" : "")"><span>مركز الموافقات</span></a>
+                            <a href="/Approvals?Source=SelfService" class="nexora-nav-link"><span>طلبات الخدمة الذاتية</span></a>
+                            <a href="/Approvals?Source=Admin" class="nexora-nav-link"><span>طلبات المشرفين</span></a>
                             <a asp-page="/Approvals/Reports" class="nexora-nav-link @(IsUnder("/Approvals/Reports") ? "active nexora-active" : "")"><span>تقارير الموافقات</span></a>
                             @if (isAdminRole)
                             {
+                                <a asp-page="/Approvals/Committees" class="nexora-nav-link @(IsUnder("/Approvals/Committees") ? "active nexora-active" : "")"><span>اللجان ومجموعاتها</span></a>
                                 <a asp-page="/HrSettings/ApprovalTemplates" class="nexora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active nexora-active" : "")"><span>قوالب الموافقات</span></a>
                                 <a href="/HrSettings/ApprovalTemplates#approval-delegations" class="nexora-nav-link"><span>تفضيلات التفويض</span></a>
                             }

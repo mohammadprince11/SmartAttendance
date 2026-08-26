@@ -327,9 +327,9 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status,AttachmentPath)
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status,AttachmentPath,RequestSource)
 VALUES
-(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending',@AttachmentPath);
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending',@AttachmentPath,N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -498,9 +498,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath)
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath, RequestSource)
 VALUES
-(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath);
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath, N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -691,8 +691,8 @@ ORDER BY AttendanceDate;
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>

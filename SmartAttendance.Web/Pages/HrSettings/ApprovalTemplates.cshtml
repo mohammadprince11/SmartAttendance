@@ -14,7 +14,7 @@
         t.AutoRejectUnknownCommittee, t.CancelLimitDays,
         t.CommentRequiredOnReject, t.AttachmentRequiredOnRequest,
         t.ReminderHours,t.EscalationDays, t.EscalationTo,t.EscalationAlternateUser,t.NotifyJson,
-        Steps = t.Steps.Select(s => new { s.ApproverType, s.RoleName, s.UserName, s.DisplayName, s.StageOrder }),
+        Steps = t.Steps.Select(s => new { s.ApproverType, s.RoleName, s.UserName, s.CommitteeGroupId, s.ExternalCommitteeId, s.DisplayName, s.StageOrder }),
         Watchers = t.Watchers.Select(w => w.UserName)
     }));
 }
@@ -179,11 +179,14 @@
             </div>
 
             <h3 class="zyu-6ace034d1de1">لجنة الموافقة (بالترتيب)</h3>
+            <p class="apt-help">يمكن إعادة استخدام مجموعات أعضاء ثابتة أو توثيق لجنة خارجية. <a asp-page="/Approvals/Committees" asp-route-CompanyId="@Model.CompanyId">إدارة اللجان</a></p>
             <div class="zyu-a66c33606303">
                 <select id="aptStepType" onchange="aptStepTypeChanged()">
                     <option value="DirectManager">المدير المباشر</option>
                     <option value="Role">دور</option>
                     <option value="User">مستخدم محدد</option>
+                    <option value="CommitteeGroup">مجموعة لجنة داخلية</option>
+                    <option value="ExternalCommittee">لجنة خارجية</option>
                 </select>
                 <select id="aptStepRole" class="zyu-6aa34d7432e7">
                     <option value="HR Manager">HR Manager</option>
@@ -193,6 +196,12 @@
                 </select>
                 <select id="aptStepUser" class="zyu-6aa34d7432e7">
                     @foreach (var user in Model.Users) { <option value="@user">@user</option> }
+                </select>
+                <select id="aptStepCommitteeGroup" class="zyu-6aa34d7432e7">
+                    @foreach (var group in Model.CommitteeGroups) { <option value="@group.Id">@group.Name</option> }
+                </select>
+                <select id="aptStepExternalCommittee" class="zyu-6aa34d7432e7">
+                    @foreach (var committee in Model.ExternalCommittees) { <option value="@committee.Id">@committee.Name</option> }
                 </select>
                 <button type="button" class="nxhs-modal-cancel" onclick="aptAddStep()">+ إضافة خطوة</button>
                 <label class="nxhs-check-line"><input type="checkbox" id="aptParallel" /> <b>موازية مع الخطوة السابقة</b></label>
@@ -280,13 +289,33 @@
             var t = document.getElementById("aptStepType").value;
             document.getElementById("aptStepRole").style.display = t === "Role" ? "" : "none";
             document.getElementById("aptStepUser").style.display = t === "User" ? "" : "none";
+            document.getElementById("aptStepCommitteeGroup").style.display = t === "CommitteeGroup" ? "" : "none";
+            document.getElementById("aptStepExternalCommittee").style.display = t === "ExternalCommittee" ? "" : "none";
         }
 
-        function aptAddStep(type, role, user, display, stage) {
+        function aptAddHidden(row, name, value) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value == null ? "" : String(value);
+            row.appendChild(input);
+        }
+
+        function aptSelectedText(id) {
+            var select = document.getElementById(id);
+            return select && select.selectedIndex >= 0 ? select.options[select.selectedIndex].text : "";
+        }
+
+        function aptAddStep(type, role, user, display, stage, committeeGroupId, externalCommitteeId) {
             type = type || document.getElementById("aptStepType").value;
             role = role !== undefined ? role : document.getElementById("aptStepRole").value;
             user = user !== undefined ? user : document.getElementById("aptStepUser").value;
-            display = display || (type === "Role" ? role : type === "User" ? user : "المدير المباشر");
+            committeeGroupId = committeeGroupId !== undefined ? committeeGroupId : document.getElementById("aptStepCommitteeGroup").value;
+            externalCommitteeId = externalCommitteeId !== undefined ? externalCommitteeId : document.getElementById("aptStepExternalCommittee").value;
+            display = display || (type === "Role" ? role : type === "User" ? user :
+                type === "CommitteeGroup" ? aptSelectedText("aptStepCommitteeGroup") :
+                type === "ExternalCommittee" ? aptSelectedText("aptStepExternalCommittee") : "المدير المباشر");
+            if ((type === "CommitteeGroup" && !committeeGroupId) || (type === "ExternalCommittee" && !externalCommitteeId)) return;
 
             var wrap = document.getElementById("aptSteps");
             var previous = wrap.lastElementChild;
@@ -296,13 +325,23 @@
             }
             var row = document.createElement("div");
             row.className = "apt-step";
-            row.innerHTML =
-                '<span class="num"></span><span>' + display + "</span>" +
-                '<input type="hidden" name="StepType" value="' + type + '" />' +
-                '<input type="hidden" name="StepRole" value="' + (type === "Role" ? role : "") + '" />' +
-                '<input type="hidden" name="StepUser" value="' + (type === "User" ? user : "") + '" />' +
-                '<input type="hidden" name="StepStage" value="' + stage + '" />' +
-                '<button type="button" onclick="this.parentElement.remove(); aptNumber();">×</button>';
+            var number = document.createElement("span");
+            number.className = "num";
+            row.appendChild(number);
+            var label = document.createElement("span");
+            label.textContent = display;
+            row.appendChild(label);
+            aptAddHidden(row, "StepType", type);
+            aptAddHidden(row, "StepRole", type === "Role" ? role : "");
+            aptAddHidden(row, "StepUser", type === "User" ? user : "");
+            aptAddHidden(row, "StepCommitteeGroup", type === "CommitteeGroup" ? committeeGroupId : "");
+            aptAddHidden(row, "StepExternalCommittee", type === "ExternalCommittee" ? externalCommitteeId : "");
+            aptAddHidden(row, "StepStage", stage);
+            var remove = document.createElement("button");
+            remove.type = "button";
+            remove.textContent = "×";
+            remove.addEventListener("click", function () { row.remove(); aptNumber(); });
+            row.appendChild(remove);
             wrap.appendChild(row);
             aptNumber();
         }
@@ -345,7 +384,8 @@
                     document.getElementById("f_EscalationAlternateUser").value = t.EscalationAlternateUser || "";
                     document.getElementById("f_CancelLimitDays").value = t.CancelLimitDays || "";
                     (t.Steps || []).forEach(function (s) {
-                        aptAddStep(s.ApproverType, s.RoleName || "", s.UserName || "", s.DisplayName, s.StageOrder || 0);
+                        aptAddStep(s.ApproverType, s.RoleName || "", s.UserName || "", s.DisplayName, s.StageOrder || 0,
+                            s.CommitteeGroupId || "", s.ExternalCommitteeId || "");
                     });
                     var watchers = t.Watchers || [];
                     Array.prototype.forEach.call(document.getElementById("f_Watchers").options, function (o) {

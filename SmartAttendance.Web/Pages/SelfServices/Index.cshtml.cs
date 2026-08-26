@@ -52,9 +52,9 @@ public class IndexModel : PageModel
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason, Status, CurrentStep, CreatedBy)
+(EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason, Status, CurrentStep, CreatedBy, RequestSource)
 VALUES
-(@EmployeeId, @RequestType, @RequestDate, @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', 'Direct Manager', 'Employee');
+(@EmployeeId, @RequestType, @RequestDate, @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', 'Direct Manager', 'Employee', N'SelfService');
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 

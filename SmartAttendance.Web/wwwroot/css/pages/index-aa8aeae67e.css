@@ -105,6 +105,9 @@
     .apv-fhint { font-size:10px; opacity:.55; font-weight:800; padding-top:8px; }
     .apv-dates { direction:ltr; font-weight:900; }
     .apv-reason { font-size:12px; font-weight:700; opacity:.8; line-height:1.6; }
+    .apv-audience { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 12px; }
+    .apv-audience a { padding:7px 12px; border:1px solid var(--zy-migrated-color-28565ef553); border-radius:999px; color:var(--sa-muted,var(--zy-muted)); text-decoration:none; font-size:11px; font-weight:900; }
+    .apv-audience a.on { color:var(--acc); border-color:var(--acc); background:color-mix(in srgb,var(--acc) 10%,transparent); }
 
     .apv-flow { margin-top:14px; padding-top:1px; border-top:1px solid var(--zy-migrated-color-ee3e8e9d25); }
     .apv-flow .apv-sect { display:flex; justify-content:space-between; gap:8px; }
@@ -122,6 +125,16 @@
     .apv-flow-step.rejected .apv-flow-node,
     .apv-flow-step.returned .apv-flow-node,
     .apv-flow-step.waitingrevision .apv-flow-node { background:var(--zy-danger); }
+    .apv-history { margin-top:10px; border:1px solid var(--zy-migrated-color-28565ef553); border-radius:12px; overflow:hidden; }
+    .apv-history > summary { display:flex; align-items:center; justify-content:space-between; padding:9px 11px; cursor:pointer; color:var(--sa-muted,var(--zy-muted)); font-size:11px; font-weight:900; list-style:none; }
+    .apv-history > summary::-webkit-details-marker { display:none; }
+    .apv-history > summary span { min-width:22px; padding:2px 7px; border-radius:999px; background:var(--zy-migrated-color-28565ef553); text-align:center; }
+    .apv-history ol { list-style:none; margin:0; padding:0 11px 8px; }
+    .apv-history li { display:grid; grid-template-columns:auto minmax(0,1fr); gap:2px 8px; padding:8px 0; border-top:1px solid var(--zy-migrated-color-ee3e8e9d25); }
+    .apv-history__action { color:var(--acc); font-size:11px; font-weight:1000; }
+    .apv-history__meta,.apv-history__delegation { color:var(--sa-muted,var(--zy-muted)); font-size:10px; font-weight:800; }
+    .apv-history__delegation,.apv-history p { grid-column:1/-1; }
+    .apv-history p { margin:3px 0 0; font-size:11px; line-height:1.6; }
 
     .apv-note { width:100%; box-sizing:border-box; min-height:40px; margin-top:14px; border-radius:11px; border:1px solid var(--zy-migrated-color-5658452bed); background:var(--zy-migrated-color-22ba49161c); color:var(--sa-text,var(--zy-text)); padding:8px 12px; font-weight:700; font-size:13px; }
     html[data-theme="light"] .apv-note { background:var(--zy-white); }

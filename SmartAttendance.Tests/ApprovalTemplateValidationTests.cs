@@ -26,11 +26,26 @@ public sealed class ApprovalTemplateValidationTests
     [Theory]
     [InlineData("Role")]
     [InlineData("User")]
+    [InlineData("CommitteeGroup")]
+    [InlineData("ExternalCommittee")]
     public void UnresolvedApprover_IsRejected(string type)
     {
         var template = Valid();
         template.Steps[0].ApproverType = type;
         Assert.NotNull(ApprovalTemplateStore.Validate(template));
+    }
+
+    [Fact]
+    public void ReusableAndExternalCommittees_WithIdentifiers_AreAccepted()
+    {
+        var template = Valid();
+        template.Steps =
+        [
+            new() { ApproverType = "CommitteeGroup", CommitteeGroupId = 7, DisplayName = "لجنة الموارد" },
+            new() { ApproverType = "ExternalCommittee", ExternalCommitteeId = 9, DisplayName = "اللجنة الخارجية" }
+        ];
+
+        Assert.Null(ApprovalTemplateStore.Validate(template));
     }
 
     [Fact]

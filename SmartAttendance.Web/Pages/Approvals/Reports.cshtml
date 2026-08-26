@@ -16,12 +16,13 @@
     <header class="zy-page-header">
         <div><h1>تقارير الموافقات</h1><div class="zy-desc">مؤشرات زمن المعالجة وحالة الطلبات، محصورة بالشركات التي تملك صلاحية رؤيتها.</div></div>
         <span class="zy-spacer"></span>
-        <a asp-page="./Reports" asp-page-handler="Export" asp-route-format="xlsx" asp-route-Status="@Model.Status" asp-route-RequestType="@Model.RequestType" asp-route-Search="@Model.Search" asp-route-From="@Model.From" asp-route-To="@Model.To" class="zy-btn zy-btn--primary">تصدير Excel</a>
-        <a asp-page="./Reports" asp-page-handler="Export" asp-route-format="csv" asp-route-Status="@Model.Status" asp-route-RequestType="@Model.RequestType" asp-route-Search="@Model.Search" asp-route-From="@Model.From" asp-route-To="@Model.To" class="zy-btn zy-btn--secondary">CSV</a>
+        <a asp-page="./Reports" asp-page-handler="Export" asp-route-format="xlsx" asp-route-Status="@Model.Status" asp-route-Source="@Model.Source" asp-route-RequestType="@Model.RequestType" asp-route-Search="@Model.Search" asp-route-From="@Model.From" asp-route-To="@Model.To" class="zy-btn zy-btn--primary">تصدير Excel</a>
+        <a asp-page="./Reports" asp-page-handler="Export" asp-route-format="csv" asp-route-Status="@Model.Status" asp-route-Source="@Model.Source" asp-route-RequestType="@Model.RequestType" asp-route-Search="@Model.Search" asp-route-From="@Model.From" asp-route-To="@Model.To" class="zy-btn zy-btn--secondary">CSV</a>
     </header>
 
     <form method="get" class="zy-filter-bar">
         <div class="zy-field"><label>الحالة</label><select class="zy-select" asp-for="Status"><option value="All">كل الحالات</option><option value="Pending">قيد الموافقة</option><option value="Approved">معتمدة</option><option value="Rejected">مرفوضة</option></select></div>
+        <div class="zy-field"><label>المصدر</label><select class="zy-select" asp-for="Source"><option value="All">كل المصادر</option><option value="SelfService">الخدمة الذاتية</option><option value="Admin">إداري</option><option value="Legacy">تاريخي</option></select></div>
         <div class="zy-field"><label>نوع الطلب</label><select class="zy-select" asp-for="RequestType"><option value="">كل الأنواع</option>@foreach (var type in Model.RequestTypes) { <option value="@type">@DisplayType(type)</option> }</select></div>
         <div class="zy-field zy-approval-report__search"><label>الموظف</label><input class="zy-input" asp-for="Search" placeholder="الاسم أو الرقم الوظيفي" /></div>
         <div class="zy-field"><label>من</label><input class="zy-input" type="date" asp-for="From" /></div>

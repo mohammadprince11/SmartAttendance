@@ -1,0 +1,103 @@
+@page
+@model SmartAttendance.Web.Pages.Approvals.CommitteesModel
+
+@{
+    ViewData["Title"] = "لجان الموافقات";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-administration.css" asp-append-version="true" />
+}
+
+<section class="zy-committee-page" dir="rtl">
+    <div class="zy-breadcrumb"><a asp-page="/Approvals/Index">الموافقات</a><span>/</span><b>اللجان</b></div>
+    <header class="zy-page-header">
+        <div><h1>لجان الموافقات</h1><div class="zy-desc">مجموعات داخلية قابلة لإعادة الاستخدام، ولجان خارجية تُسجّل قراراتها إدارياً.</div></div>
+        <span class="zy-spacer"></span>
+        <a asp-page="/HrSettings/ApprovalTemplates" asp-route-CompanyId="@Model.CompanyId" class="zy-btn zy-btn--secondary">قوالب الموافقات</a>
+    </header>
+
+    <form method="get" class="zy-filter-bar">
+        <div class="zy-field"><label>الشركة</label><select class="zy-select" asp-for="CompanyId" onchange="this.form.submit()">@foreach (var company in Model.Companies) { <option value="@company.Id">@company.Name</option> }</select></div>
+    </form>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="zy-committee-alert @(Model.MessageIsError ? "is-error" : "")" role="status">@Model.Message</div>
+    }
+
+    @if (Model.CompanyId is > 0)
+    {
+        <div class="zy-committee-layout">
+            <section class="zy-card">
+                <div class="zy-card__header"><h2>مجموعات اللجان الداخلية</h2><span class="zy-badge zy-badge--muted">@Model.Groups.Count</span></div>
+                <div class="zy-card__body">
+                    <form method="post" asp-page-handler="SaveGroup" asp-route-CompanyId="@Model.CompanyId" class="zy-committee-form">
+                        <input type="hidden" name="id" value="0" />
+                        <div class="zy-field"><label>اسم المجموعة</label><input class="zy-input" name="name" required maxlength="150" /></div>
+                        <div class="zy-field"><label>الوصف</label><input class="zy-input" name="description" maxlength="500" /></div>
+                        <div class="zy-field zy-committee-form__wide"><label>الأعضاء</label><select class="zy-select zy-committee-members" name="members" multiple required>@foreach (var user in Model.Users) { <option value="@user">@user</option> }</select><span class="zy-help">يمكن اختيار أكثر من مستخدم؛ تُجمّد العضوية عند بدء كل طلب.</span></div>
+                        <button type="submit" class="zy-btn zy-btn--primary">إضافة المجموعة</button>
+                    </form>
+
+                    <div class="zy-committee-list">
+                        @foreach (var group in Model.Groups)
+                        {
+                            <article class="zy-committee-item @(group.IsActive ? "" : "is-inactive")">
+                                <div><b>@group.Name</b><p>@(string.IsNullOrWhiteSpace(group.Description) ? "بلا وصف" : group.Description)</p><div class="zy-committee-chips">@foreach (var member in group.Members) { <span>@member</span> }</div></div>
+                                <span class="zy-badge @(group.IsActive ? "zy-badge--success" : "zy-badge--muted")">@(group.IsActive ? "نشطة" : "متوقفة")</span>
+                                <details class="zy-committee-edit">
+                                    <summary class="zy-btn zy-btn--secondary zy-btn--sm">@(group.IsActive ? "تعديل" : "تعديل وإعادة تفعيل")</summary>
+                                    <form method="post" asp-page-handler="SaveGroup" asp-route-CompanyId="@Model.CompanyId" class="zy-committee-form">
+                                        <input type="hidden" name="id" value="@group.Id" />
+                                        <div class="zy-field"><label>الاسم</label><input class="zy-input" name="name" value="@group.Name" required maxlength="150" /></div>
+                                        <div class="zy-field"><label>الوصف</label><input class="zy-input" name="description" value="@group.Description" maxlength="500" /></div>
+                                        <div class="zy-field zy-committee-form__wide"><label>الأعضاء</label><select class="zy-select zy-committee-members" name="members" multiple required>@foreach (var user in Model.Users) { <option value="@user" selected="@group.Members.Contains(user, StringComparer.OrdinalIgnoreCase)">@user</option> }</select></div>
+                                        <button type="submit" class="zy-btn zy-btn--primary zy-btn--sm">حفظ</button>
+                                    </form>
+                                </details>
+                                @if (group.IsActive) { <form method="post" asp-page-handler="DeactivateGroup" asp-route-CompanyId="@Model.CompanyId" data-zyconfirm="إيقاف مجموعة اللجنة؟"><input type="hidden" name="id" value="@group.Id" /><button class="zy-btn zy-btn--danger zy-btn--sm">إيقاف</button></form> }
+                            </article>
+                        }
+                    </div>
+                </div>
+            </section>
+
+            <section class="zy-card">
+                <div class="zy-card__header"><h2>اللجان الخارجية</h2><span class="zy-badge zy-badge--muted">@Model.ExternalCommittees.Count</span></div>
+                <div class="zy-card__body">
+                    <form method="post" asp-page-handler="SaveExternal" asp-route-CompanyId="@Model.CompanyId" class="zy-committee-form">
+                        <input type="hidden" name="id" value="0" />
+                        <div class="zy-field"><label>اسم اللجنة</label><input class="zy-input" name="name" required maxlength="150" /></div>
+                        <div class="zy-field"><label>جهة الاتصال</label><input class="zy-input" name="contactName" maxlength="150" /></div>
+                        <div class="zy-field"><label>البريد</label><input class="zy-input" type="email" name="contactEmail" maxlength="320" /></div>
+                        <div class="zy-field"><label>ملاحظات</label><input class="zy-input" name="notes" maxlength="1000" /></div>
+                        <button type="submit" class="zy-btn zy-btn--primary">إضافة اللجنة</button>
+                    </form>
+
+                    <div class="zy-committee-list">
+                        @foreach (var committee in Model.ExternalCommittees)
+                        {
+                            <article class="zy-committee-item @(committee.IsActive ? "" : "is-inactive")">
+                                <div><b>@committee.Name</b><p>@(string.IsNullOrWhiteSpace(committee.ContactName) ? "لا توجد جهة اتصال" : committee.ContactName)@(string.IsNullOrWhiteSpace(committee.ContactEmail) ? "" : " · " + committee.ContactEmail)</p></div>
+                                <span class="zy-badge @(committee.IsActive ? "zy-badge--success" : "zy-badge--muted")">@(committee.IsActive ? "نشطة" : "متوقفة")</span>
+                                <details class="zy-committee-edit">
+                                    <summary class="zy-btn zy-btn--secondary zy-btn--sm">@(committee.IsActive ? "تعديل" : "تعديل وإعادة تفعيل")</summary>
+                                    <form method="post" asp-page-handler="SaveExternal" asp-route-CompanyId="@Model.CompanyId" class="zy-committee-form">
+                                        <input type="hidden" name="id" value="@committee.Id" />
+                                        <div class="zy-field"><label>الاسم</label><input class="zy-input" name="name" value="@committee.Name" required maxlength="150" /></div>
+                                        <div class="zy-field"><label>جهة الاتصال</label><input class="zy-input" name="contactName" value="@committee.ContactName" maxlength="150" /></div>
+                                        <div class="zy-field"><label>البريد</label><input class="zy-input" type="email" name="contactEmail" value="@committee.ContactEmail" maxlength="320" /></div>
+                                        <div class="zy-field"><label>ملاحظات</label><input class="zy-input" name="notes" value="@committee.Notes" maxlength="1000" /></div>
+                                        <button type="submit" class="zy-btn zy-btn--primary zy-btn--sm">حفظ</button>
+                                    </form>
+                                </details>
+                                @if (committee.IsActive) { <form method="post" asp-page-handler="DeactivateExternal" asp-route-CompanyId="@Model.CompanyId" data-zyconfirm="إيقاف اللجنة الخارجية؟"><input type="hidden" name="id" value="@committee.Id" /><button class="zy-btn zy-btn--danger zy-btn--sm">إيقاف</button></form> }
+                            </article>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+    }
+</section>

@@ -38,6 +38,12 @@
         "Cancelled" => "ملغاة",
         _ => "قادمة"
     };
+    string ActionLabel(string action) => action switch
+    {
+        "Submitted" => "تقديم الطلب", "Approved" => "موافقة", "Rejected" => "رفض",
+        "Returned" => "إعادة للتعديل", "Resubmitted" => "إعادة تقديم", "Cancelled" => "إلغاء",
+        "Escalated" => "تصعيد", _ => action
+    };
 
     // تنسيق الوقت "HH:mm" (عمود SQL time = TimeSpan).
     string T(TimeSpan? t) => t.HasValue ? $"{(int)t.Value.TotalHours:00}:{t.Value.Minutes:00}" : "";
@@ -72,6 +78,13 @@
         </div>
     </header>
 
+    <nav class="apv-audience" aria-label="مصدر طلبات الموافقة">
+        <a class="@(Model.Source == "All" ? "on" : "")" href="?Status=@Model.Status&Source=All">كل الطلبات</a>
+        <a class="@(Model.Source == "SelfService" ? "on" : "")" href="?Status=@Model.Status&Source=SelfService">الخدمة الذاتية</a>
+        <a class="@(Model.Source == "Admin" ? "on" : "")" href="?Status=@Model.Status&Source=Admin">طلبات المشرفين</a>
+        <a class="@(Model.Source == "Legacy" ? "on" : "")" href="?Status=@Model.Status&Source=Legacy">طلبات تاريخية</a>
+    </nav>
+
     @if (!string.IsNullOrWhiteSpace(Model.Message))
     {
         <div class="hrms-alert @(Model.MessageIsError ? "danger" : "success")">@Model.Message</div>
@@ -88,12 +101,13 @@
             @{ var tabs = new[] { ("Pending", "قيد الموافقة"), ("Approved", "معتمدة"), ("Rejected", "مرفوضة"), ("All", "الكل") }; }
             @foreach (var (val, label) in tabs)
             {
-                <a class="apv-tab @(Model.Status == val ? "on" : "")" href="?Status=@val">@label</a>
+                <a class="apv-tab @(Model.Status == val ? "on" : "")" href="?Status=@val&Source=@Model.Source">@label</a>
             }
         </div>
         <div class="apv-quick">
             <form method="get" class="zyu-39c68df36fcc">
                 <input type="hidden" name="Status" value="@Model.Status" />
+                <input type="hidden" name="Source" value="@Model.Source" />
                 <input class="apv-search" name="Search" value="@Model.Search" placeholder="🔎 بحث سريع بالاسم أو الكود" />
             </form>
             <button type="button" class="apv-btn ghost" onclick="apvPanel()">
@@ -106,7 +120,7 @@
             </button>
             @if (Model.HasActiveFilters)
             {
-                <a class="apv-btn ghost" href="?Status=@Model.Status">مسح</a>
+                <a class="apv-btn ghost" href="?Status=@Model.Status&Source=@Model.Source">مسح</a>
             }
         </div>
     </div>
@@ -114,6 +128,7 @@
     <div class="apv-panel @(panelOpen ? "open" : "")" id="apvPanel">
         <form method="get" class="apv-pgrid">
             <input type="hidden" name="Status" value="@Model.Status" />
+            <input type="hidden" name="Source" value="@Model.Source" />
             <label class="apv-f">اسم أو كود الموظف
                 <input name="Search" value="@Model.Search" placeholder="بحث بالاسم أو الكود" />
             </label>
@@ -169,7 +184,7 @@
             </label>
             <div class="apv-pfoot">
                 <button type="submit" class="go">🔎 تطبيق الفلاتر</button>
-                <a class="clr" href="?Status=@Model.Status">إزالة الفلتر</a>
+                <a class="clr" href="?Status=@Model.Status&Source=@Model.Source">إزالة الفلتر</a>
             </div>
         </form>
     </div>
@@ -219,6 +234,24 @@
                                 </section>
                             }
 
+                            @if (Model.Histories.TryGetValue(request.Id, out var history) && history.Count > 0)
+                            {
+                                <details class="apv-history">
+                                    <summary>سجل القرارات <span>@history.Count</span></summary>
+                                    <ol>
+                                        @foreach (var item in history.OrderByDescending(item => item.ActionAt))
+                                        {
+                                            <li>
+                                                <span class="apv-history__action">@ActionLabel(item.Action)</span>
+                                                <span class="apv-history__meta">@item.StepName · @(string.IsNullOrWhiteSpace(item.ActionBy) ? "النظام" : item.ActionBy) · @item.ActionAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                                                @if (!string.IsNullOrWhiteSpace(item.DelegatedFrom)) { <span class="apv-history__delegation">نيابةً عن @item.DelegatedFrom</span> }
+                                                @if (!string.IsNullOrWhiteSpace(item.Notes)) { <p>@item.Notes</p> }
+                                            </li>
+                                        }
+                                    </ol>
+                                </details>
+                            }
+
                             @if (canAct)
                             {
                                 <input type="checkbox" class="apv-chk apv-row" name="Ids" value="@request.Id" form="apvBulkForm" data-row="row_@request.Id" onclick="event.stopPropagation()" />
@@ -254,7 +287,7 @@
                             <span class="apv-ava">@initials</span>
                             <div class="zyu-22a08c80a960">
                                 <div class="nm">@request.EmployeeName</div>
-                                <div class="mt">@TypeLabel(request.RequestType)@(string.IsNullOrWhiteSpace(meta) ? "" : " · " + meta)</div>
+                                <div class="mt">@TypeLabel(request.RequestType) · @(request.RequestSource == "Admin" ? "إداري" : request.RequestSource == "SelfService" ? "خدمة ذاتية" : "تاريخي")@(string.IsNullOrWhiteSpace(meta) ? "" : " · " + meta)</div>
                             </div>
                         </div>
 

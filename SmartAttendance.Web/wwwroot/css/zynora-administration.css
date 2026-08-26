@@ -70,10 +70,34 @@
 .zy-approval-report__request-link:hover { text-decoration: underline; }
 .zy-approval-report .zy-table td { white-space: nowrap; }
 
+.zy-committee-page { max-width: 1500px; margin: 0 auto; }
+.zy-committee-page .zy-breadcrumb a { color: inherit; text-decoration: none; }
+.zy-committee-layout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.zy-committee-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:10px; padding-bottom:16px; border-bottom:1px solid var(--color-border); }
+.zy-committee-form__wide { grid-column:1/-1; }
+.zy-committee-members { min-height:110px !important; padding-block:7px !important; }
+.zy-committee-list { display:grid; gap:8px; margin-top:14px; }
+.zy-committee-item { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:start; gap:10px; padding:12px; background:var(--color-background); border:1px solid var(--color-border); border-radius:11px; }
+.zy-committee-item.is-inactive { opacity:.65; }
+.zy-committee-edit { grid-column:1/-1; }
+.zy-committee-edit > summary { display:inline-flex; cursor:pointer; list-style:none; }
+.zy-committee-edit > summary::-webkit-details-marker { display:none; }
+.zy-committee-edit[open] .zy-committee-form { margin-top:12px; padding-top:12px; border-top:1px solid var(--color-border); }
+.zy-committee-item b { display:block; margin-bottom:3px; }
+.zy-committee-item p { margin:0; color:var(--color-text-secondary); font-size:var(--fs-tiny); }
+.zy-committee-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:7px; }
+.zy-committee-chips span { padding:3px 7px; color:var(--color-primary-text); background:var(--color-primary-soft); border-radius:999px; font-size:10px; font-weight:800; }
+.zy-committee-alert { margin-bottom:12px; padding:10px 12px; color:var(--color-success); background:var(--color-success-soft); border:1px solid color-mix(in srgb,var(--color-success) 35%,transparent); border-radius:10px; font-weight:800; }
+.zy-committee-alert.is-error { color:var(--color-danger); background:var(--color-danger-soft); border-color:color-mix(in srgb,var(--color-danger) 35%,transparent); }
+
 @media (max-width: 1100px) { .zy-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
     .zy-approval-report .zy-page-header .zy-btn { flex: 1 1 auto; }
     .zy-approval-report__section-title { align-items: flex-start; }
+    .zy-committee-layout,.zy-committee-form { grid-template-columns:1fr; }
+    .zy-committee-form__wide { grid-column:auto; }
+    .zy-committee-item { grid-template-columns:minmax(0,1fr) auto; }
+    .zy-committee-item form { grid-column:1/-1; }
 }
 @media (max-width: 680px) {
     .zy-settings-jump { position: static; }
