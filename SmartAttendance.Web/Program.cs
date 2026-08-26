@@ -318,7 +318,9 @@ builder.Services.AddRateLimiter(options =>
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
         context =>
         {
-            if (!LoginRateLimitPolicy.AppliesTo(context.Request.Path.Value))
+            if (!LoginRateLimitPolicy.AppliesToAttempt(
+                    context.Request.Method,
+                    context.Request.Path.Value))
             {
                 return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("free");
             }

@@ -54,6 +54,20 @@ public class LoginRateLimitPolicyTests
     public void MissingPath_IsNotLimited(string? path) =>
         Assert.False(LoginRateLimitPolicy.AppliesTo(path));
 
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("HEAD")]
+    [InlineData("OPTIONS")]
+    public void ViewingLoginPage_DoesNotConsumePasswordAttemptBucket(string method) =>
+        Assert.False(LoginRateLimitPolicy.AppliesToAttempt(method, "/account/login"));
+
+    [Theory]
+    [InlineData("/account/login")]
+    [InlineData("/api/auth/login")]
+    [InlineData("/api/webauthn/login/verify")]
+    public void PostingAuthenticationAttempt_IsLimited(string path) =>
+        Assert.True(LoginRateLimitPolicy.AppliesToAttempt("POST", path));
+
     // ═══ مفتاح التقسيم ═══
 
     [Fact]

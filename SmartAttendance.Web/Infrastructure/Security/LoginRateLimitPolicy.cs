@@ -43,6 +43,15 @@ public static class LoginRateLimitPolicy
     }
 
     /// <summary>
+    /// يستهلك الدلو طلبُ المصادقة الفعلي فقط. عرض نموذج الدخول بـ GET ليس محاولة
+    /// كلمة مرور، واحتسابه يسمح لمهاجم بحجب صفحة الدخول عن عنوان مشترك بمجرد
+    /// تحديثها دون إرسال أي اعتماد.
+    /// </summary>
+    public static bool AppliesToAttempt(string? method, string? path) =>
+        string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase) &&
+        AppliesTo(path);
+
+    /// <summary>
     /// مفتاح التقسيم: عنوان الطالب، أو <c>unknown</c> حين يتعذّر.
     ///
     /// <para><b>مغلق الفشل:</b> غياب العنوان يجمع كل المجهولين بدلوٍ واحد بدل
