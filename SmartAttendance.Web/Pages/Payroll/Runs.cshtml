@@ -215,7 +215,7 @@
             <table class="pr-table">
                 <thead>
                     <tr>
-                        <th>رقم الدفعة</th><th>الفترة</th><th>الموظفون</th>
+                        <th>رقم الدفعة</th><th>النوع</th><th>الفترة</th><th>الموظفون</th>
                         <th>الإجمالي</th><th>الاستقطاعات</th><th>الصافي</th><th>محتسب بواسطة</th><th>مقفل</th><th>تم إصدارها</th><th>تم إرسال القسيمة</th>
                         <th style="text-align:end">إجراءات</th>
                     </tr>
@@ -231,6 +231,7 @@
                         var isSent = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "PayslipSent");
                         <tr>
                             <td class="pr-num">@run.BatchNo</td>
+                            <td><span class="pr-scope @(run.RunType == PayrollRunStore.RunTypeRegular ? "" : "narrow")" title="@run.AdjustmentReason">@run.RunTypeText</span></td>
                             <td class="pr-num">@run.PeriodText</td>
                             <td class="pr-num">@run.EmployeeCount</td>
                             <td class="pr-num">@run.TotalGross.ToString("#,0.##")</td>
@@ -251,7 +252,14 @@
                                     @if (run.Status is "Draft" or "Calculated")
                                     {
                                         <button type="button" class="pr-mi" onclick="prScopeEdit(@run.Id, '@run.ScopeMode')">النطاق</button>
-                                        <form method="post" asp-page-handler="Preflight"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" title="يفحص الحركات المسودّة بالفترة قبل الاحتساب">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
+                                        @if (run.RunType == PayrollRunStore.RunTypeRegular)
+                                        {
+                                            <form method="post" asp-page-handler="Preflight"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" title="يفحص الحركات المسودّة بالفترة قبل الاحتساب">@(run.Status == "Draft" ? "احتساب" : "إعادة")</button></form>
+                                        }
+                                        else
+                                        {
+                                            <form method="post" asp-page-handler="Calculate"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit">@(run.Status == "Draft" ? "احتساب التسوية" : "إعادة احتساب التسوية")</button></form>
+                                        }
                                     }
                                     @if (run.Status == "Calculated")
                                     {
@@ -326,6 +334,29 @@
                             }
                         </select>
                     </label>
+                    <label>نوع المسير
+                        <select name="runType" id="pr-run-type" onchange="prRunTypeChanged()">
+                            <option value="Regular">اعتيادي — الأساسي والعلاوات والحضور</option>
+                            <option value="OffCycle">إضافي خارج الدورة — حركات «خارج الراتب» فقط</option>
+                            <option value="Retroactive">أثر رجعي — الحركات المؤشرة «بأثر رجعي» فقط</option>
+                            <option value="Reversal">عكسي — يعكس مسيراً مقفلاً سابقاً</option>
+                        </select>
+                    </label>
+                    <div id="pr-adjustment-fields" hidden>
+                        <label>سبب التسوية
+                            <input type="text" name="adjustmentReason" id="pr-adjustment-reason" maxlength="500" placeholder="سبب واضح يظهر في أثر المسير" />
+                        </label>
+                        <label id="pr-original-run-wrap" hidden>المسير الأصلي
+                            <select name="originalRunId" id="pr-original-run">
+                                <option value="">اختر مسيراً مقفلاً/صادراً</option>
+                                @foreach (var source in Model.ReversibleRuns)
+                                {
+                                    <option value="@source.Id" data-company="@source.CompanyId">@source.BatchNo — @source.PeriodText — @source.RunTypeText</option>
+                                }
+                            </select>
+                        </label>
+                        <p class="mass-hint" id="pr-adjustment-hint"></p>
+                    </div>
                 </div>
 
                 @* ===== النطاق — من يشمله هذا التشغيل (نمط كيان «النطاق») ===== *@
@@ -441,6 +472,28 @@
             massBuildEmps(); massCount(); massCodeCount();
             document.getElementById('pr-prev').hidden = true;
             prScope('All');
+            prRunTypeChanged();
+        }
+
+        function prRunTypeChanged() {
+            var type = document.getElementById('pr-run-type').value;
+            var fields = document.getElementById('pr-adjustment-fields');
+            var reason = document.getElementById('pr-adjustment-reason');
+            var originalWrap = document.getElementById('pr-original-run-wrap');
+            var original = document.getElementById('pr-original-run');
+            var hint = document.getElementById('pr-adjustment-hint');
+            var adjustment = type !== 'Regular';
+            fields.hidden = !adjustment;
+            reason.required = adjustment;
+            originalWrap.hidden = type !== 'Reversal';
+            original.required = type === 'Reversal';
+            hint.textContent = type === 'OffCycle'
+                ? 'يحتسب فقط الحركات المعتمدة من نوع «خارج الراتب» غير المقفلة وبمبلغ صريح؛ لا يعيد الراتب الأساسي.'
+                : type === 'Retroactive'
+                    ? 'يحتسب فقط الحركات المعتمدة المؤشرة «بأثر رجعي» وغير المقفلة؛ لا يعيد الراتب الأساسي.'
+                    : type === 'Reversal'
+                        ? 'ينشئ قيوداً معاكسة للمسير الأصلي. لا يحذف المسير الأصلي ولا يعدّله.'
+                        : '';
         }
 
         function prOpen() {

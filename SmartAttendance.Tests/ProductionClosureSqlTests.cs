@@ -939,6 +939,69 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     }
 
     [SkippableFact]
+    public async Task Offcycle_and_reversal_runs_are_separate_scoped_settlements_without_base_salary()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
+        await PayrollTransactionStore.EnsureAsync(db);
+
+        var txA = await ScalarAsync(db, $"""
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,Status,IsLocked)
+VALUES({_employeeA},2089,2,N'Off-cycle bonus',125,N'Income',N'OutSalary',0,N'Approved',0);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var txB = await ScalarAsync(db, $"""
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,Status,IsLocked)
+VALUES({_employeeB},2089,2,N'Other tenant bonus',900,N'Income',N'OutSalary',0,N'Approved',0);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+
+        var created = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 2, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeOffCycle, "Approved exceptional payment", null);
+        Assert.True(created.Ok, created.Message);
+        var calculated = await PayrollRunStore.CalculateAsync(db, created.RunId, "payroll-a");
+        Assert.True(calculated.Ok, calculated.Message);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PayrollRunLines WHERE RunId={created.RunId};"));
+        Assert.Equal(0m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT BasicSalary FROM PayrollRunLines WHERE RunId={created.RunId};")));
+        Assert.Equal(125m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={created.RunId};")));
+
+        var locked = await PayrollRunStore.LockAsync(db, created.RunId);
+        Assert.True(locked.Item1, locked.Item2);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={txA};"));
+        Assert.Equal(0, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={txB};"));
+
+        var retroTx = await ScalarAsync(db, $"""
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,RetroactiveDate,Status,IsLocked)
+VALUES({_employeeA},2089,2,N'Retroactive correction',75,N'Income',N'InSalary',1,'2089-01-01',N'Approved',0);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var retro = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 2, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeRetroactive, "Approved prior-period correction", null);
+        Assert.True(retro.Ok, retro.Message);
+        Assert.True((await PayrollRunStore.CalculateAsync(db, retro.RunId, "payroll-a")).Ok);
+        Assert.Equal(75m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={retro.RunId};")));
+        Assert.True((await PayrollRunStore.LockAsync(db, retro.RunId)).Item1);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={retroTx};"));
+
+        var reversal = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 3, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeReversal, "Reverse duplicate exceptional payment", created.RunId);
+        Assert.True(reversal.Ok, reversal.Message);
+        var reversed = await PayrollRunStore.CalculateAsync(db, reversal.RunId, "payroll-a");
+        Assert.True(reversed.Ok, reversed.Message);
+        Assert.Equal(-125m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={reversal.RunId};")));
+        Assert.Equal(PayrollRunStore.RunTypeReversal, await ScalarStringAsync(db,
+            $"SELECT RunType FROM PayrollRuns WHERE Id={reversal.RunId};"));
+    }
+
+    [SkippableFact]
     public async Task Locked_attendance_unlock_is_tenant_scoped_reasoned_and_audited()
     {
         RequireSql();

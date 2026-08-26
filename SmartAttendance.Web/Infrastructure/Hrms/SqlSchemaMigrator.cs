@@ -2002,6 +2002,21 @@ BEGIN
  CREATE UNIQUE INDEX UX_ApprovalRequestWatchers_RequestUser ON ApprovalRequestWatchers(RequestId,UserName);
 END;
 """),
+        new(
+            "20260826-17-payroll-adjustment-runs",
+            """
+IF OBJECT_ID('PayrollRuns','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('PayrollRuns','RunType') IS NULL
+     ALTER TABLE PayrollRuns ADD RunType nvarchar(20) NOT NULL CONSTRAINT DF_PayrollRuns_RunType DEFAULT(N'Regular');
+ IF COL_LENGTH('PayrollRuns','AdjustmentReason') IS NULL
+     ALTER TABLE PayrollRuns ADD AdjustmentReason nvarchar(500) NULL;
+ IF COL_LENGTH('PayrollRuns','OriginalRunId') IS NULL
+     ALTER TABLE PayrollRuns ADD OriginalRunId int NULL;
+ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollRuns') AND name='IX_PayrollRuns_OriginalRun')
+     EXEC sp_executesql N'CREATE INDEX IX_PayrollRuns_OriginalRun ON PayrollRuns(OriginalRunId) WHERE OriginalRunId IS NOT NULL;';
+END;
+"""),
     };
 
     /// <summary>

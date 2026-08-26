@@ -17,6 +17,23 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class PayrollRunStore
 {
+    public const string RunTypeRegular = "Regular";
+    public const string RunTypeOffCycle = "OffCycle";
+    public const string RunTypeRetroactive = "Retroactive";
+    public const string RunTypeReversal = "Reversal";
+    public static readonly string[] RunTypes = { RunTypeRegular, RunTypeOffCycle, RunTypeRetroactive, RunTypeReversal };
+
+    public static string NormalizeRunType(string? value) =>
+        RunTypes.FirstOrDefault(type => type.Equals(value, StringComparison.OrdinalIgnoreCase)) ?? RunTypeRegular;
+
+    public static string RunTypeLabel(string? value) => NormalizeRunType(value) switch
+    {
+        RunTypeOffCycle => "إضافي خارج الدورة",
+        RunTypeRetroactive => "أثر رجعي",
+        RunTypeReversal => "عكسي",
+        _ => "اعتيادي"
+    };
+
     public static readonly string[] Lifecycle = { "Draft", "Calculated", "Locked", "Issued", "PayslipSent" };
 
     public static string StatusLabel(string status) => status switch
@@ -44,6 +61,10 @@ public static class PayrollRunStore
         public string? CalculatedBy { get; set; }
         public DateTime? CalculatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string RunType { get; set; } = RunTypeRegular;
+        public string? AdjustmentReason { get; set; }
+        public int? OriginalRunId { get; set; }
+        public string RunTypeText => RunTypeLabel(RunType);
 
         /// <summary>كيف حُدِّد النطاق (توثيقي) — الحساب يعتمد صفوف النطاق نفسها.</summary>
         public string ScopeMode { get; set; } = PayrollRunScope.ModeAll;
@@ -345,9 +366,21 @@ WHERE r.Id = @Id;
         int year, int month,
         string? scopeMode = null, IEnumerable<int>? scopeEmployeeIds = null,
         CancellationToken cancellationToken = default)
+        => await CreateRunAsync(dbContext, callerScope, companyId, year, month, scopeMode,
+            scopeEmployeeIds, cancellationToken, RunTypeRegular, null, null);
+
+    public static async Task<(bool Ok, string Message, int RunId)> CreateRunAsync(
+        ApplicationDbContext dbContext, CompanyScope callerScope, int companyId,
+        int year, int month, string? scopeMode, IEnumerable<int>? scopeEmployeeIds,
+        CancellationToken cancellationToken, string? runType, string? adjustmentReason, int? originalRunId)
     {
         await EnsureAsync(dbContext);
         if (year < 2000 || month is < 1 or > 12) return (false, "شهر غير صالح.", 0);
+
+        var normalizedRunType = NormalizeRunType(runType);
+        var normalizedReason = adjustmentReason?.Trim();
+        if (normalizedRunType != RunTypeRegular && string.IsNullOrWhiteSpace(normalizedReason))
+            return (false, "سبب المسير غير الاعتيادي إلزامي.", 0);
 
         if (companyId <= 0 || !callerScope.Allows(companyId))
             return (false, "The selected payroll company is outside your scope.", 0);
@@ -355,6 +388,24 @@ WHERE r.Id = @Id;
                 company => company.Id == companyId && company.IsActive && !company.IsDeleted,
                 cancellationToken))
             return (false, "The selected payroll company is unavailable.", 0);
+
+        if (normalizedRunType == RunTypeReversal)
+        {
+            if (originalRunId is not > 0) return (false, "اختر المسير الأصلي المراد عكسه.", 0);
+            var original = await GetRunAsync(dbContext, originalRunId.Value);
+            if (original?.CompanyId != companyId || original.Status is not ("Locked" or "Issued" or "PayslipSent"))
+                return (false, "المسير الأصلي غير موجود ضمن الشركة أو لم يُقفل بعد.", 0);
+            if (original.RunType == RunTypeReversal)
+                return (false, "لا يمكن إنشاء عكسٍ لمسير عكسي.", 0);
+            var alreadyReversed = await HrmsDatabase.ScalarAsync<int>(dbContext,
+                "SELECT COUNT(*) FROM PayrollRuns WHERE OriginalRunId=@Original AND RunType=N'Reversal' AND Status IN (N'Locked',N'Issued',N'PayslipSent');",
+                command => HrmsDatabase.AddParameter(command, "@Original", originalRunId.Value));
+            if (alreadyReversed > 0) return (false, "للمسير الأصلي عكسٌ مقفل/صادر بالفعل.", 0);
+        }
+        else
+        {
+            originalRunId = null;
+        }
 
         var ids = (scopeEmployeeIds ?? Enumerable.Empty<int>()).Distinct().ToList();
         var mode = PayrollRunScope.NormalizeMode(scopeMode);
@@ -389,10 +440,17 @@ SELECT SequenceNo FROM @allocated;
                 HrmsDatabase.AddParameter(command, "@M", month);
             });
 
-        var batchNo = $"{year}-{month}-{seq}";
+        var typeCode = normalizedRunType switch
+        {
+            RunTypeOffCycle => "O",
+            RunTypeRetroactive => "R",
+            RunTypeReversal => "V",
+            _ => "N"
+        };
+        var batchNo = $"{year}-{month}-{typeCode}-{seq}";
         var id = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "INSERT INTO PayrollRuns (BatchNo, [Year], [Month], Status, ScopeMode, CompanyId) VALUES (@Batch, @Y, @M, N'Draft', @Scope, @Company); SELECT CAST(SCOPE_IDENTITY() AS int);",
+            "INSERT INTO PayrollRuns (BatchNo, [Year], [Month], Status, ScopeMode, CompanyId, RunType, AdjustmentReason, OriginalRunId) VALUES (@Batch, @Y, @M, N'Draft', @Scope, @Company, @RunType, @Reason, @Original); SELECT CAST(SCOPE_IDENTITY() AS int);",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Batch", batchNo);
@@ -400,6 +458,9 @@ SELECT SequenceNo FROM @allocated;
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Scope", mode);
                 HrmsDatabase.AddParameter(command, "@Company", companyId);
+                HrmsDatabase.AddParameter(command, "@RunType", normalizedRunType);
+                HrmsDatabase.AddParameter(command, "@Reason", (object?)normalizedReason ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Original", (object?)originalRunId ?? DBNull.Value);
             });
 
         if (ids.Count > 0) await PayrollRunScopeStore.ReplaceAsync(dbContext, id, ids);
@@ -409,7 +470,7 @@ SELECT SequenceNo FROM @allocated;
         var scopeText = ids.Count > 0
             ? $" — النطاق: {PayrollRunScope.Describe(mode, ids.Count)}"
             : " — النطاق: كل الموظفين النشطين";
-        return (true, $"أُنشئت دفعة {batchNo}{scopeText}. شغّل «الاحتساب».", id);
+        return (true, $"أُنشئت دفعة {batchNo} ({RunTypeLabel(normalizedRunType)}){scopeText}. شغّل «الاحتساب».", id);
     }
 
     /// <summary>حساب المسير: يبني السطور والبنود. مسموح فقط على Draft/Calculated.</summary>
@@ -420,6 +481,11 @@ SELECT SequenceNo FROM @allocated;
         if (run == null) return (false, "الدفعة غير موجودة.");
         if (run.Status is "Locked" or "Issued" or "PayslipSent")
             return (false, "لا يمكن إعادة احتساب دفعة مقفلة/معتمدة.");
+
+        // المسيرات غير الاعتيادية لا تعيد الأساسي أو العلاوات أو الحضور؛ هي تسويات
+        // منفصلة فقط. إعادة استخدام المحرك الاعتيادي هنا تعني دفع الأساسي مرتين.
+        if (run.RunType != RunTypeRegular)
+            return await CalculateAdjustmentRunAsync(dbContext, run, userName);
 
         await EmployeeFinancialInfoSchema.EnsureAsync(dbContext);
         await EmployeeAllowanceSchema.EnsureAsync(dbContext);
@@ -1526,7 +1592,8 @@ ORDER BY c.IsAddition DESC, c.Id;
         public decimal NetSalary { get; set; }
 
         /// <summary>لا آيبان ولا رقم بطاقة ⟹ الصف لا يُحوَّل، ويُعلَّم ليصححه المستخدم.</summary>
-        public bool IsPayable => !string.IsNullOrWhiteSpace(Iban) || !string.IsNullOrWhiteSpace(CardNo);
+        public bool IsPayable => NetSalary > 0
+            && (!string.IsNullOrWhiteSpace(Iban) || !string.IsNullOrWhiteSpace(CardNo));
     }
 
     /// <summary>
@@ -1681,6 +1748,177 @@ ORDER BY e.EmployeeNo;
         return res;
     }
 
+    /// <summary>
+    /// يحتسب المسير التكميلي/الرجعي من الحركات الصريحة فقط، أو المسير العكسي من
+    /// مسير أصلي مقفل. لا أساسي ولا علاوات دورية ولا أثر حضور هنا، منعاً للدفع المزدوج.
+    /// </summary>
+    private static async Task<(bool Ok, string Message)> CalculateAdjustmentRunAsync(
+        ApplicationDbContext dbContext, PayrollRun run, string userName)
+    {
+        if (run.CompanyId is not > 0) return (false, "المسير غير الاعتيادي يجب أن يكون منسوباً لشركة.");
+        await PayrollTransactionStore.EnsureAsync(dbContext);
+        var filter = run.RunType switch
+        {
+            RunTypeOffCycle => "ISNULL(t.IsRetroactive,0)=0 AND ISNULL(t.PaymentType,N'InSalary')=N'OutSalary'",
+            RunTypeRetroactive => "ISNULL(t.IsRetroactive,0)=1",
+            _ => string.Empty
+        };
+
+        if (run.RunType != RunTypeReversal && filter.Length == 0)
+            return (false, "نوع المسير غير الاعتيادي غير صالح.");
+        if (run.RunType == RunTypeReversal && run.OriginalRunId is not > 0)
+            return (false, "المسير العكسي بلا مسير أصلي.");
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await HrmsDatabase.ExecuteAsync(dbContext,
+            "DELETE c FROM PayrollRunLineComponents c INNER JOIN PayrollRunLines l ON l.Id=c.LineId WHERE l.RunId=@Run; DELETE FROM PayrollRunLines WHERE RunId=@Run; DELETE FROM PayrollRunExclusions WHERE RunId=@Run;",
+            command => HrmsDatabase.AddParameter(command, "@Run", run.Id));
+
+        if (run.RunType == RunTypeReversal)
+        {
+            var sourceValid = await HrmsDatabase.ScalarAsync<int>(dbContext,
+                "SELECT COUNT(*) FROM PayrollRuns WHERE Id=@Original AND CompanyId=@Company AND Status IN (N'Locked',N'Issued',N'PayslipSent');",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Original", run.OriginalRunId!.Value);
+                    HrmsDatabase.AddParameter(command, "@Company", run.CompanyId.Value);
+                });
+            if (sourceValid == 0)
+            {
+                await transaction.RollbackAsync();
+                return (false, "المسير الأصلي غير متاح أو لم يُقفل.");
+            }
+
+            await HrmsDatabase.ExecuteAsync(dbContext, """
+INSERT INTO PayrollRunLines
+ (RunId,EmployeeId,BasicSalary,TotalAllowances,GrossSalary,TaxAmount,GosiEmployee,GosiCompany,
+  OtherDeductions,NetSalary,WorkDays,AbsentDays,AttendanceBase,AttendanceFactor,TaxBase,
+  TaxBaseSource,GosiBase,GosiBaseSource,DaysBasis)
+SELECT @Run,l.EmployeeId,-l.BasicSalary,-l.TotalAllowances,-l.GrossSalary,-l.TaxAmount,
+       -l.GosiEmployee,-l.GosiCompany,-l.OtherDeductions,-l.NetSalary,0,0,0,1,0,
+       N'Reversal',0,N'Reversal',0
+FROM PayrollRunLines l
+WHERE l.RunId=@Original
+  AND (NOT EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run)
+       OR EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run AND s.EmployeeId=l.EmployeeId));
+
+INSERT INTO PayrollRunLineComponents(LineId,ItemName,Amount,IsAddition,Kind)
+SELECT target.Id,CONCAT(N'عكس: ',c.ItemName),ABS(c.Amount),CASE WHEN c.IsAddition=1 THEN 0 ELSE 1 END,N'Reversal'
+FROM PayrollRunLineComponents c
+INNER JOIN PayrollRunLines source ON source.Id=c.LineId AND source.RunId=@Original
+INNER JOIN PayrollRunLines target ON target.RunId=@Run AND target.EmployeeId=source.EmployeeId;
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Run", run.Id);
+                HrmsDatabase.AddParameter(command, "@Original", run.OriginalRunId.GetValueOrDefault());
+            });
+        }
+        else
+        {
+            var eligible = await HrmsDatabase.ScalarAsync<int>(dbContext, $"""
+SELECT COUNT(*) FROM PayrollTransactions t
+INNER JOIN Employees e ON e.Id=t.EmployeeId
+WHERE t.[Year]=@Y AND t.[Month]=@M AND e.CompanyId=@Company
+  AND ISNULL(t.Status,N'Approved')=N'Approved' AND ISNULL(t.IsLocked,0)=0
+  AND t.Amount<>0 AND {filter}
+  AND (NOT EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run)
+       OR EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run AND s.EmployeeId=t.EmployeeId));
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Run", run.Id);
+                HrmsDatabase.AddParameter(command, "@Y", run.Year);
+                HrmsDatabase.AddParameter(command, "@M", run.Month);
+                HrmsDatabase.AddParameter(command, "@Company", run.CompanyId.Value);
+            });
+            if (eligible == 0)
+            {
+                await transaction.RollbackAsync();
+                return (false, run.RunType == RunTypeRetroactive
+                    ? "لا توجد حركات رجعية معتمدة وغير مقفلة بمبلغ صريح ضمن النطاق."
+                    : "لا توجد حركات «خارج الراتب» معتمدة وغير مقفلة بمبلغ صريح ضمن النطاق.");
+            }
+
+            await HrmsDatabase.ExecuteAsync(dbContext, $"""
+WITH Eligible AS
+(
+ SELECT t.*,
+        CASE WHEN t.TxType=N'Deduction' THEN -ABS(t.Amount) ELSE t.Amount END AS SignedAmount
+ FROM PayrollTransactions t
+ INNER JOIN Employees e ON e.Id=t.EmployeeId
+ WHERE t.[Year]=@Y AND t.[Month]=@M AND e.CompanyId=@Company
+   AND ISNULL(t.Status,N'Approved')=N'Approved' AND ISNULL(t.IsLocked,0)=0
+   AND t.Amount<>0 AND {filter}
+   AND (NOT EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run)
+        OR EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run AND s.EmployeeId=t.EmployeeId))
+), Totals AS
+(
+ SELECT EmployeeId,
+        SUM(CASE WHEN SignedAmount>0 THEN SignedAmount ELSE 0 END) AS Additions,
+        SUM(CASE WHEN SignedAmount<0 THEN -SignedAmount ELSE 0 END) AS Deductions,
+        SUM(SignedAmount) AS Net
+ FROM Eligible GROUP BY EmployeeId
+)
+INSERT INTO PayrollRunLines
+ (RunId,EmployeeId,BasicSalary,TotalAllowances,GrossSalary,TaxAmount,GosiEmployee,GosiCompany,
+  OtherDeductions,NetSalary,WorkDays,AbsentDays,AttendanceBase,AttendanceFactor,TaxBase,
+  TaxBaseSource,GosiBase,GosiBaseSource,DaysBasis)
+SELECT @Run,EmployeeId,0,Additions,Additions,0,0,0,Deductions,Net,0,0,0,1,0,
+       N'ExplicitAdjustment',0,N'ExplicitAdjustment',0
+FROM Totals;
+
+WITH Eligible AS
+(
+ SELECT t.EmployeeId,t.ItemName,t.TxType,t.Amount,
+        CASE WHEN t.TxType=N'Deduction' THEN -ABS(t.Amount) ELSE t.Amount END AS SignedAmount
+ FROM PayrollTransactions t
+ INNER JOIN Employees e ON e.Id=t.EmployeeId
+ WHERE t.[Year]=@Y AND t.[Month]=@M AND e.CompanyId=@Company
+   AND ISNULL(t.Status,N'Approved')=N'Approved' AND ISNULL(t.IsLocked,0)=0
+   AND t.Amount<>0 AND {filter}
+   AND (NOT EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run)
+        OR EXISTS(SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@Run AND s.EmployeeId=t.EmployeeId))
+)
+INSERT INTO PayrollRunLineComponents(LineId,ItemName,Amount,IsAddition,Kind)
+SELECT l.Id,e.ItemName,ABS(e.SignedAmount),CASE WHEN e.SignedAmount>=0 THEN 1 ELSE 0 END,
+       CASE WHEN @RunType=N'Retroactive' THEN N'Retroactive' ELSE N'OffCycle' END
+FROM Eligible e INNER JOIN PayrollRunLines l ON l.RunId=@Run AND l.EmployeeId=e.EmployeeId;
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Run", run.Id);
+                HrmsDatabase.AddParameter(command, "@Y", run.Year);
+                HrmsDatabase.AddParameter(command, "@M", run.Month);
+                HrmsDatabase.AddParameter(command, "@Company", run.CompanyId.Value);
+                HrmsDatabase.AddParameter(command, "@RunType", run.RunType);
+            });
+        }
+
+        var count = await HrmsDatabase.ScalarAsync<int>(dbContext,
+            "SELECT COUNT(*) FROM PayrollRunLines WHERE RunId=@Run;",
+            command => HrmsDatabase.AddParameter(command, "@Run", run.Id));
+        if (count == 0)
+        {
+            await transaction.RollbackAsync();
+            return (false, "لا توجد سطور قابلة للتسوية ضمن نطاق المسير.");
+        }
+
+        await HrmsDatabase.ExecuteAsync(dbContext, """
+UPDATE r SET Status=N'Calculated',EmployeeCount=x.EmployeeCount,TotalGross=x.TotalGross,
+ TotalNet=x.TotalNet,TotalTax=x.TotalTax,TotalGosiCompany=x.TotalGosiCompany,
+ CalculatedBy=@By,CalculatedAt=SYSUTCDATETIME(),ApprovedBy=NULL,ApprovedAt=NULL,ApprovalNote=NULL
+FROM PayrollRuns r
+CROSS APPLY(SELECT COUNT(*) EmployeeCount,ISNULL(SUM(GrossSalary),0) TotalGross,
+ ISNULL(SUM(NetSalary),0) TotalNet,ISNULL(SUM(TaxAmount),0) TotalTax,
+ ISNULL(SUM(GosiCompany),0) TotalGosiCompany FROM PayrollRunLines WHERE RunId=@Run)x
+WHERE r.Id=@Run;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command, "@Run", run.Id);
+            HrmsDatabase.AddParameter(command, "@By", userName);
+        });
+        await transaction.CommitAsync();
+        return (true, $"احتُسب مسير {RunTypeLabel(run.RunType)} — {count} موظفاً من التسويات الصريحة فقط.");
+    }
+
     // ═══════ حارس منع ازدواج الصرف — موظفٌ واحد لا يظهر بأكثر من دفعة غير مقفلة/فترة ═══════
 
     /// <summary>معرّفات كل الموظفين النشطين (اختيارياً بشركة) — لتجسيد دفعة «الكل».</summary>
@@ -1815,6 +2053,10 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
     public static async Task<(bool Ok, string Message)> CalculateWithGuardAsync(
         ApplicationDbContext dbContext, int runId, string userName)
     {
+        var run = await GetRunAsync(dbContext, runId);
+        if (run == null) return (false, "الدفعة غير موجودة.");
+        if (run.RunType != RunTypeRegular)
+            return await CalculateAsync(dbContext, runId, userName);
         var (note, nothing) = await ResolvePeriodConflictsAsync(dbContext, runId, userName);
         if (nothing) return (false, note ?? "لا يوجد موظفون قابلون للاحتساب.");
         var (ok, msg) = await CalculateAsync(dbContext, runId, userName);
@@ -2101,6 +2343,9 @@ ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
         CalculatedBy = HrmsDatabase.GetString(reader, "CalculatedBy") is { Length: > 0 } by ? by : null,
         CalculatedAt = HrmsDatabase.GetDateTime(reader, "CalculatedAt"),
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
+        RunType = NormalizeRunType(TryString(reader, "RunType")),
+        AdjustmentReason = TryString(reader, "AdjustmentReason"),
+        OriginalRunId = TryNullableInt(reader, "OriginalRunId"),
         ScopeMode = PayrollRunScope.NormalizeMode(HrmsDatabase.GetString(reader, "ScopeMode")),
         ScopeCount = HrmsDatabase.GetInt(reader, "ScopeCount"),
         CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId"),
@@ -2123,4 +2368,7 @@ ORDER BY r.[Year] DESC, r.[Month] DESC, r.Id DESC;
 
     private static DateTime? TryDateTime(System.Data.Common.DbDataReader reader, string name) =>
         HasColumn(reader, name) ? HrmsDatabase.GetDateTime(reader, name) : null;
+
+    private static int? TryNullableInt(System.Data.Common.DbDataReader reader, string name) =>
+        HasColumn(reader, name) ? HrmsDatabase.GetNullableInt(reader, name) : null;
 }

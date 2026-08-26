@@ -273,9 +273,13 @@ FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
 INNER JOIN PayrollRuns r ON r.Id = @Run
 WHERE t.[Year] = @Y AND t.[Month] = @M
-  AND ISNULL(t.PaymentType, N'InSalary') = N'InSalary'
   AND ISNULL(t.Status, N'Approved') = N'Approved'
   AND ISNULL(t.IsLocked, 0) = 0
+  AND ((ISNULL(r.RunType,N'Regular')=N'Regular'
+        AND ISNULL(t.PaymentType,N'InSalary')=N'InSalary' AND ISNULL(t.IsRetroactive,0)=0)
+    OR (r.RunType=N'OffCycle'
+        AND ISNULL(t.PaymentType,N'InSalary')=N'OutSalary' AND ISNULL(t.IsRetroactive,0)=0)
+    OR (r.RunType=N'Retroactive' AND ISNULL(t.IsRetroactive,0)=1))
   AND (r.CompanyId IS NULL OR e.CompanyId = r.CompanyId)
   AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run)
        OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run AND s.EmployeeId = t.EmployeeId));
@@ -331,6 +335,8 @@ INNER JOIN Employees e ON e.Id = t.EmployeeId
 WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
   AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
   AND ISNULL(Status, N'Approved') = N'Approved'
+  AND ISNULL(IsRetroactive,0)=0
+  AND ISNULL(IsLocked,0)=0
   AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
   AND (@RunId IS NULL
        OR NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId)
