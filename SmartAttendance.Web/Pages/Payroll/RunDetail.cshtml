@@ -24,7 +24,7 @@
 <section class="pd-page" dir="rtl">
     <header class="pd-head">
         <div>
-            <h1>مسير @Model.Run!.BatchNo — @Model.Run.PeriodText</h1>
+            <h1>مسير @Model.Run!.BatchNoText — @Model.Run.PeriodText</h1>
             <p>@Model.CompanyName · الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—") @(Model.Run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</p>
         </div>
         <div class="zyu-39c68df36fcc">
@@ -160,7 +160,7 @@
     <script>
         var PD_DATA = @Html.Raw(payslipJson);
         var PD_PERIOD = "@Model.Run.PeriodText";
-        var PD_BATCH = "@Model.Run.BatchNo";
+        var PD_BATCH = "@Model.Run.BatchNoText";
         var PD_CO = @Html.Raw(JsonSerializer.Serialize(Model.CompanyName));
 
         function fmt(n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }

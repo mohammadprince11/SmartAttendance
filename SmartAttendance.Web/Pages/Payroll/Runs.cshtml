@@ -28,7 +28,7 @@
     <div class="pr-kpis">
         <div class="pr-kpi zyu-7198287e0e8a"><b>@Model.TotalRuns</b><span>إجمالي الدفعات</span></div>
         <div class="pr-kpi zyu-8b6a7c0b3c73"><b>@Model.PaidRuns</b><span>دفعات معتمدة/مصروفة</span></div>
-        <div class="pr-kpi zyu-1107ff14a820"><b>@(Model.LatestRun?.BatchNo ?? "—")</b><span>آخر دفعة · @(Model.LatestRun?.StatusLabelText ?? "")</span></div>
+        <div class="pr-kpi zyu-1107ff14a820"><b>@(Model.LatestRun?.BatchNoText ?? "—")</b><span>آخر دفعة · @(Model.LatestRun?.StatusLabelText ?? "")</span></div>
         <div class="pr-kpi zyu-0089fb1aa1e1"><b>@Model.LatestEmployees</b><span>موظفو آخر مسير</span></div>
         <div class="pr-kpi zyu-7198287e0e8a"><b>@Model.YearGross.ToString("#,0")</b><span>إجمالي رواتب السنة</span></div>
         <div class="pr-kpi zyu-2b7d3f92b385"><b class="pr-net">@Model.YearNet.ToString("#,0")</b><span>صافي مدفوع السنة</span></div>
@@ -135,7 +135,7 @@
                         var isIssued = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "Issued");
                         var isSent = stageIdx >= Array.IndexOf(PayrollRunStore.Lifecycle, "PayslipSent");
                         <tr>
-                            <td class="pr-num">@run.BatchNo</td>
+                            <td class="pr-num">@run.BatchNoText</td>
                             <td><span class="pr-scope @(run.RunType == PayrollRunStore.RunTypeRegular ? "" : "narrow")" title="@run.AdjustmentReason">@run.RunTypeText</span></td>
                             <td class="pr-num">@run.PeriodText</td>
                             <td class="pr-num">@run.EmployeeCount</td>
@@ -149,7 +149,7 @@
                             <td class="pr-actions-cell">
                                 <div class="pr-menu">
                                     <button type="button" class="pr-kebab" onclick="prMenuToggle(event, this)" aria-haspopup="true" aria-label="إجراءات">⋯</button>
-                                    <div class="pr-menu-panel" role="menu">
+                                    <div class="pr-menu-panel" role="menu" data-zy-preserve>
                                     @if (run.EmployeeCount > 0)
                                     {
                                         <a class="pr-mi" href="/Payroll/RunDetail?id=@run.Id">تفاصيل</a>
@@ -256,7 +256,7 @@
                                 <option value="">اختر مسيراً مقفلاً/صادراً</option>
                                 @foreach (var source in Model.ReversibleRuns)
                                 {
-                                    <option value="@source.Id" data-company="@source.CompanyId">@source.BatchNo — @source.PeriodText — @source.RunTypeText</option>
+                                    <option value="@source.Id" data-company="@source.CompanyId">@source.BatchNoText — @source.PeriodText — @source.RunTypeText</option>
                                 }
                             </select>
                         </label>

@@ -34,6 +34,23 @@ public static class PayrollRunStore
         _ => "اعتيادي"
     };
 
+    /// <summary>
+    /// يحجب رمز نوع المسير التقني (N/O/R/V) من رقم الدفعة المعروض للمستخدم.
+    /// يبقى الرقم الأصلي محفوظاً للتكاملات والتصدير والتتبع المحاسبي.
+    /// </summary>
+    public static string DisplayBatchNumber(string? value)
+    {
+        var batch = value?.Trim();
+        if (string.IsNullOrWhiteSpace(batch)) return "—";
+
+        var parts = batch.Split('-');
+        if (parts.Length == 4 && parts[2].Length == 1 &&
+            "NORV".Contains(parts[2], StringComparison.OrdinalIgnoreCase))
+            return $"{parts[0]}-{parts[1]}-{parts[3]}";
+
+        return batch;
+    }
+
     public static readonly string[] Lifecycle = { "Draft", "Calculated", "Locked", "Issued", "PayslipSent" };
 
     public static string StatusLabel(string status) => status switch
@@ -64,6 +81,7 @@ public static class PayrollRunStore
         public string RunType { get; set; } = RunTypeRegular;
         public string? AdjustmentReason { get; set; }
         public int? OriginalRunId { get; set; }
+        public string BatchNoText => DisplayBatchNumber(BatchNo);
         public string RunTypeText => RunTypeLabel(RunType);
 
         /// <summary>كيف حُدِّد النطاق (توثيقي) — الحساب يعتمد صفوف النطاق نفسها.</summary>
@@ -2205,6 +2223,7 @@ WHERE [Year] = @Y AND [Month] = @M AND Id <> @X
         public int Year { get; set; }
         public int Month { get; set; }
         public string BatchNo { get; set; } = string.Empty;
+        public string BatchNoText => DisplayBatchNumber(BatchNo);
         public string Status { get; set; } = "Draft";
         public decimal Basic { get; set; }
         public decimal Allowances { get; set; }

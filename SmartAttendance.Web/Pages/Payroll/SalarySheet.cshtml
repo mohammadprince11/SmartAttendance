@@ -17,7 +17,7 @@
                 <option value="">— اختر دفعة —</option>
                 @foreach (var r in Model.Runs)
                 {
-                    <option value="@r.Id" selected="@(Model.RunId == r.Id)">@r.BatchNo — @r.PeriodText (@r.EmployeeCount موظفاً · @r.StatusLabelText)</option>
+                    <option value="@r.Id" selected="@(Model.RunId == r.Id)">@r.BatchNoText — @r.PeriodText (@r.EmployeeCount موظفاً · @r.StatusLabelText)</option>
                 }
             </select>
         </label>
@@ -41,7 +41,7 @@
         else
         {
             <div class="ss-head">
-                <h2>كشف الرواتب — الدفعة @Model.Run.BatchNo</h2>
+                <h2>كشف الرواتب — الدفعة @Model.Run.BatchNoText</h2>
                 <p>الفترة @Model.Run.PeriodText · @Model.Lines.Count موظفاً · الحالة: @Model.Run.StatusLabelText</p>
             </div>
             <div class="ss-wrap">

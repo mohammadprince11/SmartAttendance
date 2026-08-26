@@ -81,14 +81,15 @@
     .pr-menu-panel > *:not(:first-child) { border-top:1px solid var(--zy-migrated-color-5704ef9ed3); }
     html[data-theme="light"] .pr-menu-panel > *:not(:first-child) { border-top-color:var(--zy-migrated-color-bae00db0cd); }
     /* عناصر القائمة: نصّ فقط بلا شكل أزرار (نموذج كيان). صنف مستقلّ لا يصادم .pr-btn */
-    .pr-menu-panel .pr-mi { display:flex; align-items:center; width:100%; justify-content:flex-start;
-        text-align:start; padding:11px 16px; border:0; border-radius:6px; background:transparent;
+    .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi { display:flex; align-items:center; width:100%; justify-content:flex-start;
+        text-align:start; padding:11px 16px; border:0 !important; border-radius:6px; background:transparent !important;
+        box-shadow:none !important;
         color:var(--zy-migrated-color-1ba460141b); font-family:inherit; font-weight:600; font-size:13.5px; cursor:pointer;
         text-decoration:none; box-sizing:border-box; }
-    .pr-menu-panel .pr-mi:hover { background:var(--zy-migrated-color-c201d2dab2); color:var(--zy-white); }
-    .pr-menu-panel .pr-mi.danger:hover { background:var(--zy-migrated-color-23869fd5c6); color:var(--zy-danger); }
-    html[data-theme="light"] .pr-menu-panel .pr-mi { color:var(--zy-migrated-color-9caea77c4c); }
-    html[data-theme="light"] .pr-menu-panel .pr-mi:hover { background:var(--zy-migrated-color-556c31e7bb); color:var(--zy-black); }
+    .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi:hover { background:var(--zy-migrated-color-c201d2dab2) !important; color:var(--zy-white) !important; }
+    .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi.danger:hover { background:var(--zy-migrated-color-23869fd5c6) !important; color:var(--zy-danger) !important; }
+    html[data-theme="light"] .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi { color:var(--zy-migrated-color-9caea77c4c); }
+    html[data-theme="light"] .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi:hover { background:var(--zy-migrated-color-556c31e7bb) !important; color:var(--zy-black) !important; }
     .pr-actions form { display:inline; }
     .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
     .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid var(--zy-migrated-color-6a77190266); background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:6px 10px; }
