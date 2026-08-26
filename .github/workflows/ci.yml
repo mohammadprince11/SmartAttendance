@@ -225,7 +225,7 @@ jobs:
           if (-not $ps1) { Write-Error 'playwright.ps1 غير موجود — تحقق من حزمة Microsoft.Playwright.'; exit 1 }
           & $ps1.FullName install --with-deps chromium
 
-      - name: Start disposable ZYNORA web host
+      - name: Run E2E against disposable ZYNORA host
         shell: pwsh
         run: |
           $stdout = Join-Path $env:RUNNER_TEMP 'zynora-e2e-web.stdout.log'
@@ -237,38 +237,36 @@ jobs:
           )
           $process = Start-Process dotnet -ArgumentList $arguments -PassThru -WindowStyle Hidden `
             -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-          "ZYNORA_E2E_WEB_PID=$($process.Id)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          $ready = $false
-          for ($attempt = 0; $attempt -lt 60; $attempt++) {
-            if ($process.HasExited) { break }
-            try {
-              $response = Invoke-WebRequest "$env:ZYNORA_E2E_BASE_URL/Account/Login" -UseBasicParsing -TimeoutSec 2
-              if ($response.StatusCode -eq 200) { $ready = $true; break }
-            } catch { Start-Sleep -Seconds 1 }
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+              if ($process.HasExited) { break }
+              try {
+                $response = Invoke-WebRequest "$env:ZYNORA_E2E_BASE_URL/Account/Login" -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) {
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw 'Disposable ZYNORA web host did not become ready.'
+            }
+
+            dotnet test SmartAttendance.E2E/SmartAttendance.E2E.csproj `
+              -c Release `
+              --no-build `
+              --logger "trx;LogFileName=e2e-tests.trx" `
+              --results-directory "${{ github.workspace }}/E2EResults"
+            if ($LASTEXITCODE -ne 0) { throw "Playwright E2E failed with exit code $LASTEXITCODE." }
           }
-          if (-not $ready) {
-            Get-Content $stdout -ErrorAction SilentlyContinue
-            Get-Content $stderr -ErrorAction SilentlyContinue
-            throw 'Disposable ZYNORA web host did not become ready.'
+          finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           }
 
-      - name: Run E2E
-        shell: pwsh
-        run: >
-          dotnet test SmartAttendance.E2E/SmartAttendance.E2E.csproj
-          -c Release
-          --no-build
-          --logger "trx;LogFileName=e2e-tests.trx"
-          --results-directory ${{ github.workspace }}/E2EResults
-
-      - name: Stop host and remove disposable database
+      - name: Remove disposable database
         if: always()
         shell: pwsh
-        run: |
-          if ($env:ZYNORA_E2E_WEB_PID) {
-            Stop-Process -Id ([int]$env:ZYNORA_E2E_WEB_PID) -Force -ErrorAction SilentlyContinue
-          }
-          dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release --no-build -- teardown
+        run: dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release --no-build -- teardown
 
       - name: Upload E2E results
         if: always()
