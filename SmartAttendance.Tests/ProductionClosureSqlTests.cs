@@ -1,6 +1,7 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Domain.Entities;
@@ -278,6 +279,134 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
         Assert.False(await SalaryItemStore.DeleteAsync(db, scopeA, bId));
         Assert.Equal("Company B allowance", Assert.Single(await RawStringsAsync(
             db, $"SELECT Name FROM SalaryItems WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
+    public async Task Ten_thousand_employee_directory_meets_release_query_baseline()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var anchor = await db.Employees.AsNoTracking().SingleAsync(employee => employee.Id == _employeeA);
+        var prefix = "PERF-" + Guid.NewGuid().ToString("N")[..8] + "-";
+
+        var employees = Enumerable.Range(1, 10_000).Select(index => new Employee
+        {
+            EmployeeNo = prefix + index.ToString("00000"),
+            FullName = "Synthetic performance employee " + index,
+            CompanyId = _companyA,
+            BranchId = anchor.BranchId,
+            DepartmentId = anchor.DepartmentId,
+            HireDate = new DateOnly(2020, 1, 1),
+            IsActive = true
+        }).ToArray();
+        db.Employees.AddRange(employees);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        _ = await db.Employees.AsNoTracking()
+            .Where(employee => employee.CompanyId == _companyA && employee.EmployeeNo.StartsWith(prefix))
+            .Take(1)
+            .CountAsync();
+
+        var stopwatch = Stopwatch.StartNew();
+        var directory = await db.Employees.AsNoTracking()
+            .Where(employee => employee.CompanyId == _companyA &&
+                               employee.EmployeeNo.StartsWith(prefix) &&
+                               employee.IsActive && !employee.IsDeleted)
+            .OrderBy(employee => employee.EmployeeNo)
+            .Select(employee => new { employee.Id, employee.EmployeeNo, employee.FullName })
+            .ToListAsync();
+        stopwatch.Stop();
+
+        Assert.Equal(10_000, directory.Count);
+        Assert.All(directory, row => Assert.StartsWith(prefix, row.EmployeeNo));
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+            $"10k employee directory baseline exceeded 5 seconds: {stopwatch.Elapsed}.");
+
+        await transaction.RollbackAsync();
+    }
+
+    [SkippableFact]
+    public async Task Backup_can_be_verified_restored_and_migrated()
+    {
+        RequireSql();
+        var suffix = Guid.NewGuid().ToString("N");
+        var restoredDatabase = "SmartAttendance_CodexRestore_" + suffix;
+        var backupPath = Path.Combine(Path.GetTempPath(), restoredDatabase + ".bak");
+        var dataPath = Path.Combine(Path.GetTempPath(), restoredDatabase + ".mdf");
+        var logPath = Path.Combine(Path.GetTempPath(), restoredDatabase + "_log.ldf");
+
+        static string SqlLiteral(string value) => "N'" + value.Replace("'", "''") + "'";
+        static string SqlIdentifier(string value) => "[" + value.Replace("]", "]]" ) + "]";
+
+        try
+        {
+            SqlConnection.ClearAllPools();
+            await using var admin = new SqlConnection(_adminConnection!);
+            await admin.OpenAsync();
+
+            await using (var backup = admin.CreateCommand())
+            {
+                backup.CommandTimeout = 120;
+                backup.CommandText = $"BACKUP DATABASE {SqlIdentifier(_databaseName!)} TO DISK={SqlLiteral(backupPath)} WITH COPY_ONLY, INIT, CHECKSUM; RESTORE VERIFYONLY FROM DISK={SqlLiteral(backupPath)} WITH CHECKSUM;";
+                await backup.ExecuteNonQueryAsync();
+            }
+
+            string? dataLogical = null;
+            string? logLogical = null;
+            await using (var files = admin.CreateCommand())
+            {
+                files.CommandText = $"RESTORE FILELISTONLY FROM DISK={SqlLiteral(backupPath)};";
+                await using var reader = await files.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var logical = reader.GetString(reader.GetOrdinal("LogicalName"));
+                    var type = reader.GetString(reader.GetOrdinal("Type"));
+                    if (type == "D") dataLogical ??= logical;
+                    if (type == "L") logLogical ??= logical;
+                }
+            }
+            Assert.False(string.IsNullOrWhiteSpace(dataLogical));
+            Assert.False(string.IsNullOrWhiteSpace(logLogical));
+
+            await using (var restore = admin.CreateCommand())
+            {
+                restore.CommandTimeout = 120;
+                restore.CommandText = $"RESTORE DATABASE {SqlIdentifier(restoredDatabase)} FROM DISK={SqlLiteral(backupPath)} WITH MOVE {SqlLiteral(dataLogical!)} TO {SqlLiteral(dataPath)}, MOVE {SqlLiteral(logLogical!)} TO {SqlLiteral(logPath)}, RECOVERY, CHECKSUM;";
+                await restore.ExecuteNonQueryAsync();
+            }
+
+            var restoredBuilder = new SqlConnectionStringBuilder(_connectionString!)
+            {
+                InitialCatalog = restoredDatabase
+            };
+            await using var restored = new ApplicationDbContext(
+                new DbContextOptionsBuilder<ApplicationDbContext>()
+                    .UseSqlServer(restoredBuilder.ConnectionString)
+                    .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
+                    .Options);
+            Assert.True(await restored.Employees.AnyAsync(employee => employee.Id == _employeeA));
+            await SqlSchemaMigrator.ApplyAsync(restored);
+            Assert.True(await RawIntAsync(restored, "SELECT COUNT(*) FROM __SchemaMigrations;") > 0);
+        }
+        finally
+        {
+            SqlConnection.ClearAllPools();
+            try
+            {
+                await using var admin = new SqlConnection(_adminConnection!);
+                await admin.OpenAsync();
+                await using var drop = admin.CreateCommand();
+                drop.CommandText = $"IF DB_ID({SqlLiteral(restoredDatabase)}) IS NOT NULL BEGIN ALTER DATABASE {SqlIdentifier(restoredDatabase)} SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE {SqlIdentifier(restoredDatabase)}; END";
+                await drop.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                foreach (var path in new[] { backupPath, dataPath, logPath })
+                    if (File.Exists(path)) File.Delete(path);
+            }
+        }
     }
 
     [SkippableFact]
