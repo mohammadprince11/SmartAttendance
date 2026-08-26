@@ -1,0 +1,307 @@
+/* قائمة الحساب الموحّدة: تحاكي كثافة قائمة كيان مع هوية ZYNORA ووصول كامل. */
+.zy-user-menu {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.zy-user-menu__trigger {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--zy-space-2);
+    padding: 4px 6px;
+    border: 0;
+    border-radius: var(--zy-radius-md);
+    background: transparent;
+    color: var(--zy-text);
+    font: inherit;
+    cursor: pointer;
+    text-align: start;
+    transition:
+        background-color var(--zy-duration-fast) var(--zy-ease),
+        color var(--zy-duration-fast) var(--zy-ease);
+}
+
+.zy-user-menu__trigger:hover,
+.zy-user-menu__trigger:focus-visible,
+.zy-user-menu__trigger[aria-expanded="true"] {
+    background: var(--zy-surface-raised);
+}
+
+.zy-user-menu__trigger:focus-visible {
+    outline: 0;
+    box-shadow: var(--zy-focus-ring);
+}
+
+.zy-user-menu__name {
+    max-width: 190px;
+    overflow: hidden;
+    color: var(--zy-text);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zy-user-menu__avatar {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: var(--zy-radius-sm);
+    background: var(--zy-electric-teal);
+    color: var(--zy-midnight-navy);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.zy-user-menu__chevron {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform var(--zy-duration-fast) var(--zy-ease);
+}
+
+.zy-user-menu__trigger[aria-expanded="true"] .zy-user-menu__chevron {
+    transform: rotate(180deg);
+}
+
+.zy-user-menu__panel {
+    position: absolute;
+    inset-block-start: calc(100% + var(--zy-space-2));
+    inset-inline-end: 0;
+    z-index: 1000;
+    width: 244px;
+    overflow: hidden;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-surface);
+    box-shadow: var(--zy-shadow-lg);
+}
+
+.zy-user-menu__panel[hidden] {
+    display: none !important;
+}
+
+.zy-user-menu__item {
+    width: 100%;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 var(--zy-space-3);
+    border: 0;
+    border-block-end: 1px solid var(--zy-border);
+    border-radius: 0;
+    background: var(--zy-surface);
+    color: var(--zy-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.35;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        background-color var(--zy-duration-fast) var(--zy-ease),
+        color var(--zy-duration-fast) var(--zy-ease);
+}
+
+.zy-user-menu__item:last-child {
+    border-block-end: 0;
+}
+
+.zy-user-menu__item:hover,
+.zy-user-menu__item:focus-visible {
+    background: var(--zy-surface-raised);
+    color: var(--zy-text);
+}
+
+.zy-user-menu__item:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 0;
+    box-shadow: inset var(--zy-focus-ring);
+}
+
+.zy-user-menu__item > svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    fill: none;
+    stroke: var(--zy-text-muted);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.zy-user-menu__item:hover > svg,
+.zy-user-menu__item:focus-visible > svg {
+    stroke: var(--zy-text);
+}
+
+.zy-user-menu__meta {
+    margin-inline-start: auto;
+    color: var(--zy-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.zy-user-menu__item.is-disabled {
+    cursor: not-allowed;
+    opacity: .56;
+}
+
+.zy-user-menu__item.is-disabled:hover {
+    background: var(--zy-surface);
+}
+
+.zy-user-menu__item--danger,
+.zy-user-menu__item--danger:hover,
+.zy-user-menu__item--danger:focus-visible {
+    color: var(--zy-danger);
+}
+
+.zy-user-menu__item--danger:hover,
+.zy-user-menu__item--danger:focus-visible {
+    background: var(--zy-danger-soft);
+}
+
+.zy-language-dialog {
+    width: min(440px, calc(100vw - 32px));
+    max-width: none;
+    padding: 0;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-xl);
+    background: var(--zy-surface);
+    color: var(--zy-text);
+    box-shadow: var(--zy-shadow-lg);
+}
+
+.zy-language-dialog::backdrop {
+    background: color-mix(in srgb, var(--zy-text) 36%, transparent);
+    backdrop-filter: blur(3px);
+}
+
+.zy-language-dialog__card {
+    padding: var(--zy-space-4);
+}
+
+.zy-language-dialog__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--zy-space-3);
+    margin-block-end: var(--zy-space-3);
+}
+
+.zy-language-dialog__head h2,
+.zy-language-dialog__head p {
+    margin: 0;
+}
+
+.zy-language-dialog__head h2 {
+    color: var(--zy-text);
+    font-size: 18px;
+}
+
+.zy-language-dialog__head p {
+    margin-block-start: var(--zy-space-1);
+    color: var(--zy-text-muted);
+    font-size: 12px;
+}
+
+.zy-language-dialog__close {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-surface-raised);
+    color: var(--zy-text);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.zy-language-dialog__options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--zy-space-2);
+}
+
+.zy-language-dialog__option {
+    min-height: 78px;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: var(--zy-space-1);
+    padding: var(--zy-space-3);
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-lg);
+    background: var(--zy-surface);
+    color: var(--zy-text);
+    text-align: start;
+    cursor: pointer;
+}
+
+.zy-language-dialog__option:hover,
+.zy-language-dialog__option:focus-visible {
+    background: var(--zy-surface-raised);
+    border-color: var(--zy-border-strong);
+}
+
+.zy-language-dialog__option[aria-checked="true"] {
+    border-color: var(--zy-border-strong);
+    background: var(--zy-surface-raised);
+    box-shadow: inset 0 0 0 1px var(--zy-border-strong);
+}
+
+.zy-language-dialog__option span {
+    color: var(--zy-text-muted);
+    font-size: 11px;
+}
+
+@media (max-width: 760px) {
+    .zy-user-menu {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .zy-user-menu .zy-user-menu__trigger {
+        min-width: 0;
+    }
+
+    .zy-user-menu__name {
+        max-width: 130px;
+    }
+
+    .zy-user-menu__panel {
+        width: min(100%, 300px);
+        max-width: calc(100vw - 24px);
+    }
+}
+
+@media (max-width: 440px) {
+    .zy-language-dialog__options {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .zy-user-menu__chevron,
+    .zy-user-menu__item {
+        transition: none;
+    }
+}

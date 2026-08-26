@@ -62,7 +62,7 @@
                     <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
                     <img data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
                 </label>
-                <div class="nxr-edit-photo-info">
+                <div class="nxr-edit-photo-info" id="employee-signature">
                     <strong>صورة الموظف</strong>
                     <span>اختر صورة PNG أو JPG أو WEBP.</span>
                     <small>Max 5MB</small>
