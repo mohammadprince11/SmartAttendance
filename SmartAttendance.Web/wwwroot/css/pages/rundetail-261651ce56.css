@@ -6,7 +6,7 @@
     html[data-theme="light"] .pd-head { background:linear-gradient(135deg,var(--zy-white),var(--zy-migrated-color-c2da37727c)); }
     .pd-head h1 { margin:0; font-size:19px; font-weight:1000; }
     .pd-head p { margin:3px 0 0; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
-    .pd-btn { min-height:34px; padding:7px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,var(--zy-primary),var(--zy-primary-strong)); color:var(--zy-on-primary); }
+    .pd-btn { min-height:34px; padding:7px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,var(--zy-primary),var(--zy-primary-strong)); color:var(--zy-on-primary); display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
     .pd-btn.ghost { background:transparent; border:1px solid var(--zy-migrated-color-28565ef553); color:inherit; }
     .pd-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
     .pd-stat { padding:14px 16px; border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); position:relative; overflow:hidden; }
@@ -67,7 +67,7 @@
     .pd-slip-audit > div { display:flex; justify-content:space-between; gap:18px; padding:8px 14px; border-top:1px dashed var(--pd-slip-line); font-size:12px; }
     .pd-slip-audit > div b { direction:ltr; text-align:end; }
     .pd-slip-kayan-actions { display:flex; justify-content:center; padding-top:20px; }
-    .pd-slip-kayan-actions button { min-width:150px; min-height:36px; border:0; border-radius:4px; background:var(--zy-success,var(--zy-migrated-color-943dd81b79)); color:var(--zy-white); font-family:inherit; font-weight:1000; cursor:pointer; }
+    .pd-slip-kayan-actions a { min-width:150px; min-height:36px; border:0; border-radius:4px; background:var(--zy-success,var(--zy-migrated-color-943dd81b79)); color:var(--zy-white); font-family:inherit; font-weight:1000; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
 
     @media (max-width:900px) {
         .pd-slip-info-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 28px; }
@@ -90,6 +90,71 @@
         .pd-slip-info-grid { gap:14px 34px; padding:20px 18px 24px; }
         .pd-slip-ledger th, .pd-slip-ledger td { padding:8px 10px; }
     }
+
+/* ---------- صفحة الطباعة المستقلة ---------- */
+html.pd-print-view,
+html.pd-print-view body {
+    min-height:100%;
+    margin:0;
+    direction:rtl;
+    background:var(--zy-migrated-color-c2da37727c);
+    color:var(--zy-migrated-color-cec5c48493);
+    font-family:Tahoma,Arial,sans-serif;
+}
+
+.pd-print-view .pp-toolbar {
+    position:sticky;
+    top:0;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:12px 18px;
+    background:var(--zy-migrated-color-2d2722bfd0);
+    color:var(--zy-white);
+    box-shadow:0 4px 18px var(--zy-migrated-color-3d9c0a42ba);
+}
+
+.pd-print-view .pp-toolbar button {
+    min-width:170px;
+    min-height:40px;
+    border:0;
+    border-radius:7px;
+    background:var(--zy-success,var(--zy-migrated-color-943dd81b79));
+    color:var(--zy-white);
+    font:1000 13px Tahoma,Arial,sans-serif;
+    cursor:pointer;
+}
+
+.pd-print-view .pp-toolbar span { font-size:12px; font-weight:800; }
+.pd-print-view .pp-sheet { max-width:1120px; margin:20px auto; padding:0 16px 30px; }
+.pd-print-view .pp-sheet .pd-slip-doc { width:100%; box-sizing:border-box; }
+.pd-print-view .pp-sheet .pd-slip-audit,
+.pd-print-view .pp-sheet .pd-slip-kayan-actions { display:none!important; }
+
+@media (max-width:700px) {
+    .pd-print-view .pp-toolbar { flex-direction:column; gap:7px; text-align:center; }
+    .pd-print-view .pp-sheet { margin-top:12px; padding-inline:8px; }
+}
+
+@media print {
+    @page { size:A4 landscape; margin:10mm; }
+    html.pd-print-view body * { visibility:visible!important; }
+    html.pd-print-view body { background:var(--zy-white)!important; }
+    .pd-print-view .pp-toolbar { display:none!important; }
+    .pd-print-view .pp-sheet { max-width:none; margin:0; padding:0; }
+    .pd-print-view .pp-sheet .pd-slip-doc {
+        border:0!important;
+        border-top:3px solid var(--zy-primary)!important;
+        border-radius:0!important;
+        box-shadow:none!important;
+        padding:10px!important;
+    }
+    .pd-print-view .pp-sheet .pd-slip-info-grid { gap:12px 28px; padding:16px 14px 20px; }
+    .pd-print-view .pp-sheet .pd-slip-ledger th,
+    .pd-print-view .pp-sheet .pd-slip-ledger td { padding:7px 9px; }
+}
 
 /* Static inline utilities migrated from Pages/Payroll/RunDetail.cshtml */
 

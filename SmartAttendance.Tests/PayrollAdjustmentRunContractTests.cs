@@ -56,6 +56,24 @@ public sealed class PayrollAdjustmentRunContractTests
         Assert.Contains("class=\"pd-slip-doc pd-slip-kayan\" data-zy-preserve", page);
         Assert.Contains("<th>الدخل</th><th>أيام</th><th>المبلغ</th><th>الاستقطاعات</th>", page);
         Assert.Contains("NetInWords = TerminationSettlementPolicy.CurrencyAmountInWords", page);
+        Assert.Contains("/Payroll/PayslipPrint?runId=", page);
+        Assert.Contains("id=\"pd-print-link\"", page);
+        Assert.Contains("target=\"_blank\" rel=\"noopener\"", page);
+        Assert.DoesNotContain("onclick=\"window.print()\"", page);
+
+        var printPage = File.ReadAllText(Path.Combine(
+            FindRoot(), "SmartAttendance.Web", "Pages", "Payroll", "PayslipPrint.cshtml"));
+        Assert.Contains("Layout = null", printPage);
+        Assert.Contains("طباعة / حفظ PDF", printPage);
+        Assert.Contains("zy-ui-contract", printPage);
+        Assert.Contains("zynora-unified-pages.css", printPage);
+        Assert.Contains("zynora-unified-pages.js", printPage);
+        Assert.Contains("@page { size:A4 landscape", css);
+
+        var printModel = File.ReadAllText(Path.Combine(
+            FindRoot(), "SmartAttendance.Web", "Pages", "Payroll", "PayslipPrint.cshtml.cs"));
+        Assert.Contains("CanAccessRunAsync", printModel);
+        Assert.Contains("line.EmployeeId == EmployeeId", printModel);
 
         var store = File.ReadAllText(Path.Combine(
             FindRoot(), "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs"));

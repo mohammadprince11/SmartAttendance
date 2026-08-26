@@ -155,7 +155,7 @@
         <div class="hrms-slideover-head">
             <h2>قسيمة راتب</h2>
             <div class="zyu-9c40389b4ad8">
-                <button type="button" class="pd-btn pd-print-btn" onclick="window.print()">🖨 طباعة</button>
+                <a id="pd-print-link" class="pd-btn pd-print-btn" target="_blank" rel="noopener">🖨 طباعة</a>
                 <button type="button" class="hrms-slideover-close" onclick="pdClose()">×</button>
             </div>
         </div>
@@ -170,6 +170,7 @@
         var PD_BATCH = "@Model.Run.BatchNoText";
         var PD_CO = @Html.Raw(JsonSerializer.Serialize(Model.CompanyName));
         var PD_PERIOD_RANGE = @Html.Raw(JsonSerializer.Serialize(periodRange));
+        var PD_RUN_ID = @Model.Id;
 
         function fmt(n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
         function esc(v) {
@@ -188,6 +189,11 @@
             if (key.indexOf('cash') >= 0) return 'نقدي';
             if (key.indexOf('cheque') >= 0 || key.indexOf('check') >= 0) return 'شيك';
             return value || '—';
+        }
+
+        function payslipPrintUrl(employeeId) {
+            return '/Payroll/PayslipPrint?runId=' + encodeURIComponent(PD_RUN_ID) +
+                '&employeeId=' + encodeURIComponent(employeeId);
         }
         function traceSrc(s) {
             if (s === 'Employee') return 'راتب مُدخَل بالملف المالي';
@@ -299,10 +305,11 @@
                   '<div><span>مساهمة الشركة</span><b>' + money(l.GosiCompany, l.PayrollCurrency) + '</b></div>' +
                   '<div><span>تكلفة صاحب العمل</span><b>' + money(l.EmployerCost, l.PayrollCurrency) + '</b></div>' +
                 '</details>' +
-                '<div class="pd-slip-kayan-actions"><button type="button" onclick="window.print()">طباعة</button></div>' +
+                '<div class="pd-slip-kayan-actions"><a href="' + payslipPrintUrl(l.EmployeeId) + '" target="_blank" rel="noopener">طباعة</a></div>' +
               '</div>';
 
             document.getElementById('pd-slip').innerHTML = html;
+            document.getElementById('pd-print-link').href = payslipPrintUrl(l.EmployeeId);
             document.getElementById('pd-slide').classList.add('open');
             document.getElementById('pd-backdrop').classList.add('open');
         }

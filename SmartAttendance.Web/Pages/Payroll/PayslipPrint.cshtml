@@ -1,0 +1,92 @@
+@page "/Payroll/PayslipPrint"
+@model SmartAttendance.Web.Pages.Payroll.PayslipPrintModel
+@{
+    Layout = null;
+    var line = Model.Line;
+    var currency = line.PayrollCurrency ?? string.Empty;
+    var rowCount = Math.Max(Model.IncomeRows.Count, Math.Max(Model.DeductionRows.Count, 1));
+    string TextOrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    string Money(decimal amount) => $"{amount:N2} {currency}".Trim();
+}
+<!doctype html>
+<html class="pd-print-view" lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>قسيمة راتب - @line.EmployeeName - @Model.Run.PeriodText</title>
+    <link rel="stylesheet" href="~/css/zynora-migrated-color-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-design-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/rundetail-261651ce56.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
+</head>
+<body class="zy-app zy-scope zy-ui-contract pd-print-view">
+    <header class="pp-toolbar">
+        <button type="button" onclick="window.print()">🖨 طباعة / حفظ PDF</button>
+        <span>إذا لم تظهر نافذة الطباعة تلقائياً استخدم <b>Ctrl+P</b></span>
+    </header>
+
+    <main class="pp-sheet" data-zy-preserve>
+        <article class="pd-slip-doc pd-slip-kayan" data-zy-preserve>
+            <header class="pd-slip-kayan-head">
+                <div><span>استعلام قسائم الراتب</span><h3>@Model.CompanyName</h3></div>
+                <div class="period"><b>@Model.Run.PeriodText</b><span>دفعة @Model.Run.BatchNoText</span></div>
+            </header>
+
+            <section class="pd-slip-info-grid">
+                <div class="pd-slip-info"><b>رمز الموظف</b><span>@TextOrDash(line.EmployeeNo)</span></div>
+                <div class="pd-slip-info"><b>الاسم الكامل</b><span>@TextOrDash(line.EmployeeName)</span></div>
+                <div class="pd-slip-info"><b>رقم الهوية</b><span>@TextOrDash(line.NationalId)</span></div>
+                <div class="pd-slip-info"><b>المسمى الوظيفي</b><span>@TextOrDash(line.Position)</span></div>
+                <div class="pd-slip-info"><b>وحدة العمل</b><span>@Model.CompanyName</span></div>
+                <div class="pd-slip-info"><b>الوحدة الهرمية</b><span>@TextOrDash(line.Department)</span></div>
+                <div class="pd-slip-info"><b>تاريخ التعيين</b><span>@(line.HireDate?.ToString("yyyy/MM/dd") ?? "—")</span></div>
+                <div class="pd-slip-info"><b>الراتب الأساسي</b><span>@Money(line.BasicSalary)</span></div>
+                <div class="pd-slip-info"><b>فترة الراتب</b><span>@Model.PeriodRange</span></div>
+                <div class="pd-slip-info"><b>البنك</b><span>@TextOrDash(line.BankName)</span></div>
+                <div class="pd-slip-info"><b>رقم الوحدة</b><span>@TextOrDash(line.UnitNo)</span></div>
+                <div class="pd-slip-info"><b>رقم الضمان الاجتماعي</b><span>@TextOrDash(line.SocialSecurityNo)</span></div>
+                <div class="pd-slip-info"><b>طريقة الدفع</b><span>@Model.PaymentMethodLabel</span></div>
+                <div class="pd-slip-info"><b>إجمالي العلاوات</b><span>@Money(line.TotalAllowances)</span></div>
+                <div class="pd-slip-info"><b>الراتب الكلي</b><span>@Money(line.GrossSalary)</span></div>
+                <div class="pd-slip-info"><b>الفرع</b><span>@TextOrDash(line.Branch)</span></div>
+                <div class="pd-slip-info"><b>العملة</b><span>@TextOrDash(currency)</span></div>
+                <div class="pd-slip-info"><b>الأيام المدفوعة</b><span>@(Model.DaysBasis > 0 ? $"{Model.PaidDays} / {Model.DaysBasis}" : "بلا بيانات حضور")</span></div>
+            </section>
+
+            <div class="pd-slip-ledger-wrap">
+                <table class="pd-slip-ledger">
+                    <thead><tr><th>الدخل</th><th>أيام</th><th>المبلغ</th><th>الاستقطاعات</th><th>أيام</th><th>المبلغ</th></tr></thead>
+                    <tbody>
+                    @for (var index = 0; index < rowCount; index++)
+                    {
+                        var income = index < Model.IncomeRows.Count ? Model.IncomeRows[index] : null;
+                        var deduction = index < Model.DeductionRows.Count ? Model.DeductionRows[index] : null;
+                        <tr>
+                            <td>@(income?.Kind.Equals("Basic", StringComparison.OrdinalIgnoreCase) == true ? "الراتب المستحق" : income?.Name)</td>
+                            <td class="days">@(income?.Days?.ToString() ?? string.Empty)</td>
+                            <td class="amount">@(income == null ? string.Empty : Money(income.Amount))</td>
+                            <td>@(deduction?.Name ?? string.Empty)</td>
+                            <td class="days"></td>
+                            <td class="amount">@(deduction == null ? string.Empty : Money(deduction.Amount))</td>
+                        </tr>
+                    }
+                    <tr class="total">
+                        <td colspan="2">مجموع الدخل</td><td class="amount">@Money(line.GrossSalary)</td>
+                        <td colspan="2">مجموع الاستقطاعات</td><td class="amount">@Money(line.TotalDeductions)</td>
+                    </tr>
+                    <tr class="net"><td colspan="2">صافي الراتب</td><td class="amount">@Money(line.NetSalary)</td><td colspan="3"></td></tr>
+                    <tr class="words"><td colspan="6">@Model.NetInWords فقط لا غير</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        window.addEventListener('load', function () {
+            window.setTimeout(function () { window.print(); }, 350);
+        }, { once: true });
+    </script>
+</body>
+</html>
