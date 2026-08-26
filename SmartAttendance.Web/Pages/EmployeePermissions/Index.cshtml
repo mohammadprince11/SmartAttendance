@@ -4,57 +4,8 @@
 @{
     ViewData["Title"] = "بطاقات الموظفين";
 }
+<link rel="stylesheet" href="~/css/pages/index-d6280e30de.css" asp-append-version="true" />
 
-<style>
-    .permissions-layout {
-        display: grid;
-        grid-template-columns: 330px 1fr;
-        gap: 20px;
-        align-items: start;
-    }
-
-    .permission-group {
-        border: 1px solid var(--sa-border, #e2e8f0);
-        border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 14px;
-        background: var(--sa-surface, #ffffff);
-    }
-
-    .permission-group h3 {
-        margin: 0 0 12px;
-        font-size: 16px;
-    }
-
-    .permission-check {
-        display: grid;
-        grid-template-columns: 24px 1fr;
-        gap: 10px;
-        padding: 9px 0;
-        border-top: 1px solid var(--sa-border, #f1f5f9);
-    }
-
-    .permission-check:first-of-type {
-        border-top: 0;
-    }
-
-    .permission-code {
-        font-weight: 700;
-        color: var(--sa-text, #0f172a);
-    }
-
-    .permission-desc {
-        color: var(--sa-muted, #64748b);
-        font-size: 12px;
-        margin-top: 3px;
-    }
-
-    @@media (max-width: 1000px) {
-        .permissions-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
 
 <div class="page-header">
     <div>
@@ -85,7 +36,7 @@
 
 <div class="permissions-layout">
     <div class="table-card">
-        <div class="page-header" style="margin-bottom: 12px;">
+        <div class="page-header zyu-c804002a4185">
             <div>
                 <h2>الموظفون</h2>
                 <p>ابحث واختر موظفاً</p>
@@ -107,7 +58,7 @@
     <div class="table-card">
         @if (Model.Assignment != null)
         {
-            <div class="page-header" style="margin-bottom: 12px;">
+            <div class="page-header zyu-c804002a4185">
                 <div>
                     <h2>@Model.Assignment.FullName</h2>
                     <p>
@@ -163,7 +114,7 @@
         }
         else
         {
-            <div style="text-align:center;">
+            <div class="zyu-5a2dfef236e7">
                 Select an employee to manage permissions.
             </div>
         }

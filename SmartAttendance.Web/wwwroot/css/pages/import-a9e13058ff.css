@@ -1,0 +1,221 @@
+/* Source: Pages/Holidays/Import.cshtml */
+.import-v3-wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .import-v3-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+
+    .import-v3-head h1 {
+        margin: 0 0 8px 0;
+        font-size: 30px;
+        font-weight: 900;
+        color: var(--sa-text, var(--zy-migrated-color-0e684e5160));
+    }
+
+    .import-v3-head p {
+        margin: 0;
+        color: var(--sa-muted, var(--zy-migrated-color-6b3d6d843d));
+        font-size: 15px;
+    }
+
+    .import-v3-card {
+        background: var(--sa-surface, var(--zy-white));
+        border: 1px solid var(--sa-border, var(--zy-migrated-color-8475addddc));
+        border-radius: 22px;
+        padding: 24px;
+        box-shadow: 0 22px 55px var(--zy-migrated-color-9537528770);
+        margin-bottom: 22px;
+    }
+
+    .import-v3-two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+        .import-v3-two {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .import-v3-box {
+        background: var(--sa-surface-2, var(--zy-migrated-color-46461f86fd));
+        border: 1px solid var(--sa-border, var(--zy-migrated-color-8475addddc));
+        border-radius: 18px;
+        padding: 18px;
+        min-height: 330px;
+    }
+
+    .import-v3-box-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 17px;
+        font-weight: 900;
+        color: var(--sa-text, var(--zy-migrated-color-0e684e5160));
+        margin-bottom: 8px;
+    }
+
+    .import-v3-step {
+        width: 32px;
+        height: 32px;
+        border-radius: 12px;
+        background: var(--sa-primary, var(--zy-migrated-color-e7b00c296b));
+        color: var(--sa-surface, var(--zy-white));
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+    }
+
+    .import-v3-help {
+        color: var(--sa-muted, var(--zy-migrated-color-6b3d6d843d));
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 14px;
+    }
+
+    .import-v3-file {
+        width: 100%;
+        background: var(--sa-surface, var(--zy-white));
+        border: 2px dashed var(--sa-primary-soft, var(--zy-migrated-color-928ee44540));
+        border-radius: 16px;
+        padding: 18px;
+        min-height: 64px;
+    }
+
+    .import-v3-paste {
+        width: 100%;
+        min-height: 210px;
+        resize: vertical;
+        background: var(--sa-surface, var(--zy-white));
+        border: 2px solid var(--sa-border-strong, var(--zy-migrated-color-e2442d83b3));
+        border-radius: 16px;
+        padding: 14px;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        outline: none;
+        direction: ltr;
+    }
+
+    .import-v3-paste:focus,
+    .import-v3-file:focus {
+        border-color: var(--sa-primary, var(--zy-migrated-color-e7b00c296b));
+        box-shadow: 0 0 0 4px var(--zy-migrated-color-9228ddcf62);
+    }
+
+    .import-v3-required {
+        margin: 18px 0;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--sa-success, var(--zy-migrated-color-52cca7c6db));
+        background: linear-gradient(135deg, var(--sa-surface-3, var(--zy-migrated-color-86e78d440f)), var(--sa-surface-3, var(--zy-migrated-color-61eaaf6f10)));
+    }
+
+    .import-v3-required-title {
+        color: var(--sa-success, var(--zy-migrated-color-b11aedc78d));
+        font-weight: 900;
+        margin-bottom: 10px;
+    }
+
+    .import-v3-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .import-v3-badge {
+        background: var(--sa-surface, var(--zy-white));
+        color: var(--sa-info, var(--zy-migrated-color-5b6ebf9f2b));
+        border: 1px solid var(--sa-info, var(--zy-migrated-color-41248e4681));
+        border-radius: 999px;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .import-v3-note {
+        background: var(--sa-surface-3, var(--zy-migrated-color-3727f8822a));
+        border: 1px solid var(--sa-warning, var(--zy-migrated-color-f7fe74b235));
+        color: var(--sa-warning, var(--zy-migrated-color-d12a7ec7cb));
+        border-radius: 16px;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 18px;
+    }
+
+    .import-v3-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .import-v3-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+    }
+
+    .import-v3-summary-card {
+        background: var(--sa-surface, var(--zy-white));
+        border: 1px solid var(--sa-border, var(--zy-migrated-color-3b313dfb66));
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    .import-v3-summary-card .label {
+        font-size: 12px;
+        color: var(--sa-muted, var(--zy-migrated-color-6b3d6d843d));
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .import-v3-summary-card .value {
+        font-size: 28px;
+        color: var(--sa-text, var(--zy-migrated-color-0e684e5160));
+        font-weight: 900;
+    }
+
+    .status-ready {
+        color: var(--sa-success, var(--zy-migrated-color-e21c21ccc2));
+        font-weight: 900;
+    }
+
+    .status-error {
+        color: var(--sa-danger, var(--zy-migrated-color-71158e06f1));
+        font-weight: 900;
+    }
+
+    .paste-visible-banner {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--sa-primary-soft, var(--zy-migrated-color-b1925ae209));
+        color: var(--sa-primary, var(--zy-migrated-color-1d4a6b66ff));
+        border: 1px solid var(--sa-primary-soft, var(--zy-migrated-color-928ee44540));
+        border-radius: 999px;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 900;
+        margin-bottom: 10px;
+    }
+
+/* Static inline utilities migrated from Pages/Holidays/Import.cshtml */
+
+.zyu-ff270db33d21 { margin-top: 14px; }
+
+.zyu-b3a2297a12f5 { margin-bottom: 0; }
+
+.zyu-5a2dfef236e7 { text-align:center; }

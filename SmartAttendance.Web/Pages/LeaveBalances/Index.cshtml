@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "أرصدة الإجازات";
 }
+<link rel="stylesheet" href="~/css/pages/index-783b7a2505.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
@@ -41,18 +42,16 @@
 
     @if (!string.IsNullOrEmpty(Model.CarryMessage))
     {
-        <div class="hrms-badge approved" style="display:block;padding:10px 14px;margin-bottom:12px">@Model.CarryMessage</div>
+        <div class="hrms-badge approved zyu-d1fdc74a3eca">@Model.CarryMessage</div>
     }
 
     @* ===== حوار ترحيل الأرصدة ===== *@
     <div id="carry-backdrop" onclick="carryClose()"
-         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80"></div>
+         class="zyu-dd7a532ff0b5"></div>
     <div id="carry-modal" role="dialog" aria-modal="true"
-         style="display:none;position:fixed;z-index:81;inset-inline:0;top:12vh;margin-inline:auto;width:min(460px,calc(100% - 32px));
-                background:var(--sa-surface,#0b2135);border:1px solid var(--sa-border,rgba(73,111,151,.4));border-radius:16px;
-                box-shadow:0 20px 60px rgba(0,0,0,.6);padding:20px;color:var(--sa-text,#DCEAF4)">
-        <h2 style="margin:0 0 6px;font-size:17px;font-weight:1000">ترحيل أرصدة الإجازات</h2>
-        <p style="margin:0 0 14px;font-size:12.5px;font-weight:800;color:var(--sa-muted,#8FA8BC)">
+         class="zyu-633eb4bdcf75">
+        <h2 class="zyu-50df9bdfc47d">ترحيل أرصدة الإجازات</h2>
+        <p class="zyu-b1fc2e9f62ea">
             يُرحّل رصيد الموظفين <b>المتبقّي</b> في سنة <b>@Model.Year</b> إلى «مُرحّل» سنة
             <b>@(Model.Year + 1)</b> للشركة المحددة. العملية آمنة للإعادة (تضبط لا تُراكم).
         </p>
@@ -60,28 +59,28 @@
             <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
             <input type="hidden" name="Year" value="@Model.Year" />
 
-            <div style="font-size:12px;font-weight:900;margin-bottom:6px">أنواع الإجازات المُرحّلة</div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+            <div class="zyu-b0cb8edf4ee8">أنواع الإجازات المُرحّلة</div>
+            <div class="zyu-7897327649e3">
                 @foreach (var type in Model.TrackedTypes)
                 {
-                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;cursor:pointer">
+                    <label class="zyu-3044b76458d2">
                         <input type="checkbox" name="CarryTypes" value="@type" checked="@(type == LeaveType.Annual)" />
                         @Model.LeaveTypeText(type)
                         @if (type != LeaveType.Annual)
                         {
-                            <span style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:700">(عادةً لا تُرحّل)</span>
+                            <span class="zyu-619dd98b40eb">(عادةً لا تُرحّل)</span>
                         }
                     </label>
                 }
             </div>
 
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900;margin-bottom:16px">
+            <label class="zyu-a3135df68dc0">
                 الحد الأقصى للترحيل لكل نوع (اختياري — اتركه فارغاً بلا سقف)
                 <input type="number" name="CarryCap" min="0" step="0.5" placeholder="مثال: 21"
-                       style="min-height:38px;border-radius:10px;border:1px solid var(--sa-border,rgba(73,111,151,.3));background:var(--sa-input,rgba(0,0,0,.16));color:inherit;padding:6px 10px" />
+                       class="zyu-29d97353f700" />
             </label>
 
-            <div style="display:flex;gap:8px;justify-content:flex-end">
+            <div class="zyu-9eabbfb3a288">
                 <button type="button" class="hrms-btn-secondary" onclick="carryClose()">إلغاء</button>
                 <button type="submit" class="hrms-btn-primary">تنفيذ الترحيل</button>
             </div>
@@ -153,7 +152,7 @@
                                         @cell.Entitled.ToString("0.#")
                                         @if (cell.CarriedOver > 0)
                                         {
-                                            <span style="opacity:.7">(+@cell.CarriedOver.ToString("0.#") مُرحّل)</span>
+                                            <span class="zyu-730f5b771b60">(+@cell.CarriedOver.ToString("0.#") مُرحّل)</span>
                                         }
                                         @if (cell.HasOverride)
                                         {

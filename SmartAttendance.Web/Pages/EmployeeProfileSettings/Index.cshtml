@@ -7,6 +7,7 @@
 }
 
 @section Styles {
+<link rel="stylesheet" href="~/css/pages/index-35dcdc3c45.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-employee-profile-settings.css" asp-append-version="true" />
 }
 
@@ -167,7 +168,7 @@
                         <span>@(profileSection.IsSystem ? "قسم نظام" : "قسم مخصص")@(profileSection.IsActive ? "" : " · معطل")</span>
                         <h3>@profileSection.Label</h3>
                     </div>
-                    <div class="nxr-profile-settings-row-actions" style="display:flex;align-items:center;gap:8px">
+                    <div class="nxr-profile-settings-row-actions zyu-a4e017b7b0ef">
                         <div class="nxr-profile-settings-edit-shell" data-nxr-edit-shell>
                             <button type="button" class="nxr-profile-settings-edit-trigger">تعديل القسم</button>
                             <form method="post" asp-page-handler="UpdateSection" asp-route-id="@profileSection.Id" class="nxr-profile-settings-edit-form">

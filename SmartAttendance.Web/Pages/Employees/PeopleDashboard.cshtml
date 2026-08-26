@@ -45,8 +45,8 @@
         <div class="zxd-card">
             <h2>تكافؤ الجنسين <small>الفعالون</small></h2>
             <div class="zxd-pulse">
-                <div class="zxd-pulse-row teal"><b>ذكور</b><span class="bar"><i style="width:@Pct(Model.MaleCount, genderTotal)%"></i></span><span>@Model.MaleCount (@Pct(Model.MaleCount, genderTotal)%)</span></div>
-                <div class="zxd-pulse-row green"><b>إناث</b><span class="bar"><i style="width:@Pct(Model.FemaleCount, genderTotal)%"></i></span><span>@Model.FemaleCount (@Pct(Model.FemaleCount, genderTotal)%)</span></div>
+                <div class="zxd-pulse-row teal"><b>ذكور</b><span class="bar"><i data-zy-style="width:@Pct(Model.MaleCount, genderTotal)%"></i></span><span>@Model.MaleCount (@Pct(Model.MaleCount, genderTotal)%)</span></div>
+                <div class="zxd-pulse-row green"><b>إناث</b><span class="bar"><i data-zy-style="width:@Pct(Model.FemaleCount, genderTotal)%"></i></span><span>@Model.FemaleCount (@Pct(Model.FemaleCount, genderTotal)%)</span></div>
             </div>
         </div>
 
@@ -58,7 +58,7 @@
                 {
                     <div class="zxd-dist-row">
                         <span class="n">@bucket.Label</span>
-                        <span class="bar"><i style="width:@Math.Max(3, bucket.Count * 100 / ageMax)%"></i></span>
+                        <span class="bar"><i data-zy-style="width:@Math.Max(3, bucket.Count * 100 / ageMax)%"></i></span>
                         <span class="v">@bucket.Count</span>
                     </div>
                 }
@@ -74,7 +74,7 @@
             {
                 <div class="zxd-dist-row">
                     <span class="n">@bucket.Label</span>
-                    <span class="bar"><i style="width:@Math.Max(3, bucket.Count * 100 / tenureMax)%"></i></span>
+                    <span class="bar"><i data-zy-style="width:@Math.Max(3, bucket.Count * 100 / tenureMax)%"></i></span>
                     <span class="v">@bucket.Count</span>
                 </div>
             }

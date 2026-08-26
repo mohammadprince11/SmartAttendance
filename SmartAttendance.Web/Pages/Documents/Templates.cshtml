@@ -6,21 +6,11 @@
     ViewData["Title"] = "قوالب الوثائق";
     var editing = Model.EditingId.HasValue;
 }
+<link rel="stylesheet" href="~/css/pages/templates-32bf4d191c.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
-<style>
-    .zydoc-editor { width:100%; min-height:320px; padding:14px; line-height:1.9; font-size:.9375rem;
-        border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
-        background:var(--zy-input,var(--zy-surface)); color:var(--zy-text); font-family:inherit; }
-    .zydoc-tokens { display:flex; flex-wrap:wrap; gap:6px; max-height:230px; overflow:auto;
-        border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm); padding:10px; }
-    .zydoc-token { border:1px solid var(--zy-border); background:var(--zy-surface); color:var(--zy-text);
-        border-radius:999px; padding:3px 10px; font-size:.75rem; cursor:pointer; font-family:inherit; }
-    .zydoc-token:hover { border-color:var(--zy-electric-teal); color:var(--zy-electric-teal); }
-    .zydoc-cat { width:100%; font-size:.6875rem; font-weight:700; color:var(--zy-text-muted); margin-top:6px; }
-</style>
 
 <section class="nxhs-page" dir="rtl">
     <header class="nxhs-titlebar">
@@ -48,12 +38,12 @@
             </p>
         </header>
 
-        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
-            <a asp-page="./Templates" style="@(Model.KindFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
-            <a asp-page="./Templates" asp-route-kind="Document" style="@(Model.KindFilter == "Document" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الوثائق</a>
-            <a asp-page="./Templates" asp-route-kind="Header" style="@(Model.KindFilter == "Header" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الترويسات</a>
-            <a asp-page="./Templates" asp-route-kind="Footer" style="@(Model.KindFilter == "Footer" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">التذييلات</a>
-            <a asp-page="./Templates" asp-route-kind="Badge" style="@(Model.KindFilter == "Badge" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">بطاقات الموظفين</a>
+        <div class="zyp-actions zyu-2d1bdd415249">
+            <a asp-page="./Templates" data-zy-style="@(Model.KindFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
+            <a asp-page="./Templates" asp-route-kind="Document" data-zy-style="@(Model.KindFilter == "Document" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الوثائق</a>
+            <a asp-page="./Templates" asp-route-kind="Header" data-zy-style="@(Model.KindFilter == "Header" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الترويسات</a>
+            <a asp-page="./Templates" asp-route-kind="Footer" data-zy-style="@(Model.KindFilter == "Footer" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">التذييلات</a>
+            <a asp-page="./Templates" asp-route-kind="Badge" data-zy-style="@(Model.KindFilter == "Badge" ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">بطاقات الموظفين</a>
         </div>
 
         @if (Model.Templates.Count == 0)
@@ -71,7 +61,7 @@
                         <th>الرموز</th>
                         <th>أُصدر منه</th>
                         <th>الحالة</th>
-                        <th style="width:210px"></th>
+                        <th class="zyu-b26ad6f6279c"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -104,11 +94,11 @@
                                         <a asp-page="./Generate" asp-route-templateid="@template.Id">توليد</a>
                                     }
                                     <a asp-page="./Templates" asp-route-edit="@template.Id">تعديل</a>
-                                    <form method="post" asp-page-handler="Duplicate" style="display:inline">
+                                    <form method="post" asp-page-handler="Duplicate" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit">انشئ نسخة</button>
                                     </form>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" data-zyconfirm="حذف القالب؟ الوثائق الصادرة تبقى.">حذف</button>
                                     </form>
@@ -207,7 +197,7 @@
                         <input asp-for="StampUpload" type="file" accept=".png,.jpg,.jpeg,.webp" />
                         @if (!string.IsNullOrWhiteSpace(Model.CurrentStampName))
                         {
-                            <span style="font-size:.75rem">الحالي: @Model.CurrentStampName — اتركه فارغاً للإبقاء عليه.</span>
+                            <span class="zyu-a0ba227f24b5">الحالي: @Model.CurrentStampName — اتركه فارغاً للإبقاء عليه.</span>
                         }
                     </label>
                 </div>
@@ -215,7 +205,7 @@
 
             @if (Model.UnknownTokens.Count > 0)
             {
-                <p class="zyc-summary" style="border-inline-start-color:var(--zy-warning)">
+                <p class="zyc-summary zyu-bc6a54692fba">
                     ⚠ رموز غير معروفة ستظهر كما هي بالوثيقة: <b>@string.Join("، ", Model.UnknownTokens)</b>
                 </p>
             }
@@ -288,9 +278,9 @@
                 <button type="submit">حفظ القالب</button>
                 @if (Model.TemplateId > 0)
                 {
-                    <a class="zyp-move" asp-page="./Generate" asp-route-templateid="@Model.TemplateId" style="padding:8px 14px">توليد ←</a>
+                    <a class="zyp-move zyu-e3da42537cb5" asp-page="./Generate" asp-route-templateid="@Model.TemplateId">توليد ←</a>
                 }
-                <a class="zyp-move" asp-page="./Templates" style="padding:8px 14px">إلغاء</a>
+                <a class="zyp-move zyu-e3da42537cb5" asp-page="./Templates">إلغاء</a>
             </footer>
         </form>
     }

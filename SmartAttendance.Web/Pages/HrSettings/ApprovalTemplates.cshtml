@@ -18,44 +18,17 @@
         Watchers = t.Watchers.Select(w => w.UserName)
     }));
 }
+<link rel="stylesheet" href="~/css/pages/approvaltemplates-892507660a.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 
-<style>
-    .apt-layout { display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
-    @@media (max-width: 900px) { .apt-layout { grid-template-columns: 1fr; } }
-    .apt-catalog h3 { font-size: 12px; color: var(--nxr-muted, #9FB0BE); margin: 12px 4px 6px; }
-    .apt-catalog a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; color: var(--nxr-text, #E6EAEE); text-decoration: none; font-size: 13px; font-weight: 800; }
-    .apt-catalog a:hover { background: rgba(18,217,227,.06); }
-    .apt-catalog a.active { background: rgba(18,217,227,.12); color: #12D9E3; }
-    .apt-count { font-size: 11px; opacity: .75; background: rgba(157,184,204,.14); border-radius: 999px; padding: 1px 8px; }
-    .apt-row { cursor: grab; }
-    .apt-row.apt-dragging { opacity: .4; }
-    .apt-chain { display: flex; flex-wrap: wrap; gap: 4px; }
-    .apt-chip { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: rgba(18,217,227,.09); border: 1px solid rgba(18,217,227,.2); }
-    .apt-slide { position: fixed; inset: 0 auto 0 0; width: min(560px, 96vw); transform: translateX(-100%); transition: transform .35s ease; background: linear-gradient(180deg, rgba(7,18,31,.99), rgba(5,13,23,.99)); border-inline-end: 1px solid rgba(18,217,227,.16); z-index: 1080; overflow-y: auto; padding: 18px; }
-    .apt-slide.open { transform: translateX(0); }
-    .apt-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1079; display: none; }
-    .apt-backdrop.open { display: block; }
-    .apt-slide h2 { margin: 0 0 12px; font-size: 17px; }
-    .apt-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .apt-form-grid .full { grid-column: 1 / -1; }
-    .apt-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-    .apt-step { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid rgba(157,184,204,.18); border-radius: 10px; font-size: 13px; font-weight: 800; }
-    .apt-step .num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,217,227,.12); color: #12D9E3; font-size: 12px; flex: none; }
-    .apt-step button { margin-inline-start: auto; background: none; border: 0; color: #f87171; cursor: pointer; font-weight: 900; }
-    .apt-matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .apt-matrix th, .apt-matrix td { border: 1px solid rgba(157,184,204,.16); padding: 6px 8px; text-align: center; }
-    .apt-sim { margin-top: 14px; }
-    .apt-sim-result { margin-top: 8px; font-size: 13px; font-weight: 800; }
-</style>
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>قوالب الموافقات</h1>
     </header>
-    <form method="get" class="nxhs-panel" style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+    <form method="get" class="nxhs-panel zyu-89ef3b666a67">
         <input type="hidden" name="Type" value="@Model.Type" />
         <label>الشركة</label>
         <select name="CompanyId" onchange="this.form.submit()" required>
@@ -114,20 +87,20 @@
         <section class="nxhs-panel">
             <header class="nxhs-search-head">
                 <h2>قوالب «@Model.SelectedType?.Label»</h2>
-                <button type="button" class="nxhs-modal-delete" style="background:#0e7490" onclick="aptOpen(0)">+ قالب جديد</button>
+                <button type="button" class="nxhs-modal-delete zyu-a5a382098f38" onclick="aptOpen(0)">+ قالب جديد</button>
             </header>
             <p class="nxhs-helper">اسحب الصفوف لترتيب أولوية التنفيذ — المحرك يختار أول قالب نشط تنطبق شروطه.</p>
 
             <div class="nxhs-table-wrap">
                 <table class="nxhs-table">
                     <thead>
-                        <tr><th style="width:34px"></th><th>اسم القالب</th><th>لجنة الموافقة</th><th>لديه شروط</th><th>الحالة</th><th>الإجراء</th></tr>
+                        <tr><th class="zyu-d12729b3d536"></th><th>اسم القالب</th><th>لجنة الموافقة</th><th>لديه شروط</th><th>الحالة</th><th>الإجراء</th></tr>
                     </thead>
                     <tbody id="aptRows">
                         @foreach (var template in Model.Templates)
                         {
                             <tr class="apt-row" draggable="true" data-id="@template.Id">
-                                <td style="cursor:grab">⠿</td>
+                                <td class="zyu-8c2b27bd4e3a">⠿</td>
                                 <td><b>@template.Name</b></td>
                                 <td>
                                     <span class="apt-chain">
@@ -139,9 +112,9 @@
                                 </td>
                                 <td>@(template.HasConditions ? "نعم" : "—")</td>
                                 <td>@(template.IsActive ? "نشط" : "متوقف")</td>
-                                <td style="white-space:nowrap">
+                                <td class="zyu-eb99a4c193ed">
                                     <button type="button" class="nxhs-modal-cancel" onclick="aptOpen(@template.Id)">تعديل</button>
-                                    <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" style="display:inline"
+                                    <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" class="zyu-6b8b63d565c4"
                                           data-zyconfirm="حذف القالب «@template.Name»؟">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" class="nxhs-delete-trigger">حذف</button>
@@ -151,16 +124,16 @@
                         }
                         @if (!Model.Templates.Any())
                         {
-                            <tr><td colspan="6" style="text-align:center;opacity:.7">لا قوالب لهذا النوع — الطلبات تتبع المسار الافتراضي (المدير المباشر ثم HR).</td></tr>
+                            <tr><td colspan="6" class="zyu-cbea9300f185">لا قوالب لهذا النوع — الطلبات تتبع المسار الافتراضي (المدير المباشر ثم HR).</td></tr>
                         }
                     </tbody>
                 </table>
             </div>
 
             <div class="apt-sim">
-                <h3 style="font-size:13px;margin:0 0 6px">محاكاة: أي قالب ينطبق؟</h3>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <input id="aptSimEmp" type="number" min="1" placeholder="رقم الموظف (Id)" style="max-width:180px" />
+                <h3 class="zyu-43af29035fa2">محاكاة: أي قالب ينطبق؟</h3>
+                <div class="zyu-39c68df36fcc">
+                    <input id="aptSimEmp" type="number" min="1" placeholder="رقم الموظف (Id)" class="zyu-ce4214af0040" />
                     <button type="button" class="nxhs-modal-cancel" onclick="aptSimulate()">فحص</button>
                 </div>
                 <div id="aptSimResult" class="apt-sim-result"></div>
@@ -184,7 +157,7 @@
                 <label class="nxhs-check-line"><input type="checkbox" name="HasConditions" id="f_HasConditions" value="true" onchange="aptToggleConds()" /> <b>تطبيق اعتماداً على شروط</b></label>
             </div>
 
-            <div id="aptConds" class="apt-form-grid" style="display:none;margin-top:8px">
+            <div id="aptConds" class="apt-form-grid zyu-5990b6d255a8">
                 <label>الفرع
                     <select name="CondBranchId" id="f_CondBranchId">
                         <option value="">أي فرع</option>
@@ -205,20 +178,20 @@
                 </label>
             </div>
 
-            <h3 style="font-size:13px;margin:14px 0 4px">لجنة الموافقة (بالترتيب)</h3>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <h3 class="zyu-6ace034d1de1">لجنة الموافقة (بالترتيب)</h3>
+            <div class="zyu-a66c33606303">
                 <select id="aptStepType" onchange="aptStepTypeChanged()">
                     <option value="DirectManager">المدير المباشر</option>
                     <option value="Role">دور</option>
                     <option value="User">مستخدم محدد</option>
                 </select>
-                <select id="aptStepRole" style="display:none">
+                <select id="aptStepRole" class="zyu-6aa34d7432e7">
                     <option value="HR Manager">HR Manager</option>
                     <option value="HR Officer">HR Officer</option>
                     <option value="Branch Manager">Branch Manager</option>
                     <option value="Admin">Admin</option>
                 </select>
-                <select id="aptStepUser" style="display:none">
+                <select id="aptStepUser" class="zyu-6aa34d7432e7">
                     @foreach (var user in Model.Users) { <option value="@user">@user</option> }
                 </select>
                 <button type="button" class="nxhs-modal-cancel" onclick="aptAddStep()">+ إضافة خطوة</button>
@@ -226,12 +199,12 @@
             </div>
             <div class="apt-steps" id="aptSteps"></div>
 
-            <h3 style="font-size:13px;margin:14px 0 4px">مشاهدون (بلا صلاحية قرار — يستلمون جميع أحداث الطلب)</h3>
-            <select name="Watchers" id="f_Watchers" multiple size="4" style="width:100%">
+            <h3 class="zyu-6ace034d1de1">مشاهدون (بلا صلاحية قرار — يستلمون جميع أحداث الطلب)</h3>
+            <select name="Watchers" id="f_Watchers" multiple size="4" class="zyu-b7aa1ec0049d">
                 @foreach (var user in Model.Users) { <option value="@user">@user</option> }
             </select>
 
-            <h3 style="font-size:13px;margin:14px 0 4px">مصفوفة الإشعارات الإضافية للقالب</h3>
+            <h3 class="zyu-6ace034d1de1">مصفوفة الإشعارات الإضافية للقالب</h3>
             <table class="apt-matrix">
                 <thead><tr><th></th><th>عند الطلب</th><th>الموافقة</th><th>الرفض</th><th>الإلغاء</th></tr></thead>
                 <tbody>
@@ -248,7 +221,7 @@
                 </tbody>
             </table>
 
-            <h3 style="font-size:13px;margin:14px 0 4px">التصعيد وقواعد الطلب</h3>
+            <h3 class="zyu-6ace034d1de1">التصعيد وقواعد الطلب</h3>
             <div class="apt-form-grid">
                 <label>تذكير بعد (ساعات)
                     <input type="number" name="ReminderHours" id="f_ReminderHours" min="1" />
@@ -283,7 +256,7 @@
                 <label class="nxhs-check-line"><input type="checkbox" name="AttachReq" id="f_AttachReq" value="true" /> <b>المرفق مطلوب عند تقديم الطلب</b></label>
             </div>
 
-            <footer class="nxhs-actions" style="margin-top:16px">
+            <footer class="nxhs-actions zyu-92c18f6bdac1">
                 <button type="submit">حفظ القالب</button>
                 <button type="button" class="nxhs-modal-cancel" onclick="aptClose()">إلغاء</button>
             </footer>

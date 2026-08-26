@@ -1,0 +1,15 @@
+/* Source: Pages/HrSettings/FieldControl.cshtml */
+.fcs-row { display: grid; grid-template-columns: 26px 1fr 170px 90px 90px; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--zy-migrated-color-9a7d0dcfc0); border-radius: 12px; margin-bottom: 6px; background: var(--zy-migrated-color-3b1d5b2218); }
+    .fcs-row.fcs-dragging { opacity: .4; }
+    .fcs-row.fcs-hidden-row { opacity: .55; }
+    .fcs-grip { cursor: grab; opacity: .6; user-select: none; text-align: center; }
+    .fcs-name b { display: block; font-size: 13px; }
+    .fcs-name small { opacity: .6; font-size: 11px; }
+    .fcs-row input[type="text"] { min-height: 32px; border-radius: 8px; border: 1px solid var(--zy-migrated-color-e055f23dc3); background: var(--zy-migrated-color-18a22573f7); color: inherit; padding: 4px 10px; font-size: 12px; width: 100%; }
+    .fcs-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; justify-content: center; }
+    .fcs-head { display: grid; grid-template-columns: 26px 1fr 170px 90px 90px; gap: 10px; padding: 4px 10px; font-size: 11px; opacity: .65; font-weight: 900; }
+    .fcs-lock { color: var(--zy-warning); }
+
+/* Static inline utilities migrated from Pages/HrSettings/FieldControl.cshtml */
+
+.zyu-474799ee2243 { color:var(--zy-primary); }

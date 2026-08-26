@@ -12,15 +12,8 @@ namespace SmartAttendance.Tests;
 /// </summary>
 public class PayrollSettingsUiTests
 {
-    private static string Page()
-    {
-        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
-            dir = dir.Parent;
-        Assert.NotNull(dir);
-        return File.ReadAllText(Path.Combine(
-            dir!.FullName, "SmartAttendance.Web", "Pages", "Payroll", "Settings.cshtml"));
-    }
+    private static string Page() =>
+        RazorPageAssetReader.ReadWithLinkedPageCss("Payroll", "Settings.cshtml");
 
     [Fact]
     public void HoursMode_Copy_UsesConfiguredHours_NotHardcodedEight()

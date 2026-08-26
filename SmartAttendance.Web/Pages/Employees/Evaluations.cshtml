@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "متابعة تقييمات";
 }
+<link rel="stylesheet" href="~/css/pages/evaluations-8ad13722e3.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -69,7 +70,7 @@
     </form>
 
     <div class="nxhs-panel">
-        <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <form method="get" class="zyu-a387e41d9e7f">
             <input type="search" name="Search" value="@Model.Search" placeholder="بحث بالاسم أو الرقم" />
             <select name="Year">
                 <option value="">كل السنوات</option>
@@ -81,7 +82,7 @@
             <button type="submit">بحث</button>
         </form>
 
-        <table class="zyp-table" style="width:100%">
+        <table class="zyp-table zyu-b7aa1ec0049d">
             <thead>
                 <tr>
                     <th>الرقم</th>
@@ -108,7 +109,7 @@
                             <a href="/Employees/Profile?id=@row.EmployeeId">@row.EmployeeName</a>
                             @if (!string.IsNullOrWhiteSpace(row.Position))
                             {
-                                <small style="display:block;color:#64748b">@row.Position</small>
+                                <small class="zyu-9e559b14992f">@row.Position</small>
                             }
                         </td>
                         <td>@row.EvalYear</td>
@@ -119,10 +120,10 @@
                         <td>@row.Source</td>
                         <td>
                             <form method="post" asp-page-handler="Delete" asp-route-id="@row.Id"
-                                  data-zyconfirm="حذف نتيجة التقييم هذه؟" style="display:inline">
+                                  data-zyconfirm="حذف نتيجة التقييم هذه؟" class="zyu-6b8b63d565c4">
                                 <input type="hidden" name="Search" value="@Model.Search" />
                                 <input type="hidden" name="Year" value="@Model.Year" />
-                                <button type="submit" class="zyp-link-danger" style="background:none;border:none;color:#b42318;cursor:pointer">حذف</button>
+                                <button type="submit" class="zyp-link-danger zyu-452da5e9fc75">حذف</button>
                             </form>
                         </td>
                     </tr>

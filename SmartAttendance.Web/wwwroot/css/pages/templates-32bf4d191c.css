@@ -1,0 +1,24 @@
+/* Source: Pages/Documents/Templates.cshtml */
+.zydoc-editor { width:100%; min-height:320px; padding:14px; line-height:1.9; font-size:.9375rem;
+        border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        background:var(--zy-input,var(--zy-surface)); color:var(--zy-text); font-family:inherit; }
+    .zydoc-tokens { display:flex; flex-wrap:wrap; gap:6px; max-height:230px; overflow:auto;
+        border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm); padding:10px; }
+    .zydoc-token { border:1px solid var(--zy-border); background:var(--zy-surface); color:var(--zy-text);
+        border-radius:999px; padding:3px 10px; font-size:.75rem; cursor:pointer; font-family:inherit; }
+    .zydoc-token:hover { border-color:var(--zy-electric-teal); color:var(--zy-electric-teal); }
+    .zydoc-cat { width:100%; font-size:.6875rem; font-weight:700; color:var(--zy-text-muted); margin-top:6px; }
+
+/* Static inline utilities migrated from Pages/Documents/Templates.cshtml */
+
+.zyu-2d1bdd415249 { justify-content:flex-start;flex-wrap:wrap; }
+
+.zyu-b26ad6f6279c { width:210px; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-a0ba227f24b5 { font-size:.75rem; }
+
+.zyu-bc6a54692fba { border-inline-start-color:var(--zy-warning); }
+
+.zyu-e3da42537cb5 { padding:8px 14px; }

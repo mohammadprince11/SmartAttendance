@@ -17,21 +17,10 @@
         .ToList();
     var groups = ordered.GroupBy(x => x.Def.Group);
 }
+<link rel="stylesheet" href="~/css/pages/fieldcontrol-698dd9da11.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 
-<style>
-    .fcs-row { display: grid; grid-template-columns: 26px 1fr 170px 90px 90px; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid rgba(157,184,204,.14); border-radius: 12px; margin-bottom: 6px; background: rgba(255,255,255,.02); }
-    .fcs-row.fcs-dragging { opacity: .4; }
-    .fcs-row.fcs-hidden-row { opacity: .55; }
-    .fcs-grip { cursor: grab; opacity: .6; user-select: none; text-align: center; }
-    .fcs-name b { display: block; font-size: 13px; }
-    .fcs-name small { opacity: .6; font-size: 11px; }
-    .fcs-row input[type="text"] { min-height: 32px; border-radius: 8px; border: 1px solid rgba(157,184,204,.25); background: rgba(0,0,0,.2); color: inherit; padding: 4px 10px; font-size: 12px; width: 100%; }
-    .fcs-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; justify-content: center; }
-    .fcs-head { display: grid; grid-template-columns: 26px 1fr 170px 90px 90px; gap: 10px; padding: 4px 10px; font-size: 11px; opacity: .65; font-weight: 900; }
-    .fcs-lock { color: #facc15; }
-</style>
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
@@ -48,7 +37,7 @@
         <p class="nxhs-helper">
             تحكّم كامل بحقول شاشتي إنشاء وتعديل الموظف: اسحب ⠿ لإعادة الترتيب داخل المجموعة، أخفِ أي حقل، غيّر تسميته، وحدّد الإلزامي.
             الحقول الجوهرية 🔒 تبقى ظاهرة وإلزامية. لإضافة حقول جديدة كلياً استخدم
-            <a href="/EmployeeProfileSettings" style="color:#12D9E3">باني حقول ملف الموظف</a>.
+            <a href="/EmployeeProfileSettings" class="zyu-474799ee2243">باني حقول ملف الموظف</a>.
         </p>
 
         @foreach (var group in groups)

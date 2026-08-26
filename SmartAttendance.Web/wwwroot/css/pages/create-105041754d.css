@@ -1,0 +1,786 @@
+/* Source: Pages/Employees/Create.cshtml */
+.nxr-page.nxr-create-clean-page,
+    .nxr-form.nxr-create-clean-form,
+    #employee-create-form {
+        max-width: 1400px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+    .nxr-card.nxr-form-section {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_START */
+    .nxr-page.nxr-create-clean-page {
+        display: grid !important;
+        gap: 16px !important;
+        max-width: 1400px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+
+    .nxr-create-clean-header,
+    .nxr-card.nxr-form-section,
+    .nxr-create-submit-bar {
+        border: 1px solid var(--zy-migrated-color-4a42b57ca2) !important;
+        border-radius: 24px !important;
+        background:
+            radial-gradient(circle at 92% 8%, var(--zy-migrated-color-2228375fca), transparent 34%),
+            linear-gradient(180deg, var(--zy-migrated-color-524a2083e6), var(--zy-migrated-color-b4366c80fe)) !important;
+        box-shadow: inset 0 0 0 1px var(--zy-migrated-color-99cc84676c) !important;
+    }
+
+    .nxr-create-clean-header {
+        padding: 18px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 16px !important;
+        align-items: center !important;
+        margin-bottom: 0 !important;
+    }
+
+    .nxr-create-clean-header .nxr-brand-mini,
+    .nxr-create-section .nxr-chip {
+        display: inline-flex !important;
+        align-items: center !important;
+        min-height: 27px !important;
+        padding: 4px 10px !important;
+        border-radius: 999px !important;
+        border: 1px solid var(--zy-migrated-color-c5db09a627) !important;
+        background: var(--zy-migrated-color-0682eb53ec) !important;
+        color: var(--zy-migrated-color-32e033388a) !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        letter-spacing: .02em !important;
+    }
+
+    .nxr-create-clean-header .nxr-title h1 {
+        margin: 8px 0 6px !important;
+        color: var(--zy-migrated-color-46461f86fd) !important;
+        font-size: clamp(24px, 3vw, 34px) !important;
+        line-height: 1.2 !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-clean-header .nxr-title p,
+    .nxr-create-section .nxr-section-title p {
+        margin: 0 !important;
+        color: var(--zy-migrated-color-55b3825b41) !important;
+        line-height: 1.75 !important;
+    }
+
+    .nxr-create-section {
+        padding: 18px !important;
+        margin: 0 !important;
+    }
+
+    .nxr-create-section .nxr-section-title {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 14px !important;
+        margin: 0 0 16px !important;
+        padding: 0 0 14px !important;
+        border-bottom: 1px solid var(--zy-migrated-color-0876f58944) !important;
+    }
+
+    .nxr-create-section .nxr-section-title h2 {
+        margin: 6px 0 4px !important;
+        color: var(--zy-migrated-color-46461f86fd) !important;
+        font-size: 20px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-form.nxr-create-clean-form {
+        display: grid !important;
+        gap: 16px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .nxr-form-grid.nxr-create-grid,
+    .nxr-form-grid.nxr-create-grid.two {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+        align-items: start !important;
+    }
+
+    .nxr-create-grid .wide,
+    .nxr-create-grid .nxr-field.wide {
+        grid-column: span 2 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field {
+        display: grid !important;
+        gap: 7px !important;
+    }
+
+    .nxr-create-clean-form .nxr-field label {
+        color: var(--zy-migrated-color-e71ecf8e31) !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input,
+    .nxr-create-clean-form .nxr-field select,
+    .nxr-create-clean-form .nxr-field textarea,
+    .nxr-create-clean-form .nxr-native-select {
+        min-height: 46px !important;
+        width: 100% !important;
+        border-radius: 16px !important;
+        border: 1px solid var(--zy-migrated-color-187012e9ff) !important;
+        background: var(--zy-migrated-color-a1439e5326) !important;
+        color: var(--zy-migrated-color-46461f86fd) !important;
+        padding: 10px 12px !important;
+        outline: none !important;
+        box-shadow: inset 0 0 0 1px var(--zy-migrated-color-bb50cd6943) !important;
+        box-sizing: border-box !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input:focus,
+    .nxr-create-clean-form .nxr-field select:focus,
+    .nxr-create-clean-form .nxr-field textarea:focus {
+        border-color: var(--zy-migrated-color-74364af511) !important;
+        box-shadow:
+            0 0 0 3px var(--zy-migrated-color-8a968736b9),
+            inset 0 0 0 1px var(--zy-migrated-color-99cc84676c) !important;
+    }
+
+    .nxr-create-clean-form .text-danger,
+    .nxr-create-clean-form [data-valmsg-for] {
+        min-height: 16px !important;
+        color: var(--zy-migrated-color-42705fa9a6) !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+    }
+
+    .nxr-actions,
+    .nxr-create-submit-bar {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 10px !important;
+    }
+
+    .nxr-create-submit-bar {
+        padding: 14px 18px !important;
+    }
+
+    .nxr-btn {
+        min-height: 42px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        padding: 10px 16px !important;
+        border-radius: 999px !important;
+        border: 1px solid var(--zy-migrated-color-67f8b39c02) !important;
+        background: var(--zy-migrated-color-d75a957e33) !important;
+        color: var(--zy-migrated-color-3b313dfb66) !important;
+        font-weight: 950 !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+    }
+
+    .nxr-btn.primary {
+        border-color: var(--zy-migrated-color-023edaacf5) !important;
+        background: linear-gradient(135deg, var(--zy-migrated-color-3585fc18ae), var(--zy-migrated-color-32e033388a)) !important;
+        color: var(--zy-migrated-color-a5c680c348) !important;
+        box-shadow: 0 14px 30px var(--zy-migrated-color-4edd11b73a) !important;
+    }
+
+    .nxr-doc-clean-box,
+    .nxr-selected-documents {
+        border-radius: 20px !important;
+        border-color: var(--zy-migrated-color-3c916bb0d4) !important;
+        background: var(--zy-migrated-color-d022278f9a) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-header,
+    html[data-theme="light"] .nxr-card.nxr-form-section,
+    html[data-theme="light"] .nxr-create-submit-bar {
+        background: var(--zy-white) !important;
+        border-color: var(--zy-migrated-color-97c9d15e51) !important;
+        box-shadow: 0 16px 40px var(--zy-migrated-color-c2e70d3202) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-header .nxr-title h1,
+    html[data-theme="light"] .nxr-create-section .nxr-section-title h2 {
+        color: var(--zy-migrated-color-7a0b518f48) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-header .nxr-title p,
+    html[data-theme="light"] .nxr-create-section .nxr-section-title p {
+        color: var(--zy-migrated-color-a844c54f03) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field label {
+        color: var(--zy-migrated-color-9f034e1f1a) !important;
+    }
+
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field input,
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field select,
+    html[data-theme="light"] .nxr-create-clean-form .nxr-field textarea,
+    html[data-theme="light"] .nxr-create-clean-form .nxr-native-select {
+        background: var(--zy-white) !important;
+        color: var(--zy-migrated-color-7a0b518f48) !important;
+        border-color: var(--zy-migrated-color-97c9d15e51) !important;
+    }
+
+    @media (max-width: 980px) {
+        .nxr-create-clean-header {
+            align-items: stretch !important;
+            flex-direction: column !important;
+        }
+
+        .nxr-actions,
+        .nxr-create-submit-bar {
+            justify-content: stretch !important;
+            flex-direction: column !important;
+        }
+
+        .nxr-actions .nxr-btn,
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+        }
+
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-grid .wide,
+        .nxr-create-grid .nxr-field.wide {
+            grid-column: auto !important;
+        }
+    }
+    /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_END */
+
+    /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_START */
+    .nxr-page.nxr-create-clean-page {
+        max-width: 1240px !important;
+        margin-inline: auto !important;
+        display: grid !important;
+        gap: 18px !important;
+    }
+
+    .nxr-form.nxr-create-clean-form,
+    #employee-create-form {
+        max-width: 1240px !important;
+        display: grid !important;
+        gap: 18px !important;
+    }
+
+    .nxr-create-clean-header,
+    .nxr-card.nxr-form-section,
+    .nxr-create-submit-bar {
+        border-radius: 24px !important;
+        border: 1px solid var(--zy-migrated-color-2381989c5c) !important;
+        background:
+            radial-gradient(circle at 100% 0, var(--zy-migrated-color-dafbb1c76c), transparent 34%),
+            linear-gradient(135deg, var(--zy-migrated-color-920e398e2c), var(--zy-migrated-color-a1861f9454)) !important;
+        box-shadow: 0 24px 70px var(--zy-migrated-color-5111224827) !important;
+    }
+
+    .nxr-create-clean-header {
+        padding: 22px 24px !important;
+        align-items: center !important;
+    }
+
+    .nxr-create-clean-header .nxr-title h1 {
+        margin: 8px 0 6px !important;
+        color: var(--zy-migrated-color-e3bd7c5072) !important;
+        font-size: clamp(28px, 3vw, 42px) !important;
+        line-height: 1.15 !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-clean-header .nxr-title p {
+        color: var(--zy-migrated-color-008999b676) !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-create-section {
+        padding: 22px !important;
+        overflow: visible !important;
+    }
+
+    .nxr-create-section .nxr-section-title {
+        margin: 0 0 18px !important;
+        padding-bottom: 14px !important;
+        border-bottom: 1px solid var(--zy-migrated-color-d5c29894b3) !important;
+        align-items: center !important;
+    }
+
+    .nxr-create-section .nxr-section-title h2 {
+        margin: 6px 0 4px !important;
+        color: var(--zy-migrated-color-e3bd7c5072) !important;
+        font-size: 26px !important;
+        line-height: 1.2 !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-section .nxr-section-title p {
+        color: var(--zy-migrated-color-ff8922b542) !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-create-clean-header .nxr-brand-mini,
+    .nxr-create-section .nxr-chip {
+        min-height: 29px !important;
+        border-color: var(--zy-migrated-color-4de48ad65c) !important;
+        background: var(--zy-migrated-color-ef30ff5b7b) !important;
+        color: var(--zy-migrated-color-dda8a6c749) !important;
+        font-weight: 1000 !important;
+        letter-spacing: .04em !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-upload-wrap {
+        display: grid !important;
+        grid-template-columns: 118px minmax(0, 1fr) !important;
+        gap: 16px !important;
+        align-items: center !important;
+        padding: 14px !important;
+        border: 1px solid var(--zy-migrated-color-cbebfcf5a2) !important;
+        border-radius: 20px !important;
+        background: var(--zy-migrated-color-9f14bac2d4) !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-drop {
+        width: 118px !important;
+        height: 118px !important;
+        border-radius: 22px !important;
+        border: 1px dashed var(--zy-migrated-color-26b1dcdc13) !important;
+        overflow: hidden !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-preview {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-hint {
+        display: grid !important;
+        gap: 6px !important;
+        align-content: center !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-hint strong {
+        color: var(--zy-migrated-color-e3bd7c5072) !important;
+        font-size: 17px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-photo-upload-card .nxr-photo-hint span,
+    .nxr-photo-upload-card .nxr-photo-hint small {
+        color: var(--zy-migrated-color-58567b35f7) !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-form-grid.nxr-create-grid,
+    .nxr-form-grid.nxr-create-grid.two {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+        align-items: start !important;
+    }
+
+    .nxr-create-grid .wide,
+    .nxr-create-grid .nxr-field.wide {
+        grid-column: span 2 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field {
+        min-width: 0 !important;
+        display: grid !important;
+        gap: 8px !important;
+    }
+
+    .nxr-create-clean-form .nxr-field label {
+        color: var(--zy-migrated-color-dda8a6c749) !important;
+        font-size: 13px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-create-clean-form .nxr-field input,
+    .nxr-create-clean-form .nxr-field select,
+    .nxr-create-clean-form .nxr-field textarea,
+    .nxr-create-clean-form .nxr-native-select,
+    .nxr-create-clean-form .nxos__button {
+        width: 100% !important;
+        min-height: 50px !important;
+        border-radius: 16px !important;
+        border: 1px solid var(--zy-migrated-color-2381989c5c) !important;
+        background: var(--zy-migrated-color-d7c600a620) !important;
+        color: var(--zy-migrated-color-e3bd7c5072) !important;
+        font-weight: 950 !important;
+        box-shadow: inset 0 1px 0 var(--zy-migrated-color-b8ca2cb231) !important;
+    }
+
+    .nxr-create-clean-form .nxr-field textarea {
+        min-height: 112px !important;
+        resize: vertical !important;
+    }
+
+
+    .nxr-create-clean-form .nxr-field input:focus,
+    .nxr-create-clean-form .nxr-field select:focus,
+    .nxr-create-clean-form .nxr-field textarea:focus,
+    .nxr-create-clean-form .nxos__button:focus {
+        outline: none !important;
+        border-color: var(--zy-migrated-color-4a64aa0b40) !important;
+        box-shadow: 0 0 0 4px var(--zy-migrated-color-dafbb1c76c) !important;
+    }
+
+    .nxr-create-dynamic-profile-section {
+        border-color: var(--zy-migrated-color-a98b89d818) !important;
+        background:
+            radial-gradient(circle at 100% 0, var(--zy-migrated-color-a5f848e8d5), transparent 34%),
+            linear-gradient(135deg, var(--zy-migrated-color-920e398e2c), var(--zy-migrated-color-a1861f9454)) !important;
+    }
+
+    .nxr-create-dynamic-profile-groups {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+    }
+
+    .nxr-create-dynamic-profile-group {
+        min-width: 0 !important;
+        padding: 16px !important;
+        border-radius: 20px !important;
+        border: 1px solid var(--zy-migrated-color-b9678111e3) !important;
+        background:
+            linear-gradient(135deg, var(--zy-migrated-color-780b2f1111), var(--zy-migrated-color-4eb0860250)) !important;
+    }
+
+    .nxr-create-dynamic-profile-group .nxr-form-grid.nxr-create-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+
+    .nxr-create-dynamic-profile-group .nxr-field.wide {
+        grid-column: 1 / -1 !important;
+    }
+
+    .nxr-documents-section .nxr-doc-clean-box {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 16px !important;
+        padding: 16px !important;
+        border-radius: 20px !important;
+        border: 1px solid var(--zy-migrated-color-b9678111e3) !important;
+        background: var(--zy-migrated-color-558be79d2e) !important;
+    }
+
+    .nxr-documents-section .nxr-doc-clean-box strong {
+        color: var(--zy-migrated-color-e3bd7c5072) !important;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-documents-section .nxr-doc-clean-box p,
+    .nxr-selected-documents {
+        color: var(--zy-migrated-color-58567b35f7) !important;
+        font-weight: 850 !important;
+    }
+
+    .nxr-selected-documents {
+        margin-top: 12px !important;
+        min-height: 48px !important;
+        padding: 14px !important;
+        border-radius: 18px !important;
+        border: 1px dashed var(--zy-migrated-color-2381989c5c) !important;
+        background: var(--zy-migrated-color-33f07e261a) !important;
+    }
+
+    .nxr-create-submit-bar {
+        padding: 16px !important;
+        justify-content: flex-start !important;
+        gap: 12px !important;
+    }
+
+    .nxr-btn {
+        min-height: 48px !important;
+        min-width: 148px !important;
+        border-radius: 16px !important;
+        font-weight: 1000 !important;
+    }
+
+    .nxr-btn.primary {
+        background: linear-gradient(135deg, var(--zy-migrated-color-24dade9512), var(--zy-migrated-color-03b91d26b5)) !important;
+        color: var(--zy-migrated-color-417a6f4ce5) !important;
+        border-color: var(--zy-migrated-color-7064714968) !important;
+        box-shadow: 0 16px 34px var(--zy-migrated-color-3c916bb0d4) !important;
+    }
+
+    @media (max-width: 1200px) {
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .nxr-create-dynamic-profile-groups {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .nxr-create-clean-header,
+        .nxr-documents-section .nxr-doc-clean-box {
+            display: grid !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-upload-wrap,
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two,
+        .nxr-create-dynamic-profile-group .nxr-form-grid.nxr-create-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-grid .wide,
+        .nxr-create-grid .nxr-field.wide {
+            grid-column: auto !important;
+        }
+
+        .nxr-actions,
+        .nxr-create-submit-bar {
+            justify-content: stretch !important;
+            flex-direction: column !important;
+        }
+
+        .nxr-actions .nxr-btn,
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+        }
+    }
+    /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_END */
+
+    /* NEXORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_START */
+    .nxr-page.nxr-create-clean-page {
+        width: min(100%, 1240px) !important;
+        min-width: 0 !important;
+        max-width: 1240px !important;
+        container-type: inline-size !important;
+        container-name: employee-create !important;
+    }
+
+    /* ⚠️ الاستثناء ليس تجميلاً: `*` هنا يفرض `min-width:0` على **كل** سليل،
+       ومنه لوحة الكلاندر المنسدلة — فتنكمش من 292px إلى عرض حقلها (قيس حيّاً:
+       253px بهذه الصفحة وحدها من بين 31 صفحة). اللوحة تُلحَق داخل `.nxcal`
+       فتصطادها القاعدة. */
+    .nxr-create-clean-page *:not(.nxcal__panel),
+    .nxr-create-clean-form,
+    .nxr-create-clean-header,
+    .nxr-create-section,
+    .nxr-form-grid.nxr-create-grid,
+    .nxr-photo-upload-wrap,
+    .nxr-create-dynamic-profile-groups,
+    .nxr-create-dynamic-profile-group,
+    .nxr-doc-clean-box {
+        min-width: 0 !important;
+        max-width: 100%;
+        box-sizing: border-box !important;
+    }
+
+    .nxr-create-clean-header {
+        flex-wrap: wrap !important;
+    }
+
+    .nxr-create-clean-header .nxr-title {
+        flex: 1 1 520px !important;
+        min-width: 0 !important;
+    }
+
+    .nxr-create-clean-header .nxr-actions {
+        flex: 0 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    .nxr-create-clean-form input,
+    .nxr-create-clean-form select,
+    .nxr-create-clean-form textarea,
+    .nxr-create-clean-form .nxr-native-select,
+    .nxr-create-clean-form .nxos__button {
+        max-width: 100% !important;
+    }
+
+    .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+    .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+
+    @container employee-create (max-width: 1080px) {
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two,
+        .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+        .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .nxr-create-dynamic-profile-groups {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-clean-header .nxr-title {
+            flex-basis: 420px !important;
+        }
+    }
+
+    @container employee-create (max-width: 760px) {
+        .nxr-create-clean-header,
+        .nxr-documents-section .nxr-doc-clean-box {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            align-items: stretch !important;
+        }
+
+        .nxr-create-clean-header .nxr-title,
+        .nxr-create-clean-header .nxr-actions {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+        }
+
+        .nxr-create-clean-header .nxr-actions {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-upload-wrap,
+        .nxr-form-grid.nxr-create-grid,
+        .nxr-form-grid.nxr-create-grid.two,
+        .nxr-create-dynamic-profile-group .nxr-form-grid.nxr-create-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+        .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .nxr-create-grid .wide,
+        .nxr-create-grid .nxr-field.wide,
+        .nxr-create-dynamic-profile-group .nxr-field.wide {
+            grid-column: auto !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-upload-wrap {
+            justify-items: center !important;
+            text-align: center !important;
+        }
+
+        .nxr-photo-upload-card .nxr-photo-hint {
+            width: 100% !important;
+        }
+
+        .nxr-actions,
+        .nxr-create-submit-bar {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            justify-content: stretch !important;
+        }
+
+        .nxr-actions .nxr-btn,
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+    }
+
+    @container employee-create (max-width: 520px) {
+        .nxr-create-clean-header,
+        .nxr-create-section,
+        .nxr-create-submit-bar {
+            padding: 13px !important;
+            border-radius: 18px !important;
+        }
+
+        .nxr-create-clean-header .nxr-title h1 {
+            font-size: clamp(24px, 9vw, 32px) !important;
+        }
+
+        .nxr-create-section .nxr-section-title {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            align-items: stretch !important;
+        }
+
+        .nxr-create-section .nxr-section-title h2 {
+            font-size: 21px !important;
+        }
+    }
+        /* NEXORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_START */
+    /* Canonical end-of-form action bar, visible only at form end. */
+    #employee-create-form,
+    .nxr-form.nxr-create-clean-form {
+        padding-bottom: 24px !important;
+    }
+
+    .nxr-create-submit-bar {
+        position: static !important;
+        inset: auto !important;
+        inset-inline-start: auto !important;
+        inset-inline-end: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 72px !important;
+        margin: 18px 0 0 !important;
+        z-index: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        overflow: visible !important;
+    }
+
+    .nxr-create-submit-bar .nxr-btn {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 128px !important;
+        margin: 0 !important;
+    }
+
+    @container employee-create (max-width: 520px) {
+        .nxr-form-grid.nxr-create-grid.nxr-basic-grid,
+        .nxr-form-grid.nxr-create-grid.nxr-employment-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .nxr-create-submit-bar {
+            min-height: 0 !important;
+            padding: 12px !important;
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+        }
+
+        .nxr-create-submit-bar .nxr-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+    }
+
+    @container employee-create (max-width: 360px) {
+        .nxr-create-submit-bar {
+            grid-template-columns: 1fr !important;
+        }
+    }
+/* NEXORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_END */
+    /* NEXORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_END */
+
+/* Static inline utilities migrated from Pages/Employees/Create.cshtml */
+
+.zyu-fb3651e6581b { color:var(--zy-migrated-color-03b91d26b5);font-size:12px;font-weight:800; }
+
+.zyu-2bdf8e45fdfc { margin-top:18px; }
+
+.zyu-72c74d31a983 { display:flex;align-items:center;gap:8px;font-weight:700;margin-top:10px; }
+
+.zyu-48bcc8a38351 { width:auto;min-height:auto; }

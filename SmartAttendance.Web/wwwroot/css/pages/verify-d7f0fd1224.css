@@ -1,0 +1,24 @@
+/* Source: Pages/Verify.cshtml */
+body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+            background:var(--zy-bg,var(--zy-migrated-color-d85681a0f1)); color:var(--zy-text,var(--zy-migrated-color-94af6100bb));
+            font-family:var(--zy-font-ar, system-ui, sans-serif); padding:24px; }
+        .vf { width:100%; max-width:520px; background:var(--zy-surface,var(--zy-white));
+            border:1px solid var(--zy-border,var(--zy-migrated-color-29c33e91bb)); border-radius:16px; padding:32px;
+            box-shadow:var(--zy-shadow-md, 0 6px 24px var(--zy-migrated-color-bae00db0cd)); }
+        .vf h1 { margin:0 0 6px; font-size:1.25rem; }
+        .vf p.sub { margin:0 0 22px; font-size:.875rem; color:var(--zy-text-muted,var(--zy-migrated-color-5041f29df5)); line-height:1.7; }
+        .vf label { display:flex; flex-direction:column; gap:6px; font-size:.8125rem;
+            color:var(--zy-text-muted,var(--zy-migrated-color-5041f29df5)); margin-bottom:14px; }
+        .vf input { padding:11px 13px; border:1px solid var(--zy-border,var(--zy-migrated-color-29c33e91bb));
+            border-radius:8px; background:var(--zy-input,var(--zy-white)); color:inherit;
+            font-family:inherit; font-size:1rem; letter-spacing:.04em; }
+        .vf button { width:100%; border:0; border-radius:10px; padding:12px;
+            background:var(--zy-electric-teal,var(--zy-migrated-color-b3286b109e)); color:var(--zy-white); font-family:inherit;
+            font-size:.9375rem; font-weight:700; cursor:pointer; }
+        .res { border-radius:10px; padding:16px; margin-bottom:20px; font-size:.9375rem; line-height:1.8; }
+        .res.ok { background:var(--zy-success-soft, var(--zy-migrated-color-8b3eee7843)); border-inline-start:4px solid var(--zy-success,var(--zy-migrated-color-943dd81b79)); }
+        .res.no { background:var(--zy-danger-soft, var(--zy-migrated-color-baed47617a)); border-inline-start:4px solid var(--zy-danger,var(--zy-migrated-color-4276e92976)); }
+        .res dl { margin:12px 0 0; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:.875rem; }
+        .res dt { color:var(--zy-text-muted,var(--zy-migrated-color-5041f29df5)); }
+        .res dd { margin:0; font-weight:600; }
+        .note { font-size:.75rem; color:var(--zy-text-muted,var(--zy-migrated-color-5041f29df5)); margin-top:18px; line-height:1.7; }

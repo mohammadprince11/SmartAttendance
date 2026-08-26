@@ -1,0 +1,31 @@
+/* Source: Pages/Payroll/Simulator.cshtml */
+.sim-verdict { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:800; }
+    .sim-verdict.gap  { background:var(--zy-migrated-color-d31a6596ec);  color:var(--zy-migrated-color-13b406d84d); }
+    .sim-verdict.over { background:var(--zy-migrated-color-f56548dbdc);  color:var(--zy-migrated-color-59dbd12595); }
+    .sim-verdict.ok   { background:var(--zy-migrated-color-e4da2a72ff);  color:var(--zy-migrated-color-7d4ff8ff7b); }
+    .sim-verdict.none { background:var(--zy-migrated-color-cde173774a); color:var(--zy-migrated-color-833631aa32); }
+    .sim-kpi { display:flex; gap:12px; flex-wrap:wrap; margin:10px 0; }
+    .sim-kpi div { border:1px solid var(--zy-border,var(--zy-migrated-color-3b313dfb66)); border-radius:10px; padding:8px 14px; min-width:140px; }
+    .sim-kpi b { display:block; font-size:20px; }
+    .sim-items { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px; margin:8px 0; }
+    .sim-items label { display:flex; gap:6px; align-items:center; font-size:13px; }
+
+/* Static inline utilities migrated from Pages/Payroll/Simulator.cshtml */
+
+.zyu-acc22d4dbe8e { color:var(--zy-migrated-color-6b3d6d843d); }
+
+.zyu-6f67ae5b70ce { display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px; }
+
+.zyu-ffcb6e42ab67 { width:160px; }
+
+.zyu-7ecbd5b5991b { display:flex;gap:4px;align-items:center;margin:0; }
+
+.zyu-fdb0105499d1 { color:var(--zy-migrated-color-13b406d84d); }
+
+.zyu-d80273a5ade9 { color:var(--zy-migrated-color-59dbd12595); }
+
+.zyu-29145437e040 { color:var(--zy-migrated-color-7d4ff8ff7b); }
+
+.zyu-b7aa1ec0049d { width:100%; }
+
+.zyu-33ee29812798 { font-size:11px; }

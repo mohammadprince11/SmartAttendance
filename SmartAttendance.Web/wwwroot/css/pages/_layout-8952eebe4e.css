@@ -1,0 +1,6 @@
+/* Source: Pages/Shared/_Layout.cshtml */
+html:not([data-ready]) body { visibility: hidden; }
+
+/* Static inline utilities migrated from Pages/Shared/_Layout.cshtml */
+
+.zyu-3c4b6eac2c1a { opacity:.6;font-size:.72em;margin-inline-start:.35em; }

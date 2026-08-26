@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "متابعة الإقرارات";
 }
+<link rel="stylesheet" href="~/css/pages/tracking-deff1f690f.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -29,21 +30,21 @@
             </p>
         </header>
 
-        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
-            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">أُرسل: @Model.TotalSent</span>
-            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">شوهد: @Model.TotalViewed</span>
-            <span class="zyp-rank" style="min-width:auto;padding:4px 10px">وافق: @Model.TotalAccepted</span>
+        <div class="zyp-actions zyu-2d1bdd415249">
+            <span class="zyp-rank zyu-f6f43bccf0b3">أُرسل: @Model.TotalSent</span>
+            <span class="zyp-rank zyu-f6f43bccf0b3">شوهد: @Model.TotalViewed</span>
+            <span class="zyp-rank zyu-f6f43bccf0b3">وافق: @Model.TotalAccepted</span>
             @if (Model.TotalDeclined > 0)
             {
-                <span class="zyp-rank" style="min-width:auto;padding:4px 10px">رفض: @Model.TotalDeclined</span>
+                <span class="zyp-rank zyu-f6f43bccf0b3">رفض: @Model.TotalDeclined</span>
             }
             @if (Model.NeverOpened > 0)
             {
-                <span class="zyp-count" data-zero="true" style="padding:4px 10px">⚠ لم يُفتح: @Model.NeverOpened</span>
+                <span class="zyp-count zyu-62190e055c56" data-zero="true">⚠ لم يُفتح: @Model.NeverOpened</span>
             }
         </div>
 
-        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+        <form method="get" class="zyp-editor-grid zyu-410cf9349439">
             <label>
                 القالب
                 <select asp-for="TemplateFilter">
@@ -61,9 +62,9 @@
                     <option value="true">المعلّق فقط (بلا موافقة ولا رفض)</option>
                 </select>
             </label>
-            <label style="justify-content:flex-end">
+            <label class="zyu-110c1427da8c">
                 &nbsp;
-                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+                <button type="submit" class="zyc-add-rule zyu-8ede280590c3">تطبيق</button>
             </label>
         </form>
 
@@ -82,7 +83,7 @@
                         <th>تمت المشاهدة</th>
                         <th>موافقة الموظف</th>
                         <th>الحالة</th>
-                        <th style="width:160px"></th>
+                        <th class="zyu-ffcb6e42ab67"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,11 +122,11 @@
                                 <div class="zyp-actions">
                                     @if (row.NeedsAction)
                                     {
-                                        <form method="post" asp-page-handler="Remind" style="display:inline">
+                                        <form method="post" asp-page-handler="Remind" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="id" value="@row.Id" />
                                             <button type="submit">إعادة إرسال</button>
                                         </form>
-                                        <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="id" value="@row.Id" />
                                             <button type="submit" data-zyconfirm="حذف الإرسال؟">حذف</button>
                                         </form>

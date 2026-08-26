@@ -1,0 +1,36 @@
+/* Source: Pages/Payroll/SalarySheet.cshtml */
+.ss-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,var(--zy-text)); }
+    .ss-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
+        border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    .ss-field { display:flex; flex-direction:column; gap:5px; }
+    .ss-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); }
+    .ss-bar select { min-height:38px; min-width:280px; border-radius:10px; border:1px solid var(--zy-migrated-color-5658452bed);
+        background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
+    html[data-theme="light"] .ss-bar select { background:var(--zy-white); }
+    .ss-spacer { flex:1 1 auto; }
+    .ss-btn { min-height:38px; align-self:flex-end; padding:8px 20px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:1000; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .ss-btn.exp { border:0; background:linear-gradient(135deg,var(--zy-success-strong),var(--zy-migrated-color-3c5c1ab6c5)); color:var(--zy-white); }
+    .ss-btn.prn { border:1px solid var(--zy-migrated-color-28565ef553); background:transparent; color:inherit; }
+    .ss-btn.prn:hover { background:var(--zy-migrated-color-add5638818); color:var(--zy-primary); }
+
+    .ss-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; overflow:hidden; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    .ss-head { padding:16px 18px; border-bottom:1px solid var(--zy-migrated-color-cbebfcf5a2); }
+    .ss-head h2 { margin:0; font-size:16px; font-weight:1000; }
+    .ss-head p { margin:3px 0 0; font-size:12px; font-weight:800; color:var(--sa-muted,var(--zy-muted)); }
+    .ss-wrap { overflow-x:auto; }
+    .ss-table { width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
+    .ss-table th { text-align:start; white-space:nowrap; padding:10px 12px; font-size:11px; font-weight:1000; color:var(--sa-muted,var(--zy-muted)); border-bottom:1px solid var(--zy-migrated-color-b9678111e3); background:var(--zy-migrated-color-8e71d5d639); }
+    html[data-theme="light"] .ss-table th { background:var(--zy-migrated-color-c2da37727c); }
+    .ss-table td { padding:8px 12px; border-bottom:1px solid var(--zy-migrated-color-89acc81486); white-space:nowrap; }
+    .ss-num { direction:ltr; font-weight:900; text-align:start; unicode-bidi:plaintext; }
+    .ss-net { color:var(--zy-success); }
+    .ss-grp td { background:var(--zy-migrated-color-0131c28a5e); font-weight:1000; }
+    .ss-sub td { background:var(--zy-migrated-color-51785763a3); font-weight:1000; }
+    .ss-total td { background:var(--zy-migrated-color-fa4c99c7a1); font-weight:1000; font-size:13px; border-top:2px solid var(--zy-migrated-color-9d8f3bda04); }
+    .ss-empty { padding:60px 20px; text-align:center; color:var(--sa-muted,var(--zy-muted)); font-weight:900; font-size:15px; }
+
+    @media print {
+        .ss-bar, .nexora-nav, .nexora-topbar, header, nav, aside { display:none !important; }
+        .ss-card { border:none; }
+        body, .ss-page { background:var(--zy-white) !important; color:var(--zy-black) !important; }
+    }

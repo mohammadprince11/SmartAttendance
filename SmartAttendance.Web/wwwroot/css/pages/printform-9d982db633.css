@@ -1,0 +1,152 @@
+/* Source: Pages/Violations/PrintForm.cshtml */
+* {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: var(--zy-migrated-color-417a6f4ce5);
+            color: var(--zy-migrated-color-80c34b7b5a);
+            font-family: Tahoma, Arial, sans-serif;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: center;
+            padding: 14px 22px;
+            background: var(--zy-migrated-color-3b4ee27660);
+            border-bottom: 1px solid var(--zy-migrated-color-0af5126f2a);
+        }
+
+        .toolbar strong {
+            display: block;
+            font-size: 14px;
+            color: var(--zy-migrated-color-6e2415290d);
+        }
+
+        .toolbar small {
+            color: var(--zy-migrated-color-ccfbea8fff);
+            font-size: 11px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .actions a,
+        .actions button {
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--zy-migrated-color-295d83331f);
+            border-radius: 12px;
+            background: var(--zy-migrated-color-3b77076c95);
+            color: var(--zy-migrated-color-2d0f6e8213);
+            padding: 0 13px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .actions button {
+            background: linear-gradient(135deg, var(--zy-migrated-color-0f1cc78a41), var(--zy-migrated-color-a5c0d2f334));
+            color: var(--zy-migrated-color-e6bd0226ba);
+        }
+
+        .page-wrap {
+            display: grid;
+            place-items: start center;
+            padding: 28px;
+        }
+
+        .a4-paper {
+            position: relative;
+            width: 210mm;
+            height: 297mm;
+            overflow: hidden;
+            background: var(--zy-white);
+            box-shadow: 0 24px 70px var(--zy-migrated-color-63db2c445d);
+        }
+
+        .a4-template {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        .fallback-paper {
+            position: absolute;
+            inset: 0;
+            background: var(--zy-white);
+            z-index: 0;
+        }
+
+        .fallback-head {
+            position: absolute;
+            top: 28mm;
+            inset-inline-start: 18mm;
+            inset-inline-end: 18mm;
+            height: 22mm;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--zy-migrated-color-0e684e5160);
+            font-weight: 900;
+            z-index: 1;
+        }
+
+        .fallback-foot {
+            position: absolute;
+            bottom: 18mm;
+            inset-inline-start: 18mm;
+            inset-inline-end: 18mm;
+            color: var(--zy-migrated-color-0e684e5160);
+            font-size: 10px;
+            z-index: 1;
+        }
+
+        .form-layer {
+            position: absolute;
+            white-space: pre-line;
+            line-height: 1.55;
+            z-index: 5;
+        }
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        @media print {
+            html,
+            body {
+                background: var(--zy-white);
+            }
+
+            .toolbar {
+                display: none !important;
+            }
+
+            .page-wrap {
+                padding: 0;
+                display: block;
+            }
+
+            .a4-paper {
+                width: 210mm;
+                height: 297mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }

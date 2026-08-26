@@ -20,56 +20,10 @@
         s.Id, s.Name, s.ReadType, s.ConfigValue, s.UsesSemantics, s.IsSystem, s.IsActive
     }));
 }
+<link rel="stylesheet" href="~/css/pages/index-683ab19959.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .ats-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .ats-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .ats-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .ats-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .ats-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .ats-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .ats-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-
-    .ats-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: hidden; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .ats-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(73,111,151,.22); }
-    .ats-card-head h2 { margin: 0; font-size: 15px; font-weight: 1000; }
-    .ats-card-head p { margin: 2px 0 0; font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .ats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .ats-table th { text-align: start; padding: 11px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
-    html[data-theme="light"] .ats-table th { background: #f2f7fb; }
-    .ats-table td { padding: 10px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
-    .ats-table tr:hover td { background: rgba(18,217,227,.04); }
-    .ats-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(18,217,227,.1); color: #12D9E3; }
-    .ats-chip.sys { background: rgba(167,139,250,.14); color: #a78bfa; }
-    .ats-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
-    .ats-chip.yes { background: rgba(74,222,128,.12); color: #4ade80; }
-    .ats-empty { padding: 24px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-
-    .ats-form { display: flex; flex-direction: column; gap: 10px; }
-    .ats-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
-    .ats-form input[type=text], .ats-form input[type=number], .ats-form select {
-        min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
-        background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px;
-    }
-    html[data-theme="light"] .ats-form input[type=text], html[data-theme="light"] .ats-form input[type=number], html[data-theme="light"] .ats-form select { background: #fff; }
-    .ats-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    .ats-hint { font-size: 11px; color: var(--sa-muted, #8FA8BC); font-weight: 700; }
-    /* نافذة الدلالة — حقلا وقت جنباً إلى جنب، ينهاران لعمود بالشاشات الضيّقة. */
-    .ats-sem-window { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @@media (max-width: 480px) { .ats-sem-window { grid-template-columns: 1fr; } }
-    .ats-form input[type=time] {
-        min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
-        background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; font-family: inherit;
-    }
-    html[data-theme="light"] .ats-form input[type=time] { background: #fff; }
-</style>
 
 <section class="ats-page" dir="rtl">
     <header class="ats-head">
@@ -103,89 +57,89 @@
                 <p>قاعدة جازمة: بعد تسجيل الحضور لا يُسمح بتسجيل الانصراف إلا بعد مرور المدة أدناه — لمنع بصم خروج خاطئ عقب الحضور مباشرة.</p>
             </div>
         </div>
-        <div style="padding:16px">
-            <form method="post" asp-page-handler="SaveOnlinePunchRule" class="ats-form" style="max-width:420px">
+        <div class="zyu-3b0d88aee9a7">
+            <form method="post" asp-page-handler="SaveOnlinePunchRule" class="ats-form zyu-df5afa5a8563">
                 <label>أقل عدد ساعات بين الحضور والانصراف
                     <input type="number" name="MinCheckoutHours" value="@Model.MinCheckoutHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                           min="0" max="24" step="0.5" style="max-width:160px" />
+                           min="0" max="24" step="0.5" class="zyu-eb9e070a2eee" />
                     <span class="ats-hint">مثال: 4 = لا انصراف قبل مرور 4 ساعات. الصفر يُعطّل القاعدة. يقبل الكسور (مثال 4.5).</span>
                 </label>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ القاعدة</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ القاعدة</button>
             </form>
 
-            <form method="post" asp-page-handler="SaveGeofenceRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
-                <label style="flex-direction:row;align-items:center;gap:8px">
+            <form method="post" asp-page-handler="SaveGeofenceRule" class="ats-form zyu-0452d1ac5fb3">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="EnforceGeofence" value="true" checked="@Model.EnforceGeofence" />
                     إنفاذ النطاق الجغرافي: رفض بصمة الموظف المسنَد لمواقع جغرافية إن كان خارج نصف قطر أحدها
                 </label>
                 <span class="ats-hint">تُدار المواقع وإسناد الموظفين من صفحة «المواقع الجغرافية للموظفين». موظف بلا مواقع مسنَدة لا تنطبق عليه القاعدة، وغياب إحداثيات الجهاز (رفض إذن الموقع) = رفض البصمة.</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الإنفاذ</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ الإنفاذ</button>
             </form>
 
-            <form method="post" asp-page-handler="SaveGeofenceDirection" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
-                <label style="flex-direction:row;align-items:center;gap:8px">
+            <form method="post" asp-page-handler="SaveGeofenceDirection" class="ats-form zyu-0452d1ac5fb3">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="AllowOutsideCheckIn" value="true" checked="@Model.AllowOutsideCheckIn" />
                     استثنِ بصمة <b>الدخول</b> من إنفاذ النطاق الجغرافي
                 </label>
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="AllowOutsideCheckOut" value="true" checked="@Model.AllowOutsideCheckOut" />
                     استثنِ بصمة <b>الخروج</b> من إنفاذ النطاق الجغرافي
                 </label>
                 <span class="ats-hint">كلاهما معطّل افتراضياً — الإنفاذ يشمل الاتجاهين. فعّل واحداً لحالة المندوب الذي يبصم دخولاً بالمكتب وخروجاً من موقع العميل. لا أثر لهما إن كان الإنفاذ نفسه معطّلاً.</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الاستثناءات</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ الاستثناءات</button>
             </form>
 
-            <form method="post" asp-page-handler="SaveMissingPunchLimits" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+            <form method="post" asp-page-handler="SaveMissingPunchLimits" class="ats-form zyu-0452d1ac5fb3">
                 <label>الحدّ الأعلى لطلبات البصمة المفقودة شهرياً للموظف
                     <input type="number" name="MissingPunchMonthlyLimit" value="@Model.MissingPunchMonthlyLimit"
-                           min="0" max="60" step="1" style="max-width:160px" />
+                           min="0" max="60" step="1" class="zyu-eb9e070a2eee" />
                     <span class="ats-hint">الصفر = بلا سقف. المرفوض والملغى لا يُحتسبان.</span>
                 </label>
                 <label>يُقبل الطلب عن بصمة أقدم بحدّ أقصى (أيام)
                     <input type="number" name="MissingPunchWindowDays" value="@Model.MissingPunchWindowDays"
-                           min="0" max="365" step="1" style="max-width:160px" />
+                           min="0" max="365" step="1" class="zyu-eb9e070a2eee" />
                     <span class="ats-hint">الصفر = بلا حدّ زمني. يمنع «إحياء» أيام قديمة بعد إغلاق الشهر.</span>
                 </label>
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="MissingPunchReasonRequired" value="true" checked="@Model.MissingPunchReasonRequired" />
                     السبب إلزامي بطلب البصمة المفقودة
                 </label>
                 <span class="ats-hint">الحدود تُفرَض على <b>الطلبات الجديدة</b> فقط — الطلب القائم قُدّم تحت سياسة وقتها ولا يُعاد تقييمه.</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ حدود البصمة المفقودة</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ حدود البصمة المفقودة</button>
             </form>
 
-            <form method="post" asp-page-handler="SaveReanalysisRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
-                <label style="flex-direction:row;align-items:center;gap:8px">
+            <form method="post" asp-page-handler="SaveReanalysisRule" class="ats-form zyu-0452d1ac5fb3">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="AutoReanalyze" value="true" checked="@Model.AutoReanalyze" />
                     إعادة تحليل الحضور تلقائياً بمجرد الموافقة على الإجازة أو المغادرة أو البصمة المفقودة
                 </label>
                 <span class="ats-hint">معطّل افتراضياً — عند تفعيله لا يحتاج المستخدم تشغيل «تحديث الحضور» يدوياً بعد كل موافقة لتظهر باليومية.</span>
-                <label style="flex-direction:row;align-items:center;gap:8px;margin-top:10px">
+                <label class="zyu-35b96bc4c382">
                     <input type="checkbox" name="GuardExecutedActions" value="true" checked="@Model.GuardExecutedActions" />
                     امنع إعادة التحليل التلقائية إذا كانت هناك إجراءات منفَّذة على حضور ذلك اليوم
                 </label>
                 <span class="ats-hint">مفعّل افتراضياً. «إجراء منفَّذ» = اقتراح معتمَد أو تلقائي أنشأ قضية مخالفة أو حركة مالية — إعادة تحليله تدهس قراراً بشرياً أو أثراً مالياً سبق ترحيله. الاقتراح المعلّق أو المتجاهَل لا يمنع.</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ قواعد إعادة التحليل</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ قواعد إعادة التحليل</button>
             </form>
 
-            <form method="post" asp-page-handler="SaveBiometricRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
-                <label style="flex-direction:row;align-items:center;gap:8px">
+            <form method="post" asp-page-handler="SaveBiometricRule" class="ats-form zyu-0452d1ac5fb3">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="RequireBiometric" value="true" checked="@Model.RequireBiometric" />
                     التأكيد البيولوجي: رفض بصمة الموظف صاحب مفتاح بصمة/وجه معتمد ما لم يؤكد ببصمة جهازه لحظة البصم
                 </label>
                 <span class="ats-hint">المفاتيح تُسجَّل من درج إعدادات بوابة الموظف وتُعتمد من صفحة «اعتماد مفاتيح البصمة/الوجه». موظف بلا مفتاح معتمد لا تنطبق عليه القاعدة — يمنع بصم زميل بدل زميله (مع النطاق الجغرافي: من أنت + وين أنت).</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ الإنفاذ</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ الإنفاذ</button>
             </form>
 
-            <form method="post" asp-page-handler="SaveSessionRule" class="ats-form" style="max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,#dbe4f0);padding-top:16px">
+            <form method="post" asp-page-handler="SaveSessionRule" class="ats-form zyu-0452d1ac5fb3">
                 <label>الخروج التلقائي من بوابة الموظف بعد خمول (دقائق)
-                    <input type="number" name="IdleLogoutMinutes" value="@Model.IdleLogoutMinutes" min="0" max="1440" style="max-width:160px" />
+                    <input type="number" name="IdleLogoutMinutes" value="@Model.IdleLogoutMinutes" min="0" max="1440" class="zyu-eb9e070a2eee" />
                 </label>
                 <label>الخروج عند مغادرة التطبيق/إطفاء الشاشة أكثر من (ثوانٍ)
-                    <input type="number" name="LeaveLogoutSeconds" value="@Model.LeaveLogoutSeconds" min="0" max="3600" style="max-width:160px" />
+                    <input type="number" name="LeaveLogoutSeconds" value="@Model.LeaveLogoutSeconds" min="0" max="3600" class="zyu-eb9e070a2eee" />
                 </label>
                 <span class="ats-hint">حاجز إعارة الهاتف: موظف يدخل ثم يسلّم هاتفه لزميل — الجلسة تنتهي تلقائياً بعد الخمول (إنفاذ سيرفري) أو بعد مغادرة التطبيق مدة تتجاوز السماح. الصفر يعطّل القاعدة. مع الدخول بالبصمة/الوجه، العودة للبوابة لمسة واحدة.</span>
-                <button type="submit" class="ats-btn" style="align-self:flex-start">حفظ قواعد الجلسة</button>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ قواعد الجلسة</button>
             </form>
         </div>
     </div>
@@ -207,25 +161,25 @@
         {
             <table class="ats-table">
                 <thead>
-                    <tr><th>الدلالة</th><th>English</th><th>النوع</th><th>الخصم</th><th>النافذة</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                    <tr><th>الدلالة</th><th>English</th><th>النوع</th><th>الخصم</th><th>النافذة</th><th>الحالة</th><th class="zyu-814fec806937">إجراءات</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var semantic in Model.Semantics)
                     {
                         <tr>
                             <td><b>@semantic.Name</b></td>
-                            <td dir="ltr" style="text-align:start">@(semantic.NameEn ?? "—")</td>
+                            <td dir="ltr" class="zyu-1b2b228de740">@(semantic.NameEn ?? "—")</td>
                             <td><span class="ats-chip @(semantic.IsSystem ? "sys" : "")">@(semantic.IsSystem ? "نظامية" : "مخصصة")</span></td>
                             <td><span class="ats-chip @(semantic.IsDeducted ? "" : "off")">@(semantic.IsDeducted ? "تُخصم" : "لا تُخصم")</span></td>
-                            <td dir="ltr" style="text-align:start">@(semantic.WindowFrom is { Length: > 0 } wf && semantic.WindowTo is { Length: > 0 } wt ? $"{wf} – {wt}" : "—")</td>
+                            <td dir="ltr" class="zyu-1b2b228de740">@(semantic.WindowFrom is { Length: > 0 } wf && semantic.WindowTo is { Length: > 0 } wt ? $"{wf} – {wt}" : "—")</td>
                             <td><span class="ats-chip @(semantic.IsActive ? "" : "off")">@(semantic.IsActive ? "نشطة" : "متوقفة")</span></td>
-                            <td style="text-align:end;white-space:nowrap">
+                            <td class="zyu-667bbbde05a1">
                                 <button type="button" class="ats-btn ghost" onclick="atsOpenSemantic(@semantic.Id)">تعديل</button>
                                 @if (!semantic.IsSystem)
                                 {
-                                    <form method="post" asp-page-handler="DeleteSemantic" style="display:inline">
+                                    <form method="post" asp-page-handler="DeleteSemantic" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@semantic.Id" />
-                                        <button type="submit" class="ats-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
+                                        <button type="submit" class="ats-btn ghost zyu-94c76e9c8583" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                     </form>
                                 }
                             </td>
@@ -253,7 +207,7 @@
         {
             <table class="ats-table">
                 <thead>
-                    <tr><th>المصدر</th><th>القراءة من</th><th>الإعداد</th><th>الدلالات</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                    <tr><th>المصدر</th><th>القراءة من</th><th>الإعداد</th><th>الدلالات</th><th>الحالة</th><th class="zyu-814fec806937">إجراءات</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var source in Model.Sources)
@@ -261,17 +215,17 @@
                         <tr>
                             <td><b>@source.Name</b>@(source.IsSystem ? " " : "")@if (source.IsSystem) {<span class="ats-chip sys">نظامي</span>}</td>
                             <td><span class="ats-chip">@AttendanceSourceStore.ReadTypeLabel(source.ReadType)</span></td>
-                            <td dir="ltr" style="text-align:start;font-size:12px">@(source.ConfigValue ?? "—")</td>
+                            <td dir="ltr" class="zyu-8541d8531a60">@(source.ConfigValue ?? "—")</td>
                             <td><span class="ats-chip @(source.UsesSemantics ? "yes" : "off")">@(source.UsesSemantics ? "نعم" : "لا")</span></td>
                             <td><span class="ats-chip @(source.IsActive ? "" : "off")">@(source.IsActive ? "نشط" : "متوقف")</span></td>
-                            <td style="text-align:end;white-space:nowrap">
+                            <td class="zyu-667bbbde05a1">
                                 <button type="button" class="ats-btn ghost" onclick="atsOpenSource(@source.Id)">تعديل</button>
                                 @if (!source.IsSystem)
                                 {
-                                    <form method="post" asp-page-handler="DeleteSource" style="display:inline">
+                                    <form method="post" asp-page-handler="DeleteSource" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@source.Id" />
                                         <input type="hidden" name="companyId" value="@Model.CompanyId" />
-                                        <button type="submit" class="ats-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
+                                        <button type="submit" class="ats-btn ghost zyu-94c76e9c8583" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                     </form>
                                 }
                             </td>
@@ -299,13 +253,13 @@
                     <input type="text" name="NameEn" id="ats-sem-NameEn" dir="ltr" />
                 </label>
                 <label>ترتيب العرض
-                    <input type="number" name="SortOrder" id="ats-sem-Sort" value="10" min="0" max="999" style="max-width:140px" />
+                    <input type="number" name="SortOrder" id="ats-sem-Sort" value="10" min="0" max="999" class="zyu-e0e3ddd79df2" />
                 </label>
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="IsActive" value="true" id="ats-sem-Active" checked /> الدلالة نشطة
                 </label>
 
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="IsDeducted" value="true" id="ats-sem-Deducted" checked />
                     تُخصم فترتها من مدّة الحضور
                 </label>
@@ -361,10 +315,10 @@
                     <input type="text" name="ConfigValue" id="ats-src-Config" dir="ltr" />
                     <span class="ats-hint" id="ats-src-config-hint"></span>
                 </label>
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="UsesSemantics" value="true" id="ats-src-Semantics" /> المصدر يصنّف بصماته بالدلالات
                 </label>
-                <label style="flex-direction:row;align-items:center;gap:8px">
+                <label class="zyu-95e15889185d">
                     <input type="checkbox" name="IsActive" value="true" id="ats-src-Active" checked /> المصدر نشط
                 </label>
                 <button type="submit" class="ats-btn">حفظ المصدر</button>

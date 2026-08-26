@@ -77,8 +77,7 @@ public class CalendarUnclipGuardTests
     [Fact]
     public void AttendanceViewerMatrixKeepsItsScrollOwnership()
     {
-        var page = File.ReadAllText(Path.Combine(
-            RepoRoot(), "SmartAttendance.Web", "Pages", "AttendanceViewer", "Index.cshtml"));
+        var page = RazorPageAssetReader.ReadWithLinkedPageCss("AttendanceViewer", "Index.cshtml");
 
         Assert.Matches(@"class=""avw-matrix-card""\s+data-zy-scroll", page);
 

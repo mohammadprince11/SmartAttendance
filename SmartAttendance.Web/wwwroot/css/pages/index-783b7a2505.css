@@ -1,0 +1,29 @@
+/* Static inline utilities migrated from Pages/LeaveBalances/Index.cshtml */
+
+.zyu-d1fdc74a3eca { display:block;padding:10px 14px;margin-bottom:12px; }
+
+.zyu-dd7a532ff0b5 { display:none;position:fixed;inset:0;background:var(--zy-migrated-color-e1d0b86279);z-index:80; }
+
+.zyu-633eb4bdcf75 { display:none;position:fixed;z-index:81;inset-inline:0;top:12vh;margin-inline:auto;width:min(460px,calc(100% - 32px));
+                background:var(--sa-surface,var(--zy-migrated-color-f6e701f6d8));border:1px solid var(--sa-border,var(--zy-migrated-color-b21b0ddc91));border-radius:16px;
+                box-shadow:0 20px 60px var(--zy-migrated-color-33a0843b78);padding:20px;color:var(--sa-text,var(--zy-text)); }
+
+.zyu-50df9bdfc47d { margin:0 0 6px;font-size:17px;font-weight:1000; }
+
+.zyu-b1fc2e9f62ea { margin:0 0 14px;font-size:12.5px;font-weight:800;color:var(--sa-muted,var(--zy-muted)); }
+
+.zyu-b0cb8edf4ee8 { font-size:12px;font-weight:900;margin-bottom:6px; }
+
+.zyu-7897327649e3 { display:flex;flex-direction:column;gap:8px;margin-bottom:14px; }
+
+.zyu-3044b76458d2 { display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;cursor:pointer; }
+
+.zyu-619dd98b40eb { font-size:11px;color:var(--sa-muted,var(--zy-muted));font-weight:700; }
+
+.zyu-a3135df68dc0 { display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900;margin-bottom:16px; }
+
+.zyu-29d97353f700 { min-height:38px;border-radius:10px;border:1px solid var(--sa-border,var(--zy-migrated-color-28565ef553));background:var(--sa-input,var(--zy-migrated-color-819b024f9d));color:inherit;padding:6px 10px; }
+
+.zyu-9eabbfb3a288 { display:flex;gap:8px;justify-content:flex-end; }
+
+.zyu-730f5b771b60 { opacity:.7; }

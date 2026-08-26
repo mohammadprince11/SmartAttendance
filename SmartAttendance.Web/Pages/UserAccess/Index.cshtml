@@ -11,32 +11,11 @@
 @{
     ViewData["Title"] = "إدارة مستخدمي النظام";
 }
+<link rel="stylesheet" href="~/css/pages/index-98bc6cd6d5.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-user-access.css" asp-append-version="true" />
 
-<style>
-    .zua-bulk-bar { border:1px solid var(--zua-line); border-radius:18px; padding:14px 18px; margin:0 0 14px; }
-    .zua-bulk-title { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-    .zua-bulk-title b { font-size:14px; }
-    .zua-bulk-title #zua-bulk-count { color:var(--zua-muted); font-size:12px; font-weight:800; }
-    .zua-bulk-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
-    .zua-bulk-fields label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); }
-    .zua-bulk-fields input[type=password] { min-height:38px; padding:0 12px; border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; min-width:190px; }
-    .zua-bulk-codes { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); margin-bottom:8px; }
-    .zua-bulk-codes textarea { border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; padding:10px 12px; resize:vertical; font-family:inherit; }
-    .zua-pager { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:center; margin:14px 0; }
-    .zua-pager .disabled { pointer-events:none; opacity:.45; }
-    .zua-pager-info { font-weight:800; font-size:13px; color:var(--zua-muted); padding:0 8px; }
-    .zua-accessroles { border:1px solid var(--zua-line); border-radius:12px; padding:10px 12px; }
-    .zua-ar-title { display:block; font-weight:800; font-size:12px; color:var(--zua-muted); margin-bottom:8px; }
-    .zua-ar-grid { display:flex; flex-direction:column; gap:6px; max-height:180px; overflow:auto; }
-    .zua-ar-item { display:flex !important; flex-direction:row !important; align-items:center; gap:8px; font-weight:700; }
-    .zua-ar-item input { min-height:auto; width:auto; }
-    .zua-ar-item small { color:var(--zua-muted); font-weight:600; }
-    .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
-    .zua-bulk-check input { min-height:auto; }
-</style>
 
 <section class="zua-page" dir="rtl">
 
@@ -90,7 +69,7 @@
             <textarea name="BulkEmployeeCodes" rows="2" dir="ltr"
                       placeholder="11230 10000 10521 ..." oninput="zuaBulkCount()"></textarea>
         </label>
-        <span class="hint" style="display:block;margin:-4px 0 8px">من لا حساب دخول له من هذه الأكواد يُنشأ له حساب «موظف» تلقائيّاً (اسم المستخدم = كوده).</span>
+        <span class="hint zyu-39762d086def">من لا حساب دخول له من هذه الأكواد يُنشأ له حساب «موظف» تلقائيّاً (اسم المستخدم = كوده).</span>
         <div class="zua-bulk-fields">
                 <label>كلمة مرور مؤقّتة
                     <input type="password" name="BulkPassword" dir="ltr" minlength="8"
@@ -110,19 +89,19 @@
                 </label>
                 <button type="submit" class="zua-btn" onclick="return zuaValidateBulk(event)">تطبيق</button>
             </div>
-            <div id="zua-bulk-msg" class="zua-alert error" style="display:none;margin-top:10px"></div>
-            <label class="zua-bulk-check" style="margin-top:10px;color:var(--zua-amber);font-weight:800">
+            <div id="zua-bulk-msg" class="zua-alert error zyu-6523cf68ed39"></div>
+            <label class="zua-bulk-check zyu-ed113db286a5">
                 <input type="checkbox" name="BulkAllNoAccount" value="true" onchange="zuaBulkCount()" />
                 إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود الموظّف)
             </label>
-            <p class="hint" style="margin:6px 0 0">
+            <p class="hint zyu-5074b45d6175">
                 يُطبَّق على الحسابات المحدَّدة في الجدول أو المُلصقة بالأكواد، ويُطلب من كلٍّ تغييرها عند الدخول التالي. حسابك الشخصي مُستثنى.
             </p>
         </form>
 
     @if (Model.NoAccountTotal > Model.NoAccountShown && Model.PageIndex <= 1)
     {
-        <div class="zua-alert" style="background:rgba(18,217,227,.08)">
+        <div class="zua-alert zyu-71745d42e472">
             يوجد @Model.NoAccountTotal موظّف بلا حساب دخول — يُعرض منهم @Model.NoAccountShown فقط لأداء أفضل.
             ابحث بالاسم أو الكود بالأعلى لإيجاد موظّفٍ بعينه، أو الصق أكواد الموظّفين في أداة كلمة المرور لإنشاء حساباتهم دفعةً واحدة.
         </div>
@@ -139,7 +118,7 @@
             <table class="zua-table">
                 <thead>
                     <tr>
-                        <th style="width:34px">
+                        <th class="zyu-d12729b3d536">
                             <input type="checkbox" id="zua-select-all" title="تحديد الكل"
                                    onclick="zuaToggleAll(this)" />
                         </th>
@@ -149,7 +128,7 @@
                         <th>حالة الربط</th>
                         <th>الحالة</th>
                         <th>آخر دخول</th>
-                        <th style="text-align:end">إجراءات</th>
+                        <th class="zyu-814fec806937">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -183,18 +162,18 @@
                             <td>
                                 @if (row.EmployeeId.HasValue && !string.IsNullOrWhiteSpace(row.EmployeeName))
                                 {
-                                    <a href="/Employees/Profile?id=@row.EmployeeId" style="color:var(--zua-teal);text-decoration:none;font-weight:800">@row.EmployeeName</a>
-                                    <small style="color:var(--zua-muted)"> @row.EmployeeNo</small>
+                                    <a href="/Employees/Profile?id=@row.EmployeeId" class="zyu-fe133f3edfdb">@row.EmployeeName</a>
+                                    <small class="zyu-4ff8060297b2"> @row.EmployeeNo</small>
                                 }
                                 else
                                 {
-                                    <span style="color:var(--zua-muted)">بلا ربط</span>
+                                    <span class="zyu-4ff8060297b2">بلا ربط</span>
                                 }
                             </td>
                             <td><span class="zua-chip role">@row.CompatibilityRole</span></td>
                             <td><span class="zua-chip @row.StatusCss">@row.StatusLabel</span></td>
                             <td><span class="zua-chip @(row.IsActive ? "on" : "off")">@(row.IsActive ? "فعال" : "معطل")</span></td>
-                            <td style="direction:ltr;text-align:end;font-size:12px;color:var(--zua-muted)">
+                            <td class="zyu-0b6b7bbb5492">
                                 @(row.LastLoginAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")
                             </td>
                             <td>
@@ -221,7 +200,7 @@
                                     }
                                     @if (row.CanToggle)
                                     {
-                                        <form method="post" asp-page-handler="Toggle" style="display:inline">
+                                        <form method="post" asp-page-handler="Toggle" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="loginId" value="@row.LoginId" />
                                             <input type="hidden" name="search" value="@Model.Search" />
                                             <input type="hidden" name="status" value="@Model.Status" />
@@ -326,8 +305,8 @@
                     <textarea asp-for="Input.Notes" rows="2"></textarea>
                 </label>
 
-                <label style="flex-direction:row;align-items:center;gap:8px">
-                    <input asp-for="Input.IsActive" type="checkbox" style="min-height:auto" /> الحساب فعال
+                <label class="zyu-95e15889185d">
+                    <input asp-for="Input.IsActive" type="checkbox" class="zyu-2d2defc6e3bc" /> الحساب فعال
                 </label>
 
                 <button type="submit" class="zua-btn">@(Model.Input.IsEditing ? "حفظ التعديلات" : "إنشاء الحساب")</button>

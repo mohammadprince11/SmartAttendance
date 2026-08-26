@@ -19,6 +19,7 @@
 }
 @if (visible.Count > 1)
 {
+<link rel="stylesheet" href="~/css/pages/_attendanceapprovalviews-3115a62117.css" asp-append-version="true" />
     <nav class="att-views" aria-label="فترة اعتماد الحضور">
         @foreach (var v in visible)
         {
@@ -27,13 +28,4 @@
             <a asp-page="@v.Page" class="att-view @(active ? "is-active" : "")">@v.Label</a>
         }
     </nav>
-    <style>
-        .att-views { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px;
-            border: 1px solid var(--sa-border, rgba(73,111,151,.22)); border-radius: 14px;
-            background: var(--sa-surface, rgba(8,25,43,.9)); }
-        .att-view { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 900;
-            color: var(--sa-muted, #8FA8BC); text-decoration: none; border: 1px solid transparent; }
-        .att-view:hover { color: var(--sa-text, #DCEAF4); }
-        .att-view.is-active { color: #04141d; background: linear-gradient(135deg, #12D9E3, #0ea5b5); }
-    </style>
-}
+    }

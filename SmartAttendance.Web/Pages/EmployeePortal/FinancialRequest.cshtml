@@ -5,43 +5,8 @@
     Layout = "_EmployeePortalLayout";
     ViewData["Title"] = "طلب مالي";
 }
+<link rel="stylesheet" href="~/css/pages/financialrequest-c39279c45a.css" asp-append-version="true" />
 
-<style>
-    .efr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,#DCEAF4); }
-    .efr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:18px; }
-    .efr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
-    .efr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .efr-kinds { display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:8px; margin-bottom:14px; }
-    .efr-kinds label { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 6px; border:1px solid rgba(73,111,151,.28); border-radius:14px; cursor:pointer; text-align:center; font-size:11px; font-weight:900; }
-    .efr-kinds label.on { border-color:#38bdf8; background:color-mix(in srgb,#38bdf8 12%,transparent); color:#38bdf8; }
-    .efr-kinds .ic { font-size:22px; }
-    .efr-kinds input { display:none; }
-    .efr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .efr-grid .full { grid-column:1/-1; }
-    /* صف واحد: الأقساط (أقصر) + الشهر + السنة */
-    .efr-row3 { grid-column:1/-1; display:flex; gap:10px; align-items:flex-end; }
-    .efr-row3 .efr-field { flex:1; min-width:0; }
-    .efr-row3 #efrFldCount { flex:0 0 78px; }
-    .efr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .efr-field input, .efr-field select, .efr-field textarea { min-height:42px; box-sizing:border-box; border-radius:12px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:8px 12px; font-weight:800; font-size:14px; }
-    html[data-theme="light"] .efr-field input, html[data-theme="light"] .efr-field select, html[data-theme="light"] .efr-field textarea { background:#fff; }
-    .efr-field select { appearance:none; -webkit-appearance:none; padding-inline-start:38px;
-        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2338bdf8' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; }
-    .efr-field select:focus { outline:none; border-color:rgba(56,189,248,.55); }
-    .efr-field select option { background:#0a1a2e; color:var(--sa-text,#DCEAF4); }
-    html[data-theme="light"] .efr-field select option { background:#fff; color:#0a1a2e; }
-    .efr-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:#38bdf8; }
-    .efr-submit { min-height:46px; margin-top:14px; width:100%; border:0; border-radius:14px; background:#38bdf8; color:#04141d; font-weight:1000; font-size:15px; cursor:pointer; }
-    .efr-alert { padding:12px 14px; border-radius:12px; background:rgba(52,211,153,.14); border:1px solid rgba(52,211,153,.4); color:#34d399; font-weight:900; font-size:13px; }
-    .efr-list { display:flex; flex-direction:column; gap:8px; }
-    .efr-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border:1px solid rgba(73,111,151,.2); border-radius:14px; font-size:13px; }
-    .efr-row .amt { direction:ltr; font-weight:1000; }
-    .efr-pill { font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; border:1px solid rgba(73,111,151,.3); }
-    .efr-pill.Pending { color:#facc15; border-color:rgba(250,204,21,.4); }
-    .efr-pill.Approved { color:#34d399; border-color:rgba(52,211,153,.4); }
-    .efr-pill.Rejected { color:#f87171; border-color:rgba(248,113,113,.4); }
-    .efr-del { background:transparent; border:1px solid rgba(248,113,113,.4); color:#f87171; border-radius:10px; padding:4px 10px; font-size:11px; font-weight:900; cursor:pointer; }
-</style>
 
 <section class="efr" dir="rtl">
     @if (!string.IsNullOrEmpty(Model.StatusMessage))
@@ -127,11 +92,11 @@
                                 <span class="amt"> · @r.Detail.Amount.ToString("N2")</span>
                                 @if (r.Detail.Kind is "Loan" or "Advance")
                                 {
-                                    <span style="opacity:.6"> · @r.Detail.InstallmentCount قسط</span>
+                                    <span class="zyu-541964fc246f"> · @r.Detail.InstallmentCount قسط</span>
                                 }
-                                <br /><small style="opacity:.6">@(r.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd")) · @(string.IsNullOrWhiteSpace(r.CurrentStep) ? "" : r.CurrentStep)</small>
+                                <br /><small class="zyu-541964fc246f">@(r.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd")) · @(string.IsNullOrWhiteSpace(r.CurrentStep) ? "" : r.CurrentStep)</small>
                             </div>
-                            <div style="display:flex;align-items:center;gap:8px">
+                            <div class="zyu-a4e017b7b0ef">
                                 <span class="efr-pill @r.Status">@r.StatusText</span>
                                 @if (r.Status == "Pending")
                                 {

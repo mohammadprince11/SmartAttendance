@@ -6,6 +6,7 @@
     ViewData["Title"] = "مهام التعيين والإنهاء";
     var today = DateOnly.FromDateTime(DateTime.Today);
 }
+<link rel="stylesheet" href="~/css/pages/index-5c3dbc8fd0.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
@@ -20,7 +21,7 @@
 
     @if (!string.IsNullOrEmpty(Model.Message))
     {
-        <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+        <div class="hrms-badge approved zyu-961915113e90">@Model.Message</div>
     }
 
     <div class="hrms-stats-card">
@@ -40,7 +41,7 @@
     @* ---------------- Tab 1: Screening ---------------- *@
     <div class="hrms-tabpanel active" data-hrms-tabpanel="screening">
         <div class="hrms-table-card">
-            <form method="get" class="hrms-inline-form" style="margin-bottom:12px;flex-wrap:wrap">
+            <form method="get" class="hrms-inline-form zyu-2130e9f98a91">
                 <label>العملية</label>
                 <select name="ProcessFilter" onchange="this.form.submit()">
                     <option value="0" selected="@(Model.ProcessFilter == 0 ? "selected" : null)">الكل</option>
@@ -93,7 +94,7 @@
                                     <td>@(string.IsNullOrWhiteSpace(task.AssigneeRole) ? "—" : task.AssigneeRole)</td>
                                     <td>@(task.DueDate?.ToString("yyyy-MM-dd") ?? "—")</td>
                                     <td>
-                                        <div class="hrms-inline-form" style="justify-content:center">
+                                        <div class="hrms-inline-form zyu-99b9ba53aa94">
                                             @if (!task.IsDone)
                                             {
                                                 <form method="post" asp-page-handler="Complete" asp-route-StatusFilter="@Model.StatusFilter" asp-route-ProcessFilter="@Model.ProcessFilter" asp-route-Search="@Model.Search">
@@ -126,22 +127,22 @@
 
     @* ---------------- Tab 2: Templates ---------------- *@
     <div class="hrms-tabpanel" data-hrms-tabpanel="templates">
-        <div class="hrms-grid" style="grid-template-columns:repeat(2, minmax(0,1fr))">
+        <div class="hrms-grid zyu-71658f30ac9a">
             @foreach (var process in new[] { HrProcessType.Onboarding, HrProcessType.Offboarding })
             {
                 var items = Model.Templates.Where(t => t.ProcessType == process).ToList();
                 <div class="hrms-table-card">
-                    <div class="hrms-tile-head" style="margin-bottom:10px">
+                    <div class="hrms-tile-head zyu-b922c89f16f9">
                         <h3>قالب @(process == HrProcessType.Onboarding ? "التعيين (Onboarding)" : "الإنهاء (Offboarding)")</h3>
                         <span class="hrms-badge">@items.Count مهمة</span>
                     </div>
 
-                    <form method="post" asp-page-handler="AddTemplate" class="hrms-inline-form" style="margin-bottom:10px;flex-wrap:wrap">
+                    <form method="post" asp-page-handler="AddTemplate" class="hrms-inline-form zyu-5f4de50b6716">
                         <input type="hidden" name="processType" value="@((int)process)" />
-                        <input name="title" required placeholder="مهمة جديدة..." style="flex:1;min-width:140px" />
-                        <input name="assigneeRole" placeholder="الجهة (HR/IT...)" style="max-width:120px" />
-                        <input name="dueDays" type="number" min="0" value="0" title="أيام الاستحقاق" style="max-width:70px" />
-                        <input name="sortOrder" type="number" min="0" value="0" title="الترتيب" style="max-width:70px" />
+                        <input name="title" required placeholder="مهمة جديدة..." class="zyu-4bb4cf8ba2e5" />
+                        <input name="assigneeRole" placeholder="الجهة (HR/IT...)" class="zyu-ebb13c75debb" />
+                        <input name="dueDays" type="number" min="0" value="0" title="أيام الاستحقاق" class="zyu-b7386e12f2b5" />
+                        <input name="sortOrder" type="number" min="0" value="0" title="الترتيب" class="zyu-b7386e12f2b5" />
                         <button type="submit" class="hrms-btn-primary">+</button>
                     </form>
 
@@ -171,7 +172,7 @@
                                             <td>+@template.DueDays</td>
                                             <td><span class="hrms-badge @(template.IsActive ? "approved" : "rejected")">@(template.IsActive ? "فعال" : "معطل")</span></td>
                                             <td>
-                                                <div class="hrms-inline-form" style="justify-content:center">
+                                                <div class="hrms-inline-form zyu-99b9ba53aa94">
                                                     <form method="post" asp-page-handler="ToggleTemplate">
                                                         <input type="hidden" name="id" value="@template.Id" />
                                                         <button type="submit" class="hrms-btn-secondary">@(template.IsActive ? "تعطيل" : "تفعيل")</button>

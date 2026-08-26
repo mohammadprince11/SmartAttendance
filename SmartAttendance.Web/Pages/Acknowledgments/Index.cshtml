@@ -5,6 +5,7 @@
     ViewData["Title"] = "قوالب الإقرارات";
     var editing = Model.EditingId.HasValue;
 }
+<link rel="stylesheet" href="~/css/pages/index-d8348e19e6.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -51,7 +52,7 @@
                         <th>أُرسل</th>
                         <th>وافق</th>
                         <th>معلّق</th>
-                        <th style="width:200px"></th>
+                        <th class="zyu-3cab7ef27d09"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -74,13 +75,13 @@
                             <td class="zyp-count" data-zero="@((stats.Pending > 0).ToString().ToLowerInvariant())">@stats.Pending</td>
                             <td>
                                 <div class="zyp-actions">
-                                    <form method="post" asp-page-handler="Send" style="display:inline">
+                                    <form method="post" asp-page-handler="Send" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" data-zyconfirm="إرسال الإقرار لجمهوره الآن؟">إرسال</button>
                                     </form>
                                     <a asp-page="./Tracking" asp-route-templatefilter="@template.Id">المتابعة</a>
                                     <a asp-page="./Index" asp-route-edit="@template.Id">تعديل</a>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@template.Id" />
                                         <button type="submit" data-zyconfirm="حذف القالب؟ الإرسالات تبقى.">حذف</button>
                                     </form>
@@ -133,10 +134,10 @@
                 </label>
             </div>
 
-            <label style="display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted)">
+            <label class="zyu-8fbe49f3670f">
                 نصّ الإقرار (ما يوافق عليه الموظف)
                 <textarea asp-for="Body" rows="10"
-                          style="padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.875rem;line-height:1.7"
+                          class="zyu-f26f66e43d92"
                           placeholder="اكتب نصّ الإقرار كاملاً…"></textarea>
             </label>
 
@@ -152,7 +153,7 @@
 
             <footer class="nxhs-actions">
                 <button type="submit">حفظ القالب</button>
-                <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">إلغاء</a>
+                <a class="zyp-move zyu-e3da42537cb5" asp-page="./Index">إلغاء</a>
             </footer>
         </form>
     }

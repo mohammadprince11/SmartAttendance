@@ -1,0 +1,104 @@
+/* Source: Pages/Payroll/Settings.cshtml */
+/* تخطيط خاصٌّ بالصفحة فقط (المكوّنات المرئية صارت zy-*). كلّه من التوكنز. */
+    .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--zy-text,inherit); }
+    /* رأس الصفحة/الأقسام/الأزرار — ألوانها من التوكنز (لا ألوان علامة مباشرة). */
+    .ps-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid var(--zy-border,var(--zy-migrated-color-b9678111e3)); border-radius:20px; background:var(--zy-bg-elevated,var(--zy-bg,transparent)); }
+    .ps-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .ps-head p { margin:2px 0 0; font-size:12px; color:var(--zy-text-muted,var(--sa-muted,var(--zy-muted))); font-weight:800; }
+    .ps-warn { padding:10px 14px; border-radius:12px; font-size:12px; font-weight:900; border-inline-start:3px solid var(--status-warning,var(--zy-migrated-color-564c14c4e5)); background:var(--status-warning-soft,var(--zy-migrated-color-b2be389017)); color:var(--zy-text,inherit); }
+    .ps-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border-inline-start:3px solid var(--status-success,var(--zy-migrated-color-c857488cc0)); background:var(--status-success-soft,var(--zy-migrated-color-1718bee2f4)); color:var(--zy-text,inherit); }
+    .ps-sec { border:1px solid var(--zy-border,var(--zy-migrated-color-b9678111e3)); border-radius:18px; background:var(--zy-bg-elevated,var(--sa-surface,var(--zy-migrated-color-8c7f75b04e))); padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .ps-sec h2 { margin:0; font-size:15px; font-weight:1000; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .ps-btn { min-height:34px; padding:6px 15px; border-radius:11px; font-size:12px; font-weight:900; cursor:pointer; }
+    .ps-btn.ghost { background:transparent; border:1px solid var(--zy-border,var(--zy-migrated-color-28565ef553)); color:inherit; }
+    .ps-btn.danger { background:transparent; border:1px solid var(--status-danger,var(--zy-migrated-color-ca2f869833)); color:var(--status-danger,var(--zy-migrated-color-ca2f869833)); }
+    .ps-btn.sm { min-height:28px; padding:3px 10px; font-size:11px; }
+    .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:900px){ .ps-grid { grid-template-columns:1fr; } }
+    /* عنصر قائمة/بطاقة اختيار — تخطيط داخليّ، ألوانه من التوكنز، يعمل بالوضعين. */
+    .ps-item { border:1px solid var(--zy-border,var(--zy-migrated-color-cbebfcf5a2)); border-radius:var(--zy-card-radius,12px); padding:10px 12px; font-size:var(--zy-body-font,13px); background:var(--zy-bg-elevated,transparent); }
+    .ps-item.active { border-color:var(--status-success,var(--zy-migrated-color-c857488cc0)); }
+    .ps-item b { direction:ltr; }
+    .ps-tag { font-size:10px; font-weight:900; padding:2px 8px; border-radius:999px; background:var(--status-success-soft,var(--zy-migrated-color-69a1e25df5)); color:var(--status-success,var(--zy-migrated-color-c857488cc0)); }
+    /* نماذج السلايد — تخطيط عموديّ خاصّ؛ الحقول ترث نظام الإدخال العامّ. */
+    .ps-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .ps-form input { min-height:var(--zy-control-h,36px); border-radius:var(--zy-control-radius,10px); border:1px solid var(--zy-border,var(--zy-migrated-color-6a77190266)); background:var(--zy-bg,transparent); color:inherit; padding:6px 10px; }
+    .ps-brk { display:grid; grid-template-columns:1fr 1fr 80px 34px; gap:6px; align-items:center; }
+    .ps-brk input { min-height:32px; font-size:12px; }
+    .ps-muted { font-size:12px; color:var(--zy-text-muted,var(--sa-muted,var(--zy-muted))); font-weight:800; }
+
+/* Source: Pages/Payroll/Settings.cshtml */
+.sb-sec { margin-top: 18px; }
+        .sb-hint { color: var(--color-text-secondary); font-size: 13px; margin: 4px 0 14px; }
+        .sb-board { border: 1px solid var(--color-border); border-radius: 14px; padding: 14px; margin-bottom: 16px; background: var(--color-surface); }
+        .sb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+        .sb-col h3 { font-size: 13px; margin: 0 0 8px; color: var(--color-text-secondary); }
+        .sb-drop { min-height: 96px; border: 1px dashed var(--color-border-strong); border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; background: var(--color-background); }
+        .sb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; cursor: grab; user-select: none; background: var(--color-primary-soft); color: var(--color-primary-text); border: 1px solid var(--color-border); font-size: 13px; }
+        .sb-out .sb-chip { background: var(--color-surface); color: var(--color-text-secondary); }
+        .sb-chip:active { cursor: grabbing; }
+
+        @media (max-width: 860px) { .sb-cols { grid-template-columns: 1fr; } }
+
+/* Static inline utilities migrated from Pages/Payroll/Settings.cshtml */
+
+.zyu-a4e017b7b0ef { display:flex;align-items:center;gap:8px; }
+
+.zyu-ba951531a5ea { font-size:12px;color:var(--sa-muted,var(--zy-muted));font-weight:800;margin:0 0 8px; }
+
+.zyu-0fbf9e859f82 { display:flex;flex-direction:column;gap:8px; }
+
+.zyu-3d494aad713f { margin-top:3px; }
+
+.zyu-192beac8e8a5 { display:block;font-size:12px;color:var(--sa-muted,var(--zy-muted));font-weight:800;margin-top:2px; }
+
+.zyu-7eb569b2ce96 { align-self:flex-start;min-height:36px;padding:7px 24px;border:0;border-radius:10px;background:linear-gradient(135deg,var(--zy-primary),var(--zy-primary-strong));color:var(--zy-on-primary);font-weight:1000;cursor:pointer; }
+
+.zyu-bbca822d7973 { display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0; }
+
+.zyu-02f1ed8e11c7 { min-width:190px; }
+
+.zyu-5a5f7abe4163 { width:110px; }
+
+.zyu-234ef25e545e { font-size:12px;font-weight:900; }
+
+.zyu-5040f64097e1 { font-size:12px;color:var(--sa-muted,var(--zy-muted));font-weight:800; }
+
+.zyu-0fd943ffe4c5 { align-self:flex-start; }
+
+.zyu-89086d4ee3f5 { display:flex;flex-direction:column;gap:10px; }
+
+.zyu-fe3847ad0a07 { min-width:230px; }
+
+.zyu-45435946eaf3 { min-width:260px; }
+
+.zyu-d8a13058d9f8 { display:flex;flex-wrap:wrap;align-items:center;gap:10px; }
+
+.zyu-1332d1129261 { display:flex;align-items:center;gap:6px;margin:0; }
+
+.zyu-91269935bd91 { width:80px; }
+
+.zyu-b7e63b9b8145 { min-width:220px; }
+
+.zyu-cd2b97c43d05 { width:140px; }
+
+.zyu-99ebfe3d8735 { display:flex;justify-content:space-between;align-items:center; }
+
+.zyu-eb99a4c193ed { white-space:nowrap; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-d473b3815758 { font-size:12px;color:var(--sa-muted,var(--zy-muted));margin-top:4px; }
+
+.zyu-f0de252a84a8 { display:flex;flex-direction:column;gap:12px; }
+
+.zyu-95e15889185d { flex-direction:row;align-items:center;gap:8px; }
+
+.zyu-5e461f0709b6 { font-size:13px; }
+
+.zyu-34f536270598 { color:var(--sa-muted,var(--zy-muted));font-size:11px;font-weight:900; }
+
+.zyu-67c6459975c9 { display:flex;flex-direction:column;gap:6px; }
+
+.zyu-71658681447f { display:grid;grid-template-columns:1fr 1fr;gap:10px; }

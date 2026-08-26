@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "تهيئة المخالفات";
 }
+<link rel="stylesheet" href="~/css/pages/violationconfiguration-04ead15ab3.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -112,8 +113,8 @@
                 <thead>
                     <tr>
                         <th>نوع المخالفة</th>
-                        <th style="width:220px">رقم الفقرة</th>
-                        <th style="width:110px"></th>
+                        <th class="zyu-e104eb5fa217">رقم الفقرة</th>
+                        <th class="zyu-5a5f7abe4163"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -122,13 +123,13 @@
                         <tr>
                             <td><b>@name</b></td>
                             <td colspan="2">
-                                <form method="post" asp-page-handler="Clause" style="display:flex;gap:8px">
+                                <form method="post" asp-page-handler="Clause" class="zyu-9c40389b4ad8">
                                                     <input type="hidden" name="id" value="@id" />
                                     @* الصفحة تُمرَّر مع الحفظ كي تعود إليها لا إلى الأولى. *@
                                     <input type="hidden" name="pageNo" value="@Model.CurrentPage" />
                                     <input name="clause" value="@clause" placeholder="مثال: المادة 12 / فقرة ب"
-                                           style="flex:1;padding:6px 10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.8125rem" />
-                                    <button type="submit" class="zyc-add-rule" style="align-self:stretch">حفظ</button>
+                                           class="zyu-45fd55b81692" />
+                                    <button type="submit" class="zyc-add-rule zyu-8ede280590c3">حفظ</button>
                                 </form>
                             </td>
                         </tr>

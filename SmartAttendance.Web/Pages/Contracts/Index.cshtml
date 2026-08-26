@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "عقود الموظفين";
 }
+<link rel="stylesheet" href="~/css/pages/index-d03af21692.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -38,7 +39,7 @@
             </p>
         </header>
 
-        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+        <form method="get" class="zyp-editor-grid zyu-410cf9349439">
             <label>
                 بحث (اسم · رقم موظف · رقم عقد)
                 <input asp-for="Search" placeholder="اكتب للبحث…" />
@@ -50,9 +51,9 @@
                     <option value="true">إظهار الكل</option>
                 </select>
             </label>
-            <label style="justify-content:flex-end">
+            <label class="zyu-110c1427da8c">
                 &nbsp;
-                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+                <button type="submit" class="zyc-add-rule zyu-8ede280590c3">تطبيق</button>
             </label>
         </form>
 
@@ -71,7 +72,7 @@
                         <th>من – إلى تاريخ</th>
                         <th>الأيام المتبقية</th>
                         <th>الحالة</th>
-                        <th style="width:190px"></th>
+                        <th class="zyu-dc9eac3f8921"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -92,7 +93,7 @@
                             <td class="zyp-conditions">
                                 @if (contract.IsCurrent)
                                 {
-                                    <span class="zyp-rank" style="min-width:auto;padding:0 8px">حالي</span>
+                                    <span class="zyp-rank zyu-c2f07af63a01">حالي</span>
                                 }
                                 else if (remaining is 0)
                                 {
@@ -107,7 +108,7 @@
                                 <div class="zyp-actions">
                                     <a asp-page="./Movements" asp-route-contract="@contract.Id">تجديد / تمديد</a>
                                     <a asp-page="./Index" asp-route-employeefilter="@contract.EmployeeId" asp-route-showexpired="true">سلسلته</a>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@contract.Id" />
                                         <button type="submit" data-zyconfirm="حذف العقد من السجلّ؟">حذف</button>
                                     </form>
@@ -180,7 +181,7 @@
 
         <footer class="nxhs-actions">
             <button type="submit">حفظ العقد</button>
-            <a class="zyp-move" asp-page="./Movements" style="padding:8px 14px">تحديثات العقود ←</a>
+            <a class="zyp-move zyu-e3da42537cb5" asp-page="./Movements">تحديثات العقود ←</a>
         </footer>
     </form>
 </section>

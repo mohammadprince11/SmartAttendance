@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "سلم الرواتب";
 }
+<link rel="stylesheet" href="~/css/pages/salaryscale-cc54b8737b.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -16,7 +17,7 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.Message))
     {
-        <div class="nxhs-alert" style="@(Model.MessageOk ? "" : "border-color:#b42318;color:#b42318")">@Model.Message</div>
+        <div class="nxhs-alert" data-zy-style="@(Model.MessageOk ? "" : "border-color:#b42318;color:#b42318")">@Model.Message</div>
     }
 
     <form method="post" asp-page-handler="SaveLabels" class="nxhs-panel zyp-editor">
@@ -59,7 +60,7 @@
 
     <div class="nxhs-panel">
         <h3>درجات السلم (@Model.Grades.Count)</h3>
-        <table class="zyp-table" style="width:100%">
+        <table class="zyp-table zyu-b7aa1ec0049d">
             <thead>
                 <tr>
                     <th></th><th>الكود</th><th>الاسم</th><th>@Model.Dim1Label</th><th>@Model.Dim2Label</th><th>@Model.Dim3Label</th>
@@ -74,7 +75,7 @@
                 @foreach (var g in Model.Grades)
                 {
                     <tr>
-                        <td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:@(g.Color ?? "#94a3b8")"></span></td>
+                        <td><span data-zy-style="display:inline-block;width:12px;height:12px;border-radius:3px;background:@(g.Color ?? "#94a3b8")"></span></td>
                         <td><b>@g.Code</b></td>
                         <td>@g.Name</td>
                         <td>@(g.Dim1 ?? "—")</td><td>@(g.Dim2 ?? "—")</td><td>@(g.Dim3 ?? "—")</td>
@@ -84,8 +85,8 @@
                         <td>@(g.MaxBasic?.ToString("#,0.##") ?? "—")</td>
                         <td>@(g.IsActive ? "نعم" : "لا")</td>
                         <td>
-                            <form method="post" asp-page-handler="Delete" asp-route-id="@g.Id" data-zyconfirm="حذف الدرجة «@g.Code»؟" style="display:inline">
-                                <button type="submit" style="background:none;border:none;color:#b42318;cursor:pointer">حذف</button>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@g.Id" data-zyconfirm="حذف الدرجة «@g.Code»؟" class="zyu-6b8b63d565c4">
+                                <button type="submit" class="zyu-452da5e9fc75">حذف</button>
                             </form>
                         </td>
                     </tr>

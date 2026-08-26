@@ -4,87 +4,15 @@
 
 @{
     ViewData["Title"] = "زيادات الراتب";
-    var acc = "#34d399";
     var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name, e.Basic }));
     string J(object o) => JsonSerializer.Serialize(o);
     string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
 }
+<link rel="stylesheet" href="~/css/pages/raises-867dc597c8.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
 
-<style>
-    .rz-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
-    .rz-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .rz-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .rz-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .rz-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .rz-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
-    .rz-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .rz-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
-    .rz-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
-    .rz-btn.danger:hover { background:rgba(248,113,113,.26); }
-    .rz-btn.apply { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
-    .rz-btn.apply:hover { background:rgba(52,211,153,.28); }
-    .rz-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
-    .rz-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
-    .rz-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
-        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
-        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
-        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
-    html[data-theme="light"] .rz-bulkbar { background:#fff; }
-    .rz-bulkbar.show { display:flex; }
-    .rz-bulkbar b { font-size:13px; font-weight:900; } .rz-bulkbar b span { color:var(--acc); }
-    .rz-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
-    .rz-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
-    .rz-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
-
-    .rz-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
-    .rz-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
-    .rz-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
-    .rz-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
-    .rz-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-
-    .rz-bar { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
-    .rz-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
-    .rz-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
-    html[data-theme="light"] .rz-filter input { background:#fff; }
-
-    .rz-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .rz-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
-    .rz-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
-    html[data-theme="light"] .rz-table th { background:#f2f7fb; }
-    .rz-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
-    .rz-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
-    .rz-ref { direction:ltr; font-weight:900; font-size:12px; }
-    .rz-emp b { font-weight:900; } .rz-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
-    .rz-num { direction:ltr; font-weight:900; text-align:start; }
-    .rz-flow { direction:ltr; font-weight:900; } .rz-flow .old { color:var(--sa-muted,#8FA8BC); text-decoration:line-through; } .rz-flow .arrow { color:var(--acc); margin:0 5px; } .rz-flow .new { color:var(--acc); }
-    .rz-inc { direction:ltr; font-weight:900; color:#34d399; }
-    .rz-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
-    .rz-chip.amt { background:rgba(18,217,227,.1); color:#12D9E3; }
-    .rz-chip.pct { background:rgba(167,139,250,.16); color:#a78bfa; }
-    .rz-chip.ap { background:rgba(52,211,153,.16); color:#34d399; }
-    .rz-chip.pend { background:rgba(250,204,21,.14); color:#facc15; }
-    .rz-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .rz-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(52,211,153,.35); background:rgba(52,211,153,.08); }
-    .rz-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
-    .rz-actions { display:flex; gap:6px; justify-content:flex-end; } .rz-actions form { display:inline; }
-
-    .rz-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
-    .rz-form select, .rz-form input, .rz-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
-    html[data-theme="light"] .rz-form select, html[data-theme="light"] .rz-form input, html[data-theme="light"] .rz-form textarea { background:#fff; }
-    .rz-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .rz-seg { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:10px; overflow:hidden; }
-    .rz-seg label { flex-direction:row !important; padding:9px 16px; cursor:pointer; margin:0; font-weight:900; }
-    .rz-seg label.on { background:var(--acc); color:#04141d; }
-    .rz-seg input { display:none; }
-    .rz-preview { padding:12px 14px; border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:12px; font-size:14px; font-weight:900; background:color-mix(in srgb,var(--acc) 8%,transparent); text-align:center; }
-    .rz-preview .flow { direction:ltr; } .rz-preview .old { color:var(--sa-muted,#8FA8BC); text-decoration:line-through; } .rz-preview .arrow { color:var(--acc); margin:0 8px; } .rz-preview .new { color:var(--acc); font-size:16px; }
-    .rz-preview small { display:block; font-size:11px; font-weight:800; color:var(--sa-muted,#8FA8BC); margin-top:4px; }
-</style>
 
 <section class="rz-page" dir="rtl">
     <header class="rz-head">
@@ -92,7 +20,7 @@
             <h1>📈 زيادات الراتب</h1>
             <p>تغيير دائم للراتب الأساسي (بمبلغ أو نسبة). عند «التطبيق» يُحدَّث راتب الموظف الأساسي فوراً.</p>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="zyu-d0cb022ba49e">
             <button type="button" class="rz-btn ghost icon" title="زيادة جماعية — نفس الزيادة لعدة موظفين" aria-label="زيادة جماعية" onclick="massOpen()">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </button>
@@ -111,14 +39,14 @@
     <div class="rz-kpis">
         <div class="rz-kpi"><b>@Model.PendingCount</b><span>زيادات قيد الانتظار</span></div>
         <div class="rz-kpi"><b>@Model.AppliedCount</b><span>زيادات مُطبَّقة</span></div>
-        <div class="rz-kpi"><b style="color:#34d399">+@Model.TotalIncrease.ToString("#,0.##")</b><span>إجمالي الزيادة الشهرية المُطبَّقة</span></div>
+        <div class="rz-kpi"><b class="zyu-c15fd6731792">+@Model.TotalIncrease.ToString("#,0.##")</b><span>إجمالي الزيادة الشهرية المُطبَّقة</span></div>
         <div class="rz-kpi"><b>@Model.Employees.Count</b><span>الموظفون النشطون</span></div>
     </div>
 
     <form method="get" class="rz-bar">
         <input type="hidden" name="Tab" value="@Model.Tab" />
         <div class="rz-filter">
-            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/سبب/رقم مرجعي" style="min-width:220px" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/سبب/رقم مرجعي" class="zyu-b7e63b9b8145" />
             <button type="submit" class="rz-btn ghost sm">بحث</button>
         </div>
     </form>
@@ -145,10 +73,10 @@
                 <thead>
                     <tr>
                         @if (!Model.IsApplied)
-                        { <th style="width:34px"><input type="checkbox" onclick="rzAll(this)" /></th> }
+                        { <th class="zyu-d12729b3d536"><input type="checkbox" onclick="rzAll(this)" /></th> }
                         <th>الرقم المرجعي</th><th>الموظف</th><th>النوع</th><th>الأساسي (قبل ← بعد)</th>
                         <th>الزيادة</th><th>تاريخ السريان</th><th>السبب</th><th>@(Model.IsApplied ? "طُبّقت في" : "الحالة")</th>
-                        <th style="text-align:end">إجراءات</th>
+                        <th class="zyu-814fec806937">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -167,10 +95,10 @@
                             <td class="rz-flow"><span class="old">@r.OldBasic.ToString("#,0.##")</span><span class="arrow">←</span><span class="new">@r.NewBasic.ToString("#,0.##")</span></td>
                             <td class="rz-inc">+@r.Increase.ToString("#,0.##")</td>
                             <td class="rz-ref">@(r.EffectiveDate?.ToString("yyyy-MM-dd") ?? "—")</td>
-                            <td style="font-size:12px">@(r.Reason ?? "—")</td>
+                            <td class="zyu-a49cca52becd">@(r.Reason ?? "—")</td>
                             <td>
                                 @if (r.IsApplied)
-                                { <span class="rz-ref" style="font-size:12px">@(r.AppliedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span> }
+                                { <span class="rz-ref zyu-a49cca52becd">@(r.AppliedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</span> }
                                 else
                                 { <span class="rz-chip pend">قيد الانتظار (غير مقفلة)</span> }
                             </td>
@@ -213,7 +141,7 @@
             <button type="button" class="hrms-slideover-close" onclick="rzClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Save" class="rz-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="Save" class="rz-form zyu-f0de252a84a8">
                 <input type="hidden" name="Id" id="rz-Id" value="0" />
                 <input type="hidden" name="RaiseType" id="rz-RaiseType" value="Amount" />
 
@@ -253,7 +181,7 @@
 
                 <label>ملاحظة<textarea name="Note" id="rz-Note" rows="2"></textarea></label>
 
-                <p style="font-size:12px;font-weight:800;color:var(--sa-muted,#8FA8BC);margin:0">تُحفظ الزيادة قيد الانتظار — لا يتغيّر الراتب الأساسي إلا بعد الضغط على «تطبيق».</p>
+                <p class="zyu-956cd6dad157">تُحفظ الزيادة قيد الانتظار — لا يتغيّر الراتب الأساسي إلا بعد الضغط على «تطبيق».</p>
                 <button type="submit" class="rz-btn">حفظ الزيادة</button>
             </form>
         </div>
@@ -267,7 +195,7 @@
             <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="rz-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="rz-form zyu-f0de252a84a8">
                 <input type="hidden" name="RaiseType" id="mass-RaiseType" value="Amount" />
                 <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="Manual" />
 
@@ -305,10 +233,10 @@
                 </div>
 
                 <div class="mass-pane" id="mass-pane-Manual">
-                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
-                    <div style="display:flex;gap:6px">
+                    <label>الموظفون <span id="mass-count" class="zyu-07fa33e9aa03">(0 محدد)</span></label>
+                    <div class="zyu-69374f356aba">
                         <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
-                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                               class="zyu-e038610b695a" />
                         <button type="button" class="rz-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
                         <button type="button" class="rz-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
                     </div>
@@ -326,8 +254,8 @@
                 </div>
 
                 <div class="mass-pane" id="mass-pane-File" hidden>
-                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
-                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                    <div class="mass-file-hint"><b class="zyu-07fa33e9aa03">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" class="zyu-b87a8c000a7e" /></label>
                 </div>
 
                 <div class="mass-pane" id="mass-pane-Criteria" hidden>
@@ -353,12 +281,12 @@
             <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="rz-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="rz-form zyu-f0de252a84a8">
                 <div class="mass-file-hint">
-                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                    <b class="zyu-07fa33e9aa03">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
                     A: رمز الموظف · B: القيمة · C: النوع (مبلغ / نسبة — اختياري، افتراضي مبلغ) · D: السبب (اختياري)
                 </div>
-                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required class="zyu-b87a8c000a7e" /></label>
                 <button type="submit" class="rz-btn">استيراد</button>
             </form>
         </div>

@@ -10,181 +10,10 @@
 @{
     ViewData["Title"] = "الحضور اليومي";
 }
+<link rel="stylesheet" href="~/css/pages/index-f84a9abfe5.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .dat-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .dat-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .dat-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .dat-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .dat-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .dat-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .dat-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-
-    .dat-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .dat-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
-    .dat-bar input, .dat-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
-    html[data-theme="light"] .dat-bar input, html[data-theme="light"] .dat-bar select { background: #fff; color: inherit; }
-
-    .dat-stats { display: flex; gap: 8px; flex-wrap: wrap; }
-    .dat-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
-    .dat-stat b { direction: ltr; display: inline-block; }
-    .dat-stat.present { color: #4ade80; } .dat-stat.late { color: #facc15; }
-    .dat-stat.absent { color: #f87171; } .dat-stat.incomplete { color: #f97316; }
-    /* «لم تُحلَّل» ليست حالة حضور بل تنبيه إجراء — تُميَّز بحدٍّ متقطّع. */
-    .dat-stat.stale { color: #f97316; border-style: dashed; }
-    /* العدّادات صارت أزرار فلترة: مؤشّر يد وحالة نشطة واضحة، وبلا خطّ رابط. */
-    a.dat-stat { text-decoration: none; cursor: pointer; transition: background .15s, border-color .15s; }
-    a.dat-stat:hover { border-color: rgba(18,217,227,.55); }
-    a.dat-stat.is-active { background: rgba(18,217,227,.14); border-color: #12D9E3; }
-    .dat-stat-clear { color: var(--sa-muted, #8FA8BC); }
-
-    /* ⚠️ **بلا `overflow` هنا**: أي قيمة تجعل البطاقة حاوية التمرير، فيلتصق رأس
-       الجدول بها لا بالشاشة — والبطاقة بطول الجدول كلّه فلا تُمرَّر أصلاً ⟹ الرأس
-       يهرب مع الصفوف وتبقى الأرقام بلا عناوين. نفس قاعدة «المستند هو المُمرِّر».
-       التمرير الأفقي يعود بالمقاسات الضيّقة وحدها (أدناه) حيث لا يسع الجدول. */
-    .dat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .dat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-    .dat-table th {
-        text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000;
-        color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22);
-        background: #0b1e33;
-        /* أسفل الشريط العلويّ الملتصق لا تحته، وإلا اختفى الرأس خلفه. */
-        position: sticky; top: var(--zy-topbar-height, 64px); z-index: 3;
-    }
-    html[data-theme="light"] .dat-table th { background: #f2f7fb; }
-
-    @@media (max-width: 1100px) {
-        /* الجدول لا يسع: يستعيد مُمرِّره الأفقي، ويسقط الالتصاق معه — وهو ثمنٌ
-           مقبول بمقاسٍ يُقرأ بالتمرير الأفقي أصلاً. */
-        .dat-table-card { overflow-x: auto; }
-        .dat-table { min-width: 900px; }
-        .dat-table th { position: static; }
-    }
-    .dat-table td { padding: 9px 7px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
-    /* اثنتا عشرة خانة بمقاسٍ واحد: العنوان يلتفّ على سطرين، واسم الموظف يلتفّ،
-       والباقي أرقامٌ قصيرة — فيدخل الجدول كاملاً بلا قصٍّ ولا تمرير أفقيّ. */
-    .dat-table th { white-space: normal; line-height: 1.35; padding-inline: 7px; }
-    .dat-table td:nth-child(3) { white-space: normal; min-width: 118px; }
-    .dat-table td:nth-child(5) { font-size: 11.5px; }
-    .dat-table tr:hover td { background: rgba(18,217,227,.04); }
-    /* الأرقام تُقرأ LTR (تواريخ · أوقات · ساعات) لكن محاذاتها يجب أن تطابق
-       عنوانها. مع direction:ltr تصير start = يسار بينما عنوان الجدول RTL
-       فيحاذي يميناً — فينفصل العمود عن رأسه. التثبيت على right يوحّدهما. */
-    .dat-num { direction: ltr; text-align: right; font-weight: 900; }
-    .dat-table th { text-align: right; }
-    .dat-num.warn { color: #facc15; } .dat-num.bad { color: #f97316; }
-    .dat-shift { display: inline-flex; align-items: center; gap: 6px; }
-    .dat-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-    .dat-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
-    .dat-chip.Present { background: rgba(74,222,128,.12); color: #4ade80; }
-    .dat-chip.Late { background: rgba(250,204,21,.12); color: #facc15; }
-    .dat-chip.Absent { background: rgba(248,113,113,.12); color: #f87171; }
-    .dat-chip.Incomplete { background: rgba(249,115,22,.14); color: #f97316; }
-    .dat-chip.Weekend, .dat-chip.Rest { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
-    .dat-check { color: #12D9E3; font-weight: 900; }
-    /* بائتة: طرأ تغيير بعد التحليل. لون تحذيري لا خطأ — البيانات سليمة لكنها قديمة. */
-    .dat-stale { color: #f97316; font-weight: 900; cursor: help; }
-    .dat-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .dat-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    .dat-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
-
-    /* منبثقة الإشعار. `z-index` أدنى من منسدلة الكلاندر (2147482500) فلا تحجبها،
-       وأعلى من الترويسة اللاصقة (20) و رأس الجدول اللاصق. */
-    .dat-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,8,16,.62); z-index: 900; }
-    .dat-modal {
-        display: none; position: fixed; z-index: 901;
-        /* التوسيط بـ`inset:0 + margin:auto` لا بـ`top/left:50% + translate(-50%,-50%)`:
-           أثناء سحب شريط التمرير يرسم المتصفّح الطبقة الثابتة **بلا** الـtransform
-           للحظات، فتقفز النافذة لزاوية اليمين السفلى (ركنها الأعلى يصير بمنتصف
-           الشاشة) ثم ترتدّ عند الإفلات. بلا transform لا يوجد ما يسقط. */
-        inset: 0; margin: auto;
-        height: max-content;
-        width: min(560px, calc(100% - 32px)); max-height: 86vh; overflow: auto;
-        /* لا يمتدّ تمرير المنبثقة للصفحة تحتها حين يبلغ آخره (سلسلة التمرير). */
-        overscroll-behavior: contain;
-        padding: 20px; border-radius: 20px; border: 1px solid rgba(73,111,151,.3);
-        background: var(--sa-surface, rgba(8,25,43,.98)); color: var(--sa-text, #DCEAF4);
-        box-shadow: 0 24px 60px rgba(0,0,0,.42);
-    }
-    html[data-theme="light"] .dat-modal { background: #fff; }
-    .dat-modal h3 { margin: 0 0 10px; font-size: 16px; font-weight: 1000; }
-    .dat-modal-scope { margin: 0 0 14px; font-size: 12px; font-weight: 800; line-height: 1.8; color: var(--sa-muted, #8FA8BC); }
-    .dat-modal-scope b { color: #12D9E3; }
-    .dat-modal-form { display: flex; flex-direction: column; gap: 14px; }
-    .dat-modal-label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 6px; }
-    .dat-modal-radios { display: flex; gap: 14px; margin-top: 6px; font-size: 13px; font-weight: 900; flex-wrap: wrap; }
-    .dat-modal-radios label { display: flex; align-items: center; gap: 6px; }
-    .dat-modal-text {
-        border-radius: 10px; border: 1px solid rgba(73,111,151,.3); background: rgba(0,0,0,.16);
-        color: inherit; padding: 8px 10px; font-size: 13px; font-weight: 700; font-family: inherit; resize: vertical;
-    }
-    html[data-theme="light"] .dat-modal-text { background: #fff; }
-    .dat-modal-legend { font-size: 11px; font-weight: 800; line-height: 1.9; color: var(--sa-muted, #8FA8BC); }
-    .dat-modal-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; }
-    /* أزرار الإرسال ملتصقة بأسفل المنبثقة: بقائمة أيامٍ طويلة كانت تهبط تحت الحافة
-       فيبدو أن لا زرّ أصلاً. تلتصق بلونٍ صلب لئلا تعبر الصفوف من تحتها. */
-    .dat-modal-actions {
-        display: flex; gap: 8px; position: sticky; bottom: -20px;
-        margin: 4px -20px -20px; padding: 12px 20px 20px;
-        background: var(--sa-surface, rgba(8,25,43,.98));
-        border-top: 1px solid rgba(73,111,151,.22);
-    }
-    html[data-theme="light"] .dat-modal-actions { background: #fff; }
-
-    /* ═══ التحديد الجماعي ═══ */
-    .dat-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
-    .dat-table th.dat-pick-col, .dat-table td.dat-pick-col { width: 34px; text-align: center; padding-inline: 8px; }
-    tr.is-picked td { background: rgba(18,217,227,.09) !important; }
-
-    /* بار الإجراءات الجماعية: عائم ثابت أسفل الشاشة (المعيار الموحّد) — لا يظهر
-       إلا بوجود تحديد، فلا يحجب شيئاً بالحالة الطبيعية. */
-    .dat-bulkbar {
-        display: none; position: fixed; inset-inline: 0; bottom: 18px; z-index: 880;
-        margin-inline: auto; width: max-content; max-width: calc(100% - 24px);
-        align-items: center; gap: 12px; padding: 10px 16px; border-radius: 999px;
-        border: 1px solid rgba(18,217,227,.45); background: var(--sa-surface, rgba(8,25,43,.98));
-        color: var(--sa-text, #DCEAF4); box-shadow: 0 18px 44px rgba(0,0,0,.42);
-        font-size: 13px; font-weight: 900;
-    }
-    html[data-theme="light"] .dat-bulkbar { background: #fff; }
-    .dat-bulkbar.is-on { display: flex; }
-    .dat-bulkbar b { color: #12D9E3; direction: ltr; display: inline-block; }
-
-    /* تقرير الاستثناء — القرار: يُستثنى غير المستحقّ **مع بيان السبب**. */
-    .dat-skips { border: 1px solid rgba(249,115,22,.4); background: rgba(249,115,22,.07); border-radius: 14px; padding: 12px 16px; }
-    .dat-skips h4 { margin: 0 0 8px; font-size: 13px; font-weight: 1000; color: #f97316; }
-    .dat-skips ul { margin: 0; padding-inline-start: 18px; font-size: 12.5px; font-weight: 800; line-height: 2; }
-
-    /* قائمة أيام الطلب الزمنيّ: سطر لكل تاريخ بنافذته المستقلّة. */
-    .dat-days-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-    .dat-days-head span { font-size: 12px; font-weight: 900; }
-    /* بلا `max-height`/`overflow`: مُمرِّرٌ داخل مُمرِّرٍ داخل المنبثقة يعني أن عجلة
-       الفأرة تحرّك القائمة الصغيرة بينما المستخدم يظنّ أنه ينزل بالمنبثقة — فتبقى
-       أزرار الإرسال تحت الحافة ولا يصل إليها. مُمرِّرٌ واحد: المنبثقة نفسها. */
-    .dat-days-list { display: flex; flex-direction: column; gap: 6px; }
-    .dat-day {
-        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-        padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(73,111,151,.28);
-        background: rgba(0,0,0,.12);
-    }
-    html[data-theme="light"] .dat-day { background: #f7fafc; }
-    .dat-day-label { flex: 1 1 190px; font-size: 12px; font-weight: 900; line-height: 1.7; }
-    .dat-day-label b { direction: ltr; display: inline-block; }
-    .dat-day-why { display: block; font-size: 11px; font-weight: 800; color: #facc15; }
-    .dat-day-why.none { color: var(--sa-muted, #8FA8BC); }
-    .dat-day input[type="time"] {
-        min-height: 32px; border-radius: 9px; border: 1px solid rgba(73,111,151,.3);
-        background: rgba(0,0,0,.16); color: inherit; padding: 4px 8px; font-size: 12.5px; font-weight: 800;
-    }
-    html[data-theme="light"] .dat-day input[type="time"] { background: #fff; }
-</style>
 
 <section class="dat-page" dir="rtl">
     <partial name="_AttendanceViews" />
@@ -193,14 +22,14 @@
             <h1>الحضور اليومي</h1>
             <p>يوميات موظف×يوم بالحقول المشتقة: تأخير، خروج مبكر، ساعات عمل، حالة — المرحلة 3 من محرك الحضور.</p>
         </div>
-        <form method="post" asp-page-handler="Analyze" style="display:flex;align-items:end;gap:8px">
+        <form method="post" asp-page-handler="Analyze" class="zyu-103386265ead">
             <input type="hidden" name="Month" value="@Model.Month" />
             <input type="hidden" name="Search" value="@Model.Search" />
             @* بلا `required`: التحليل يقرأ مناوبة كل موظف المسنَدة، وهذا الحقل احتياطُ
                غير المسنَدين وحدهم. إجبار الاختيار كان يوهم أن التحليل «على مناوبة». *@
-            <label style="font-size:11px;font-weight:900;display:flex;flex-direction:column;gap:4px">
+            <label class="zyu-dd4fdd075935">
                 احتياط غير المسنَدين (اختياري)
-                <select name="ShiftTypeId" style="min-height:36px;border-radius:10px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:6px 10px">
+                <select name="ShiftTypeId" class="zyu-60557d7c6632">
                     <option value="">— تلقائي: مناوبة كل موظف —</option>
                     @foreach (var shift in Model.Shifts)
                     {
@@ -247,7 +76,7 @@
             <input type="hidden" name="StatusFilter" value="@Model.StatusFilter" />
         </label>
         <button type="submit" class="dat-btn ghost">عرض</button>
-        <div class="dat-stats" style="margin-inline-start:auto">
+        <div class="dat-stats zyu-a3d4b1c97186">
 @{
     // الضغط على عدّاد يفلتر عليه، والضغط عليه وهو نشط يرفع الفلتر — فلا يعلق
     // المستخدم بحالةٍ لا يعرف كيف يخرج منها.
@@ -328,7 +157,7 @@
                             <td>
                                 @if (row.ShiftName != null)
                                 {
-                                    <span class="dat-shift"><i style="background:@(row.ShiftColor ?? "#12D9E3")"></i>@row.ShiftName</span>
+                                    <span class="dat-shift"><i data-zy-style="background:@(row.ShiftColor ?? "#12D9E3")"></i>@row.ShiftName</span>
                                 }
                                 else { <text>—</text> }
                             </td>
@@ -428,7 +257,7 @@
             </select>
         </label>
 
-        <label class="dat-modal-label" id="dat-req-shift-wrap" style="display:none">
+        <label class="dat-modal-label zyu-6aa34d7432e7" id="dat-req-shift-wrap">
             المناوبة البديلة
             <select name="ReqShiftTypeId" id="dat-req-shift" class="dat-modal-text">
                 @foreach (var shift in Model.Shifts)
@@ -443,10 +272,10 @@
            الدوام]. الاقتراح لا يدهس تعديل المستخدم — يتوقّف أول ما يلمس الحقل. *@
         @* تحديدٌ بأكثر من يومية: **كل تاريخ بسطره ووقته** — نافذة الأحد ليست نافذة
            الاثنين، وفرضُ نافذةٍ واحدة على أيامٍ مختلفة يُنتج طلباً لا يطابق ما جرى. *@
-        <div id="dat-req-days" style="display:none"></div>
+        <div id="dat-req-days" class="zyu-6aa34d7432e7"></div>
 
-        <div id="dat-req-time-block" style="display:none">
-            <div id="dat-req-time-wrap" style="gap:10px" class="dat-modal-radios">
+        <div id="dat-req-time-block" class="zyu-6aa34d7432e7">
+            <div id="dat-req-time-wrap" class="zyu-297096a428af" class="dat-modal-radios">
                 <label class="dat-modal-label">من الساعة
                     <input type="time" name="ReqFromTime" class="dat-modal-text"
                            oninput="this.dataset.touched='1'" />
@@ -455,7 +284,7 @@
                     <input type="time" name="ReqToTime" class="dat-modal-text"
                            oninput="this.dataset.touched='1'" />
                 </label>
-                <button type="button" class="dat-btn ghost" style="align-self:end"
+                <button type="button" class="dat-btn ghost zyu-edcd900711b9"
                         onclick="datSuggestTimes(true)" title="أعِد حساب الوقت من اليوميات المحدَّدة">
                     ↻ اقتراح تلقائي
                 </button>

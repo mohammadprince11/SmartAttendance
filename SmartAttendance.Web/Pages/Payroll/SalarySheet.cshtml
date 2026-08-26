@@ -6,44 +6,8 @@
         .GroupBy(l => string.IsNullOrWhiteSpace(l.Department) ? "بدون قسم" : l.Department)
         .OrderBy(g => g.Key);
 }
+<link rel="stylesheet" href="~/css/pages/salarysheet-594793f365.css" asp-append-version="true" />
 
-<style>
-    .ss-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
-    .ss-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
-        border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .ss-field { display:flex; flex-direction:column; gap:5px; }
-    .ss-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .ss-bar select { min-height:38px; min-width:280px; border-radius:10px; border:1px solid rgba(73,111,151,.28);
-        background:rgba(0,0,0,.16); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
-    html[data-theme="light"] .ss-bar select { background:#fff; }
-    .ss-spacer { flex:1 1 auto; }
-    .ss-btn { min-height:38px; align-self:flex-end; padding:8px 20px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:1000; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
-    .ss-btn.exp { border:0; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
-    .ss-btn.prn { border:1px solid rgba(73,111,151,.3); background:transparent; color:inherit; }
-    .ss-btn.prn:hover { background:rgba(18,217,227,.12); color:#12D9E3; }
-
-    .ss-card { border:1px solid rgba(73,111,151,.22); border-radius:16px; overflow:hidden; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .ss-head { padding:16px 18px; border-bottom:1px solid rgba(73,111,151,.18); }
-    .ss-head h2 { margin:0; font-size:16px; font-weight:1000; }
-    .ss-head p { margin:3px 0 0; font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); }
-    .ss-wrap { overflow-x:auto; }
-    .ss-table { width:100%; border-collapse:collapse; font-size:12.5px; min-width:900px; }
-    .ss-table th { text-align:start; white-space:nowrap; padding:10px 12px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
-    html[data-theme="light"] .ss-table th { background:#f2f7fb; }
-    .ss-table td { padding:8px 12px; border-bottom:1px solid rgba(143,168,188,.08); white-space:nowrap; }
-    .ss-num { direction:ltr; font-weight:900; text-align:start; unicode-bidi:plaintext; }
-    .ss-net { color:#4ade80; }
-    .ss-grp td { background:rgba(18,217,227,.06); font-weight:1000; }
-    .ss-sub td { background:rgba(73,111,151,.1); font-weight:1000; }
-    .ss-total td { background:rgba(18,217,227,.14); font-weight:1000; font-size:13px; border-top:2px solid rgba(18,217,227,.4); }
-    .ss-empty { padding:60px 20px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:900; font-size:15px; }
-
-    @@media print {
-        .ss-bar, .nexora-nav, .nexora-topbar, header, nav, aside { display:none !important; }
-        .ss-card { border:none; }
-        body, .ss-page { background:#fff !important; color:#000 !important; }
-    }
-</style>
 
 <section class="ss-page" dir="rtl">
     <form method="get" class="ss-bar">

@@ -1,0 +1,42 @@
+/* Source: Pages/Forms/Index.cshtml */
+.fb-preview { border:1px solid var(--zy-border); border-radius:var(--zy-radius-md);
+        padding:20px; background:var(--zy-surface-soft); }
+    .fb-group { border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        padding:14px; margin-bottom:14px; background:var(--zy-surface); }
+    .fb-group > h4 { margin:0 0 12px; font-size:.875rem; }
+    .fb-field { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; font-size:.8125rem; }
+    .fb-field > span { color:var(--zy-text-muted); }
+    .fb-field input, .fb-field select, .fb-field textarea {
+        padding:8px 10px; border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        background:var(--zy-input,var(--zy-surface)); color:var(--zy-text); font-family:inherit; font-size:.875rem; }
+    .fb-rating { display:flex; gap:6px; }
+    .fb-rating span { width:34px; height:34px; display:inline-flex; align-items:center;
+        justify-content:center; border:1px solid var(--zy-border); border-radius:var(--zy-radius-sm);
+        font-size:.8125rem; }
+    .fb-req { color:var(--zy-danger); }
+
+/* Static inline utilities migrated from Pages/Forms/Index.cshtml */
+
+.zyu-2d1bdd415249 { justify-content:flex-start;flex-wrap:wrap; }
+
+.zyu-3cab7ef27d09 { width:200px; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-e3da42537cb5 { padding:8px 14px; }
+
+.zyu-410cf9349439 { border:0;padding:0; }
+
+.zyu-110c1427da8c { justify-content:flex-end; }
+
+.zyu-8ede280590c3 { align-self:stretch; }
+
+.zyu-f47e3b970dce { width:90px; }
+
+.zyu-8fbe49f3670f { display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted); }
+
+.zyu-92ba147f1415 { padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.875rem; }
+
+.zyu-662c8e43345e { width:150px; }
+
+.zyu-0ee7f66ad9c0 { margin-top:12px; }

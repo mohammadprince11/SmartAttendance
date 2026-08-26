@@ -1,0 +1,29 @@
+/* Static inline utilities migrated from Pages/Employees/Index.cshtml */
+
+.zyu-c75f6b24bb4b { color:var(--zhr-text-secondary); margin-inline-start:8px; }
+
+.zyu-254959ab5526 { color:var(--cloud-white); }
+
+.zyu-5fcdd953a3c9 { display:flex; gap:12px; }
+
+.zyu-61c777fb5bde { background:var(--zy-migrated-color-7a5701aec3); color:var(--success); border: 1px solid var(--success); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold; }
+
+.zyu-2243a35b7e50 { background:var(--zy-migrated-color-377c4e9d57); color:var(--danger); border: 1px solid var(--danger); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold; }
+
+.zyu-02419cffd4a2 { margin: 0; }
+
+.zyu-38965f9b18ca { margin:0; }
+
+.zyu-5dc4c949cfa8 { padding: 4px 8px; width: auto; height: 32px; }
+
+.zyu-8b4c0db2f788 { text-align:center; padding:32px; color:var(--zhr-text-secondary); }
+
+.zyu-1d8951e3fc68 { color:var(--zhr-text-secondary); }
+
+.zyu-7abdba98c688 { inset-inline:max(16px, calc(50vw - 250px)); }
+
+.zyu-d0466aa33fa8 { display:none; }
+
+.zyu-3dc9c801db6b { justify-content:center; }
+
+.zyu-d2dbc7c4eca8 { min-width:150px; }

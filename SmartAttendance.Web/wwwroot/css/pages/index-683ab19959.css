@@ -1,0 +1,76 @@
+/* Source: Pages/AttendanceSettings/Index.cshtml */
+.ats-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, var(--zy-text)); }
+    .ats-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, var(--zy-migrated-color-add5638818), transparent 36%),
+                    linear-gradient(135deg, var(--zy-migrated-color-2d2722bfd0), var(--zy-migrated-color-d38141ec79));
+    }
+    html[data-theme="light"] .ats-head { background: linear-gradient(135deg, var(--zy-white), var(--zy-migrated-color-c2da37727c)); }
+    .ats-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .ats-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .ats-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, var(--zy-primary), var(--zy-primary-strong)); color: var(--zy-on-primary); }
+    .ats-btn.ghost { background: transparent; border: 1px solid var(--zy-migrated-color-28565ef553); color: inherit; }
+
+    .ats-card { border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 18px; overflow: hidden; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+    .ats-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--zy-migrated-color-b9678111e3); }
+    .ats-card-head h2 { margin: 0; font-size: 15px; font-weight: 1000; }
+    .ats-card-head p { margin: 2px 0 0; font-size: 11px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .ats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .ats-table th { text-align: start; padding: 11px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, var(--zy-muted)); border-bottom: 1px solid var(--zy-migrated-color-b9678111e3); background: var(--zy-migrated-color-733a2ff5ad); }
+    html[data-theme="light"] .ats-table th { background: var(--zy-migrated-color-c2da37727c); }
+    .ats-table td { padding: 10px 14px; border-bottom: 1px solid var(--zy-migrated-color-89acc81486); vertical-align: middle; }
+    .ats-table tr:hover td { background: var(--zy-migrated-color-e174917010); }
+    .ats-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: var(--zy-migrated-color-335feb4bcf); color: var(--zy-primary); }
+    .ats-chip.sys { background: var(--zy-migrated-color-e58aa135ec); color: var(--zy-accent); }
+    .ats-chip.off { background: var(--zy-migrated-color-e92da98547); color: var(--zy-danger); }
+    .ats-chip.yes { background: var(--zy-migrated-color-d670465097); color: var(--zy-success); }
+    .ats-empty { padding: 24px; text-align: center; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+
+    .ats-form { display: flex; flex-direction: column; gap: 10px; }
+    .ats-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .ats-form input[type=text], .ats-form input[type=number], .ats-form select {
+        min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266);
+        background: var(--zy-migrated-color-819b024f9d); color: inherit; padding: 6px 10px;
+    }
+    html[data-theme="light"] .ats-form input[type=text], html[data-theme="light"] .ats-form input[type=number], html[data-theme="light"] .ats-form select { background: var(--zy-white); }
+    .ats-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid var(--zy-migrated-color-ab4e1fef3b); background: var(--zy-migrated-color-39bb173a0d); }
+    .ats-hint { font-size: 11px; color: var(--sa-muted, var(--zy-muted)); font-weight: 700; }
+    /* نافذة الدلالة — حقلا وقت جنباً إلى جنب، ينهاران لعمود بالشاشات الضيّقة. */
+    .ats-sem-window { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .ats-sem-window { grid-template-columns: 1fr; } }
+    .ats-form input[type=time] {
+        min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266);
+        background: var(--zy-migrated-color-819b024f9d); color: inherit; padding: 6px 10px; font-family: inherit;
+    }
+    html[data-theme="light"] .ats-form input[type=time] { background: var(--zy-white); }
+
+/* Static inline utilities migrated from Pages/AttendanceSettings/Index.cshtml */
+
+.zyu-3b0d88aee9a7 { padding:16px; }
+
+.zyu-df5afa5a8563 { max-width:420px; }
+
+.zyu-eb9e070a2eee { max-width:160px; }
+
+.zyu-0fd943ffe4c5 { align-self:flex-start; }
+
+.zyu-0452d1ac5fb3 { max-width:520px;margin-top:18px;border-top:1px solid var(--sa-border,var(--zy-migrated-color-8475addddc));padding-top:16px; }
+
+.zyu-95e15889185d { flex-direction:row;align-items:center;gap:8px; }
+
+.zyu-35b96bc4c382 { flex-direction:row;align-items:center;gap:8px;margin-top:10px; }
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-1b2b228de740 { text-align:start; }
+
+.zyu-667bbbde05a1 { text-align:end;white-space:nowrap; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-94c76e9c8583 { color:var(--zy-danger); }
+
+.zyu-8541d8531a60 { text-align:start;font-size:12px; }
+
+.zyu-e0e3ddd79df2 { max-width:140px; }

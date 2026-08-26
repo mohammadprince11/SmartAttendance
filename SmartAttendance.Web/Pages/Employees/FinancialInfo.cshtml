@@ -5,33 +5,8 @@
     ViewData["Title"] = "المعلومات المالية";
     string d(DateOnly? v) => v?.ToString("yyyy-MM-dd") ?? "";
 }
+<link rel="stylesheet" href="~/css/pages/financialinfo-40cc6a79ec.css" asp-append-version="true" />
 
-<style>
-    .fin-page { direction: rtl; display: grid; gap: 16px; max-width: 1200px; margin: 0 auto; }
-    .fin-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
-        padding: 18px 22px; border-radius: 20px; border: 1px solid var(--zy-border);
-        background: var(--zy-surface-raised); color: var(--zy-text); }
-    .fin-hero h1 { margin: 0 0 4px; color: var(--zy-text); font-size: 26px; font-weight: 1000; }
-    .fin-hero p { margin: 0; color: var(--zy-text-muted); font-weight: 800; }
-    .fin-card { padding: 18px 20px; border-radius: 18px; border: 1px solid var(--zy-border);
-        background: var(--zy-surface); color: var(--zy-text); display: grid; gap: 14px; }
-    .fin-card > h2 { margin: 0; color: var(--zy-text); font-size: 16px; font-weight: 1000;
-        padding-bottom: 10px; border-bottom: 1px solid var(--zy-border); }
-    .fin-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-    .fin-field { display: grid; gap: 6px; min-width: 0; }
-    .fin-field label { color: var(--zy-text); font-size: 12.5px; font-weight: 900; }
-    .fin-field input, .fin-field select { min-height: 42px; border-radius: 12px; padding: 8px 12px;
-        border: 1px solid var(--zy-border); background: var(--zy-surface-raised); color: var(--zy-text); font-weight: 800; }
-    .fin-note { color: var(--zy-text-muted); font-size: 11.5px; font-weight: 800; line-height: 1.5; }
-    .fin-check { display: flex; align-items: center; gap: 8px; color: var(--zy-text); font-weight: 800; min-height: 42px; }
-    .fin-actions { display: flex; gap: 10px; justify-content: flex-start; }
-    .fin-btn { min-height: 44px; padding: 10px 20px; border-radius: 12px; font-weight: 1000; cursor: pointer;
-        border: 1px solid var(--zy-border); background: var(--zy-surface-raised); color: var(--zy-text); text-decoration: none;
-        display: inline-flex; align-items: center; }
-    .fin-btn.primary { background: linear-gradient(135deg,#22d3ee,#67e8f9); color: #06111f; border-color: rgba(34,211,238,.44); }
-    @@media (max-width: 900px) { .fin-grid { grid-template-columns: 1fr 1fr; } }
-    @@media (max-width: 560px) { .fin-grid { grid-template-columns: 1fr; } }
-</style>
 
 <form method="post" enctype="multipart/form-data" class="fin-page">
     <section class="fin-hero">
@@ -47,7 +22,7 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="fin-card" style="border-color:var(--zy-danger);color:var(--zy-danger)">@Model.ErrorMessage</div>
+        <div class="fin-card zyu-ae3282379ff6">@Model.ErrorMessage</div>
     }
 
     <section class="fin-card">
@@ -75,7 +50,7 @@
                 }
                 @if (Model.SuggestedGrade != null)
                 {
-                    <small style="display:block;color:#64748b;margin-top:2px">
+                    <small class="zyu-7d0dd64c6e8e">
                         الدرجة المقترحة من الأساسي: <b>@Model.SuggestedGrade.Label</b>
                         @if (!string.Equals(Model.Input.SalaryScale?.Trim(), Model.SuggestedGrade.Code, StringComparison.OrdinalIgnoreCase))
                         {
@@ -90,7 +65,7 @@
             <div class="fin-field">
                 <label>الراتب الكلي</label>
                 <input type="text" id="fin-total-salary" readonly tabindex="-1"
-                       style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.35);font-weight:1000" />
+                       class="zyu-6e1c99ec6809" />
             </div>
         </div>
     </section>
@@ -122,7 +97,7 @@
             <div class="fin-field">
                 <label>راتب الضمان المحتسَب</label>
                 <input type="text" readonly tabindex="-1" value="@Model.GosiBase.ToString("N2")"
-                       style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.35);font-weight:1000" />
+                       class="zyu-6e1c99ec6809" />
                 <span class="fin-note">حصة الموظف @Model.GosiEmployeeShare.ToString("N2") · حصة الشركة @Model.GosiCompanyShare.ToString("N2") — @Model.GosiBaseSourceLabel</span>
             </div>
             <div class="fin-field"><label>رقم الضمان</label><input asp-for="Input.SocialSecurityNo" /></div>

@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "الهياكل التنظيمية";
 }
+<link rel="stylesheet" href="~/css/pages/index-81f0f3e349.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/organization-chart.css" asp-append-version="true" />
@@ -23,11 +24,11 @@
 
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
     {
-        <div class="hrms-badge approved" style="padding:10px 14px">@Model.SuccessMessage</div>
+        <div class="hrms-badge approved zyu-961915113e90">@Model.SuccessMessage</div>
     }
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="hrms-badge rejected" style="padding:10px 14px">@Model.ErrorMessage</div>
+        <div class="hrms-badge rejected zyu-961915113e90">@Model.ErrorMessage</div>
     }
 
     <div class="hrms-stats-card">
@@ -47,7 +48,7 @@
 
     @* ===================== Tab 1: Company structure ===================== *@
     <div class="hrms-tabpanel active" data-hrms-tabpanel="company">
-        <div class="hrms-tile-head" style="margin-bottom:14px">
+        <div class="hrms-tile-head zyu-42a6ced8b67e">
             <form method="get" class="hrms-inline-form">
                 <label for="org-search">بحث</label>
                 <input id="org-search" type="search" name="Search" value="@Model.Search" placeholder="شركة / فرع / قسم" />
@@ -77,7 +78,7 @@
                     <article class="hrms-tile cursor org-unit" data-active="@(company.IsActive ? "1" : "0")"
                              data-hrms-open="company-@company.Id">
                         <div class="hrms-tile-head">
-                            <div style="display:flex;align-items:center;gap:10px">
+                            <div class="zyu-b4e7d324c7e6">
                                 <div class="hrms-tile-icon">🏢</div>
                                 <div>
                                     <h3>@company.Name</h3>
@@ -88,7 +89,7 @@
                                 @(company.IsActive ? "فعال" : "متوقف")
                             </span>
                         </div>
-                        <div style="display:flex;gap:18px">
+                        <div class="zyu-52ad6a1427bd">
                             <div><div class="hrms-tile-metric">@company.EmployeeCount</div><span class="hrms-tile-sub">موظف</span></div>
                             <div><div class="hrms-tile-metric">@company.BranchCount</div><span class="hrms-tile-sub">فرع</span></div>
                             <div><div class="hrms-tile-metric">@company.DepartmentCount</div><span class="hrms-tile-sub">قسم</span></div>
@@ -101,7 +102,7 @@
 
     @* ===================== Tab 2: Hierarchical (chart) ===================== *@
     <div class="hrms-tabpanel" data-hrms-tabpanel="chart">
-        <div class="hrms-tile-head" style="margin-bottom:14px">
+        <div class="hrms-tile-head zyu-42a6ced8b67e">
             <div>
                 <h3>الهيكل الهرمي (خريطة المسؤوليات)</h3>
                 <span class="hrms-tile-sub">تسلسل المدراء المباشرين للموظفين الفعالين — مبني من "المدير المباشر".</span>
@@ -125,7 +126,7 @@
         }
         else
         {
-            <div class="hrms-stats-card" style="margin-bottom:14px">
+            <div class="hrms-stats-card zyu-42a6ced8b67e">
                 <div class="hrms-stats">
                     <div class="hrms-stat"><span>موظفون فعّالون</span><strong>@Model.Chart.TotalEmployees</strong></div>
                     <div class="hrms-stat"><span>مدراء</span><strong>@Model.Chart.ManagerCount</strong></div>
@@ -211,7 +212,7 @@
 
     @* ===================== Tab 3: Functional (positions) ===================== *@
     <div class="hrms-tabpanel" data-hrms-tabpanel="functional">
-        <div class="hrms-tile-head" style="margin-bottom:14px">
+        <div class="hrms-tile-head zyu-42a6ced8b67e">
             <div>
                 <h3>الهيكل الوظيفي (المناصب)</h3>
                 <span class="hrms-tile-sub">المناصب الوظيفية الفعّالة وعدد الموظفين في كل منصب.</span>
@@ -226,7 +227,7 @@
         else
         {
             <div class="hrms-table-card">
-                <div class="hrms-inline-form" style="margin-bottom:12px">
+                <div class="hrms-inline-form zyu-b56987dbcbbe">
                     <label for="pos-search">بحث</label>
                     <input id="pos-search" type="search" placeholder="بحث باسم المنصب..." autocomplete="off" />
                 </div>
@@ -277,7 +278,7 @@
             {
                 foreach (var branch in company.Branches)
                 {
-                    <div class="hrms-tile" style="margin-bottom:12px">
+                    <div class="hrms-tile zyu-b56987dbcbbe">
                         <div class="hrms-tile-head">
                             <div>
                                 <h3>📍 @branch.Name</h3>
@@ -287,7 +288,7 @@
                         </div>
                         @if (branch.Departments.Any())
                         {
-                            <div style="display:flex;flex-wrap:wrap;gap:8px">
+                            <div class="zyu-e71fea521116">
                                 @foreach (var department in branch.Departments)
                                 {
                                     <span class="hrms-badge" title="@department.EmployeeCount موظف">

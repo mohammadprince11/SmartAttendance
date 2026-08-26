@@ -1,0 +1,39 @@
+/* Source: Pages/Employees/EFilePrint.cshtml */
+:root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin: 0; padding: 32px; background: var(--zy-white); color: var(--zy-migrated-color-55471f2440);
+        }
+        .efile-toolbar { display: flex; gap: 8px; justify-content: flex-start; margin-bottom: 24px; }
+        .efile-toolbar button {
+            border: 1px solid var(--zy-migrated-color-7ac8a9712b); background: var(--zy-migrated-color-7ac8a9712b); color: var(--zy-white);
+            padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .efile-toolbar a { align-self: center; color: var(--zy-migrated-color-7ac8a9712b); text-decoration: none; font-size: 13px; }
+        header.efile-head { border-bottom: 3px solid var(--zy-migrated-color-7ac8a9712b); padding-bottom: 12px; margin-bottom: 20px; }
+        header.efile-head h1 { margin: 0 0 4px; font-size: 22px; }
+        header.efile-head small { color: var(--zy-migrated-color-d8f15bea32); }
+        .efile-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 24px; margin-bottom: 24px; }
+        .efile-meta div { font-size: 13px; }
+        .efile-meta b { display: block; color: var(--zy-migrated-color-6b3d6d843d); font-weight: 600; font-size: 12px; }
+        section.efile-section { margin-bottom: 22px; break-inside: avoid; }
+        section.efile-section h2 {
+            font-size: 15px; border-inline-start: 4px solid var(--zy-migrated-color-7ac8a9712b);
+            padding-inline-start: 8px; margin: 0 0 8px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        th, td { border: 1px solid var(--zy-migrated-color-db5add7c0a); padding: 6px 8px; text-align:end; }
+        th { background: var(--zy-migrated-color-91bcd0ad97); font-weight: 600; }
+        footer.efile-foot {
+            margin-top: 32px; padding-top: 10px; border-top: 1px solid var(--zy-migrated-color-db5add7c0a);
+            font-size: 11.5px; color: var(--zy-migrated-color-6b3d6d843d); display: flex; justify-content: space-between;
+        }
+        @media print {
+            body { padding: 0; }
+            .efile-toolbar { display: none; }
+        }
+
+/* Static inline utilities migrated from Pages/Employees/EFilePrint.cshtml */
+
+.zyu-3bd4a6bc4c9d { font-size:12.5px;color:var(--zy-migrated-color-6b3d6d843d); }

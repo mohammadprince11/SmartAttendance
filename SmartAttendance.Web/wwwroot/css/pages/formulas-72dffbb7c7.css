@@ -1,0 +1,31 @@
+/* Static inline utilities migrated from Pages/HrSettings/Formulas.cshtml */
+
+.zyu-8fbe49f3670f { display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted); }
+
+.zyu-05d14e7b8973 { padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:ui-monospace,monospace;font-size:.9375rem; }
+
+.zyu-2d1bdd415249 { justify-content:flex-start;flex-wrap:wrap; }
+
+.zyu-f6f43bccf0b3 { min-width:auto;padding:4px 10px; }
+
+.zyu-5c017805b839 { min-width:auto;padding:4px 10px;border-style:dashed; }
+
+.zyu-43a97fe4943c { margin-top:8px; }
+
+.zyu-dd043d9005ae { border-inline-start-color:var(--zy-success); }
+
+.zyu-690c891d389b { border-inline-start-color:var(--zy-danger); }
+
+.zyu-3bf10d99b485 { font-family:ui-monospace,monospace; }
+
+.zyu-55d8ffef28ea { width:170px; }
+
+.zyu-e4d0ac829ac0 { font-family:ui-monospace,monospace;font-size:.8125rem; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-bf4a218e05ab { margin-bottom:16px; }
+
+.zyu-edcd900711b9 { align-self:end; }
+
+.zyu-f47e3b970dce { width:90px; }

@@ -1,0 +1,206 @@
+/* Source: Pages/Companies/Delete.cshtml */
+/* NEXORA_FIX19D_SMART_COMPANY_DELETE_START */
+.nxr-company-delete-page {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 18px;
+    direction: rtl;
+    color: var(--zy-migrated-color-21bb7eed1d);
+}
+
+.nxr-company-delete-card {
+    width: min(900px, 100%);
+    border: 1px solid var(--zy-migrated-color-3946c985b9);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 12% 8%, var(--zy-migrated-color-dafbb1c76c), transparent 34%),
+        linear-gradient(145deg, var(--zy-migrated-color-55da608a5b), var(--zy-migrated-color-a1861f9454));
+    box-shadow: 0 26px 80px var(--zy-migrated-color-2d55e9cc1b);
+    padding: 28px;
+}
+
+.nxr-company-delete-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.nxr-company-delete-kicker {
+    display: block;
+    color: var(--zy-migrated-color-24dade9512);
+    font-size: 13px;
+    font-weight: 1000;
+    margin-bottom: 8px;
+}
+
+.nxr-company-delete-title {
+    color: var(--zy-white);
+    font-size: clamp(30px, 4vw, 46px);
+    line-height: 1.1;
+    font-weight: 1000;
+    margin: 0 0 10px;
+    letter-spacing: -.02em;
+}
+
+.nxr-company-delete-subtitle {
+    color: var(--zy-migrated-color-51103de5bf);
+    font-size: 14px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.nxr-company-delete-icon {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    color: var(--zy-migrated-color-22028368ab);
+    background: var(--zy-migrated-color-c8c0e729ba);
+    border: 1px solid var(--zy-migrated-color-acf1dbb354);
+    font-size: 28px;
+    font-weight: 1000;
+    box-shadow: 0 16px 38px var(--zy-migrated-color-fdc0b00a86);
+}
+
+.nxr-company-delete-mode {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border-radius: 18px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    border: 1px solid var(--zy-migrated-color-e6b3e1813c);
+    background: var(--zy-migrated-color-9d28f260fc);
+    color: var(--zy-migrated-color-b6807aefcd);
+    font-size: 13px;
+    font-weight: 950;
+    line-height: 1.8;
+}
+
+.nxr-company-delete-mode.safe {
+    border-color: var(--zy-migrated-color-568981c77a);
+    background: var(--zy-migrated-color-c2ff112100);
+    color: var(--zy-migrated-color-92cef0afb6);
+}
+
+.nxr-company-delete-mode-badge {
+    min-width: 142px;
+    min-height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid currentColor;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 1000;
+    white-space: nowrap;
+}
+
+.nxr-company-delete-details {
+    border: 1px solid var(--zy-migrated-color-3c916bb0d4);
+    border-radius: 22px;
+    background: var(--zy-migrated-color-bd97c715b9);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.nxr-company-delete-row {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 16px;
+    padding: 17px 20px;
+    border-bottom: 1px solid var(--zy-migrated-color-48e4200702);
+}
+
+.nxr-company-delete-row:last-child {
+    border-bottom: 0;
+}
+
+.nxr-company-delete-label {
+    color: var(--zy-migrated-color-2b5e4e8871);
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-company-delete-value {
+    color: var(--zy-white);
+    font-size: 14px;
+    font-weight: 950;
+    text-align:start;
+    direction: ltr;
+    overflow-wrap: anywhere;
+}
+
+.nxr-company-delete-value.name {
+    text-align:end;
+    direction: rtl;
+}
+
+.nxr-company-delete-actions {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding-top: 6px;
+}
+
+.nxr-company-delete-btn {
+    min-height: 46px;
+    min-width: 148px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    font-weight: 1000;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.nxr-company-delete-btn:hover {
+    transform: translateY(-1px);
+}
+
+.nxr-company-delete-btn-secondary {
+    border: 1px solid var(--zy-migrated-color-97d3995b9e);
+    background: var(--zy-migrated-color-6b96deee7d);
+    color: var(--zy-migrated-color-21bb7eed1d);
+}
+
+.nxr-company-delete-btn-secondary:hover {
+    border-color: var(--zy-migrated-color-85ecd0df12);
+    background: var(--zy-migrated-color-ffc6811ee4);
+    color: var(--zy-white);
+}
+
+.nxr-company-delete-btn-danger {
+    border: 1px solid var(--zy-migrated-color-b570ba4634);
+    background: var(--zy-migrated-color-08403a9f87);
+    color: var(--zy-migrated-color-22028368ab);
+}
+
+.nxr-company-delete-btn-danger:hover {
+    border-color: var(--zy-migrated-color-c46ed3be84);
+    background: var(--zy-migrated-color-3ad194a8a9);
+    color: var(--zy-white);
+}
+
+.nxr-company-delete-error {
+    border: 1px solid var(--zy-migrated-color-acf1dbb354);
+    border-radius: 16px;
+    background: var(--zy-migrated-color-fdc0b00a86);
+    color: var(--zy-migrated-color-22028368ab);
+    padding: 14px 16px;
+    font-weight: 900;
+    margin-bottom: 18px;
+}
+/* NEXORA_FIX19D_SMART_COMPANY_DELETE_END */

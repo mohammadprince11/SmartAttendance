@@ -20,70 +20,10 @@
         ("All", "الكل", Model.PendingCount + Model.ConflictedCount + Model.AutoCount + Model.ApprovedCount + Model.IgnoredCount)
     };
 }
+<link rel="stylesheet" href="~/css/pages/index-72eb4d44b4.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .rec-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .rec-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .rec-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .rec-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .rec-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .rec-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .rec-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-    .rec-btn.ok { background: linear-gradient(135deg, #4ade80, #22c55e); }
-    .rec-btn.no { background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171; }
-
-    .rec-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .rec-bar input[type=month] { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; }
-    html[data-theme="light"] .rec-bar input[type=month] { background: #fff; color: inherit; }
-    .rec-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-inline-start: auto; }
-    .rec-tab { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.25); color: inherit; text-decoration: none; }
-    .rec-tab.active { background: rgba(18,217,227,.14); color: #12D9E3; border-color: rgba(18,217,227,.4); }
-    .rec-tab b { direction: ltr; display: inline-block; }
-
-    .rec-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .rec-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 860px; }
-    .rec-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
-    html[data-theme="light"] .rec-table th { background: #f2f7fb; }
-    .rec-table td { padding: 10px 12px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
-    .rec-table tr:hover td { background: rgba(18,217,227,.04); }
-    .rec-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
-    .rec-chip.Pending { background: rgba(250,204,21,.12); color: #facc15; }
-    .rec-chip.Approved { background: rgba(74,222,128,.12); color: #4ade80; }
-    .rec-chip.Auto { background: rgba(18,217,227,.12); color: #12D9E3; }
-    .rec-chip.Ignored { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
-    .rec-chip.Conflicted { background: rgba(248,113,113,.14); color: #f87171; }
-    .rec-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
-    .rec-chip.fin { background: rgba(96,165,250,.14); color: #60a5fa; }
-    .rec-subtabs { display: flex; gap: 6px; flex-wrap: wrap; }
-    .rec-subtab {
-        padding: 8px 16px; border-radius: 12px; font-size: 12.5px; font-weight: 900;
-        border: 1px solid rgba(73,111,151,.25); color: inherit; text-decoration: none;
-    }
-    .rec-subtab.active { background: rgba(96,165,250,.14); color: #60a5fa; border-color: rgba(96,165,250,.42); }
-    .rec-subtab b { direction: ltr; display: inline-block; margin-inline-start: 4px; }
-    .rec-chip.moved { background: rgba(74,222,128,.12); color: #4ade80; }
-    .rec-chip.notmoved { background: rgba(250,204,21,.12); color: #facc15; }
-    .rec-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .rec-bulkbar {
-        position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
-        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
-        border: 1px solid rgba(18,217,227,.45); border-radius: 16px;
-        background: var(--sa-surface, rgba(8,25,43,.98)); box-shadow: 0 14px 44px rgba(0,0,0,.55);
-    }
-    html[data-theme="light"] .rec-bulkbar { background: #fff; }
-    .rec-bulkbar.show { display: flex; }
-    .rec-bulkbar b { font-size: 13px; font-weight: 900; margin-inline-end: 6px; }
-    .rec-bulkbar b span { color: #12D9E3; }
-    .rec-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    .rec-ref { font-size: 11px; color: #12D9E3; font-weight: 900; direction: ltr; display: inline-block; }
-</style>
 
 <section class="rec-page" dir="rtl">
     <header class="rec-head">
@@ -111,11 +51,11 @@
            الضيّقة فلا تُقصّ. *@
         <form method="get" class="rec-filters">
             <input type="hidden" name="Tab" value="@Model.Tab" />
-            <input type="month" name="Month" value="@Model.Month" style="flex:0 0 auto;width:150px" />
-            <input type="text" name="Search" value="@Model.Search" placeholder="رمز أو اسم موظف" style="flex:0 0 auto;width:170px" />
+            <input type="month" name="Month" value="@Model.Month" class="zyu-9c739d044c7f" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="رمز أو اسم موظف" class="zyu-e56e657c2ac0" />
             @if (Model.RuleFilterOptions.Count > 0)
             {
-                <select name="RuleId" style="flex:0 0 auto;width:250px">
+                <select name="RuleId" class="zyu-662d950221b6">
                     <option value="0">كل القواعد</option>
                     @foreach (var (id, name, count) in Model.RuleFilterOptions)
                     {
@@ -123,16 +63,16 @@
                     }
                 </select>
             }
-            <button type="submit" class="rec-btn ghost" style="flex:0 0 auto">عرض</button>
+            <button type="submit" class="rec-btn ghost zyu-8037400c2408">عرض</button>
             @* حدود الفترة مكتوبة لا مضمرة: «آب» قد تعني 21/07 → 20/08 بسياسة الغلق،
                فبلا ذكرها يقرأ المستخدم رقماً على مدىً غير الذي يظنّه. *@
-            <span style="flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--sa-muted,#8FA8BC)"
+            <span class="zyu-92fbb996af1a"
                   dir="ltr" title="فترة غلق الحضور المطبَّقة@(string.IsNullOrWhiteSpace(Model.CutoffPolicyName) ? "" : $" — {Model.CutoffPolicyName}")">
                 @Model.CutoffPeriod.From.ToString("yyyy-MM-dd") → @Model.CutoffPeriod.To.ToString("yyyy-MM-dd")
             </span>
             @if (!string.IsNullOrWhiteSpace(Model.Search) || Model.RuleId != 0)
             {
-                <a class="rec-btn ghost" style="flex:0 0 auto" href="?Month=@Model.Month&Tab=@Model.Tab">✕ إلغاء الفلتر</a>
+                <a class="rec-btn ghost zyu-8037400c2408" href="?Month=@Model.Month&Tab=@Model.Tab">✕ إلغاء الفلتر</a>
             }
         </form>
         <nav class="rec-tabs">
@@ -167,24 +107,24 @@
                     <thead>
                         <tr>
                             <th>الموظف</th><th>التاريخ</th><th>المخالفة</th>
-                            <th>الحالة</th><th style="text-align:end">الاقتطاع</th>
+                            <th>الحالة</th><th class="zyu-814fec806937">الاقتطاع</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var v in Model.ViolationCases)
                         {
                             <tr>
-                                <td><b>@v.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @v.EmployeeNo</span></td>
-                                <td style="direction:ltr;text-align:start">@v.EventDate.ToString("yyyy-MM-dd")</td>
-                                <td style="font-size:12px">
+                                <td><b>@v.EmployeeName</b> <span class="zyu-c8664f4c9a37">· @v.EmployeeNo</span></td>
+                                <td class="zyu-9e11c96f461e">@v.EventDate.ToString("yyyy-MM-dd")</td>
+                                <td class="zyu-a49cca52becd">
                                     @v.Title
                                     <a class="rec-ref" href="/Violations">@v.ReferenceNo</a>
                                 </td>
                                 <td>
                                     <span class="rec-chip Pending">@v.Status</span>
-                                    <span class="rec-ref" style="color:var(--sa-muted,#8FA8BC)">@v.ActionStatus</span>
+                                    <span class="rec-ref zyu-c8664f4c9a37">@v.ActionStatus</span>
                                 </td>
-                                <td style="text-align:end;direction:ltr;font-weight:900">
+                                <td class="zyu-265ff381cf1f">
                                     @(v.DeductionAmount > 0 ? v.DeductionAmount.ToString("0.##") : "—")
                                 </td>
                             </tr>
@@ -208,9 +148,9 @@
                     <table class="rec-table">
                         <thead>
                             <tr>
-                                <th style="width:34px"><input type="checkbox" onclick="recAll(this)" /></th>
+                                <th class="zyu-d12729b3d536"><input type="checkbox" onclick="recAll(this)" /></th>
                                 <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>نوع الأثر</th>
-                                <th>البيان</th><th style="text-align:end">القيمة</th><th>حالة الترحيل</th>
+                                <th>البيان</th><th class="zyu-814fec806937">القيمة</th><th>حالة الترحيل</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -218,12 +158,12 @@
                             {
                                 <tr>
                                     <td><input type="checkbox" name="selectedIds" value="@txn.Id" onclick="recSel()" /></td>
-                                    <td><b>@txn.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @txn.EmployeeNo</span></td>
-                                    <td style="direction:ltr;text-align:start">@txn.WorkDate.ToString("yyyy-MM-dd")</td>
-                                    <td style="font-size:12px">@txn.RuleName</td>
+                                    <td><b>@txn.EmployeeName</b> <span class="zyu-c8664f4c9a37">· @txn.EmployeeNo</span></td>
+                                    <td class="zyu-9e11c96f461e">@txn.WorkDate.ToString("yyyy-MM-dd")</td>
+                                    <td class="zyu-a49cca52becd">@txn.RuleName</td>
                                     <td><span class="rec-chip fin">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, txn.ActionType)</span></td>
-                                    <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@txn.ActionText</td>
-                                    <td style="text-align:end;direction:ltr;font-weight:900">
+                                    <td class="zyu-6cbcb9384e42">@txn.ActionText</td>
+                                    <td class="zyu-265ff381cf1f">
                                         @if (txn.Hours > 0)
                                         { <text>@txn.Hours.ToString("0.##") ساعة</text> }
                                         else if (txn.Amount > 0)
@@ -231,7 +171,7 @@
                                         else
                                         { <text>—</text> }
                                     </td>
-                                    <td style="white-space:nowrap">
+                                    <td class="zyu-eb99a4c193ed">
                                         @if (!AttendanceTransactionStore.IsTransferable(txn.ActionType))
                                         {
                                             <span class="rec-chip Ignored" title="أثر لا يُرحَّل للرواتب — يتبع وحدة المغادرات/الإجازات">لا تُرحَّل</span>
@@ -244,7 +184,7 @@
                                                 var payrollHref = txn.ActionType == "Overtime"
                                                     ? $"/Payroll/Overtime?Year={txn.WorkDate.Year}&Month={txn.WorkDate.Month}"
                                                     : $"/Payroll/Transactions?Type={txn.ActionType}&Year={txn.WorkDate.Year}&Month={txn.WorkDate.Month}";
-                                                <a class="rec-ref" href="@payrollHref" style="color:#60a5fa">مسير #@txn.PayrollTransactionId</a>
+                                                <a class="rec-ref zyu-1ec466ed7d0b" href="@payrollHref">مسير #@txn.PayrollTransactionId</a>
                                             }
                                         }
                                     </td>
@@ -292,9 +232,9 @@
                         <tr>
                             @* التحديد على الصفوف القابلة للبتّ وحدها — تحديد صفٍّ مبتوتٍ
                                سابقاً يَعِد بفعلٍ لا يقع. *@
-                            <th style="width:34px"><input type="checkbox" class="rec-pick" onchange="recPickAll(this.checked)" title="تحديد كل صفوف الصفحة" /></th>
+                            <th class="zyu-d12729b3d536"><input type="checkbox" class="rec-pick" onchange="recPickAll(this.checked)" title="تحديد كل صفوف الصفحة" /></th>
                             <th>الموظف</th><th>التاريخ</th><th>القاعدة</th><th>ما تحقق</th>
-                            <th>الإجراء المقترح</th><th>الحالة</th><th style="text-align:end">فرز</th>
+                            <th>الإجراء المقترح</th><th>الحالة</th><th class="zyu-814fec806937">فرز</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -308,23 +248,23 @@
                                         <input type="checkbox" class="rec-pick rec-row-pick" value="@row.Id" onchange="recPickSync()" />
                                     }
                                 </td>
-                                <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
-                                <td style="direction:ltr;text-align:start">@row.WorkDate.ToString("yyyy-MM-dd")</td>
-                                <td style="font-size:12px">@row.RuleName</td>
-                                <td style="font-size:12px;color:var(--sa-muted,#8FA8BC)">@row.Summary</td>
+                                <td><b>@row.EmployeeName</b> <span class="zyu-c8664f4c9a37">· @row.EmployeeNo</span></td>
+                                <td class="zyu-9e11c96f461e">@row.WorkDate.ToString("yyyy-MM-dd")</td>
+                                <td class="zyu-a49cca52becd">@row.RuleName</td>
+                                <td class="zyu-6cbcb9384e42">@row.Summary</td>
                                 <td>
-                                    <span class="rec-chip @(row.ActionType == "Note" ? "note" : row.ActionType == "Violation" ? "Pending" : "fin")" style="@(row.ActionType is "Note" or "Violation" ? "background:rgba(18,217,227,.08);color:inherit" : "")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, row.ActionType)@(string.IsNullOrWhiteSpace(row.ActionText) ? "" : $" · {row.ActionText}")</span>
+                                    <span class="rec-chip @(row.ActionType == "Note" ? "note" : row.ActionType == "Violation" ? "Pending" : "fin")" data-zy-style="@(row.ActionType is "Note" or "Violation" ? "background:rgba(18,217,227,.08);color:inherit" : "")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, row.ActionType)@(string.IsNullOrWhiteSpace(row.ActionText) ? "" : $" · {row.ActionText}")</span>
                                     @if (ShiftRuleStore.ActionNeedsValue(row.ActionType) && row.ActionValue > 0)
                                     {
                                         @* النسبة تُعرض نسبةً: «25 مبلغ» يُقرأ ديناراً وهو ٪.
                                            والمبلغ الفعليّ يُحسب لحظة الاعتماد من راتب الموظف. *@
                                         if (Model.PercentRuleIds.Contains(row.RuleId))
                                         {
-                                            <span class="rec-ref" style="color:#60a5fa" title="يُحتسب المبلغ عند الاعتماد من الراتب الأساسي ÷ 30">@row.ActionValue.ToString("0.##")% من قيمة اليوم</span>
+                                            <span class="rec-ref zyu-1ec466ed7d0b" title="يُحتسب المبلغ عند الاعتماد من الراتب الأساسي ÷ 30">@row.ActionValue.ToString("0.##")% من قيمة اليوم</span>
                                         }
                                         else
                                         {
-                                            <span class="rec-ref" style="color:#60a5fa">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span>
+                                            <span class="rec-ref zyu-1ec466ed7d0b">@row.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(row.ActionType)</span>
                                         }
                                     }
                                     @if (row.ViolationCaseId != null)
@@ -333,35 +273,35 @@
                                     }
                                     @if (row.TransactionId != null)
                                     {
-                                        <a class="rec-ref" href="?Month=@Model.Month&Tab=Transactions" style="color:#60a5fa">حركة #@row.TransactionId</a>
+                                        <a class="rec-ref zyu-1ec466ed7d0b" href="?Month=@Model.Month&Tab=Transactions">حركة #@row.TransactionId</a>
                                     }
                                 </td>
                                 <td><span class="rec-chip @row.Status">@RecommendationStore.StatusLabel(row.Status)</span></td>
-                                <td style="text-align:end;white-space:nowrap">
+                                <td class="zyu-667bbbde05a1">
                                     @if (canDecide)
                                     {
-                                        <form method="post" asp-page-handler="Approve" style="display:inline">
+                                        <form method="post" asp-page-handler="Approve" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="id" value="@row.Id" />
                                             <input type="hidden" name="Month" value="@Model.Month" />
                                             <input type="hidden" name="Tab" value="@Model.Tab" />
-                                            <button type="submit" class="rec-btn ok" style="min-height:32px;padding:5px 14px" data-zyconfirm="@(row.Status == "Conflicted" ? "اعتماد رغم التعارض مع حركة قائمة؟" : null)">اعتماد</button>
+                                            <button type="submit" class="rec-btn ok zyu-e5c1c9fd1a98" data-zyconfirm="@(row.Status == "Conflicted" ? "اعتماد رغم التعارض مع حركة قائمة؟" : null)">اعتماد</button>
                                         </form>
-                                        <form method="post" asp-page-handler="Ignore" style="display:inline">
+                                        <form method="post" asp-page-handler="Ignore" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="id" value="@row.Id" />
                                             <input type="hidden" name="Month" value="@Model.Month" />
                                             <input type="hidden" name="Tab" value="@Model.Tab" />
-                                            <button type="submit" class="rec-btn no" style="min-height:32px;padding:5px 14px">تجاهل</button>
+                                            <button type="submit" class="rec-btn no zyu-e5c1c9fd1a98">تجاهل</button>
                                         </form>
                                         @* راية «السماح بتعديل الإجراء الموصى به» على القاعدة المُصدِرة *@
                                         @if (Model.EditableRuleIds.Contains(row.RuleId))
                                         {
-                                            <form method="post" asp-page-handler="EditAction" style="display:inline-flex;gap:4px;align-items:center;margin-inline-start:6px">
+                                            <form method="post" asp-page-handler="EditAction" class="zyu-6f6eb5273669">
                                                 <input type="hidden" name="id" value="@row.Id" />
                                                 <input type="hidden" name="Month" value="@Model.Month" />
                                                 <input type="hidden" name="Tab" value="@Model.Tab" />
-                                                <input type="text" name="actionText" value="@row.ActionText" placeholder="الإجراء" style="width:120px;min-height:32px" />
-                                                <input type="number" step="0.01" name="actionValue" value="@row.ActionValue" style="width:78px;min-height:32px" />
-                                                <button type="submit" class="rec-btn" style="min-height:32px;padding:5px 12px">حفظ</button>
+                                                <input type="text" name="actionText" value="@row.ActionText" placeholder="الإجراء" class="zyu-5399805d8496" />
+                                                <input type="number" step="0.01" name="actionValue" value="@row.ActionValue" class="zyu-081f5161c641" />
+                                                <button type="submit" class="rec-btn zyu-3f25dad2d1a9">حفظ</button>
                                             </form>
                                         }
                                     }
@@ -380,7 +320,7 @@
 
     @if (Model.TotalPages > 1)
     {
-        <div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:900">
+        <div class="zyu-2779b52a48af">
             @* الفلتر يسافر مع التصفّح: بدونه ترجع الصفحة الثانية لكل الشهر فيضيع الفرز. *@
             @if (Model.PageNumber > 1)
             {
@@ -400,7 +340,7 @@
    لا تتداخل بـHTML — فالمربّعات تُنسخ لهذا النموذج لحظة الضغط. *@
 <div class="rec-bulkbar" id="rec-bulkbar">
     <span>محدَّد: <b id="rec-pick-count">0</b> اقتراح</span>
-    <form method="post" id="rec-bulk-form" style="display:flex;gap:8px;margin:0">
+    <form method="post" id="rec-bulk-form" class="zyu-7abf5224b3ee">
         <input type="hidden" name="Month" value="@Model.Month" />
         <input type="hidden" name="Tab" value="@Model.Tab" />
         <input type="hidden" name="Search" value="@Model.Search" />
@@ -415,35 +355,6 @@
     <button type="button" class="rec-btn ghost" onclick="recPickAll(false)">إلغاء التحديد</button>
 </div>
 
-<style>
-    .rec-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    /* الكلاندر والمنسدلة يستبدلهما محرّك الواجهة بعنصرين مرئيّين (`nxcal` و
-       `nxcs-select`) عرضهما 100%، والأصليّان يُخفيان — فتقييد عرض الأصليّ لا يفعل
-       شيئاً، والقياس هو ما كشف ذلك. التقييد هنا على المرئيّ. */
-    /* `!important` مقصود لا كسل: محرّك الكلاندر يفرض `.nxcal { width:100% !important }`
-       (قِسته: قاعدتي 160px تخسر أمامها)، ولا سبيل لتجاوز `!important` إلا بمثلها. */
-    .rec-filters .nxcal { flex: 0 0 auto; width: 160px !important; }
-    .rec-filters .nxcs-select { flex: 0 0 auto; width: 250px !important; }
-    .rec-filters input[type="text"] { flex: 0 0 auto; width: 170px; }
-    .rec-filters input, .rec-filters select {
-        min-height: 34px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3);
-        background: rgba(0,0,0,.16); color: inherit; padding: 4px 10px; font-size: 13px; font-weight: 800;
-    }
-    html[data-theme="light"] .rec-filters input, html[data-theme="light"] .rec-filters select { background: #fff; }
-
-    .rec-pick { width: 16px; height: 16px; accent-color: #12D9E3; cursor: pointer; }
-    .rec-bulkbar {
-        display: none; position: fixed; inset-inline: 0; bottom: 18px; z-index: 880;
-        margin-inline: auto; width: max-content; max-width: calc(100% - 24px);
-        align-items: center; gap: 12px; padding: 10px 16px; border-radius: 999px;
-        border: 1px solid rgba(18,217,227,.45); background: var(--sa-surface, rgba(8,25,43,.98));
-        color: var(--sa-text, #DCEAF4); box-shadow: 0 18px 44px rgba(0,0,0,.42);
-        font-size: 13px; font-weight: 900;
-    }
-    html[data-theme="light"] .rec-bulkbar { background: #fff; }
-    .rec-bulkbar.is-on { display: flex; }
-    .rec-bulkbar b { color: #12D9E3; direction: ltr; display: inline-block; }
-</style>
 
 @section Scripts {
     <script>

@@ -18,55 +18,12 @@
         r.AllowEdit, r.UseEscalation, r.IsAutomatic, r.IsActive, r.ConditionsJson
     }));
 }
+<link rel="stylesheet" href="~/css/pages/index-a0d7e7787a.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .shr-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .shr-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .shr-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .shr-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .shr-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .shr-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .shr-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-
-    .shr-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: hidden; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .shr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .shr-table th { text-align: start; padding: 12px 14px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
-    html[data-theme="light"] .shr-table th { background: #f2f7fb; }
-    .shr-table td { padding: 11px 14px; border-bottom: 1px solid rgba(143,168,188,.08); vertical-align: middle; }
-    .shr-table tr:hover td { background: rgba(18,217,227,.04); }
-    .shr-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; background: rgba(18,217,227,.1); color: #12D9E3; }
-    .shr-chip.auto { background: rgba(74,222,128,.12); color: #4ade80; }
-    .shr-chip.off { background: rgba(248,113,113,.12); color: #f87171; }
-    .shr-chip.note { background: rgba(167,139,250,.14); color: #a78bfa; }
-    .shr-chip.fin { background: rgba(96,165,250,.14); color: #60a5fa; }
-    .shr-sentence { font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .shr-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .shr-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-
-    .shr-form { display: flex; flex-direction: column; gap: 12px; }
-    .shr-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
-    .shr-hint { font-size: 11px; font-weight: 800; line-height: 1.5; color: #facc15; }
-    .shr-form input[type=text], .shr-form input[type=number], .shr-form input[type=time], .shr-form select {
-        min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25);
-        background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px;
-    }
-    html[data-theme="light"] .shr-form input, html[data-theme="light"] .shr-form select { background: #fff; }
-    .shr-section { border: 1px solid rgba(73,111,151,.18); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .shr-section > b { font-size: 12px; color: #12D9E3; }
-    .shr-checks { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; font-weight: 800; }
-    .shr-checks label { flex-direction: row; align-items: center; gap: 5px; }
-    .shr-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .shr-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-</style>
 
 <section class="shr-page" dir="rtl">
     <header class="shr-head">
@@ -91,7 +48,7 @@
         {
             <table class="shr-table">
                 <thead>
-                    <tr><th>القاعدة</th><th>الجملة</th><th>النطاق</th><th>الأثر</th><th>التنفيذ</th><th>الحالة</th><th style="text-align:end">إجراءات</th></tr>
+                    <tr><th>القاعدة</th><th>الجملة</th><th>النطاق</th><th>الأثر</th><th>التنفيذ</th><th>الحالة</th><th class="zyu-814fec806937">إجراءات</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var rule in Model.Rules)
@@ -102,7 +59,7 @@
                         <tr>
                             <td><b>@rule.Name</b></td>
                             <td class="shr-sentence">@rule.Sentence</td>
-                            <td style="font-size:12px">
+                            <td class="zyu-a49cca52becd">
                                 @scopeText · @ShiftRuleStore.LabelOf(ShiftRuleStore.ApplyOnOptions, rule.ApplyOn)
                                 @if (!rule.Conditions.IsEmpty)
                                 {
@@ -112,15 +69,15 @@
                             <td>
                                 <span class="shr-chip @(rule.ActionType == "Violation" ? "" : rule.ActionType == "Note" ? "note" : "fin")">@ShiftRuleStore.LabelOf(ShiftRuleStore.ActionTypes, rule.ActionType)</span>
                                 @if (ShiftRuleStore.ActionNeedsValue(rule.ActionType) && rule.ActionValue > 0)
-                                { <span class="shr-sentence" style="direction:ltr">@rule.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(rule.ActionType)</span> }
+                                { <span class="shr-sentence zyu-6e4c67e3c0a2">@rule.ActionValue.ToString("0.##") @ShiftRuleStore.ActionValueUnit(rule.ActionType)</span> }
                             </td>
                             <td><span class="shr-chip @(rule.IsAutomatic ? "auto" : "")">@(rule.IsAutomatic ? "تلقائي" : "بالفرز")</span></td>
                             <td><span class="shr-chip @(rule.IsActive ? "" : "off")">@(rule.IsActive ? "نشطة" : "متوقفة")</span></td>
-                            <td style="text-align:end;white-space:nowrap">
+                            <td class="zyu-667bbbde05a1">
                                 <button type="button" class="shr-btn ghost" onclick="shrOpen(@rule.Id)">تعديل</button>
-                                <form method="post" asp-page-handler="Delete" style="display:inline">
+                                <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                     <input type="hidden" name="id" value="@rule.Id" />
-                                    <button type="submit" class="shr-btn ghost" style="color:#f87171" data-zyconfirm="تأكيد الحذف؟">حذف</button>
+                                    <button type="submit" class="shr-btn ghost zyu-94c76e9c8583" data-zyconfirm="تأكيد الحذف؟">حذف</button>
                                 </form>
                             </td>
                         </tr>
@@ -264,7 +221,7 @@
                             <input type="number" name="ActionValue" id="shr-ActionValue" value="0" step="0.25" min="0" />
                         </label>
                     </div>
-                    <p class="shr-sentence" id="shr-action-hint" style="margin:0"></p>
+                    <p class="shr-sentence zyu-ab79ea2b8573" id="shr-action-hint"></p>
                     <div class="shr-checks">
                         <label><input type="checkbox" name="IsAutomatic" value="true" id="shr-Auto" /> اتخذ الإجراء تلقائياً (بلا فرز)</label>
                         <label><input type="checkbox" name="AllowEdit" value="true" id="shr-AllowEdit" /> السماح بتعديل الإجراء الموصى به</label>
@@ -276,7 +233,7 @@
                 @* معايير الاستحقاق (نمط كيان) — شروط على الموظف نفسه، فارغة = الجميع *@
                 <div class="shr-section">
                     <b>معايير الاستحقاق</b>
-                    <p class="shr-sentence" style="margin:0">
+                    <p class="shr-sentence zyu-ab79ea2b8573">
                         اتركها بلا شروط لتنطبق القاعدة على كل الموظفين. أضف شروطاً إن كانت
                         مستحقّة لبعضهم فقط (وحدة عمل · جنسية · نوع عقد · مدة خدمة …).
                     </p>

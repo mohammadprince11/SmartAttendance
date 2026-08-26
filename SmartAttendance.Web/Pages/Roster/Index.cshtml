@@ -37,79 +37,10 @@
         Model.Shifts.ToDictionary(s => s.Id.ToString(),
             s => new { n = s.Name, c = ShiftColor(s), h = HoursLabel(s), f = FamilyLabel(s) }));
 }
+<link rel="stylesheet" href="~/css/pages/index-baf7305581.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .ros-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .ros-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .ros-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .ros-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .ros-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .ros-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .ros-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-    .ros-btn.pub { background: linear-gradient(135deg, #4ade80, #22c55e); }
-
-    .ros-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .ros-bar input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
-    html[data-theme="light"] .ros-bar input { background: #fff; color: inherit; }
-    .ros-note { font-size: 12px; font-weight: 800; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(250,204,21,.3); background: rgba(250,204,21,.08); color: #facc15; }
-    .ros-pub { font-size: 12px; font-weight: 900; padding: 5px 12px; border-radius: 999px; background: rgba(74,222,128,.14); color: #4ade80; }
-    .ros-pub.no { background: rgba(143,168,188,.14); color: var(--sa-muted, #8FA8BC); }
-    .ros-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-
-    /* الاسم لا يحتوي «card/panel/form» عمداً: قاعدة nexora-calendar العامة تفرض overflow:visible!important على أي كلاس يحوي تلك الكلمات */
-    .ros-grid-scroll { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); max-height: 66vh; }
-    .ros-grid { border-collapse: separate; border-spacing: 0; font-size: 11.5px; user-select: none; }
-    .ros-grid th, .ros-grid td { border-bottom: 1px solid rgba(143,168,188,.1); border-inline-start: 1px solid rgba(143,168,188,.06); white-space: nowrap; }
-    .ros-grid thead th { position: sticky; top: 0; z-index: 3; background: #0a1f33; color: var(--sa-muted, #8FA8BC); font-weight: 1000; padding: 6px 8px; text-align: center; }
-    html[data-theme="light"] .ros-grid thead th { background: #eef4f9; }
-    .ros-grid th.emp, .ros-grid td.emp { position: sticky; inset-inline-start: 0; z-index: 2; background: var(--sa-surface, #0b2135); text-align: start; padding: 6px 12px; min-width: 190px; }
-    .ros-grid thead th.emp { z-index: 4; }
-    html[data-theme="light"] .ros-grid th.emp, html[data-theme="light"] .ros-grid td.emp { background: #fff; }
-    .ros-grid td.emp b { font-weight: 900; }
-    .ros-grid td.emp .dep { font-size: 10px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .ros-dcol { min-width: 58px; }
-    .ros-dcol .dn { font-size: 10px; opacity: .8; }
-    .ros-dcol.off { color: #f87171; }
-    .rc-td { padding: 2px; text-align: center; }
-    .rc { width: 58px; min-height: 30px; border-radius: 6px; border: 1px solid rgba(73,111,151,.18); background: rgba(0,0,0,.14); color: var(--sa-muted, #8FA8BC); padding: 2px 3px; cursor: pointer; overflow: hidden; transition: transform .05s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1.12; }
-    .rc .rc-n { font-size: 10.5px; font-weight: 900; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .rc .rc-h { font-size: 8.5px; font-weight: 800; opacity: .82; direction: ltr; }
-    .rc:hover { transform: scale(1.06); }
-    .rc:active { transform: scale(.94); }
-    html[data-theme="light"] .rc { background: #f4f8fb; }
-
-    .ros-palette { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 10px 14px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .ros-palette .lbl { font-weight: 900; font-size: 12px; }
-    .pchip { border: 1px solid rgba(73,111,151,.3); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 800; cursor: pointer; background: transparent; color: inherit; display: flex; gap: 6px; align-items: center; }
-    .pchip .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .pchip.active { outline: 2px solid #12D9E3; outline-offset: 1px; background: rgba(18,217,227,.12); }
-    .pchip.tool.on { outline: 2px solid #facc15; background: rgba(250,204,21,.12); }
-    .ros-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .ros-actions { display: flex; gap: 8px; align-items: center; }
-
-    /* منتقي «كل المناوبات»: بحث + تجميع حسب العائلة — الشريط يبقى سطراً مضغوطاً */
-    /* display بالكلاس يتغلب على خاصية hidden — نعيد لها الغلبة صراحةً */
-    .ros-pick[hidden], .ros-pick-backdrop[hidden] { display: none !important; }
-    .ros-pick-backdrop { position: fixed; inset: 0; background: rgba(2,10,18,.55); z-index: 60; }
-    .ros-pick { position: fixed; top: 12vh; inset-inline: max(16px, calc(50vw - 330px)); z-index: 61;
-        border: 1px solid rgba(73,111,151,.3); border-radius: 18px; background: var(--sa-surface, #0a1f33);
-        box-shadow: 0 22px 60px rgba(0,0,0,.5); max-height: 72vh; display: flex; flex-direction: column; }
-    html[data-theme="light"] .ros-pick { background: #fff; }
-    .ros-pick-head { display: flex; gap: 8px; padding: 12px 14px; border-bottom: 1px solid rgba(73,111,151,.2); }
-    .ros-pick-head input { flex: 1; min-height: 38px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3);
-        background: rgba(0,0,0,.16); color: inherit; padding: 6px 12px; font-size: 13px; font-weight: 800; }
-    html[data-theme="light"] .ros-pick-head input { background: #f4f8fb; }
-    .ros-pick-body { overflow: auto; padding: 12px 14px 16px; }
-    .ros-pick-group { font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); margin: 10px 0 6px; }
-    .ros-pick-row { display: flex; gap: 6px; flex-wrap: wrap; }
-</style>
 
 <section class="ros-page" dir="rtl">
     <header class="ros-head">
@@ -119,7 +50,7 @@
         </div>
         <form method="get" class="ros-actions">
             <input type="month" name="Month" value="@Model.Month" onchange="this.form.submit()"
-                   style="min-height:38px;border-radius:10px;border:1px solid rgba(73,111,151,.3);background:rgba(0,0,0,.16);color:inherit;padding:6px 10px" />
+                   class="zyu-3a533013d07f" />
             <input type="hidden" name="Search" value="@Model.Search" />
             @if (Model.PublishedAt != null)
             {
@@ -143,8 +74,8 @@
         <input type="hidden" name="Month" value="@Model.Month" />
         <input type="text" name="Search" value="@Model.Search" placeholder="بحث بالموظف (رمز/اسم)..." />
         <button type="submit" class="ros-btn ghost">عرض</button>
-        <span style="margin-inline-start:auto;font-size:12px;font-weight:800;color:var(--sa-muted,#8FA8BC)">
-            الموظفون: <b style="direction:ltr;display:inline-block;color:var(--sa-text,#DCEAF4)">@Model.TotalRows</b>
+        <span class="zyu-b8a9aa4a9363">
+            الموظفون: <b class="zyu-3730805ca2e8">@Model.TotalRows</b>
         </span>
     </form>
 
@@ -153,13 +84,13 @@
         @* الشريط يبقى سطراً مهما كبر الكتالوج: ثوابت + آخر المستخدمة + «كل المناوبات» ببحث *@
         <div class="ros-palette">
             <span class="lbl">الفرشاة:</span>
-            <button type="button" class="pchip active" data-bv="" onclick="setBrush('')"><span class="dot" style="background:#64748b"></span>افتراضي —</button>
-            <button type="button" class="pchip" data-bv="Weekend" onclick="setBrush('Weekend')"><span class="dot" style="background:#f87171"></span>عطلة</button>
-            <button type="button" class="pchip" data-bv="Rest" onclick="setBrush('Rest')"><span class="dot" style="background:#facc15"></span>راحة</button>
-            <span id="ros-recents" style="display:contents"></span>
+            <button type="button" class="pchip active" data-bv="" onclick="setBrush('')"><span class="dot zyu-28557094e3b4"></span>افتراضي —</button>
+            <button type="button" class="pchip" data-bv="Weekend" onclick="setBrush('Weekend')"><span class="dot zyu-16280ad178fd"></span>عطلة</button>
+            <button type="button" class="pchip" data-bv="Rest" onclick="setBrush('Rest')"><span class="dot zyu-90e35c7aa2fc"></span>راحة</button>
+            <span id="ros-recents" class="zyu-043808a943a3"></span>
             <button type="button" class="pchip" onclick="openPicker()">كل المناوبات (@Model.Shifts.Count) ▾</button>
             <button type="button" class="pchip tool" id="ros-eyedrop" onclick="toggleEyedrop()" title="القطّارة: انقرها ثم انقر خلية لالتقاط مناوبتها فرشاةً — أو انقر أي خلية بالزر الأيمن مباشرة">💧 قطّارة</button>
-            <span style="margin-inline-start:auto;font-size:11px;font-weight:800;color:var(--sa-muted,#8FA8BC)">انقر أو اسحب على الخلايا لطليها · الزر الأيمن يلتقط فرشاة الخلية · يُحفظ ما غيّرته فقط</span>
+            <span class="zyu-faf9fb9fca28">انقر أو اسحب على الخلايا لطليها · الزر الأيمن يلتقط فرشاة الخلية · يُحفظ ما غيّرته فقط</span>
         </div>
 
         <div class="ros-pick-backdrop" id="ros-pick-backdrop" hidden onclick="closePicker()"></div>
@@ -177,8 +108,8 @@
     @if (Model.Employees.Count > 0)
     {
         <div class="ros-bar">
-            <span style="font-size:12px;font-weight:1000">⚡ جدولة سريعة:</span>
-            <form method="post" asp-page-handler="FillFromFirstWeek" style="display:inline">
+            <span class="zyu-6432a0660613">⚡ جدولة سريعة:</span>
+            <form method="post" asp-page-handler="FillFromFirstWeek" class="zyu-6b8b63d565c4">
                 <input type="hidden" name="Month" value="@Model.Month" />
                 <input type="hidden" name="Search" value="@Model.Search" />
                 <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
@@ -186,7 +117,7 @@
                     🗓 ارسم أسبوعاً… ونعبّي الشهر
                 </button>
             </form>
-            <form method="post" asp-page-handler="CopyPrevMonth" style="display:inline">
+            <form method="post" asp-page-handler="CopyPrevMonth" class="zyu-6b8b63d565c4">
                 <input type="hidden" name="Month" value="@Model.Month" />
                 <input type="hidden" name="Search" value="@Model.Search" />
                 <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
@@ -194,7 +125,7 @@
                     📋 نسخ الشهر الماضي
                 </button>
             </form>
-            <span style="font-size:11px;font-weight:800;color:var(--sa-muted,#8FA8BC)">تعمل على كل الموظفين (لا الصفحة الحالية فقط) — راجع النتيجة ثم «نشر الجدول»</span>
+            <span class="zyu-33cc64a1eaaf">تعمل على كل الموظفين (لا الصفحة الحالية فقط) — راجع النتيجة ثم «نشر الجدول»</span>
         </div>
     }
 
@@ -229,7 +160,7 @@
                             <tr>
                                 <td class="emp">
                                     <b>@emp.Name</b>
-                                    <div class="dep" style="direction:ltr">@emp.No · @emp.Department</div>
+                                    <div class="dep zyu-6e4c67e3c0a2">@emp.No · @emp.Department</div>
                                 </td>
                                 @foreach (var day in Model.Days)
                                 {
@@ -252,14 +183,14 @@
             }
         </div>
 
-        <div class="ros-bar" style="justify-content:space-between">
+        <div class="ros-bar zyu-55db2416bec8">
             <div class="ros-actions">
                 <button type="submit" asp-page-handler="Save" class="ros-btn" data-zyconfirm="حفظ الجدول للصفحة الحالية؟">حفظ الجدول</button>
                 <button type="submit" asp-page-handler="Publish" class="ros-btn pub" data-zyconfirm="حفظ ونشر جدول الشهر؟">نشر الجدول</button>
             </div>
             @if (Model.TotalPages > 1)
             {
-                <div class="ros-actions" style="font-size:12px;font-weight:900">
+                <div class="ros-actions zyu-234ef25e545e">
                     @if (Model.PageNumber > 1)
                     {
                         <a class="ros-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&PageNumber=@(Model.PageNumber - 1)">السابق</a>
@@ -297,7 +228,7 @@
         function chipHtml(v) {
             const s = SHIFTS[v.slice(1)];
             return `<button type="button" class="pchip" data-bv="${v}" onclick="setBrush('${v}')">` +
-                `<span class="dot" style="background:${s.c}"></span>${esc(s.n)}${s.h ? ' · ' + esc(s.h) : ''}</button>`;
+                `<span class="dot zyu-896c540c9f10"></span>${esc(s.n)}${s.h ? ' · ' + esc(s.h) : ''}</button>`;
         }
         function renderRecents() {
             document.getElementById('ros-recents').innerHTML = recents().map(chipHtml).join('');
@@ -348,7 +279,7 @@
                 html += `<div class="ros-pick-group">${icons[fam]} ${fam} (${items.length})</div><div class="ros-pick-row">` +
                     items.map(([id, s]) =>
                         `<button type="button" class="pchip" onclick="pickShift('S${id}')">` +
-                        `<span class="dot" style="background:${s.c}"></span>${esc(s.n)}${s.h ? ' · ' + esc(s.h) : ''}</button>`).join('') +
+                        `<span class="dot zyu-896c540c9f10"></span>${esc(s.n)}${s.h ? ' · ' + esc(s.h) : ''}</button>`).join('') +
                     '</div>';
             }
             document.getElementById('ros-pick-body').innerHTML =

@@ -4,13 +4,9 @@
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 @inject IThemeContextService ThemeContextService
 @inject IAccessRoleService AccessRoleService
-@inject SmartAttendance.Infrastructure.Persistence.ApplicationDbContext DesignTokenDb
 @{
     var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
     var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA HR" : companyTheme.DisplayName;
-
-    // مقاسات الواجهة المخصَّصة. مكشوفةٌ من كاش العملية لا من القاعدة بكل طلب.
-    var designTokenCss = DesignTokenStore.CompileCss(await DesignTokenStore.LoadAsync(DesignTokenDb));
 }
 
 <!DOCTYPE html>
@@ -65,8 +61,7 @@
 
     @* حاجز الوميض: لا رسمة وسيطة إطلاقاً — الصفحة مخفية حتى يكتمل بناء DOM وتطبيق
        كل أوراق الأنماط الحاجبة، فتظهر مرة واحدة بشكلها النهائي. مهلة أمان 3ث. *@
-    <style>html:not([data-ready]) body { visibility: hidden; }</style>
-    <script>
+        <script>
         (function () {
             function ready() { document.documentElement.setAttribute("data-ready", "1"); }
             if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready);
@@ -92,6 +87,8 @@
     <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-theme-contract.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-migrated-color-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/_layout-8952eebe4e.css" asp-append-version="true" />
     @* Design System v1 الموحد (كلاسات zy-*): مرجع إعادة التصميم صفحة-صفحة — إضافي لا يمس القديم *@
     <link rel="stylesheet" href="~/css/zynora-design-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
@@ -109,10 +106,7 @@
     @* Branding & Theme Engine injection point (P4): overrides the token contract
        for the active company. Rendered last so it wins the cascade; absent for
        the ZYNORA Default so the shell is byte-identical to pre-engine. *@
-    @if (companyTheme.HasCompanyOverride)
-    {
-        <style id="company-theme">@Html.Raw(companyTheme.CompiledCss)</style>
-    }
+    <link rel="stylesheet" href="~/theme/current.css" />
 </head>
 
 <body dir="rtl">
@@ -273,7 +267,7 @@
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                         @* رقم الإصدار — يزيد مع كل تعديل نعمله (v.1 ← v.2 ← ...) *@
-                        <span class="nexora-brand-version" style="opacity:.6;font-size:.72em;margin-inline-start:.35em;">v.21</span>
+                        <span class="nexora-brand-version zyu-3c4b6eac2c1a">v.21</span>
                     </span>
                 </div>
             </div>
@@ -953,10 +947,6 @@
     @* يُسكِت تأثيرات «التمرير-فوق» أثناء السكرول — انظر تعليق السكربت.
        غير مؤجَّل (بلا defer) عمداً: تأجيله يترك أول تمريرةٍ بعد التحميل بلا حماية. *@
     <script src="~/js/zynora-scroll-hover-guard.js" asp-append-version="true"></script>
-    @if (!string.IsNullOrEmpty(designTokenCss))
-    {
-        <style id="zy-design-tokens">@Html.Raw(designTokenCss)</style>
-    }
 
     <script>
         window.SA_AUTH = {
@@ -967,6 +957,7 @@
 
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
     <script src="~/js/hrms-ui.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-dynamic-style.js" asp-append-version="true" defer></script>
     <script src="~/js/zynora-theme.js" asp-append-version="true"></script>
     <script src="~/js/zynora-kayan-nav.js" asp-append-version="true"></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
@@ -982,6 +973,3 @@
     <script src="~/js/zynora-ux-guards.js" asp-append-version="true"></script>
 </body>
 </html>
-
-
-

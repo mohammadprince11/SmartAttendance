@@ -1,0 +1,72 @@
+/* Source: Pages/ShiftAssignments/Index.cshtml */
+.sha-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, var(--zy-text)); }
+    .sha-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, var(--zy-migrated-color-add5638818), transparent 36%),
+                    linear-gradient(135deg, var(--zy-migrated-color-2d2722bfd0), var(--zy-migrated-color-d38141ec79));
+    }
+    html[data-theme="light"] .sha-head { background: linear-gradient(135deg, var(--zy-white), var(--zy-migrated-color-c2da37727c)); }
+    .sha-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .sha-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sha-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, var(--zy-primary), var(--zy-primary-strong)); color: var(--zy-on-primary); }
+    .sha-btn.ghost { background: transparent; border: 1px solid var(--zy-migrated-color-28565ef553); color: inherit; }
+    .sha-btn.no { background: transparent; border: 1px solid var(--zy-migrated-color-348f8741cc); color: var(--zy-danger); }
+
+    .sha-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 16px; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+    .sha-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, var(--zy-muted)); display: flex; flex-direction: column; gap: 4px; }
+    .sha-bar input, .sha-bar select { min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266); background: var(--zy-migrated-color-819b024f9d); color: var(--sa-text, var(--zy-text)); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .sha-bar input, html[data-theme="light"] .sha-bar select { background: var(--zy-white); color: inherit; }
+    .sha-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid var(--zy-migrated-color-b9678111e3); }
+    .sha-stat b { direction: ltr; display: inline-block; }
+
+    .sha-table-card { border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 18px; overflow: auto; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+    .sha-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 760px; }
+    .sha-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, var(--zy-muted)); border-bottom: 1px solid var(--zy-migrated-color-b9678111e3); background: var(--zy-migrated-color-733a2ff5ad); }
+    html[data-theme="light"] .sha-table th { background: var(--zy-migrated-color-c2da37727c); }
+    .sha-table td { padding: 9px 12px; border-bottom: 1px solid var(--zy-migrated-color-89acc81486); }
+    .sha-table tr:hover td { background: var(--zy-migrated-color-e174917010); }
+    .sha-shift { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; }
+    .sha-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .sha-none { color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sha-pos { font-size: 11px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sha-src { font-size: 10px; font-weight: 900; padding: 1px 7px; border-radius: 999px; margin-inline-start: 6px; vertical-align: 1px; }
+    .sha-src.Manual { background: var(--zy-migrated-color-fa4c99c7a1); color: var(--zy-primary); }
+    .sha-src.Eligibility { background: var(--zy-migrated-color-1333fa9962); color: var(--zy-info); }
+    .sha-src.Default { background: var(--zy-migrated-color-0fbcda6aa7); color: var(--sa-muted, var(--zy-muted)); }
+    .sha-empty { padding: 28px; text-align: center; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sha-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid var(--zy-migrated-color-ab4e1fef3b); background: var(--zy-migrated-color-39bb173a0d); }
+
+    /* بار الإجراءات الجماعية العائم الثابت (المعيار البصري المعتمد) */
+    .sha-bulkbar { position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
+        border: 1px solid var(--zy-migrated-color-17523f5ab6); border-radius: 16px;
+        background: var(--sa-surface, var(--zy-migrated-color-02e74ab91e)); box-shadow: 0 14px 44px var(--zy-migrated-color-e1d0b86279); }
+    html[data-theme="light"] .sha-bulkbar { background: var(--zy-white); }
+    .sha-bulkbar.show { display: flex; }
+    .sha-bulkbar b { font-size: 13px; font-weight: 900; }
+    .sha-bulkbar b span { color: var(--zy-primary); }
+    .sha-bulkbar select { min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-28565ef553); background: var(--zy-migrated-color-819b024f9d); color: inherit; padding: 6px 10px; font-size: 13px; font-weight: 800; }
+    html[data-theme="light"] .sha-bulkbar select { background: var(--zy-migrated-color-c2da37727c); }
+    .sha-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .sha-btn.sm { min-height: 32px; padding: 5px 12px; font-size: 12px; }
+
+/* Static inline utilities migrated from Pages/ShiftAssignments/Index.cshtml */
+
+.zyu-9c40389b4ad8 { display:flex;gap:8px; }
+
+.zyu-22d70a2892cd { color:var(--zy-success); }
+
+.zyu-fecc85c94a43 { color:var(--zy-warning); }
+
+.zyu-8cab4cf2c131 { padding:0 4px; }
+
+.zyu-a49cca52becd { font-size:12px; }
+
+.zyu-b27868803587 { direction:ltr;display:inline-block; }
+
+.zyu-0ee7f66ad9c0 { margin-top:12px; }
+
+.zyu-d12729b3d536 { width:34px; }
+
+.zyu-934736f196e1 { direction:ltr;text-align:start;font-weight:900; }

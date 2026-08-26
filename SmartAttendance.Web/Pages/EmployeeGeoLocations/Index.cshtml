@@ -15,62 +15,10 @@
 
 @* الأنماط برأس الصفحة (section Styles) لا بجسمها — منعاً لوميض «الشكل القديم ثم الجديد» (FOUC) *@
 @section Styles {
+<link rel="stylesheet" href="~/css/pages/index-5d47c478df.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" asp-append-version="true" />
 
-<style>
-    .geo-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .geo-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .geo-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .geo-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .geo-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .geo-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .geo-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-    .geo-btn.no { background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171; }
-    .geo-btn.sm { min-height: 32px; padding: 5px 12px; font-size: 12px; }
-
-    .geo-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .geo-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
-    .geo-bar input, .geo-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
-    html[data-theme="light"] .geo-bar input, html[data-theme="light"] .geo-bar select { background: #fff; color: inherit; }
-    .geo-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
-    .geo-stat b { direction: ltr; display: inline-block; }
-
-    .geo-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .geo-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 780px; }
-    .geo-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
-    html[data-theme="light"] .geo-table th { background: #f2f7fb; }
-    .geo-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); }
-    .geo-table tr:hover td { background: rgba(18,217,227,.04); }
-    .geo-loc { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; color: #60a5fa; }
-    .geo-none { color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .geo-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .geo-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-
-    .geo-bulkbar { position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
-        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
-        border: 1px solid rgba(18,217,227,.45); border-radius: 16px;
-        background: var(--sa-surface, rgba(8,25,43,.98)); box-shadow: 0 14px 44px rgba(0,0,0,.55); }
-    html[data-theme="light"] .geo-bulkbar { background: #fff; }
-    .geo-bulkbar.show { display: flex; }
-    .geo-bulkbar b { font-size: 13px; font-weight: 900; }
-    .geo-bulkbar b span { color: #12D9E3; }
-    .geo-bulkbar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.3); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; font-size: 13px; font-weight: 800; }
-    html[data-theme="light"] .geo-bulkbar select { background: #f2f7fb; }
-
-    .geo-form { display: flex; flex-direction: column; gap: 10px; }
-    .geo-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
-    .geo-form input { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: inherit; padding: 6px 10px; }
-    html[data-theme="light"] .geo-form input { background: #fff; }
-    .geo-loclist { display: flex; flex-direction: column; gap: 6px; }
-    .geo-locrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid rgba(73,111,151,.18); border-radius: 10px; font-size: 12px; font-weight: 800; }
-    .geo-locrow .co { direction: ltr; color: var(--sa-muted, #8FA8BC); font-size: 11px; }
-</style>
 }
 
 <section class="geo-page" dir="rtl">
@@ -79,9 +27,9 @@
             <h1>المواقع الجغرافية للموظفين</h1>
             <p>ربط موقع جغرافي (نطاق مسموح للبصم) بالموظفين — التعريفات تُدار من «إدارة المواقع». الإنفاذ وقت البصم يُفعَّل من «إعدادات الحضور».</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-            <span class="geo-stat" style="color:#4ade80">معيّن <b>@Model.AssignedCount</b></span>
-            <span class="geo-stat" style="color:#facc15">بلا موقع <b>@Model.UnassignedCount</b></span>
+        <div class="zyu-39c68df36fcc">
+            <span class="geo-stat zyu-22d70a2892cd">معيّن <b>@Model.AssignedCount</b></span>
+            <span class="geo-stat zyu-fecc85c94a43">بلا موقع <b>@Model.UnassignedCount</b></span>
             <button type="button" class="geo-btn ghost" onclick="geoManage()">إدارة المواقع (@Model.Locations.Count)</button>
         </div>
     </header>
@@ -109,12 +57,12 @@
         <input type="hidden" name="Search" value="@Model.Search" />
         <input type="hidden" name="Filter" value="@Model.Filter" />
 
-        <div style="display:flex;gap:8px;padding:0 4px">
+        <div class="zyu-e2ba48f2bbc4">
             <button type="button" class="geo-btn ghost sm" onclick="geoSelectAll(true)">تحديد الكل (@Model.TotalRows)</button>
             <button type="button" class="geo-btn ghost sm" onclick="geoSelectAll(false)">مسح الكل</button>
         </div>
 
-        <div class="geo-table-card" style="margin-top:12px">
+        <div class="geo-table-card zyu-0ee7f66ad9c0">
             @if (Model.Rows.Count == 0)
             {
                 <div class="geo-empty">لا موظفون مطابقون.</div>
@@ -123,13 +71,13 @@
             {
                 <table class="geo-table">
                     <thead>
-                        <tr><th style="width:34px"><input type="checkbox" id="geo-all" onchange="geoToggleAll(this)" /></th>
+                        <tr><th class="zyu-d12729b3d536"><input type="checkbox" id="geo-all" onchange="geoToggleAll(this)" /></th>
                             <th>الرمز</th><th>اسم الموظف</th><th>الهيكلية</th><th>وحدة عمل</th><th>Geo Location</th></tr>
                     </thead>
                     <tbody>
                         @if (Model.TotalRows > Model.Rows.Count)
                         {
-                            <tr><td colspan="6" style="padding:10px;font-size:12px;font-weight:900;color:var(--sa-muted,#8FA8BC)">
+                            <tr><td colspan="6" class="zyu-02a14627fe2c">
                                 يُعرض أول @Model.Rows.Count من @Model.TotalRows موظفاً — استخدم البحث أو فلتر «بلا موقع/معيّن» للوصول للبقية.
                             </td></tr>
                         }
@@ -137,7 +85,7 @@
                         {
                             <tr>
                                 <td><input type="checkbox" name="SelectedIds" value="@row.EmployeeId" onchange="geoCount()" /></td>
-                                <td style="direction:ltr;text-align:start;font-weight:900">@row.EmployeeNo</td>
+                                <td class="zyu-934736f196e1">@row.EmployeeNo</td>
                                 <td><b>@row.EmployeeName</b></td>
                                 <td>@row.Department</td>
                                 <td>@row.Branch</td>
@@ -175,42 +123,42 @@
             <h2>إدارة المواقع الجغرافية</h2>
             <button type="button" class="hrms-slideover-close" onclick="geoClose()">×</button>
         </div>
-        <div class="hrms-slideover-body" style="display:flex;flex-direction:column;gap:16px">
+        <div class="hrms-slideover-body zyu-8b0ebad99652">
             <form method="post" asp-page-handler="SaveLocation" class="geo-form">
                 <input type="hidden" name="Search" value="@Model.Search" />
                 <input type="hidden" name="Filter" value="@Model.Filter" />
                 <input type="hidden" name="LocId" id="geo-LocId" value="0" />
                 <label>اسم الموقع *<input type="text" name="LocName" id="geo-LocName" required placeholder="مثال: المكتب الرئيسي" /></label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="zyu-71658681447f">
                     <label>خط العرض (Latitude)<input type="number" step="any" inputmode="decimal" name="LocLat" id="geo-LocLat" value="0" /></label>
                     <label>خط الطول (Longitude)<input type="number" step="any" inputmode="decimal" name="LocLng" id="geo-LocLng" value="0" /></label>
                 </div>
-                <label>نصف القطر (متر)<input type="number" name="LocRadius" id="geo-LocRadius" value="100" min="1" style="max-width:160px" oninput="geoMapCircle()" /></label>
+                <label>نصف القطر (متر)<input type="number" name="LocRadius" id="geo-LocRadius" value="100" min="1" class="zyu-eb9e070a2eee" oninput="geoMapCircle()" /></label>
                 <div>
-                    <label style="font-size:12px;font-weight:900;color:var(--sa-muted,#8FA8BC)">اختر الموقع من الخريطة (نقرة تحدّد الإحداثيات، والدائرة = نصف القطر)</label>
-                    <div style="display:flex;gap:6px;margin-top:8px">
-                        <input type="text" id="geo-search" placeholder="ابحث عن مكان… (مثال: المنصور بغداد)" style="flex:1"
+                    <label class="zyu-e08c1b3326b7">اختر الموقع من الخريطة (نقرة تحدّد الإحداثيات، والدائرة = نصف القطر)</label>
+                    <div class="zyu-5864c5f610eb">
+                        <input type="text" id="geo-search" placeholder="ابحث عن مكان… (مثال: المنصور بغداد)" class="zyu-83725d2c6e00"
                                onkeydown="if(event.key==='Enter'){event.preventDefault();geoSearch();}" />
                         <button type="button" class="geo-btn ghost sm" onclick="geoSearch()">بحث</button>
                         <button type="button" class="geo-btn ghost sm" onclick="geoMyLocation()" title="موقعي الحالي">📍 موقعي</button>
                         <button type="button" class="geo-btn ghost sm" onclick="geoToggleLayer()" id="geo-layerbtn" title="تبديل قمر صناعي/خريطة">🛰️</button>
                     </div>
-                    <div id="geo-results" style="display:none;margin-top:6px;border:1px solid rgba(73,111,151,.3);border-radius:10px;overflow:hidden"></div>
-                    <div id="geo-map" style="height:320px;border-radius:14px;margin-top:8px;border:1px solid rgba(73,111,151,.3)"></div>
+                    <div id="geo-results" class="zyu-045c12a33d2c"></div>
+                    <div id="geo-map" class="zyu-f45227f99c0e"></div>
                 </div>
-                <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="LocActive" value="true" id="geo-LocActive" checked /> الموقع نشط</label>
-                <div style="display:flex;gap:8px">
+                <label class="zyu-95e15889185d"><input type="checkbox" name="LocActive" value="true" id="geo-LocActive" checked /> الموقع نشط</label>
+                <div class="zyu-9c40389b4ad8">
                     <button type="submit" class="geo-btn">حفظ الموقع</button>
                     <button type="button" class="geo-btn ghost" onclick="geoResetForm()">جديد</button>
                 </div>
             </form>
 
             <div>
-                <label style="font-size:12px;font-weight:900;color:var(--sa-muted,#8FA8BC)">المواقع المعرّفة</label>
-                <div class="geo-loclist" style="margin-top:8px">
+                <label class="zyu-e08c1b3326b7">المواقع المعرّفة</label>
+                <div class="geo-loclist zyu-43a97fe4943c">
                     @if (Model.Locations.Count == 0)
                     {
-                        <span class="geo-none" style="font-size:12px">لا مواقع بعد.</span>
+                        <span class="geo-none zyu-a49cca52becd">لا مواقع بعد.</span>
                     }
                     @foreach (var loc in Model.Locations)
                     {
@@ -219,13 +167,13 @@
                                 <b>@loc.Name</b>
                                 <span class="co">@loc.Latitude.ToString("0.####"), @loc.Longitude.ToString("0.####") · @loc.RadiusMeters م</span>
                             </div>
-                            <div style="display:flex;gap:6px">
+                            <div class="zyu-69374f356aba">
                                 <button type="button" class="geo-btn ghost sm" onclick="geoEdit(@loc.Id)">تعديل</button>
-                                <form method="post" asp-page-handler="DeleteLocation" style="display:inline">
+                                <form method="post" asp-page-handler="DeleteLocation" class="zyu-6b8b63d565c4">
                                     <input type="hidden" name="Search" value="@Model.Search" />
                                     <input type="hidden" name="Filter" value="@Model.Filter" />
                                     <input type="hidden" name="id" value="@loc.Id" />
-                                    <button type="submit" class="geo-btn ghost sm" style="color:#f87171" data-zyconfirm="حذف الموقع؟">حذف</button>
+                                    <button type="submit" class="geo-btn ghost sm zyu-94c76e9c8583" data-zyconfirm="حذف الموقع؟">حذف</button>
                                 </form>
                             </div>
                         </div>
@@ -308,11 +256,11 @@
             var box = document.getElementById('geo-results');
             if (!q) { box.style.display = 'none'; return; }
             box.style.display = 'block';
-            box.innerHTML = '<div style="padding:8px 12px;font-size:12px">جارٍ البحث…</div>';
+            box.innerHTML = '<div class="zyu-5de347d2338a">جارٍ البحث…</div>';
             fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ar&q=' + encodeURIComponent(q))
                 .then(function (r) { return r.json(); })
                 .then(function (list) {
-                    if (!list.length) { box.innerHTML = '<div style="padding:8px 12px;font-size:12px">لا نتائج.</div>'; return; }
+                    if (!list.length) { box.innerHTML = '<div class="zyu-5de347d2338a">لا نتائج.</div>'; return; }
                     box.innerHTML = '';
                     list.forEach(function (item) {
                         var row = document.createElement('button');
@@ -329,7 +277,7 @@
                         box.appendChild(row);
                     });
                 })
-                .catch(function () { box.innerHTML = '<div style="padding:8px 12px;font-size:12px">تعذّر البحث — تحقق من الإنترنت.</div>'; });
+                .catch(function () { box.innerHTML = '<div class="zyu-5de347d2338a">تعذّر البحث — تحقق من الإنترنت.</div>'; });
         }
 
         // «موقعي الحالي»: يتمركز على GPS الجهاز ويحدد الدبوس (يحتاج سماح إذن الموقع)

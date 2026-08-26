@@ -7,6 +7,7 @@
     var emp = Model.Employee;
     var activeTab = Model.Tab;
 }
+<link rel="stylesheet" href="~/css/pages/index-da993b952e.css" asp-append-version="true" />
 
 <section class="nxex-page" dir="rtl" data-nxex-page data-active-tab="@activeTab">
     <header class="nxex-hero">
@@ -257,7 +258,7 @@
 
         <section class="nxex-pane" data-nxex-pane="attendance">
             @* ===== بصمة الآن (بصم ذاتي عبر الإنترنت) ===== *@
-            <section class="nxex-card" style="margin-bottom:16px">
+            <section class="nxex-card zyu-bf4a218e05ab">
                 <header class="nxex-card-head">
                     <div>
                         <h2>البصمة عبر الإنترنت</h2>
@@ -270,13 +271,13 @@
                     // الحاسم سيرفري لحظة الإرسال). عدد زوجي = التالية دخول.
                     var nextPunchIsIn = Model.TodayPunchIso.Count % 2 == 0;
                 }
-                <div class="nxex-punch-btns" style="justify-content:center">
-                    <form method="post" asp-page-handler="OnlinePunch" class="nxex-punch-form" style="flex:1;max-width:440px">
+                <div class="nxex-punch-btns zyu-99b9ba53aa94">
+                    <form method="post" asp-page-handler="OnlinePunch" class="nxex-punch-form zyu-a140e3282b2c">
                         <input type="hidden" name="returnTab" value="attendance" />
                         <input type="hidden" name="geoLat" /><input type="hidden" name="geoLng" />
                         <input type="hidden" name="bioToken" />
-                        <button type="submit" class="nxex-punch-btn @(nextPunchIsIn ? "in" : "out")" style="width:100%;padding:16px;font-size:15.5px;gap:10px">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:30px;height:30px;flex:none">
+                        <button type="submit" class="nxex-punch-btn @(nextPunchIsIn ? "in" : "out")" data-zy-style="width:100%;padding:16px;font-size:15.5px;gap:10px">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="zyu-8e48b4eaa69d">
                                 <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/>
                                 <path d="M9 9.5v1.2M15 9.5v1.2M12 9.5v3.2a1 1 0 0 1-1 1"/>
                                 <path d="M9 15.5a4.2 4.2 0 0 0 6 0"/>
@@ -400,7 +401,7 @@
                 }
             </section>
 
-            <section class="nxex-card" style="margin-bottom:16px">
+            <section class="nxex-card zyu-bf4a218e05ab">
                 <header class="nxex-card-head">
                     <div><h2>ملخص الحضور</h2><p>قراءة سريعة من سجلات الحضور.</p></div>
                     <span class="nxex-chip">@Model.Attendance.Count سجل</span>
@@ -598,11 +599,11 @@
                             {
                                 <article class="@Model.StatusClass(mp.Status)">
                                     <div class="nxex-request-icon">@(mp.PunchType == "Out" ? "🚪" : "🔓")</div>
-                                    <div style="flex:1">
+                                    <div class="zyu-83725d2c6e00">
                                         <strong>@mp.PunchTypeText · @mp.PunchAt.ToString("yyyy-MM-dd HH:mm")</strong>
-                                        <small style="display:block;opacity:.75">@mp.RefNo@(string.IsNullOrWhiteSpace(mp.Reason) ? "" : " · " + mp.Reason)</small>
+                                        <small class="zyu-27ec6f4cb2c5">@mp.RefNo@(string.IsNullOrWhiteSpace(mp.Reason) ? "" : " · " + mp.Reason)</small>
                                         @if (!string.IsNullOrWhiteSpace(mp.DecisionNote))
-                                        { <small style="display:block;opacity:.6">ملاحظة الإدارة: @mp.DecisionNote</small> }
+                                        { <small class="zyu-2b369ef2af11">ملاحظة الإدارة: @mp.DecisionNote</small> }
                                     </div>
                                     <span class="nxex-chip @(mp.Status == MissingPunchRequestStore.Approved ? "live" : "pending")">@mp.StatusText</span>
                                 </article>
@@ -613,7 +614,7 @@
 
                 @if (Model.PendingViolationReplies.Any())
                 {
-                    <section class="nxex-card" style="border:1px solid rgba(250,204,21,.35)">
+                    <section class="nxex-card zyu-9ce780795323">
                         <header class="nxex-card-head">
                             <div>
                                 <h2>مخالفات بانتظار ردّك</h2>
@@ -624,7 +625,7 @@
 
                         @foreach (var violation in Model.PendingViolationReplies)
                         {
-                            <form method="post" asp-page-handler="ViolationReply" class="nxex-form" style="margin-bottom:12px">
+                            <form method="post" asp-page-handler="ViolationReply" class="nxex-form zyu-b56987dbcbbe">
                                 <input type="hidden" name="id" value="@violation.Id" />
                                 <input type="hidden" name="returnTab" value="requests" />
                                 <div class="nxex-request-preview">
@@ -640,7 +641,7 @@
 
                 @if (Model.PendingAssetAcknowledgments.Any())
                 {
-                    <section class="nxex-card" style="border:1px solid rgba(18,217,227,.35)">
+                    <section class="nxex-card zyu-bed0c62b95ff">
                         <header class="nxex-card-head">
                             <div>
                                 <h2>عهد بانتظار إقرارك</h2>
@@ -651,16 +652,16 @@
 
                         @foreach (var asset in Model.PendingAssetAcknowledgments)
                         {
-                            <form method="post" asp-page-handler="AcknowledgeAsset" class="nxex-form" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;justify-content:space-between">
+                            <form method="post" asp-page-handler="AcknowledgeAsset" class="nxex-form zyu-17216c058e74">
                                 <input type="hidden" name="id" value="@asset.Id" />
                                 <input type="hidden" name="returnTab" value="requests" />
                                 <div>
                                     <strong>@asset.Title</strong>
-                                    <small style="display:block;opacity:.75">
+                                    <small class="zyu-27ec6f4cb2c5">
                                         @(string.IsNullOrWhiteSpace(asset.Subtitle) ? "" : asset.Subtitle + " · ")منذ @(asset.FromDate?.ToString("yyyy-MM-dd") ?? "—")@(asset.Amount.HasValue ? " · بقيمة " + asset.Amount.Value.ToString("#,0.##") : "")
                                     </small>
                                 </div>
-                                <button type="submit" style="flex:none">أقرّ بالاستلام</button>
+                                <button type="submit" class="zyu-f87fcd11f8b4">أقرّ بالاستلام</button>
                             </form>
                         }
                     </section>
@@ -862,10 +863,10 @@
                         <div class="nxex-timeline">
                             @foreach (var v in Model.DisciplinaryHistory)
                             {
-                                <article class="nxex-request-preview" style="margin-bottom:12px">
+                                <article class="nxex-request-preview zyu-b56987dbcbbe">
                                     <span>@v.ReferenceNo · @(v.EventDate?.ToString("yyyy-MM-dd") ?? "—")@(string.IsNullOrWhiteSpace(v.Category) ? "" : " · " + v.Category)</span>
                                     <strong>@(string.IsNullOrWhiteSpace(v.Title) ? "مخالفة" : v.Title)</strong>
-                                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+                                    <div class="zyu-78bfc9407374">
                                         <span class="nxex-chip">@v.Status</span>
                                         @if (!string.IsNullOrWhiteSpace(v.ActionStatus))
                                         {
@@ -882,11 +883,11 @@
                                     </div>
                                     @if (!string.IsNullOrWhiteSpace(v.EmployeeReply))
                                     {
-                                        <div class="nxex-reply" style="margin-top:8px"><strong>ردّك</strong><span>@v.EmployeeReply</span></div>
+                                        <div class="nxex-reply zyu-43a97fe4943c"><strong>ردّك</strong><span>@v.EmployeeReply</span></div>
                                     }
                                     else if (v.ReplyStatus == "Pending")
                                     {
-                                        <small style="display:block;margin-top:6px;color:#facc15">بانتظار ردّك — من تبويب «طلباتي».</small>
+                                        <small class="zyu-e8da90e8e62d">بانتظار ردّك — من تبويب «طلباتي».</small>
                                     }
                                 </article>
                             }
@@ -1025,7 +1026,7 @@
                         <textarea name="reason" rows="2" placeholder="اكتب السبب"></textarea>
                     </div>
                     <div class="nxex-field">
-                        <label>إرفاق صورة <span data-attach-star hidden>*</span> <span data-attach-hint style="color:#7f95ab;font-weight:800"></span></label>
+                        <label>إرفاق صورة <span data-attach-star hidden>*</span> <span data-attach-hint class="zyu-8932c827a2eb"></span></label>
                         <input type="file" name="attachment" accept="image/*,.pdf" />
                     </div>
 
@@ -1121,4 +1122,3 @@
 @section Scripts {
     <script src="~/js/nexora-employee-experience.js" asp-append-version="true"></script>
 }
-

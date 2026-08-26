@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "تسوية الإنهاء — الفروقات";
 }
+<link rel="stylesheet" href="~/css/pages/terminationsettlement-1de92baf31.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -27,7 +28,7 @@
             </p>
         </header>
 
-        <form method="post" class="zyp-editor-grid" style="border:0;padding:0">
+        <form method="post" class="zyp-editor-grid zyu-410cf9349439">
             @* المنتقي المشترك — بـIncludeInactive لأن موضوع الشاشة من أُنهيت خدمته *@
             <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
                 Label = "الموظف",
@@ -48,9 +49,9 @@
                 الضمان المستحقّ فعلاً (اتركه فارغاً لتخطّي البند)
                 <input asp-for="DueGosi" type="number" step="0.01" placeholder="—" />
             </label>
-            <label style="justify-content:flex-end">
+            <label class="zyu-110c1427da8c">
                 &nbsp;
-                <button type="submit" class="zyc-add-rule" style="align-self:stretch">احسب الفروقات</button>
+                <button type="submit" class="zyc-add-rule zyu-8ede280590c3">احسب الفروقات</button>
             </label>
         </form>
     </div>
@@ -65,7 +66,7 @@
 
             @if (Model.MonthUnpaidWarning)
             {
-                <p class="zyc-summary" style="border-inline-start-color:var(--zy-warning)">
+                <p class="zyc-summary zyu-bc6a54692fba">
                     ⚠ <b>لم يُحتسب راتب شهر الإنهاء بعد</b> — أكمل مسير الشهر قبل إغلاق
                     التسوية، وإلا خرج الموظف ناقصاً راتب شهر كامل.
                 </p>
@@ -127,7 +128,7 @@
                 <b>صافي الفروقات: @TerminationSettlementPolicy.Money(Model.Net)</b>
                 — @(Model.Net >= 0 ? "يُضاف للتسوية" : "يُخصم منها")
                 <br />
-                <span style="font-size:.8125rem">@Model.NetInWords</span>
+                <span class="zyu-859811c5f743">@Model.NetInWords</span>
             </p>
 
             <p class="zyp-hint">
