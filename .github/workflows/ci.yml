@@ -132,7 +132,13 @@ jobs:
       - name: Remove disposable integration database
         if: always()
         shell: pwsh
-        run: dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release --no-build -- teardown
+        run: |
+          $bootstrap = 'tools/SmartAttendance.E2E.Bootstrap/bin/Release/net10.0/SmartAttendance.E2E.Bootstrap.exe'
+          if (Test-Path $bootstrap) {
+            & $bootstrap teardown
+          } else {
+            Write-Host 'Bootstrap was not built; no disposable database could have been created.'
+          }
 
       - name: Upload SQL acceptance results
         if: always()
@@ -266,7 +272,13 @@ jobs:
       - name: Remove disposable database
         if: always()
         shell: pwsh
-        run: dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release --no-build -- teardown
+        run: |
+          $bootstrap = 'tools/SmartAttendance.E2E.Bootstrap/bin/Release/net10.0/SmartAttendance.E2E.Bootstrap.exe'
+          if (Test-Path $bootstrap) {
+            & $bootstrap teardown
+          } else {
+            Write-Host 'Bootstrap was not built; no disposable database could have been created.'
+          }
 
       - name: Upload E2E results
         if: always()
