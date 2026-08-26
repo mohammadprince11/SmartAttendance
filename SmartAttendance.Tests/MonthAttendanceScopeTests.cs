@@ -28,6 +28,7 @@ public class MonthAttendanceScopeTests
         Assert.Contains("ApproveWithGateAsync(\n        ApplicationDbContext dbContext, CompanyScope scope", s.Replace("\r\n", "\n"));
         Assert.Contains("ReopenAsync(ApplicationDbContext dbContext, CompanyScope scope", s);
         Assert.Contains("LockAsync(ApplicationDbContext dbContext, CompanyScope scope", s);
+        Assert.Contains("UnlockAsync(\n        ApplicationDbContext dbContext, CompanyScope scope", s.Replace("\r\n", "\n"));
     }
 
     [Fact]
@@ -40,5 +41,16 @@ public class MonthAttendanceScopeTests
         Assert.Contains("INNER JOIN Employees e", body);
         Assert.Contains("ToSqlPredicate", body);
         Assert.Contains("scope.IsDeniedAll", body);
+    }
+
+    [Fact]
+    public void LockedPeriodUnlock_RequiresReasonAndWritesAudit()
+    {
+        var s = Store();
+        Assert.Contains("string.IsNullOrWhiteSpace(reason)", s);
+        Assert.Contains("m.Status = N'Locked'", s);
+        Assert.Contains("N'EmployeeMonthAttendance'", s);
+        Assert.Contains("N'Unlock'", s);
+        Assert.Contains("@Reason", s);
     }
 }

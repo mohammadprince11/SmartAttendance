@@ -59,7 +59,7 @@
     <header class="mat-head">
         <div>
             <h1>الحضور الشهري</h1>
-            <p>دورة شهر الموظف: تحت المراجعة ← معتمد ← <b>مقفل للرواتب</b> — القفل نهائي وأرقامه لا تتغير بإعادة البناء.</p>
+            <p>دورة شهر الموظف: تحت المراجعة ← معتمد ← <b>مقفل للرواتب</b> — لا يتغير بإعادة البناء ولا يُفتح إلا بسببٍ مُسجّل.</p>
         </div>
         <form method="post" asp-page-handler="Build">
             <input type="hidden" name="Month" value="@Model.Month" />
@@ -114,6 +114,9 @@
                     data-zyconfirm="القفل نهائي — تأكيد؟">قفل للرواتب</button>
             <button type="submit" asp-page-handler="Reopen" class="mat-btn no"
                     data-zyconfirm="إرجاع للمراجعة — تأكيد؟">إرجاع للمراجعة</button>
+            <input type="text" name="UnlockReason" maxlength="500" placeholder="سبب فتح المقفل (إلزامي)" />
+            <button type="submit" asp-page-handler="Unlock" class="mat-btn no"
+                    data-zyconfirm="فتح المقفل إلى معتمد وتسجيل السبب — تأكيد؟">فتح المقفل</button>
         </div>
 
         <div class="mat-table-card" style="margin-top:14px">
@@ -135,10 +138,7 @@
                         {
                             <tr>
                                 <td>
-                                    @if (row.Status != "Locked")
-                                    {
-                                        <input type="checkbox" name="SelectedIds" value="@row.Id" onchange="matCount()" />
-                                    }
+                                    <input type="checkbox" name="SelectedIds" value="@row.Id" onchange="matCount()" />
                                 </td>
                                 <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
                                 <td class="mat-num">@row.WorkDays</td>

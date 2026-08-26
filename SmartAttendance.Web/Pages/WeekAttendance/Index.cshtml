@@ -124,6 +124,9 @@
                     data-zyconfirm="قفل الأسبوع — تأكيد؟">قفل</button>
             <button type="submit" asp-page-handler="Reopen" class="mat-btn no"
                     data-zyconfirm="إرجاع للمراجعة — تأكيد؟">إرجاع للمراجعة</button>
+            <input type="text" name="UnlockReason" maxlength="500" placeholder="سبب فتح المقفل (إلزامي)" />
+            <button type="submit" asp-page-handler="Unlock" class="mat-btn no"
+                    data-zyconfirm="فتح المقفل إلى معتمد وتسجيل السبب — تأكيد؟">فتح المقفل</button>
         </div>
 
         <div class="mat-table-card" style="margin-top:14px">
@@ -145,10 +148,7 @@
                         {
                             <tr>
                                 <td>
-                                    @if (row.Status != "Locked")
-                                    {
-                                        <input type="checkbox" name="SelectedIds" value="@row.Id" onchange="matCount()" />
-                                    }
+                                    <input type="checkbox" name="SelectedIds" value="@row.Id" onchange="matCount()" />
                                 </td>
                                 <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
                                 <td class="mat-num">@row.WorkDays</td>

@@ -939,6 +939,61 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     }
 
     [SkippableFact]
+    public async Task Locked_attendance_unlock_is_tenant_scoped_reasoned_and_audited()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
+        await MonthAttendanceStore.EnsureAsync(db);
+        await WeekAttendanceStore.EnsureAsync(db);
+
+        var monthA = await ScalarAsync(db, $"""
+INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],Status,LockedAt)
+VALUES({_employeeA},2088,1,N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var monthB = await ScalarAsync(db, $"""
+INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],Status,LockedAt)
+VALUES({_employeeB},2088,1,N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var weekA = await ScalarAsync(db, $"""
+INSERT INTO EmployeeWeekAttendance(EmployeeId,IsoYear,WeekNumber,WeekStart,WeekEnd,Status,LockedAt)
+VALUES({_employeeA},2088,1,'2088-01-05','2088-01-11',N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var weekB = await ScalarAsync(db, $"""
+INSERT INTO EmployeeWeekAttendance(EmployeeId,IsoYear,WeekNumber,WeekStart,WeekEnd,Status,LockedAt)
+VALUES({_employeeB},2088,1,'2088-01-05','2088-01-11',N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+
+        Assert.Equal(0, await MonthAttendanceStore.UnlockAsync(
+            db, scope, new[] { monthA }, "auditor-a", "127.0.0.1", " "));
+        Assert.Equal(1, await MonthAttendanceStore.UnlockAsync(
+            db, scope, new[] { monthA, monthB }, "auditor-a", "127.0.0.1", "Correction approved"));
+        Assert.Equal(1, await WeekAttendanceStore.UnlockAsync(
+            db, scope, new[] { weekA, weekB }, "auditor-a", "127.0.0.1", "Correction approved"));
+
+        Assert.Equal("Approved", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeMonthAttendance WHERE Id={monthA};"));
+        Assert.Equal("Locked", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeMonthAttendance WHERE Id={monthB};"));
+        Assert.Equal("Approved", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeWeekAttendance WHERE Id={weekA};"));
+        Assert.Equal("Locked", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeWeekAttendance WHERE Id={weekB};"));
+        Assert.Equal(2, await RawIntAsync(db, $"""
+SELECT COUNT(*) FROM AuditLogs
+WHERE Action=N'Unlock' AND UserName=N'auditor-a'
+  AND ((EntityName=N'EmployeeMonthAttendance' AND EntityId=N'{monthA}')
+    OR (EntityName=N'EmployeeWeekAttendance' AND EntityId=N'{weekA}'));
+"""));
+        Assert.Equal(0, await RawIntAsync(db, $"""
+SELECT COUNT(*) FROM AuditLogs
+WHERE Action=N'Unlock'
+  AND ((EntityName=N'EmployeeMonthAttendance' AND EntityId=N'{monthB}')
+    OR (EntityName=N'EmployeeWeekAttendance' AND EntityId=N'{weekB}'));
+"""));
+    }
+
+    [SkippableFact]
     public async Task Payroll_calculation_refuses_unapproved_month_attendance_before_writing_lines()
     {
         RequireSql();

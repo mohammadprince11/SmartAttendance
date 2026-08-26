@@ -24,9 +24,10 @@ public class WeekAttendanceScopeTests
     public void Transitions_TakeCompanyScope_AndGateByEmployeeCompany()
     {
         var s = Store();
-        Assert.Contains("ApproveAsync(ApplicationDbContext dbContext, CompanyScope scope", s);
+        Assert.Contains("ApproveWithGateAsync(\n        ApplicationDbContext dbContext, CompanyScope scope", s.Replace("\r\n", "\n"));
         Assert.Contains("ReopenAsync(ApplicationDbContext dbContext, CompanyScope scope", s);
         Assert.Contains("LockAsync(ApplicationDbContext dbContext, CompanyScope scope", s);
+        Assert.Contains("UnlockAsync(\n        ApplicationDbContext dbContext, CompanyScope scope", s.Replace("\r\n", "\n"));
 
         var idx = s.IndexOf("private static async Task<int> Transition", System.StringComparison.Ordinal);
         Assert.True(idx > 0);
@@ -34,5 +35,27 @@ public class WeekAttendanceScopeTests
         Assert.Contains("INNER JOIN Employees e", body);
         Assert.Contains("ToSqlPredicate", body);
         Assert.Contains("scope.IsDeniedAll", body);
+    }
+
+    [Fact]
+    public void BuildAndApprovalGate_AreScopedBeforeMaterialization()
+    {
+        var s = Store();
+        Assert.Contains("BuildWeekAsync(\n        ApplicationDbContext dbContext, CompanyScope scope", s.Replace("\r\n", "\n"));
+        Assert.Contains("INNER JOIN Employees e ON e.Id = d.EmployeeId", s);
+        Assert.Contains("EmployeeCompanyGuard.ListFilter(scope, \"e.CompanyId\")", s);
+        Assert.Contains("AnalyzedDays", s);
+        Assert.Contains("ExpectedDays", s);
+    }
+
+    [Fact]
+    public void LockedPeriodUnlock_RequiresReasonAndWritesAudit()
+    {
+        var s = Store();
+        Assert.Contains("string.IsNullOrWhiteSpace(reason)", s);
+        Assert.Contains("w.Status = N'Locked'", s);
+        Assert.Contains("N'EmployeeWeekAttendance'", s);
+        Assert.Contains("N'Unlock'", s);
+        Assert.Contains("@Reason", s);
     }
 }

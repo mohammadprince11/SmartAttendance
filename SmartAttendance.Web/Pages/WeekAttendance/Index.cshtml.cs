@@ -28,6 +28,7 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     [BindProperty(SupportsGet = true)] public string Filter { get; set; } = "All";
     [BindProperty(SupportsGet = true)] public int PageNumber { get; set; } = 1;
+    [BindProperty] public string? UnlockReason { get; set; }
 
     public const int PageSize = 50;
 
@@ -86,7 +87,8 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostBuildAsync()
     {
         var (year, week) = Period;
-        var count = await WeekAttendanceStore.BuildWeekAsync(_dbContext, year, week);
+        var count = await WeekAttendanceStore.BuildWeekAsync(
+            _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), year, week);
 
         // نفس منطق الشهري: التجميع الأسبوعي الطازج يُقيَّم بالقواعد الفترية الأسبوعية.
         var suggested = count == 0
@@ -100,14 +102,48 @@ public class IndexModel : PageModel
         return RedirectToPage(Route());
     }
 
-    public Task<IActionResult> OnPostApproveAsync() => TransitionAsync(
-        WeekAttendanceStore.ApproveAsync, "اعتُمد {0} أسبوعاً.");
+    public async Task<IActionResult> OnPostApproveAsync()
+    {
+        var ids = SelectedIds();
+        if (ids.Count == 0)
+            TempData["SuccessMessage"] = "حدد صفوفاً أولاً.";
+        else
+        {
+            var (approved, blocked) = await WeekAttendanceStore.ApproveWithGateAsync(
+                _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), ids);
+            TempData["SuccessMessage"] = (approved, blocked) switch
+            {
+                (0, > 0) => $"لم يُعتمد شيء — {blocked} صفاً بأيام غير محلّلة.",
+                (> 0, > 0) => $"اعتُمد {approved} أسبوعاً، وحُجب {blocked} لأيام غير محلّلة.",
+                (> 0, 0) => $"اعتُمد {approved} أسبوعاً.",
+                _ => "لا صفوف بحالة تسمح بهذا الانتقال ضمن المحدد."
+            };
+        }
+        return RedirectToPage(Route());
+    }
 
     public Task<IActionResult> OnPostReopenAsync() => TransitionAsync(
         WeekAttendanceStore.ReopenAsync, "أُرجع {0} أسبوعاً للمراجعة.");
 
     public Task<IActionResult> OnPostLockAsync() => TransitionAsync(
         WeekAttendanceStore.LockAsync, "قُفل {0} أسبوعاً.");
+
+    public async Task<IActionResult> OnPostUnlockAsync()
+    {
+        var ids = SelectedIds();
+        if (ids.Count == 0 || string.IsNullOrWhiteSpace(UnlockReason))
+            TempData["SuccessMessage"] = "حدد صفوفاً مقفلة واكتب سبب الفتح.";
+        else
+        {
+            var count = await WeekAttendanceStore.UnlockAsync(
+                _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), ids,
+                User.Identity?.Name, HttpContext.Connection.RemoteIpAddress?.ToString(), UnlockReason);
+            TempData["SuccessMessage"] = count == 0
+                ? "لا صفوف مقفلة ضمن المحدد أو لا تملك نطاقها."
+                : $"فُتح {count} أسبوعاً إلى حالة معتمد وسُجل السبب في سجل التدقيق.";
+        }
+        return RedirectToPage(Route());
+    }
 
     private List<int> SelectedIds() =>
         Request.Form["SelectedIds"]
