@@ -204,3 +204,48 @@
     border-inline-start: 2px solid rgba(157, 184, 204, .18);
     border-radius: 0 10px 10px 0;
 }
+
+/*
+   The full-height desktop drawer used to be hard-coded to the dark palette.
+   That made every light page look half dark as soon as its active module drawer
+   opened. Keep the same structure and motion, but resolve the complete drawer
+   surface, title and return row for the selected light mode.
+*/
+@media (min-width: 981px) {
+    html[data-theme="light"] .nexora-nav-group.ky-open > summary {
+        background: rgba(72, 108, 143, .09) !important;
+        color: #0B2239 !important;
+    }
+
+    html[data-theme="light"] .nexora-nav-group.ky-open > .nexora-nav-group-links,
+    html[data-theme="light"] .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+        background:
+            radial-gradient(circle at 85% 0%, rgba(72, 108, 143, .10), transparent 34%),
+            linear-gradient(180deg, rgba(255, 255, 255, .995), rgba(244, 246, 248, .995)) !important;
+        border-inline-start-color: rgba(15, 60, 100, .14) !important;
+        box-shadow: -18px 0 44px rgba(8, 20, 38, .14) !important;
+        color: #0B2239 !important;
+    }
+
+    html[data-theme="light"] .nexora-nav-group-links .ky-back {
+        border-bottom-color: rgba(15, 60, 100, .14) !important;
+        background: rgba(72, 108, 143, .05) !important;
+        color: #53697D !important;
+    }
+
+    html[data-theme="light"] .nexora-nav-group-links .ky-back:hover {
+        background: rgba(72, 108, 143, .11) !important;
+        color: #0B2239 !important;
+    }
+
+    html[data-theme="light"] .nexora-nav-group-links .ky-drawer-title,
+    html[data-theme="light"] .nexora-nav-group-links .ky-drawer-title:hover {
+        border-bottom-color: rgba(15, 60, 100, .14) !important;
+        background: rgba(72, 108, 143, .07) !important;
+        color: #0B2239 !important;
+    }
+
+    html[data-theme="light"] .ky-acc .ky-acc-body .nexora-nav-link {
+        border-inline-start-color: rgba(15, 60, 100, .16);
+    }
+}

@@ -15,8 +15,9 @@
    layout. Semantic status colours are engine-owned and stay independent of the
    company brand colour by design.
 
-   Dark-first: these are the dark values. Light is generated later (P7) behind a
-   feature flag and is intentionally absent today.
+   Dark-first: the root values are the company/theme-engine dark palette. The
+   explicit light block below is the canonical fallback for consumers that read
+   contract tokens directly instead of the higher-level --zy-* aliases.
 */
 
 :root {
@@ -94,4 +95,40 @@
     --layout-sidebar-width: 288px;
     --layout-topbar-height: 72px;
     --layout-content-max: 1760px;
+}
+
+/*
+   Light-mode parity for direct contract consumers.
+
+   Most current components consume --zy-* tokens, whose light values live in
+   zynora-design-tokens.css. A few valid surfaces (branding, people and legacy
+   HR cards) consume the engine contract directly. Without this block those
+   surfaces kept the dark palette while the shell and the rest of the page were
+   light. The attribute selector intentionally has higher specificity than the
+   runtime theme engine's :root output, so the selected UI mode always wins.
+*/
+html[data-theme="light"] {
+    color-scheme: light;
+
+    --surface-app: #F4F6F8;
+    --surface-base: #F7F9FB;
+    --surface-panel: #FFFFFF;
+    --surface-raised: #F3F6F8;
+    --surface-input: #FFFFFF;
+    --surface-soft: rgba(8, 20, 38, .035);
+
+    --text-default: #0D1B2A;
+    --text-muted: #627386;
+    --text-on-primary: #FFFFFF;
+
+    --border-default: #E6EBF1;
+    --border-strong: rgba(72, 108, 143, .40);
+
+    --interactive-primary-soft: rgba(72, 108, 143, .11);
+    --interactive-row-alt: rgba(8, 20, 38, .018);
+    --interactive-focus-ring: 0 0 0 3px rgba(72, 108, 143, .20);
+
+    --elevation-sm: 0 1px 2px rgba(8, 20, 38, .04);
+    --elevation-md: 0 6px 18px rgba(8, 20, 38, .07);
+    --elevation-lg: 0 16px 40px rgba(8, 20, 38, .10);
 }

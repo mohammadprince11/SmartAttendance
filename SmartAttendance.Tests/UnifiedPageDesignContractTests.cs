@@ -98,6 +98,31 @@ public sealed class UnifiedPageDesignContractTests
     }
 
     [Fact]
+    public void LightTheme_CoversDirectContractConsumersAndTheFullHeightModuleDrawer()
+    {
+        var themeContract = ReadWeb("wwwroot", "css", "zynora-theme-contract.css");
+        var navigation = ReadWeb("wwwroot", "css", "zynora-kayan-nav.css");
+
+        Assert.Contains("html[data-theme=\"light\"]", themeContract, StringComparison.Ordinal);
+        foreach (var token in new[]
+                 {
+                     "--surface-app", "--surface-base", "--surface-panel", "--surface-raised",
+                     "--surface-input", "--text-default", "--text-muted", "--border-default",
+                     "--interactive-primary-soft", "--elevation-lg"
+                 })
+        {
+            Assert.Contains(token, themeContract, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group.ky-open > .nexora-nav-group-links",
+            navigation, StringComparison.Ordinal);
+        Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group-links .ky-back",
+            navigation, StringComparison.Ordinal);
+        Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group-links .ky-drawer-title",
+            navigation, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RazorImports_DoNotRegisterTheBroadRuntimeAdapterAsATagHelper()
     {
         var imports = ReadWeb("Pages", "_ViewImports.cshtml");
