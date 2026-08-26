@@ -38,7 +38,7 @@
         <form method="get" class="pr-filter">
             <span>السنة:</span>
             @{ var selectedYear = Model.Year ?? DateTime.Today.Year; }
-            <select name="Year" onchange="this.form.submit()">
+            <select name="Year" aria-label="سنة المسير" onchange="this.form.submit()">
                 <option value="0" selected="@(Model.Year == 0)">الكل</option>
                 @foreach (var y in Model.AvailableYears)
                 {
@@ -48,7 +48,7 @@
             @if (Model.Companies.Count > 1)
             {
                 <span>الشركة:</span>
-                <select name="CompanyId" onchange="this.form.submit()" class="zyu-101bfa174da6">
+                <select name="CompanyId" aria-label="شركة المسير" onchange="this.form.submit()" class="zyu-101bfa174da6">
 
                     <option value="0" selected="@(!(Model.CompanyId > 0))">كل الشركات</option>
                     @foreach (var c in Model.Companies)

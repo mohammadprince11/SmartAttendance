@@ -55,7 +55,7 @@
             <div class="zhr-filter-grid">
                 <div class="zhr-form-group">
                     <label class="zhr-label">الشركة</label>
-                    <select name="CompanyId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="CompanyId" class="zhr-select" aria-label="الشركة" onchange="document.getElementById('zhr-filter-form').submit()">
                         @foreach(var c in Model.CompanyOptions){<option value="@c.Id" selected="@(Model.CompanyId==c.Id ? "selected" : null)">@c.Name</option>}
                     </select>
                 </div>
@@ -65,21 +65,21 @@
                 </div>
                 <div class="zhr-form-group">
                     <label class="zhr-label">موقع العمل</label>
-                    <select name="BranchId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="BranchId" class="zhr-select" aria-label="موقع العمل" onchange="document.getElementById('zhr-filter-form').submit()">
                         <option value="">الكل</option>
                         @foreach(var b in Model.BranchOptions){<option value="@b.Id" selected="@(Model.BranchId==b.Id ? "selected" : null)">@b.Name</option>}
                     </select>
                 </div>
                 <div class="zhr-form-group">
                     <label class="zhr-label">القسم</label>
-                    <select name="DepartmentId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="DepartmentId" class="zhr-select" aria-label="القسم" onchange="document.getElementById('zhr-filter-form').submit()">
                         <option value="">الكل</option>
                         @foreach(var d in Model.DepartmentOptions){<option value="@d.Id" selected="@(Model.DepartmentId==d.Id ? "selected" : null)">@d.Name</option>}
                     </select>
                 </div>
                 <div class="zhr-form-group">
                     <label class="zhr-label">الحالة</label>
-                    <select name="StatusFilter" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="StatusFilter" class="zhr-select" aria-label="الحالة" onchange="document.getElementById('zhr-filter-form').submit()">
                         <option value="all" selected="@(Model.StatusFilter=="all" ? "selected" : null)">الكل</option>
                         <option value="active" selected="@(Model.StatusFilter=="active" ? "selected" : null)">فعال</option>
                         <option value="inactive" selected="@(Model.StatusFilter=="inactive" ? "selected" : null)">غير فعال</option>
@@ -99,7 +99,7 @@
             </span>
             <div class="zhr-pagesize-wrapper">
                 <label class="zhr-label zyu-38965f9b18ca">الأسطر:</label>
-                <select name="PageSize" form="zhr-filter-form" class="zhr-select zyu-5dc4c949cfa8" onchange="document.getElementById('zhr-filter-form').submit()">
+                <select name="PageSize" form="zhr-filter-form" class="zhr-select zyu-5dc4c949cfa8" aria-label="عدد الأسطر في الصفحة" onchange="document.getElementById('zhr-filter-form').submit()">
                     <option value="10" selected="@(Model.PageSize==10 ? "selected" : null)">10</option>
                     <option value="25" selected="@(Model.PageSize==25 ? "selected" : null)">25</option>
                     <option value="50" selected="@(Model.PageSize==50 ? "selected" : null)">50</option>

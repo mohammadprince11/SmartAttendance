@@ -46,7 +46,7 @@
     </header>
 
     <form method="get" class="avw-bar" id="avw-getform">
-        <input type="month" name="Month" value="@Model.Month" onchange="this.form.submit()" />
+        <input type="month" name="Month" value="@Model.Month" aria-label="شهر الحضور" onchange="this.form.submit()" />
         <input type="text" name="Search" value="@Model.Search" placeholder="بحث رمز/اسم..." />
         <button type="submit" class="avw-btn ghost">عرض</button>
         @* حفظ قيم الفلتر عبر البحث/الشهر *@

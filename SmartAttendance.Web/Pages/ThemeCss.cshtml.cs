@@ -25,6 +25,7 @@ public sealed class ThemeCssModel : PageModel
         var theme = await _themeContextService.GetCurrentAsync(cancellationToken);
         var tokens = DesignTokenStore.CompileCss(await DesignTokenStore.LoadAsync(_dbContext));
         var css = string.Concat(tokens, Environment.NewLine, theme.CompiledCss);
+        if (string.IsNullOrWhiteSpace(css)) css = ":root {}";
 
         Response.Headers.CacheControl = "private, no-store, max-age=0";
         Response.Headers.Pragma = "no-cache";

@@ -19,6 +19,7 @@ namespace SmartAttendance.E2E;
 /// شغّلها: dotnet test SmartAttendance.E2E
 /// </summary>
 [TestFixture]
+[NonParallelizable]
 public class SmokeTests : PageTest
 {
     private static readonly (string Path, string Evidence)[] ReleaseSurfaces =
@@ -103,7 +104,9 @@ public class SmokeTests : PageTest
         await Page.ClickAsync("button[type='submit']");
 
         // بعد الدخول لا نبقى على صفحة تسجيل الدخول (نجح الدخول).
-        await Page.WaitForURLAsync(new Regex("^(?!.*/Account/Login).*$"), new() { Timeout = 15000 });
+        await Page.WaitForURLAsync(
+            new Regex("^(?!.*/Account/Login).*$"),
+            new() { Timeout = 15000, WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.That(Page.Url, Does.Not.Contain("/Account/Login"));
     }
 
@@ -131,20 +134,28 @@ public class SmokeTests : PageTest
             var accessibilityIssues = await Page.EvaluateAsync<string[]>("""
                 () => {
                   const issues = [];
+                  const visible = element => !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+                  const describe = element => {
+                    const id = element.id ? '#' + element.id : '';
+                    const classes = typeof element.className === 'string' && element.className.trim()
+                      ? '.' + element.className.trim().split(/\s+/).join('.') : '';
+                    const name = element.getAttribute('name') ? '[name=' + element.getAttribute('name') + ']' : '';
+                    return element.tagName.toLowerCase() + id + classes + name;
+                  };
                   const ids = [...document.querySelectorAll('[id]')]
                     .map(x => x.id).filter(Boolean);
                   const duplicates = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
                   if (duplicates.length) issues.push('duplicate ids: ' + duplicates.join(','));
                   if ([...document.images].some(img => !img.hasAttribute('alt')))
                     issues.push('image without alt');
-                  if ([...document.querySelectorAll('button')].some(button =>
-                        !((button.innerText || button.getAttribute('aria-label') || button.title || '').trim())))
-                    issues.push('unnamed button');
-                  if ([...document.querySelectorAll('input:not([type=hidden]),select,textarea')].some(control => {
+                  [...document.querySelectorAll('button')].filter(button => visible(button) &&
+                        !((button.innerText || button.getAttribute('aria-label') || button.title || '').trim()))
+                    .forEach(button => issues.push('unnamed button: ' + describe(button)));
+                  [...document.querySelectorAll('input:not([type=hidden]),select,textarea')].filter(control => visible(control) && (() => {
                         const labelled = control.labels && control.labels.length > 0;
                         return !(labelled || control.getAttribute('aria-label') ||
                           control.getAttribute('aria-labelledby') || control.getAttribute('placeholder') || control.title);
-                      })) issues.push('unnamed form control');
+                      })()).forEach(control => issues.push('unnamed form control: ' + describe(control)));
                   return issues;
                 }
                 """);
@@ -170,9 +181,12 @@ public class SmokeTests : PageTest
     {
         var (user, pass) = RequireCredentials();
         await Page.GotoAsync($"{baseUrl}/Account/Login");
+        if (!Page.Url.Contains("/Account/Login", StringComparison.OrdinalIgnoreCase)) return;
         await Page.FillAsync("input[name='Username']", user);
         await Page.FillAsync("input[name='Password']", pass);
         await Page.ClickAsync("button[type='submit']");
-        await Page.WaitForURLAsync(new Regex("^(?!.*/Account/Login).*$"), new() { Timeout = 15000 });
+        await Page.WaitForURLAsync(
+            new Regex("^(?!.*/Account/Login).*$"),
+            new() { Timeout = 15000, WaitUntil = WaitUntilState.DOMContentLoaded });
     }
 }

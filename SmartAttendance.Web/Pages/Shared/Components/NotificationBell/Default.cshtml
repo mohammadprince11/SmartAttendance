@@ -19,7 +19,7 @@
     <div class="zy-bell-panel">
         <div class="zy-bell-head">
             <b>الإشعارات</b>
-            <button type="button" class="zy-bell-markall" id="zyBellMarkAll" @(unread > 0 ? "" : "disabled")>تعليم الكل كمقروء</button>
+            <button type="button" class="zy-bell-markall" id="zyBellMarkAll" aria-label="تعليم كل الإشعارات كمقروءة" @(unread > 0 ? "" : "disabled")>تعليم الكل كمقروء</button>
         </div>
         <div class="zy-bell-list" id="zyBellList">
             @if (Model.Items.Count == 0)
