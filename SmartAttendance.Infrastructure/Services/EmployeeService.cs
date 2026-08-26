@@ -84,7 +84,7 @@ public class EmployeeService : IEmployeeService
                     x.HireDate >= startOfYear &&
                     x.HireDate < startOfNextYear)
             })
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
 
         var totalEmployees = employeeSummary?.TotalEmployees ?? 0;
         var activeEmployees = employeeSummary?.ActiveEmployees ?? 0;

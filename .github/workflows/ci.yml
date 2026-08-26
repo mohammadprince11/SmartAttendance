@@ -52,7 +52,7 @@ jobs:
           dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
           -c Release
           --no-build
-          --filter "FullyQualifiedName!~ProductionClosureSqlTests"
+          --filter "FullyQualifiedName!~ProductionClosureSqlTests&FullyQualifiedName!~AccessRoleServiceIntegrationTests&FullyQualifiedName!~ThemeStoreIntegrationTests&FullyQualifiedName!~CrossCompanyResourceDenialTests&FullyQualifiedName!~SecurityAuditLogTests&FullyQualifiedName!~TenantIsolationIntegrationTests"
           --logger "trx;LogFileName=unit-tests.trx"
           --results-directory ${{ github.workspace }}/TestResults
           --collect:"XPlat Code Coverage"
@@ -70,6 +70,8 @@ jobs:
     name: SQL Server Acceptance
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      ZYNORA_E2E_DATABASE_NAME: SmartAttendance_E2E_SQL_${{ github.run_id }}_${{ github.run_attempt }}
 
     steps:
       - name: Checkout
@@ -98,6 +100,15 @@ jobs:
         shell: pwsh
         run: sqllocaldb start MSSQLLocalDB
 
+      - name: Create disposable integration database
+        shell: pwsh
+        run: |
+          $password = [Guid]::NewGuid().ToString('N') + 'Aa1!'
+          $connection = "Server=(localdb)\MSSQLLocalDB;Database=$env:ZYNORA_E2E_DATABASE_NAME;Integrated Security=true;TrustServerCertificate=true;MultipleActiveResultSets=true"
+          $env:ZYNORA_BOOTSTRAP_ADMIN_PASSWORD = $password
+          "SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION=$connection" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release -- setup
+
       - name: Tenant isolation and sequence invariants
         shell: pwsh
         run: >
@@ -107,6 +118,21 @@ jobs:
           --filter "FullyQualifiedName~ProductionClosureSqlTests"
           --logger "trx;LogFileName=sql-acceptance.trx"
           --results-directory ${{ github.workspace }}/SqlAcceptanceResults
+
+      - name: Legacy integration invariants on disposable SQL
+        shell: pwsh
+        run: >
+          dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
+          -c Release
+          --no-build
+          --filter "FullyQualifiedName~AccessRoleServiceIntegrationTests|FullyQualifiedName~ThemeStoreIntegrationTests|FullyQualifiedName~CrossCompanyResourceDenialTests|FullyQualifiedName~SecurityAuditLogTests|FullyQualifiedName~TenantIsolationIntegrationTests"
+          --logger "trx;LogFileName=sql-integration.trx"
+          --results-directory ${{ github.workspace }}/SqlAcceptanceResults
+
+      - name: Remove disposable integration database
+        if: always()
+        shell: pwsh
+        run: dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release --no-build -- teardown
 
       - name: Upload SQL acceptance results
         if: always()

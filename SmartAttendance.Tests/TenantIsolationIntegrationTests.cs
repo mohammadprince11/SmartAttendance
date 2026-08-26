@@ -26,7 +26,8 @@ namespace SmartAttendance.Tests;
 public sealed class TenantIsolationIntegrationTests : IAsyncLifetime
 {
     // قاعدة التطوير حصراً — لا الإنتاج (القاعدة الحمراء: ممنوع الوصول للإنتاج).
-    private const string ConnectionString =
+    private static string ConnectionString =>
+        Environment.GetEnvironmentVariable("SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION") ??
         "Server=localhost;Database=SmartAttendance_Dev;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 
     private ApplicationDbContext _db = null!;

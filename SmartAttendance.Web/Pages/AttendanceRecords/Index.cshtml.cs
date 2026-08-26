@@ -312,7 +312,7 @@ public class IndexModel : PageModel
                 Total = g.Count(),
                 Open = g.Count(x => x.CheckOut == null),
             })
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
 
         TotalRows = counts?.Total ?? 0;
         OpenPunches = counts?.Open ?? 0;

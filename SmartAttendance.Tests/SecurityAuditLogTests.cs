@@ -16,7 +16,8 @@ namespace SmartAttendance.Tests;
 /// </summary>
 public sealed class SecurityAuditLogTests : IAsyncLifetime
 {
-    private const string ConnectionString =
+    private static string ConnectionString =>
+        Environment.GetEnvironmentVariable("SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION") ??
         "Server=localhost;Database=SmartAttendance_Test;Trusted_Connection=True;" +
         "TrustServerCertificate=True;MultipleActiveResultSets=True";
 

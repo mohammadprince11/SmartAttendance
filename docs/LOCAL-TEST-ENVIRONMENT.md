@@ -11,6 +11,11 @@
 dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj -c Release
 ```
 
+اختبارات التكامل التي تكتب SQL تقرأ
+`SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION`. يجب أن تشير هذه القيمة حصراً إلى
+قاعدة مؤقتة أنشأتها أداة `SmartAttendance.E2E.Bootstrap`؛ بوابة CI تفصلها عن
+اختبارات الوحدة وتشغّل الاختبارات الثلاثين عليها بلا تخطٍ، ثم تحذفها دائماً.
+
 ## اختبارات E2E (Playwright)
 
 تعمل **فقط** على بيئة اختبار مخصصة. **ممنوع تشغيلها على الإنتاج.**
