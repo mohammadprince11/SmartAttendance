@@ -101,7 +101,7 @@
                                        asp-route-form="@Model.TemplateFilter" asp-route-statusFilter="@Model.StatusFilter">عرض الإجابات</a>
                                 </div>
                                 @* الاستبيان لا يُعتمد ولا يُرفض — يُقرأ. الاعتماد للطلبات وحدها. *@
-                                @if (row.IsPending && !row.IsSurvey)
+                                @if (row.IsPending && !row.IsSurvey && !row.UsesApprovalWorkflow)
                                 {
                                     <form method="post" asp-page-handler="Review" class="zyu-69374f356aba">
                                         <input type="hidden" name="id" value="@row.Id" />
@@ -110,6 +110,10 @@
                                         <button type="submit" name="approve" value="true" class="zyp-move">اعتمد</button>
                                         <button type="submit" name="approve" value="false" class="zyp-move">رفض</button>
                                     </form>
+                                }
+                                else if (row.UsesApprovalWorkflow)
+                                {
+                                    <a asp-page="/Approvals/Index" asp-route-Search="@row.EmployeeNo">افتح في مركز الموافقات</a>
                                 }
                             </td>
                         </tr>

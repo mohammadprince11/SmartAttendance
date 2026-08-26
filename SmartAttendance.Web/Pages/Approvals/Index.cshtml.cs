@@ -47,6 +47,7 @@ public class IndexModel : PageModel
     public Dictionary<int, List<ApprovalWorkflowEngine.HistoryState>> Histories { get; set; } = new();
     public Dictionary<int, List<DataChangeRequestStore.ProposedField>> DataChanges { get; set; } = new();
     public Dictionary<int, FinancialRequestStore.Detail> FinancialRequests { get; set; } = new();
+    public Dictionary<int, List<FormSubmissionStore.Answer>> CustomRequestAnswers { get; set; } = new();
 
     // قوائم الفلاتر
     public List<Lookup> Departments { get; set; } = new();
@@ -274,6 +275,8 @@ ORDER BY r.CreatedAt DESC;
         DataChanges = await DataChangeRequestStore.ListFieldsForRequestsAsync(_dbContext, dataChangeIds);
 
         FinancialRequests = await FinancialRequestStore.ListForRequestsAsync(_dbContext, Requests.Select(r => r.Id));
+        CustomRequestAnswers = await FormSubmissionStore.LoadAnswersForRequestsAsync(
+            _dbContext, Requests.Select(r => r.Id), scope);
 
         Flows = new Dictionary<int, ApprovalWorkflowEngine.FlowState>();
         foreach (var request in Requests)

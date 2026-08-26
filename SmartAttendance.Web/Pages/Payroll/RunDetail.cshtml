@@ -11,6 +11,7 @@
         l.TaxAmount, l.GosiEmployee, l.GosiCompany, l.OtherDeductions,
         l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays, l.DaysBasis,
         l.AttendanceBase, l.AttendanceFactor, l.TaxBase, l.TaxBaseSource, l.GosiBase, l.GosiBaseSource,
+        l.SourceCurrency, l.PayrollCurrency, l.ExchangeRate, l.ExchangeRateDate,
         Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount }),
         Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount })
     }));
@@ -205,13 +206,16 @@
                   '<div class="pd-slip-box ded"><h4>الاستقطاعات</h4>' + dedRows +
                     '<div class="sum"><span>إجمالي الاستقطاعات</span><b>' + fmt(l.TotalDeductions) + '</b></div></div>' +
                 '</div>' +
-                '<div class="pd-slip-net"><span>صافي الراتب المستحق</span><b>' + fmt(l.NetSalary) + ' د.ع</b></div>' +
+                '<div class="pd-slip-net"><span>صافي الراتب المستحق</span><b>' + fmt(l.NetSalary) + ' ' + (l.PayrollCurrency || '') + '</b></div>' +
                 // أثر الاحتساب (Phase 15): من أين جاء كل وعاء ولماذا — للموارد البشرية.
                 '<div class="pd-slip-trace">' +
                   '<h4>أثر الاحتساب</h4>' +
                   '<div class="row"><span>وعاء الحضور</span><b>' + fmt(l.AttendanceBase) + ' × معامل ' + Number(l.AttendanceFactor || 1).toFixed(4) + '</b></div>' +
                   '<div class="row"><span>وعاء الضريبة</span><b>' + fmt(l.TaxBase) + ' <small>(' + traceSrc(l.TaxBaseSource) + ')</small></b></div>' +
                   '<div class="row"><span>وعاء الضمان</span><b>' + fmt(l.GosiBase) + ' <small>(' + traceSrc(l.GosiBaseSource) + ')</small></b></div>' +
+                  ((l.SourceCurrency && l.PayrollCurrency && l.SourceCurrency !== l.PayrollCurrency)
+                    ? '<div class="row"><span>تحويل العملة</span><b>1 ' + l.SourceCurrency + ' = ' + Number(l.ExchangeRate).toFixed(8) + ' ' + l.PayrollCurrency + ' <small>(' + (l.ExchangeRateDate || '—') + ')</small></b></div>'
+                    : '') +
                 '</div>' +
                 '<div class="pd-slip-emp2">' +
                   '<div>مساهمة الشركة (ضمان): <b>' + fmt(l.GosiCompany) + '</b></div>' +

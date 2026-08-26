@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -20,11 +21,14 @@ public static class FormSubmissionStore
     {
         StatusApproved => "معتمد",
         StatusRejected => "مرفوض",
+        "Returned" => "مُعاد للتعديل",
+        "Cancelled" => "ملغي",
         _ => "مُستلَم"
     };
 
     public sealed record Submission(
         int Id,
+        int? RequestId,
         int TemplateId,
         string? TemplateName,
         string? FormType,
@@ -41,9 +45,12 @@ public static class FormSubmissionStore
         public bool IsPending => string.Equals(Status, StatusSubmitted, StringComparison.OrdinalIgnoreCase);
         public string StatusText => StatusLabel(Status);
         public bool IsSurvey => FormBuilder.IsSurveyLike(FormType);
+        public bool UsesApprovalWorkflow => RequestId is > 0;
     }
 
     public sealed record Answer(int Id, int SubmissionId, int? FieldId, string? FieldLabel, string? ControlType, string? Value);
+    public sealed record SubmitResult(
+        int SubmissionId, int? RequestId, ApprovalWorkflowEngine.ActionResult? Workflow, bool IsDuplicate = false);
 
     // ── الكتابة ────────────────────────────────────────────────────────────────
 
@@ -53,24 +60,91 @@ public static class FormSubmissionStore
     ///
     /// <paramref name="answers"/> = (معرّف الحقل، النصّ، النوع، القيمة، الترتيب).
     /// </summary>
-    public static async Task<int> SubmitAsync(
+    public static async Task<SubmitResult> SubmitAsync(
         ApplicationDbContext db,
         FormTemplateStore.Template template,
         int employeeId,
         IReadOnlyList<(int FieldId, string Label, string ControlType, string? Value, int SortOrder)> answers,
-        string? submittedBy)
+        string? submittedBy,
+        Guid clientRequestToken)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync();
+        if (clientRequestToken == Guid.Empty) clientRequestToken = Guid.NewGuid();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        var existing = await HrmsDatabase.QueryAsync(db, """
+SELECT TOP(1) Id,RequestId
+FROM FormSubmissions WITH(UPDLOCK,HOLDLOCK)
+WHERE ClientRequestToken=@Token AND EmployeeId=@EmployeeId AND TemplateId=@TemplateId;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command, "@Token", clientRequestToken);
+            HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+            HrmsDatabase.AddParameter(command, "@TemplateId", template.Id);
+        }, reader => (Id: HrmsDatabase.GetInt(reader, "Id"), RequestId: HrmsDatabase.GetNullableInt(reader, "RequestId")));
+        var duplicate = existing.FirstOrDefault();
+        if (duplicate.Id > 0)
+        {
+            ApprovalWorkflowEngine.ActionResult? existingWorkflow = null;
+            if (duplicate.RequestId is > 0)
+            {
+                var state = (await HrmsDatabase.QueryAsync(db, """
+SELECT r.Status,r.ReviewNote,
+       CONVERT(bit,CASE WHEN EXISTS(SELECT 1 FROM ApprovalRequestFlows f WHERE f.RequestId=r.Id) THEN 1 ELSE 0 END) HasFlow
+FROM SelfServiceRequests r WHERE r.Id=@RequestId AND r.EmployeeId=@EmployeeId;
+""", command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@RequestId", duplicate.RequestId.Value);
+                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                }, reader => (
+                    Status: HrmsDatabase.GetString(reader, "Status"),
+                    ReviewNote: HrmsDatabase.GetString(reader, "ReviewNote"),
+                    HasFlow: HrmsDatabase.GetBool(reader, "HasFlow")))).FirstOrDefault();
+                existingWorkflow = state.HasFlow
+                    ? new ApprovalWorkflowEngine.ActionResult(true, "سبق استلام الطلب وبدء مسار الموافقة.")
+                    : new ApprovalWorkflowEngine.ActionResult(
+                        false, state.ReviewNote ?? $"سبق حفظ الطلب بحالة {state.Status} لكن مسار الموافقة غير نشط.",
+                        Rejected: string.Equals(state.Status, "Rejected", StringComparison.OrdinalIgnoreCase));
+            }
+            await transaction.CommitAsync();
+            return new SubmitResult(duplicate.Id, duplicate.RequestId, existingWorkflow, IsDuplicate: true);
+        }
+
+        int? requestId = null;
+        if (!template.IsSurvey)
+        {
+            var requestType = $"طلب مخصص — {template.Name}";
+            requestId = await HrmsDatabase.ScalarAsync<int>(
+                db,
+                """
+INSERT INTO SelfServiceRequests
+    (EmployeeId, RequestType, RequestDate, Reason, Status, CurrentStep, CreatedBy, RequestSource)
+OUTPUT INSERTED.Id
+VALUES
+    (@EmployeeId, @RequestType, CAST(SYSUTCDATETIME() AS date), @Reason,
+     N'Pending', N'بدء المسار', @By, N'SelfService');
+""",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                    HrmsDatabase.AddParameter(command, "@RequestType", requestType);
+                    HrmsDatabase.AddParameter(command, "@Reason", string.IsNullOrWhiteSpace(template.Description)
+                        ? $"تعبئة النموذج: {template.Name}"
+                        : template.Description);
+                    HrmsDatabase.AddParameter(command, "@By", submittedBy);
+                });
+        }
 
         var submissionId = await HrmsDatabase.ScalarAsync<int>(
             db,
             """
-INSERT INTO FormSubmissions (TemplateId, TemplateName, FormType, EmployeeId, Status, SubmittedBy)
+INSERT INTO FormSubmissions (RequestId, ClientRequestToken, TemplateId, TemplateName, FormType, EmployeeId, Status, SubmittedBy)
 OUTPUT INSERTED.Id
-VALUES (@TemplateId, @TemplateName, @FormType, @EmployeeId, N'Submitted', @By);
+VALUES (@RequestId, @Token, @TemplateId, @TemplateName, @FormType, @EmployeeId, N'Submitted', @By);
 """,
             command =>
             {
+                HrmsDatabase.AddParameter(command, "@RequestId", (object?)requestId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Token", clientRequestToken);
                 HrmsDatabase.AddParameter(command, "@TemplateId", template.Id);
                 HrmsDatabase.AddParameter(command, "@TemplateName", template.Name);
                 HrmsDatabase.AddParameter(command, "@FormType", template.FormType);
@@ -98,8 +172,17 @@ VALUES (@SubmissionId, @FieldId, @Label, @Control, @Answer, @Sort);
                 });
         }
 
+        ApprovalWorkflowEngine.ActionResult? workflow = null;
+        if (requestId is > 0)
+        {
+            workflow = await ApprovalWorkflowEngine.StartAsync(db, requestId.Value, "CustomRequest", employeeId);
+        }
+
+        // الطلب ولقطة الإجابات وسريان الموافقة وحدة ذرّية واحدة. أي خطأ تقني في
+        // إنشاء السريان يعيد الكل، فلا يبقى طلب Pending بلا خطوات موافقة.
         await transaction.CommitAsync();
-        return submissionId;
+
+        return new SubmitResult(submissionId, requestId, workflow);
     }
 
     /// <summary>مراجعة تعبئة (للطلبات). المحسوم لا يُعاد حسمه.</summary>
@@ -115,12 +198,13 @@ VALUES (@SubmissionId, @FieldId, @Label, @Control, @Answer, @Sort);
 
         var status = approve ? StatusApproved : StatusRejected;
 
-        await HrmsDatabase.ExecuteAsync(
+        var changed = await HrmsDatabase.ScalarAsync<int>(
             db,
             $"""
 UPDATE FormSubmissions
 SET Status = @Status, ReviewedBy = @By, ReviewedAt = SYSUTCDATETIME(), ReviewNote = @Note
-WHERE Id = @Id AND Status = N'Submitted';
+WHERE Id = @Id AND RequestId IS NULL AND Status = N'Submitted';
+SELECT @@ROWCOUNT;
 """,
             command =>
             {
@@ -130,7 +214,7 @@ WHERE Id = @Id AND Status = N'Submitted';
                 HrmsDatabase.AddParameter(command, "@Note", note);
             });
 
-        return true;
+        return changed == 1;
     }
 
     // ── القراءة ────────────────────────────────────────────────────────────────
@@ -149,7 +233,7 @@ WHERE Id = @Id AND Status = N'Submitted';
         return await HrmsDatabase.QueryAsync(
             db,
             $"""
-SELECT s.Id, s.TemplateId, s.TemplateName, s.FormType, s.EmployeeId,
+SELECT s.Id, s.RequestId, s.TemplateId, s.TemplateName, s.FormType, s.EmployeeId,
        ISNULL(e.FullName, N'') AS EmployeeName, ISNULL(e.EmployeeNo, N'') AS EmployeeNo,
        s.Status, s.SubmittedAt, s.SubmittedBy, s.ReviewedBy, s.ReviewedAt, s.ReviewNote
 FROM FormSubmissions s
@@ -164,6 +248,7 @@ ORDER BY CASE WHEN s.Status = N'Submitted' THEN 0 ELSE 1 END, s.Id DESC;
             },
             reader => new Submission(
                 HrmsDatabase.GetInt(reader, "Id"),
+                HrmsDatabase.GetNullableInt(reader, "RequestId"),
                 HrmsDatabase.GetInt(reader, "TemplateId"),
                 HrmsDatabase.GetString(reader, "TemplateName"),
                 HrmsDatabase.GetString(reader, "FormType"),
@@ -176,6 +261,45 @@ ORDER BY CASE WHEN s.Status = N'Submitted' THEN 0 ELSE 1 END, s.Id DESC;
                 HrmsDatabase.GetString(reader, "ReviewedBy"),
                 HrmsDatabase.GetDateTime(reader, "ReviewedAt"),
                 HrmsDatabase.GetString(reader, "ReviewNote")));
+    }
+
+    /// <summary>إجابات الطلبات المخصصة مفهرسة بمعرّف طلب الموافقة للتحميل الدفعي.</summary>
+    public static async Task<Dictionary<int, List<Answer>>> LoadAnswersForRequestsAsync(
+        ApplicationDbContext db, IEnumerable<int> requestIds, CompanyScope scope)
+    {
+        var ids = requestIds.Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<int, List<Answer>>();
+
+        var parameters = ids.Select((_, index) => $"@RequestId{index}").ToList();
+        var rows = await HrmsDatabase.QueryAsync(
+            db,
+            $"""
+SELECT s.RequestId,a.Id,a.SubmissionId,a.FieldId,a.FieldLabel,a.ControlType,a.Answer
+FROM FormSubmissions s
+INNER JOIN FormAnswers a ON a.SubmissionId=s.Id
+INNER JOIN SelfServiceRequests r ON r.Id=s.RequestId
+INNER JOIN Employees e ON e.Id=r.EmployeeId AND ISNULL(e.IsDeleted,0)=0
+WHERE s.RequestId IN ({string.Join(",", parameters)})
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+ORDER BY s.RequestId,a.SortOrder,a.Id;
+""",
+            command =>
+            {
+                for (var index = 0; index < ids.Count; index++)
+                    HrmsDatabase.AddParameter(command, parameters[index], ids[index]);
+            },
+            reader => (
+                RequestId: HrmsDatabase.GetInt(reader, "RequestId"),
+                Answer: new Answer(
+                    HrmsDatabase.GetInt(reader, "Id"),
+                    HrmsDatabase.GetInt(reader, "SubmissionId"),
+                    HrmsDatabase.GetNullableInt(reader, "FieldId"),
+                    HrmsDatabase.GetString(reader, "FieldLabel"),
+                    HrmsDatabase.GetString(reader, "ControlType"),
+                    HrmsDatabase.GetString(reader, "Answer"))));
+
+        return rows.GroupBy(row => row.RequestId)
+            .ToDictionary(group => group.Key, group => group.Select(row => row.Answer).ToList());
     }
 
     public static async Task<Submission?> FindAsync(

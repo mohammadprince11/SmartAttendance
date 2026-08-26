@@ -282,6 +282,7 @@
                     var formId = $"decform_{request.Id}";
                     var meta = string.Join(" · ", new[] { request.EmployeeNo, request.Department, request.Position }.Where(s => !string.IsNullOrWhiteSpace(s)));
                     var hasFields = Model.DataChanges.TryGetValue(request.Id, out var diffs) && diffs.Count > 0;
+                    var hasCustomFields = Model.CustomRequestAnswers.TryGetValue(request.Id, out var customAnswers);
                     <div class="apv-card @(firstSel != null && firstSel.Id == request.Id ? "active" : "")" id="side_@request.Id">
                         <div class="apv-chead">
                             <span class="apv-ava">@initials</span>
@@ -342,6 +343,19 @@
                                         <span class="apv-fbody">
                                             <span class="lbl">الدفعة</span>
                                             <span class="val">@(fin.PaymentType == "OutSalary" ? "خارج الراتب" : "داخل الراتب")</span>
+                                        </span>
+                                    </div>
+                                }
+                            }
+                            else if (hasCustomFields)
+                            {
+                                <div class="apv-sect">حقول الطلب المخصص</div>
+                                @foreach (var answer in customAnswers!)
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">@answer.FieldLabel</span>
+                                            <span class="val apv-reason">@(string.IsNullOrWhiteSpace(answer.Value) ? "— لم يُجب" : answer.Value)</span>
                                         </span>
                                     </div>
                                 }
@@ -419,7 +433,10 @@
                                 <input asp-for="Note" class="apv-note" placeholder="ملاحظة@(flow!.CommentRequiredOnReject ? " (إلزامية للرفض)" : " (اختياري)")" />
                                 <div class="apv-decide">
                                     <button asp-page-handler="Approve" asp-route-id="@request.Id" class="apv-act ok">✓ موافقة</button>
-                                    <button asp-page-handler="Return" asp-route-id="@request.Id" class="apv-act" title="يتطلب كتابة سبب">↩ إعادة للتعديل</button>
+                                    @if (!hasCustomFields)
+                                    {
+                                        <button asp-page-handler="Return" asp-route-id="@request.Id" class="apv-act" title="يتطلب كتابة سبب">↩ إعادة للتعديل</button>
+                                    }
                                     <button asp-page-handler="Reject" asp-route-id="@request.Id" class="apv-act no">✕ رفض</button>
                                 </div>
                             }

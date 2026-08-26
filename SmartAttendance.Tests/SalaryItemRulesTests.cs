@@ -151,7 +151,8 @@ public class SalaryItemRulesTests
 
         // حلقة العلاوات: تخطّي غير الساري/غير المؤهّل + حصر المبلغ.
         Assert.Contains("!sItem.WithinValidity(periodStart, periodEnd) || !sItem.EligibleFor(facts)", source);
-        Assert.Contains("sItem?.Clamp(al.Amount)", source);
+        Assert.Contains("var convertedAllowance = fx.Convert(al.Amount)", source);
+        Assert.Contains("sItem?.Clamp(convertedAllowance)", source);
         // حلقة الصيغ: تخطّي غير الساري/غير المؤهّل + حصر القيمة.
         Assert.Contains("!item.WithinValidity(periodStart, periodEnd) || !item.EligibleFor(facts)", source);
         Assert.Contains("item.Clamp(Math.Round(item.Prorated ? raw * factor : raw, 2))", source);

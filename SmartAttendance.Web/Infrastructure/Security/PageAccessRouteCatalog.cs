@@ -80,7 +80,7 @@ public static class PageAccessRouteCatalog
         new("/payroll/leaveencashment", "Payroll.LeaveEncashment"),
         new("/payroll/raises", "Payroll.Raises"), new("/payroll/endofservice", "Payroll.EndOfService"),
         new("/payrollprovisions", "Payroll.Provisions"), new("/payroll/salaryitems", "Payroll.SalaryItems"),
-        new("/payroll/settings", "Payroll.Settings"),
+        new("/payroll/settings", "Payroll.Settings"), new("/payroll/exchangerates", "Payroll.Settings"),
         new("/payroll/banktemplates", "Payroll.BankTemplates"), new("/banktemplates", "Payroll.BankTemplates"),
         new("/payroll/taxsocial", "Payroll.TaxSocial"), new("/payroll/payment", "Payroll.Payment"),
         new("/payrollreports", "Payroll.Reports"),

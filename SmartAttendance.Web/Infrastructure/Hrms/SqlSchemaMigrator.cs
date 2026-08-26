@@ -2240,6 +2240,155 @@ BEGIN
     CREATE INDEX IX_ApprovalRequestStepMembers_User ON ApprovalRequestStepMembers(UserName,StepId);
 END;
 """),
+
+        // الطلب المخصّص المبني بباني النماذج يصير طلب خدمة ذاتية حقيقياً: الرابط
+        // واحد-لواحد يربط لقطة الأسئلة/الإجابات بسريان الموافقة المجمّد. الاستبيانات
+        // تبقى بلا RequestId لأنها إجابات تحليلية وليست قرارات إدارية.
+        new(
+            "20260826-24-form-submission-approval-link",
+            """
+IF OBJECT_ID('FormSubmissions','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('FormSubmissions','RequestId') IS NULL
+        ALTER TABLE FormSubmissions ADD RequestId int NULL;
+    IF COL_LENGTH('FormSubmissions','ClientRequestToken') IS NULL
+        ALTER TABLE FormSubmissions ADD ClientRequestToken uniqueidentifier NULL;
+
+    IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_FormSubmissions_SelfServiceRequest')
+        EXEC sp_executesql N'
+        ALTER TABLE FormSubmissions ADD CONSTRAINT FK_FormSubmissions_SelfServiceRequest
+            FOREIGN KEY(RequestId) REFERENCES SelfServiceRequests(Id);';
+
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('FormSubmissions') AND name='UX_FormSubmissions_Request')
+        EXEC sp_executesql N'
+        CREATE UNIQUE INDEX UX_FormSubmissions_Request ON FormSubmissions(RequestId)
+            WHERE RequestId IS NOT NULL;';
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('FormSubmissions') AND name='UX_FormSubmissions_ClientRequestToken')
+        EXEC sp_executesql N'
+        CREATE UNIQUE INDEX UX_FormSubmissions_ClientRequestToken ON FormSubmissions(ClientRequestToken)
+            WHERE ClientRequestToken IS NOT NULL;';
+END;
+"""),
+
+        // أسعار صرف مؤرّخة لكل شركة. Rate يعني: وحدة من FromCurrency تساوي Rate
+        // من ToCurrency. سطر المسير يجمد العملة والسعر/تاريخه المستخدم كي يبقى الرقم
+        // قابلاً للتدقيق حتى لو عُدّلت الأسعار لاحقاً.
+        new(
+            "20260826-25-currency-exchange-rates",
+            """
+IF OBJECT_ID('CurrencyExchangeRates','U') IS NULL
+BEGIN
+    CREATE TABLE CurrencyExchangeRates
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CurrencyExchangeRates PRIMARY KEY,
+        CompanyId int NOT NULL,
+        FromCurrency char(3) NOT NULL,
+        ToCurrency char(3) NOT NULL,
+        EffectiveDate date NOT NULL,
+        Rate decimal(28,12) NOT NULL,
+        Note nvarchar(500) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_CurrencyExchangeRates_Active DEFAULT(1),
+        CreatedBy nvarchar(150) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_CurrencyExchangeRates_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_CurrencyExchangeRates_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT CK_CurrencyExchangeRates_Rate CHECK(Rate>0),
+        CONSTRAINT CK_CurrencyExchangeRates_Currencies CHECK(FromCurrency<>ToCurrency),
+        CONSTRAINT UQ_CurrencyExchangeRates UNIQUE(CompanyId,FromCurrency,ToCurrency,EffectiveDate)
+    );
+    CREATE INDEX IX_CurrencyExchangeRates_Effective
+        ON CurrencyExchangeRates(CompanyId,FromCurrency,ToCurrency,IsActive,EffectiveDate DESC);
+END;
+
+IF OBJECT_ID('PayrollRunLines','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRunLines','SourceCurrency') IS NULL
+        ALTER TABLE PayrollRunLines ADD SourceCurrency char(3) NULL;
+    IF COL_LENGTH('PayrollRunLines','PayrollCurrency') IS NULL
+        ALTER TABLE PayrollRunLines ADD PayrollCurrency char(3) NULL;
+    IF COL_LENGTH('PayrollRunLines','ExchangeRate') IS NULL
+        ALTER TABLE PayrollRunLines ADD ExchangeRate decimal(28,12) NULL;
+    IF COL_LENGTH('PayrollRunLines','ExchangeRateDate') IS NULL
+        ALTER TABLE PayrollRunLines ADD ExchangeRateDate date NULL;
+END;
+"""),
+
+        // إغلاق اعتماد ملفات الضريبة/الضمان على EnsureAsync بطلب الصفحة. في قاعدة
+        // جديدة كانت هجرة CompanyId القديمة تمر قبل وجود الجداول، ثم ينشئها المتجر
+        // لاحقاً بلا CompanyId فيفشل أول مسير. هنا يصير المخطط كاملاً وقت الإقلاع.
+        new(
+            "20260826-26-payroll-statutory-profile-schema",
+            """
+IF OBJECT_ID('PayrollTaxProfiles','U') IS NULL
+BEGIN
+    CREATE TABLE PayrollTaxProfiles
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PayrollTaxProfiles PRIMARY KEY,
+        CompanyId int NULL,Name nvarchar(150) NOT NULL,
+        ExemptionAmount decimal(18,2) NOT NULL CONSTRAINT DF_PayrollTaxProfiles_Exemption DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_PayrollTaxProfiles_Active DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,SortOrder int NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PayrollTaxProfiles_Created DEFAULT(SYSUTCDATETIME())
+    );
+END;
+ELSE
+BEGIN
+    IF COL_LENGTH('PayrollTaxProfiles','CompanyId') IS NULL ALTER TABLE PayrollTaxProfiles ADD CompanyId int NULL;
+    IF COL_LENGTH('PayrollTaxProfiles','ConditionsJson') IS NULL ALTER TABLE PayrollTaxProfiles ADD ConditionsJson nvarchar(max) NULL;
+    IF COL_LENGTH('PayrollTaxProfiles','SortOrder') IS NULL ALTER TABLE PayrollTaxProfiles ADD SortOrder int NULL;
+END;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollTaxProfiles') AND name='IX_PayrollTaxProfiles_Company')
+    CREATE INDEX IX_PayrollTaxProfiles_Company ON PayrollTaxProfiles(CompanyId,IsActive,SortOrder);
+
+IF OBJECT_ID('PayrollTaxBrackets','U') IS NULL
+BEGIN
+    CREATE TABLE PayrollTaxBrackets
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PayrollTaxBrackets PRIMARY KEY,
+        CompanyId int NULL,ProfileId int NOT NULL,
+        FromAmount decimal(18,2) NOT NULL CONSTRAINT DF_PayrollTaxBrackets_From DEFAULT(0),
+        ToAmount decimal(18,2) NULL,Rate decimal(9,4) NOT NULL CONSTRAINT DF_PayrollTaxBrackets_Rate DEFAULT(0)
+    );
+    CREATE INDEX IX_PayrollTaxBrackets_Profile ON PayrollTaxBrackets(ProfileId,FromAmount);
+END;
+
+IF OBJECT_ID('PayrollGosiProfiles','U') IS NULL
+BEGIN
+    CREATE TABLE PayrollGosiProfiles
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PayrollGosiProfiles PRIMARY KEY,
+        CompanyId int NULL,Name nvarchar(150) NOT NULL,
+        EmployeeRate decimal(9,4) NOT NULL CONSTRAINT DF_PayrollGosiProfiles_EmployeeRate DEFAULT(0),
+        CompanyRate decimal(9,4) NOT NULL CONSTRAINT DF_PayrollGosiProfiles_CompanyRate DEFAULT(0),
+        Ceiling decimal(18,2) NOT NULL CONSTRAINT DF_PayrollGosiProfiles_Ceiling DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_PayrollGosiProfiles_Active DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,SortOrder int NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PayrollGosiProfiles_Created DEFAULT(SYSUTCDATETIME())
+    );
+END;
+ELSE
+BEGIN
+    IF COL_LENGTH('PayrollGosiProfiles','CompanyId') IS NULL ALTER TABLE PayrollGosiProfiles ADD CompanyId int NULL;
+    IF COL_LENGTH('PayrollGosiProfiles','ConditionsJson') IS NULL ALTER TABLE PayrollGosiProfiles ADD ConditionsJson nvarchar(max) NULL;
+    IF COL_LENGTH('PayrollGosiProfiles','SortOrder') IS NULL ALTER TABLE PayrollGosiProfiles ADD SortOrder int NULL;
+END;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollGosiProfiles') AND name='IX_PayrollGosiProfiles_Company')
+    CREATE INDEX IX_PayrollGosiProfiles_Company ON PayrollGosiProfiles(CompanyId,IsActive,SortOrder);
+
+IF NOT EXISTS(SELECT 1 FROM PayrollGosiProfiles)
+    INSERT INTO PayrollGosiProfiles(CompanyId,Name,EmployeeRate,CompanyRate,Ceiling)
+    VALUES(NULL,N'الضمان الاجتماعي — العراق (مبدئي، تحتاج تأكيد محاسب)',5,12,0);
+IF NOT EXISTS(SELECT 1 FROM PayrollTaxProfiles)
+BEGIN
+    INSERT INTO PayrollTaxProfiles(CompanyId,Name,ExemptionAmount)
+    VALUES(NULL,N'ضريبة الدخل — العراق (مبدئي، تحتاج تأكيد محاسب)',250000);
+    DECLARE @TaxProfileId int=SCOPE_IDENTITY();
+    INSERT INTO PayrollTaxBrackets(ProfileId,FromAmount,ToAmount,Rate) VALUES
+      (@TaxProfileId,0,250000,3),(@TaxProfileId,250000,500000,5),
+      (@TaxProfileId,500000,1000000,10),(@TaxProfileId,1000000,NULL,15);
+END;
+"""),
     };
 
     /// <summary>

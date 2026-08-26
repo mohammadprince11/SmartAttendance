@@ -21,6 +21,7 @@ public class FormFillModel : PageModel
     [TempData] public string? StatusMessage { get; set; }
 
     [BindProperty(SupportsGet = true, Name = "form")] public int? FormId { get; set; }
+    [BindProperty] public Guid SubmissionToken { get; set; }
 
     public List<FormTemplateStore.Template> Available { get; private set; } = new();
     public FormTemplateStore.Template? Current { get; private set; }
@@ -85,14 +86,22 @@ public class FormFillModel : PageModel
             return Page();
         }
 
-        await FormSubmissionStore.SubmitAsync(_db, Current, employeeId, answers, User.Identity?.Name);
+        var submitted = await FormSubmissionStore.SubmitAsync(
+            _db, Current, employeeId, answers, User.Identity?.Name, SubmissionToken);
 
-        StatusMessage = Current.IsSurvey ? "شكراً — سُجِّلت إجاباتك." : "أُرسل طلبك.";
+        StatusMessage = Current.IsSurvey
+            ? "شكراً — سُجِّلت إجاباتك."
+            : submitted.Workflow?.Ok == true
+                ? submitted.IsDuplicate
+                    ? $"سبق استلام طلبك رقم {submitted.RequestId} — لم ننشئ نسخة مكررة."
+                    : $"أُرسل طلبك رقم {submitted.RequestId} وبدأ مسار الموافقة."
+                : $"حُفظ طلبك رقم {submitted.RequestId}، لكن تعذّر بدء الموافقة: {submitted.Workflow?.Message ?? "خطأ غير متوقع"}";
         return RedirectToPage();
     }
 
     private async Task LoadAsync()
     {
+        if (SubmissionToken == Guid.Empty) SubmissionToken = Guid.NewGuid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0) return;
 

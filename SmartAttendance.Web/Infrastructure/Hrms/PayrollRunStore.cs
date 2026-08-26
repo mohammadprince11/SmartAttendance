@@ -118,6 +118,10 @@ public static class PayrollRunStore
         public string? TaxBaseSource { get; set; }
         public decimal GosiBase { get; set; }
         public string? GosiBaseSource { get; set; }
+        public string? SourceCurrency { get; set; }
+        public string? PayrollCurrency { get; set; }
+        public decimal? ExchangeRate { get; set; }
+        public DateOnly? ExchangeRateDate { get; set; }
         public List<Component> Components { get; set; } = new();
 
         public decimal TotalDeductions => TaxAmount + GosiEmployee + OtherDeductions;
@@ -491,6 +495,9 @@ SELECT SequenceNo FROM @allocated;
         await EmployeeAllowanceSchema.EnsureAsync(dbContext);
         await MonthAttendanceStore.EnsureAsync(dbContext);
         await ViolationCaseSchema.EnsureAsync(dbContext);
+        // الاستعلام المالي يربط قاعدة الجزاء حتى إن لم توجد مخالفات؛ لا يجوز أن
+        // يعتمد نجاح أول مسير على أن الأدمن فتح شاشة اللوائح قبله.
+        await DisciplinarySchema.EnsureAsync(dbContext);
 
         // ترحيل أقساط القروض المستحقة لهذه الفترة تلقائياً كحركات اقتطاع قبل الاحتساب —
         // كانت خطوة يدوية منفصلة بصفحة القروض تُنسى فتضيع خصومات القروض بصمت. النداء
@@ -505,6 +512,18 @@ SELECT SequenceNo FROM @allocated;
             ? CompanyScope.ForCompanies(new[] { runCompanyForLoans.Value })
             : CompanyScope.Unrestricted();
         var runScope = loanScope;
+        var periodStart = new DateOnly(run.Year, run.Month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+        // العملة جزء من مدخلات المسير لا تنسيق عرض. نتحقق من كل أسعار النطاق قبل
+        // أي أثر مالي (حتى قبل ترحيل الأقساط)، ثم نجمّد السعر المستخدم على كل سطر.
+        var fxContext = runCompanyForLoans is > 0
+            ? await CurrencyExchangeRateStore.BuildPayrollContextAsync(
+                dbContext, runCompanyForLoans.Value, runId, periodEnd)
+            : new CurrencyExchangeRateStore.PayrollContext(
+                true, string.Empty, string.Empty,
+                new Dictionary<int, CurrencyExchangeRateStore.ResolvedRate>());
+        if (!fxContext.Ok) return (false, fxContext.Message);
 
         // بوابة مصدر الحقيقة: لا أثر حضور في الراتب من شهر ما زال قيد المراجعة.
         // نبني الملخص أولاً (فقط صفوف UnderReview تتحدث)، ثم نتحقق من أن كل موظف
@@ -592,9 +611,6 @@ WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
 
         // عضوية أوعية **كل** الملفات دفعةً واحدة (قاموس بالذاكرة) بدل نداء لكل موظف.
         var baseMembers = await SalaryBaseStore.AllAsync(dbContext);
-
-        var periodStart = new DateOnly(run.Year, run.Month, 1);
-        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
         // حقائق الموظفين لتقييم شروط الملفات — بتاريخ مرجعي صريح (نهاية الفترة) لا
         // بتاريخ اليوم، وإلا اختلف حسمُ الملف بإعادة احتساب شهرٍ ماضٍ.
@@ -831,7 +847,15 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 exclusions.Add((emp.Id, "Stopped", "موقوف الاحتساب بالملف المالي — ارفع الإيقاف من الملف المالي للموظف."));
                 continue;
             }
-            var basic = fin?.Basic ?? 0;
+            var fx = fxContext.ByEmployee.TryGetValue(emp.Id, out var employeeFx)
+                ? employeeFx
+                : new CurrencyExchangeRateStore.ResolvedRate(
+                    fxContext.PayrollCurrency, fxContext.PayrollCurrency, 1m, null, false);
+            var basic = fx.Convert(fin?.Basic ?? 0);
+            var employeeTaxSalary = fin?.CurrentTaxSalary is { } rawTaxSalary
+                ? fx.Convert(rawTaxSalary) : (decimal?)null;
+            var employeeGosiSalary = fin?.SocialSecuritySalary is { } rawGosiSalary
+                ? fx.Convert(rawGosiSalary) : (decimal?)null;
             if (basic <= 0 && !allowances.ContainsKey(emp.Id) && !income.ContainsKey(emp.Id)
                 && !overtimeTx.ContainsKey(emp.Id) && !salaryDaysTx.ContainsKey(emp.Id)
                 && !leaveEncashTx.ContainsKey(emp.Id))
@@ -933,7 +957,8 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                     if (sItem is not null &&
                         (!sItem.WithinValidity(periodStart, periodEnd) || !sItem.EligibleFor(facts)))
                         continue;
-                    var alAmount = sItem?.Clamp(al.Amount) ?? al.Amount;
+                    var convertedAllowance = fx.Convert(al.Amount);
+                    var alAmount = sItem?.Clamp(convertedAllowance) ?? convertedAllowance;
 
                     if (policy.OvertimeEligible)
                         overtimeEligibleAllow += alAmount;
@@ -1188,13 +1213,13 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             // وعاء الضريبة: مُركَّبٌ من المكوّنات (السلوك القائم) أو راتب الضريبة المُدخَل
             // حين يختار المستخدم «مُعرَّف بالموظف». النمط الفارغ ⟹ مُركَّب، فلا تتغيّر قسيمة.
             var composedTax = SalaryBaseComposer.Compose(contribBase, taxMembers);
-            var taxBase = EmployeeDefinedSalaryBase.Resolve(fin?.TaxBaseMode, fin?.CurrentTaxSalary, composedTax);
+            var taxBase = EmployeeDefinedSalaryBase.Resolve(fin?.TaxBaseMode, employeeTaxSalary, composedTax);
             var tax = PayrollConfigStore.ComputeTax(taxBase.Base, taxProfile);
 
             // وعاء الضمان: مُركَّب (افتراضاً الإجمالي) أو راتب الضمان المُدخَل
             // (SocialSecuritySalary) حين «مُعرَّف بالموظف» — الرقم الذي كان يُدخَل ويُهمَل.
             var composedGosi = SalaryBaseComposer.Compose(contribBase, gosiMembers);
-            var gosiBase = EmployeeDefinedSalaryBase.Resolve(fin?.GosiBaseMode, fin?.SocialSecuritySalary, composedGosi);
+            var gosiBase = EmployeeDefinedSalaryBase.Resolve(fin?.GosiBaseMode, employeeGosiSalary, composedGosi);
             var (gosiEmp, gosiCo) = PayrollConfigStore.ComputeGosi(gosiBase.Base, gosiProfile);
 
             // «مُعرَّف بالموظف» بلا رقم: لا رجوع صامت — يُسجَّل تحذيراً بسجلّ المستبعَدين
@@ -1342,10 +1367,12 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 """
 INSERT INTO PayrollRunLines
   (RunId, EmployeeId, BasicSalary, TotalAllowances, GrossSalary, TaxAmount, GosiEmployee, GosiCompany, OtherDeductions, NetSalary, WorkDays, AbsentDays,
-   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource, DaysBasis)
+   AttendanceBase, AttendanceFactor, TaxBase, TaxBaseSource, GosiBase, GosiBaseSource, DaysBasis,
+   SourceCurrency,PayrollCurrency,ExchangeRate,ExchangeRateDate)
 VALUES
   (@RunId, @Emp, @Basic, @Allow, @Gross, @Tax, @GosiEmp, @GosiCo, @Other, @Net, @WorkDays, @AbsentDays,
-   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc, @DaysBasis);
+   @AttBase, @AttFactor, @TaxBase, @TaxSrc, @GosiBase, @GosiSrc, @DaysBasis,
+   @SourceCurrency,@PayrollCurrency,@ExchangeRate,@ExchangeRateDate);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
                 command =>
@@ -1373,6 +1400,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                     // وإلا WorkDays (السلوك القديم). القسيمة تعرضه بدل أيام الحضور.
                     HrmsDatabase.AddParameter(command, "@DaysBasis",
                         linkPolicy.MonthlyDivisorDays > 0 ? linkPolicy.MonthlyDivisorDays : workDays);
+                    HrmsDatabase.AddParameter(command, "@SourceCurrency", (object?)fx.SourceCurrency ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@PayrollCurrency", (object?)fx.TargetCurrency ?? DBNull.Value);
+                    HrmsDatabase.AddParameter(command, "@ExchangeRate", fx.Rate);
+                    HrmsDatabase.AddParameter(command, "@ExchangeRateDate", (object?)fx.EffectiveDate?.ToDateTime(TimeOnly.MinValue) ?? DBNull.Value);
                 });
 
             foreach (var c in comps)
@@ -1546,7 +1577,11 @@ ORDER BY e.EmployeeNo;
                 TaxBase = reader["TaxBase"] is decimal tb ? tb : 0,
                 TaxBaseSource = HrmsDatabase.GetString(reader, "TaxBaseSource"),
                 GosiBase = reader["GosiBase"] is decimal gb ? gb : 0,
-                GosiBaseSource = HrmsDatabase.GetString(reader, "GosiBaseSource")
+                GosiBaseSource = HrmsDatabase.GetString(reader, "GosiBaseSource"),
+                SourceCurrency = HrmsDatabase.GetString(reader, "SourceCurrency"),
+                PayrollCurrency = HrmsDatabase.GetString(reader, "PayrollCurrency"),
+                ExchangeRate = reader["ExchangeRate"] is decimal er ? er : null,
+                ExchangeRateDate = HrmsDatabase.GetDateOnly(reader, "ExchangeRateDate")
             });
 
         if (lines.Count > 0)

@@ -31,6 +31,7 @@
             }
 
             <form method="post">
+                <input type="hidden" asp-for="SubmissionToken" />
                 @foreach (var (group, fields) in Model.Layout())
                 {
                     <div class="ef-group">

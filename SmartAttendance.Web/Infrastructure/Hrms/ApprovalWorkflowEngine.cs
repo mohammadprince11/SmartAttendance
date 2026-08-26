@@ -614,6 +614,10 @@ SET Status = 'Approved', CurrentStep = 'Completed', ReviewedBy = @Actor, ReviewN
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @Id;
 
+UPDATE FormSubmissions
+SET Status=N'Approved',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note
+WHERE RequestId=@Id;
+
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
 VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بعد اكتمال لجنة الموافقة', 'Employee', '/SelfServices');
 """,
@@ -706,6 +710,10 @@ SET Status = 'Rejected', CurrentStep = 'Rejected', ReviewedBy = @Actor, ReviewNo
     UpdatedAt = SYSUTCDATETIME()
 WHERE Id = @RequestId;
 
+UPDATE FormSubmissions
+SET Status=N'Rejected',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note
+WHERE RequestId=@RequestId;
+
 INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes, DelegatedFrom)
 VALUES (@RequestId, @StepName, 'Rejected', @Actor, @Note, @DelegatedFrom);
 
@@ -739,6 +747,13 @@ SELECT @Changed;
     {
         if (string.IsNullOrWhiteSpace(note))
             return new ActionResult(false, "سبب الإرجاع للتعديل إلزامي.");
+        // حقول النموذج لقطةٌ تاريخية مرتبطة ببنية القالب وقت الإرسال. تعديل القالب
+        // لاحقاً ثم «إعادة» نفس الإجابات يخلط نسختين؛ لذلك يُحسم الطلب المخصص
+        // بالموافقة/الرفض، ويقدّم الموظف نموذجاً جديداً عند الحاجة للتغيير.
+        if (await HrmsDatabase.ScalarAsync<int>(dbContext,
+                "SELECT COUNT(1) FROM FormSubmissions WHERE RequestId=@RequestId;",
+                command => HrmsDatabase.AddParameter(command, "@RequestId", requestId)) > 0)
+            return new ActionResult(false, "الطلب المخصص لقطة ثابتة؛ ارفضه ليقدّم الموظف نموذجاً جديداً بالحقول المصححة.");
         if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
                 dbContext, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
             return new ActionResult(false, "الطلب غير موجود أو خارج نطاق صلاحيتك.");
@@ -768,6 +783,7 @@ BEGIN
  SET @RequestChanged=@@ROWCOUNT;
  IF @RequestChanged=1
  BEGIN
+  UPDATE FormSubmissions SET Status=N'Returned',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note WHERE RequestId=@RequestId;
   INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes,DelegatedFrom) VALUES(@RequestId,@StepName,'Returned',@Actor,@Note,@DelegatedFrom);
   INSERT INTO SystemNotifications(Title,Message,TargetRole,Url) VALUES(N'طلب يحتاج تعديلاً',N'أُعيد طلبك للتعديل: '+@Note,'Employee','/EmployeePortal?tab=requests');
  END
@@ -813,6 +829,7 @@ IF @StepId IS NULL BEGIN SELECT 0; RETURN; END;
 UPDATE SelfServiceRequests SET Reason=@Reason,FromDate=COALESCE(@FromDate,FromDate),ToDate=COALESCE(@ToDate,ToDate),
  Status='Pending',CurrentStep=@StepName,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status='Returned';
 IF @@ROWCOUNT=0 BEGIN SELECT 0; RETURN; END;
+UPDATE FormSubmissions SET Status=N'Submitted',ReviewedBy=NULL,ReviewedAt=NULL,ReviewNote=NULL WHERE RequestId=@RequestId;
 UPDATE ApprovalRequestSteps SET Status='Current',CurrentSince=SYSUTCDATETIME(),ActionBy=NULL,ActionAt=NULL,Note=NULL,DelegatedFrom=NULL,
  ReminderSentAt=NULL,EscalatedAt=NULL,EscalatedToRole=NULL,EscalatedToUser=NULL
 WHERE RequestId=@RequestId AND StageOrder=@StageOrder AND Status IN ('Returned','WaitingRevision');
@@ -871,6 +888,7 @@ WHERE Id=@RequestId AND EmployeeId=@EmployeeId AND Status IN ('Pending','Returne
 DECLARE @Changed int=@@ROWCOUNT;
 IF @Changed=1
 BEGIN
+ UPDATE FormSubmissions SET Status=N'Cancelled',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note WHERE RequestId=@RequestId;
  UPDATE ApprovalRequestSteps SET Status='Cancelled',ActionBy=@Actor,ActionAt=SYSUTCDATETIME(),Note=@Note
  WHERE RequestId=@RequestId AND Status IN ('Current','Pending','Returned','WaitingRevision');
  INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes)
@@ -970,6 +988,7 @@ SELECT COUNT(1) FROM ApprovalExternalCommittees WHERE Id=@CommitteeId AND Compan
     private static Task BlockSubmissionAsync(ApplicationDbContext dbContext,int requestId,string status,string currentStep,string action,string reason) =>
         HrmsDatabase.ExecuteAsync(dbContext,"""
 UPDATE SelfServiceRequests SET Status=@Status,CurrentStep=@CurrentStep,ReviewNote=@Reason,UpdatedAt=SYSUTCDATETIME() WHERE Id=@RequestId;
+UPDATE FormSubmissions SET Status=@Status,ReviewedBy=N'System',ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Reason WHERE RequestId=@RequestId;
 INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes)
 VALUES(@RequestId,N'فحص التقديم',@Action,N'System',@Reason);
 """, command =>
@@ -1126,6 +1145,8 @@ WHERE r.Id=@RequestId;
     {
         var value = requestType?.Trim() ?? string.Empty;
         if (RequestTypeMap.TryGetValue(value, out var mapped)) return mapped;
+        if (value.Equals("CustomRequest", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("طلب مخصص", StringComparison.OrdinalIgnoreCase)) return "CustomRequest";
         if (value.Contains("تعديل", StringComparison.OrdinalIgnoreCase) &&
             value.Contains("بيانات", StringComparison.OrdinalIgnoreCase)) return "InfoChange";
         if (value.Contains("نسيان بصمة", StringComparison.OrdinalIgnoreCase) ||

@@ -1,0 +1,84 @@
+@page
+@model SmartAttendance.Web.Pages.Payroll.ExchangeRatesModel
+@{
+    ViewData["Title"] = "أسعار الصرف";
+}
+<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
+
+<section class="nxhs-page" dir="rtl">
+    <header class="nxhs-titlebar">
+        <a asp-page="./Settings">إعدادات الرواتب</a>
+        <h1>أسعار الصرف</h1>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Message))
+    {
+        <div class="nxhs-alert" data-zy-style="@(Model.MessageOk ? "" : "border-color:#b42318;color:#b42318")">@Model.Message</div>
+    }
+
+    <form method="get" class="nxhs-panel zyp-editor">
+        <h3>الشركة وعملة المسير</h3>
+        <div class="zyp-editor-grid">
+            <label>الشركة
+                <select asp-for="CompanyId" onchange="this.form.submit()" required>
+                    <option value="">اختر الشركة</option>
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id">@company.Name — @(company.CurrencyCode ?? "بلا عملة")</option>
+                    }
+                </select>
+            </label>
+        </div>
+        <p class="zyp-hint">عملة المسير الأساسية: <b>@(Model.PayrollCurrency ?? "غير محددة — حدّدها من إعداد الشركة")</b>. السعر يعني أن وحدة واحدة من عملة المصدر تساوي السعر من عملة الهدف.</p>
+    </form>
+
+    @if (Model.CompanyId is > 0)
+    {
+        <form method="post" asp-page-handler="Save" asp-route-company-id="@Model.CompanyId" class="nxhs-panel zyp-editor">
+            <h3>@(Model.Input.Id > 0 ? "تعديل السعر" : "سعر جديد")</h3>
+            <input type="hidden" asp-for="Input.Id" />
+            <input type="hidden" asp-for="Input.CompanyId" />
+            <div class="zyp-editor-grid">
+                <label>من عملة <input asp-for="Input.FromCurrency" maxlength="3" placeholder="USD" required /></label>
+                <label>إلى عملة <input asp-for="Input.ToCurrency" maxlength="3" value="@(Model.Input.ToCurrency.Length > 0 ? Model.Input.ToCurrency : Model.PayrollCurrency)" placeholder="IQD" required /></label>
+                <label>تاريخ السريان <input asp-for="Input.EffectiveDate" type="date" required /></label>
+                <label>السعر <input asp-for="Input.Rate" type="number" min="0.000000000001" step="0.000000000001" required /></label>
+                <label>الحالة <select asp-for="Input.IsActive"><option value="true">نشط</option><option value="false">معطّل</option></select></label>
+                <label>ملاحظة <input asp-for="Input.Note" maxlength="500" placeholder="مصدر السعر / رقم التعميم" /></label>
+            </div>
+            <footer class="nxhs-actions">
+                <button type="submit">حفظ</button>
+                @if (Model.Input.Id > 0) { <a asp-page="./ExchangeRates" asp-route-company-id="@Model.CompanyId">إلغاء التعديل</a> }
+            </footer>
+        </form>
+
+        <div class="nxhs-panel">
+            <h3>السجل المؤرّخ (@Model.Rates.Count)</h3>
+            <p class="zyp-hint">المسير يختار أحدث سعر ساري في نهاية فترة الراتب أو قبلها، ويدعم السعر العكسي تلقائياً. لا يُحذف التاريخ المالي؛ يُعطّل فقط.</p>
+            <table class="zyp-table">
+                <thead><tr><th>من</th><th>إلى</th><th>السريان</th><th>السعر</th><th>الحالة</th><th>ملاحظة</th><th></th></tr></thead>
+                <tbody>
+                @if (Model.Rates.Count == 0) { <tr><td colspan="7">لا أسعار بعد.</td></tr> }
+                @foreach (var rate in Model.Rates)
+                {
+                    <tr>
+                        <td><b>@rate.FromCurrency</b></td><td><b>@rate.ToCurrency</b></td>
+                        <td>@rate.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                        <td>@rate.Rate.ToString("0.############")</td><td>@(rate.IsActive ? "نشط" : "معطّل")</td><td>@(rate.Note ?? "—")</td>
+                        <td>
+                            <a asp-page="./ExchangeRates" asp-route-company-id="@Model.CompanyId" asp-route-edit="@rate.Id">تعديل</a>
+                            @if (rate.IsActive)
+                            {
+                                <form method="post" asp-page-handler="Deactivate" asp-route-id="@rate.Id" asp-route-company-id="@Model.CompanyId" class="zyu-6b8b63d565c4" data-zyconfirm="تعطيل هذا السعر؟">
+                                    <button type="submit">تعطيل</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

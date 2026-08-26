@@ -64,6 +64,14 @@
                     <div class="f"><span>الراتب الأساسي</span><b>@c.BasicSalary.ToString("#,0.##")</b></div>
                     <div class="f"><span>العلاوات</span><b>@c.TotalAllowances.ToString("#,0.##")</b></div>
                     <div class="f"><span>الراتب الكلي</span><b>@c.GrossSalary.ToString("#,0.##")</b></div>
+                    @if (!string.IsNullOrWhiteSpace(c.SourceCurrency) && !string.IsNullOrWhiteSpace(c.PayrollCurrency))
+                    {
+                        <div class="f"><span>عملة المسير</span><b>@c.PayrollCurrency</b></div>
+                        @if (c.SourceCurrency != c.PayrollCurrency)
+                        {
+                            <div class="f"><span>سعر الصرف المجمد</span><b>1 @c.SourceCurrency = @c.ExchangeRate?.ToString("0.########") @c.PayrollCurrency · @c.ExchangeRateDate?.ToString("yyyy-MM-dd")</b></div>
+                        }
+                    }
                     @{
                         // أساس أيام الاستحقاق: 30/الفترة حين توجد سياسة WorkingDays (العطل مدفوعة)،
                         // وإلا أيام الحضور (السلوك القديم). القسيمة تعرض أيام الاستحقاق لا الحضور.

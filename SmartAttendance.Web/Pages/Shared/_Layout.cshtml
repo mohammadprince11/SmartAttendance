@@ -815,11 +815,12 @@
                            ولا يقرأهما أحد، بينما المحرّك يقرأ TaxProfiles/GosiProfiles من
                            «الضريبة والضمان» أدناه — فكان الأدمن يعدّل بلا أثر وبلا تحذير.
                            الجدولان اليتيمان يبقيان بالقاعدة حتى تُسقطهما هجرة محكومة. *@
-                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/SalaryScale") ? "open" : "")>
+                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/SalaryScale") || IsUnder("/Payroll/ExchangeRates") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
                                 <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
                                 <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>الضريبة والضمان</span></a>
+                                <a asp-page="/Payroll/ExchangeRates" class="nexora-nav-link @(IsUnder("/Payroll/ExchangeRates") ? "active nexora-active" : "")"><span>أسعار الصرف</span></a>
                                 <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
                                 <a asp-page="/Payroll/SalaryScale" class="nexora-nav-link @(IsUnder("/Payroll/SalaryScale") ? "active nexora-active" : "")"><span>سلم الرواتب</span></a>
                             </div>

@@ -109,6 +109,7 @@ BEGIN
     CREATE TABLE PayrollGosiProfiles
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NULL,
         Name nvarchar(150) NOT NULL,
         EmployeeRate decimal(9,4) NOT NULL DEFAULT(0),
         CompanyRate decimal(9,4) NOT NULL DEFAULT(0),

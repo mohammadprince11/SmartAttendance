@@ -1274,10 +1274,124 @@ WHERE Action=N'Unlock'
             db, $"SELECT Status FROM PayrollRuns WHERE Id={runId};"));
     }
 
+    [SkippableFact]
+    public async Task Custom_form_submission_creates_a_scoped_approval_request_and_freezes_answers()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var template = new FormTemplateStore.Template(
+            900001, "طلب تجهيزات", null, "حاسوب أو هاتف للعمل", FormBuilder.FormTypeRequest,
+            string.Empty, true, false, true);
+        var submissionToken = Guid.NewGuid();
+        var submitted = await FormSubmissionStore.SubmitAsync(
+            db, template, _employeeA,
+            new (int FieldId, string Label, string ControlType, string? Value, int SortOrder)[]
+            {
+                (11, "نوع الجهاز", FormBuilder.ControlSelect, "حاسوب", 1),
+                (12, "المبرر", FormBuilder.ControlTextArea, "متطلبات المشروع", 2)
+            }, "employee-a", submissionToken);
+
+        Assert.True(submitted.RequestId is > 0);
+        Assert.True(submitted.Workflow?.Ok, submitted.Workflow?.Message);
+        Assert.Equal("SelfService", await ScalarStringAsync(db,
+            $"SELECT RequestSource FROM SelfServiceRequests WHERE Id={submitted.RequestId};"));
+        Assert.Equal(submitted.RequestId, Convert.ToInt32(await ScalarObjectAsync(db,
+            $"SELECT RequestId FROM FormSubmissions WHERE Id={submitted.SubmissionId};")));
+
+        var answers = await FormSubmissionStore.LoadAnswersForRequestsAsync(
+            db, new[] { submitted.RequestId!.Value }, CompanyScope.ForCompanies(new[] { _companyA }));
+        Assert.Equal(new[] { "نوع الجهاز", "المبرر" }, answers[submitted.RequestId.Value].Select(answer => answer.FieldLabel));
+        Assert.Empty(await FormSubmissionStore.LoadAnswersForRequestsAsync(
+            db, new[] { submitted.RequestId.Value }, CompanyScope.ForCompanies(new[] { _companyB })));
+        Assert.False(await FormSubmissionStore.ReviewAsync(
+            db, submitted.SubmissionId, true, "bypass", null, CompanyScope.ForCompanies(new[] { _companyA })));
+
+        var retried = await FormSubmissionStore.SubmitAsync(
+            db, template, _employeeA,
+            new (int FieldId, string Label, string ControlType, string? Value, int SortOrder)[]
+            {
+                (11, "نوع الجهاز", FormBuilder.ControlSelect, "حاسوب", 1),
+                (12, "المبرر", FormBuilder.ControlTextArea, "متطلبات المشروع", 2)
+            }, "employee-a", submissionToken);
+        Assert.True(retried.IsDuplicate);
+        Assert.Equal(submitted.SubmissionId, retried.SubmissionId);
+        Assert.Equal(submitted.RequestId, retried.RequestId);
+        Assert.Equal(1, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM FormSubmissions WHERE ClientRequestToken='{submissionToken}';"));
+    }
+
+    [SkippableFact]
+    public async Task Exchange_rates_are_effective_dated_tenant_scoped_and_resolved_for_payroll()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await ExecuteAsync(db, $"UPDATE Companies SET CurrencyCode=N'IQD' WHERE Id={_companyA};");
+        var financial = await db.EmployeeFinancialInfos.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(info => info.EmployeeId == _employeeA);
+        if (financial is null)
+        {
+            financial = new EmployeeFinancialInfo { EmployeeId = _employeeA };
+            db.EmployeeFinancialInfos.Add(financial);
+        }
+        financial.Currency = "USD"; financial.BasicSalary = 1000m; financial.IsDeleted = false;
+        await db.SaveChangesAsync();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var wrong = await CurrencyExchangeRateStore.SaveAsync(db, CompanyScope.ForCompanies(new[] { _companyB }),
+            new CurrencyExchangeRateStore.RateRow
+            {
+                CompanyId = _companyA, FromCurrency = "USD", ToCurrency = "IQD",
+                EffectiveDate = new DateOnly(2099, 1, 1), Rate = 1300m
+            }, "admin-b", null);
+        Assert.False(wrong.Ok);
+
+        var saved = await CurrencyExchangeRateStore.SaveAsync(db, scopeA,
+            new CurrencyExchangeRateStore.RateRow
+            {
+                CompanyId = _companyA, FromCurrency = "USD", ToCurrency = "IQD",
+                EffectiveDate = new DateOnly(2099, 1, 1), Rate = 1300m, Note = "SQL acceptance"
+            }, "admin-a", "127.0.0.1");
+        Assert.True(saved.Ok, saved.Message);
+
+        var runId = await ScalarAsync(db, $"""
+INSERT INTO PayrollRuns(BatchNo,[Year],[Month],Status,CompanyId,CreatedAt)
+VALUES(N'FX-{Guid.NewGuid().ToString("N")[..12]}',2099,2,N'Draft',{_companyA},SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var context = await CurrencyExchangeRateStore.BuildPayrollContextAsync(
+            db, _companyA, runId, new DateOnly(2099, 2, 28));
+        Assert.True(context.Ok, context.Message);
+        var rate = context.ByEmployee[_employeeA];
+        Assert.Equal("USD", rate.SourceCurrency);
+        Assert.Equal("IQD", rate.TargetCurrency);
+        Assert.Equal(1_300_000m, rate.Convert(1000m));
+        Assert.Empty(await CurrencyExchangeRateStore.ListAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyB }), _companyA));
+
+        await MonthAttendanceStore.EnsureAsync(db);
+        await ExecuteAsync(db, $"""
+IF EXISTS(SELECT 1 FROM EmployeeMonthAttendance WHERE EmployeeId={_employeeA} AND [Year]=2099 AND [Month]=2)
+ UPDATE EmployeeMonthAttendance SET WorkDays=28,PresentDays=28,AbsentDays=0,Status=N'Approved',ApprovedAt=SYSUTCDATETIME()
+ WHERE EmployeeId={_employeeA} AND [Year]=2099 AND [Month]=2;
+ELSE
+ INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],WorkDays,PresentDays,AbsentDays,Status,ApprovedAt)
+ VALUES({_employeeA},2099,2,28,28,0,N'Approved',SYSUTCDATETIME());
+""");
+        var calculated = await PayrollRunStore.CalculateAsync(db, runId, "fx-payroll-test");
+        Assert.True(calculated.Ok, calculated.Message);
+        Assert.Equal(1_300_000m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT BasicSalary FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};")));
+        Assert.Equal("USD", await ScalarStringAsync(db,
+            $"SELECT SourceCurrency FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};"));
+        Assert.Equal("IQD", await ScalarStringAsync(db,
+            $"SELECT PayrollCurrency FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};"));
+        Assert.Equal(new DateTime(2099, 1, 1), Convert.ToDateTime(await ScalarObjectAsync(db,
+            $"SELECT ExchangeRateDate FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};")));
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
-        var a = new Company { Name = "SQL Company A", Code = "SQL-A" };
-        var b = new Company { Name = "SQL Company B", Code = "SQL-B" };
+        var a = new Company { Name = "SQL Company A", Code = "SQL-A", CurrencyCode = "IQD" };
+        var b = new Company { Name = "SQL Company B", Code = "SQL-B", CurrencyCode = "IQD" };
         var branchA = new Branch { Name = "A Branch", Code = "SQL-BA", Company = a };
         var branchB = new Branch { Name = "B Branch", Code = "SQL-BB", Company = b };
         var deptA = new Department { Name = "A Department", Code = "SQL-DA", Company = a, Branch = branchA };
