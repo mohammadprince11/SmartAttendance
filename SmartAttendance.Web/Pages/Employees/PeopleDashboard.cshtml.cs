@@ -59,7 +59,6 @@ public class PeopleDashboardModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
         var role = PeopleAccessContext.GetRole(HttpContext);

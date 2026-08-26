@@ -72,8 +72,6 @@ public class ChangePasswordModel : PageModel
             return Page();
         }
 
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
-
         var user = await LoginDatabase.GetByUsernameAsync(_dbContext, username.Trim());
         if (user == null)
         {

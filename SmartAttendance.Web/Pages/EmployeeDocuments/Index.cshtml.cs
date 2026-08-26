@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -64,7 +64,6 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         if (EmployeeId > 0)
         {
@@ -76,7 +75,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostUploadAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         if (Input.EmployeeId <= 0)
         {

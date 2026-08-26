@@ -29,7 +29,6 @@ public class LifecycleModel : PageModel
     {
         Id = id;
 
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         Employee = await LoadEmployeeAsync(id);

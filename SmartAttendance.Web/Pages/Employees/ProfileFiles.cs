@@ -38,7 +38,6 @@ public partial class ProfileModel
 
     public async Task<IActionResult> OnPostUploadProfileAreaFileAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EnsureProfileFilesTableAsync();
 
         if (id <= 0)
@@ -71,7 +70,6 @@ public partial class ProfileModel
 
     public async Task<IActionResult> OnPostDeleteProfileAreaFileAsync(int id, int fileId)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EnsureProfileFilesTableAsync();
 
         var rows = await HrmsDatabase.QueryAsync(
@@ -168,6 +166,13 @@ END;
         }
 
         if (!await Infrastructure.Security.UploadSignatureValidator.IsValidForExtensionAsync(file, extension))
+        {
+            return string.Empty;
+        }
+
+        var scan = await Infrastructure.Security.FileThreatPolicy.ScanUploadAsync(
+            _threatScanner, file, HttpContext.RequestAborted);
+        if (!Infrastructure.Security.FileThreatPolicy.CanStore(_malwareOptions, scan))
         {
             return string.Empty;
         }

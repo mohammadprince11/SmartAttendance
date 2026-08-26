@@ -88,7 +88,6 @@ ORDER BY CompanyId, Name;",
         string? reassignNotes,
         string? confirmReassign)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         if (id <= 0)

@@ -27,7 +27,6 @@ public class ShiftRequestModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "ShiftRequest")) return Forbid();
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         Shifts = await ShiftRequestStore.RequestableShiftsAsync(_db);
         var employeeId = await ResolveEmployeeIdAsync();
         HasEmployee = employeeId > 0;

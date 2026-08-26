@@ -171,6 +171,7 @@ if (-not $aspnetEnv) {
 Write-Host "  البيئة: $aspnetEnv"
 
 $forceHttps = $false; $revProxy = $false; $allowInsecure = $false
+$loadedConfigs = @()
 foreach ($name in @('appsettings.json', "appsettings.$aspnetEnv.json")) {
     $file = Join-Path $SitePath $name
     if (-not (Test-Path $file)) { continue }
@@ -180,6 +181,7 @@ foreach ($name in @('appsettings.json', "appsettings.$aspnetEnv.json")) {
         Write-Warn "تعذّرت قراءة $name كـJSON — أتخطّاه بالفحص."
         continue
     }
+    $loadedConfigs += $cfg
     # اللاحق يغلب السابق، تماماً كترتيب ASP.NET Core.
     if (Get-ConfigFlag $cfg @('ForceHttps'))                      { $forceHttps    = $true }
     if (Get-ConfigFlag $cfg @('ReverseProxy','Enabled'))           { $revProxy      = $true }
@@ -207,6 +209,99 @@ if ($isProd -and -not $forceHttps -and -not $revProxy -and -not $allowInsecure) 
     يجعل التطبيق يثق بترويسات X-Forwarded المُزوَّرة بسهولة):
       "ReverseProxy": { "Enabled": true }
 "@
+}
+
+# نفس أولوية الإعداد الفعلية: JSON الأساسي ثم JSON البيئة ثم متغيّر البيئة.
+# لا نطبع قيمة AlertWebhook أو كلمات المرور كي لا تتسرّب الأسرار في سجل النشر.
+function Get-NestedConfigValue {
+    param([object] $Json, [string[]] $Path)
+    $node = $Json
+    foreach ($segment in $Path) {
+        if ($null -eq $node) { return $null }
+        $property = $node.PSObject.Properties[$segment]
+        if (-not $property) { return $null }
+        $node = $property.Value
+    }
+    return $node
+}
+
+function Resolve-ZynoraSetting {
+    param([string[]] $Path)
+    $value = $null
+    foreach ($config in $loadedConfigs) {
+        $candidate = Get-NestedConfigValue $config $Path
+        if ($null -ne $candidate) { $value = $candidate }
+    }
+
+    $environmentName = $Path -join '__'
+    foreach ($target in @('Machine', 'User', 'Process')) {
+        $candidate = [Environment]::GetEnvironmentVariable($environmentName, $target)
+        if (-not [string]::IsNullOrWhiteSpace($candidate)) { $value = $candidate }
+    }
+    return $value
+}
+
+function Test-TrueValue([object] $Value) {
+    if ($Value -is [bool]) { return $Value }
+    return "$Value".Equals('true', [StringComparison]::OrdinalIgnoreCase)
+}
+
+if ($isProd) {
+    $enforceOperations = Resolve-ZynoraSetting @('Operations', 'EnforceProductionReadiness')
+    if ($null -eq $enforceOperations) { $enforceOperations = $true }
+
+    if (Test-TrueValue $enforceOperations) {
+        $missing = [Collections.Generic.List[string]]::new()
+
+        foreach ($entry in @(
+            @{ Path = @('Operations','OwnerAcceptanceReference'); Label = 'Operations:OwnerAcceptanceReference' },
+            @{ Path = @('Operations','OffsiteBackupPath');        Label = 'Operations:OffsiteBackupPath' },
+            @{ Path = @('Operations','BackupHeartbeatPath');      Label = 'Operations:BackupHeartbeatPath' },
+            @{ Path = @('Operations','HealthMonitorUrl');         Label = 'Operations:HealthMonitorUrl' },
+            @{ Path = @('Operations','AlertWebhookUrl');          Label = 'Operations:AlertWebhookUrl' },
+            @{ Path = @('Smtp','Host');                           Label = 'Smtp:Host' },
+            @{ Path = @('Smtp','FromAddress');                    Label = 'Smtp:FromAddress' },
+            @{ Path = @('MalwareScanning','Host');                Label = 'MalwareScanning:Host' }
+        )) {
+            if ([string]::IsNullOrWhiteSpace("$(Resolve-ZynoraSetting $entry.Path)")) {
+                $missing.Add($entry.Label)
+            }
+        }
+
+        foreach ($entry in @(
+            @{ Path = @('Operations','RpoMinutes'); Label = 'Operations:RpoMinutes' },
+            @{ Path = @('Operations','RtoMinutes'); Label = 'Operations:RtoMinutes' },
+            @{ Path = @('MalwareScanning','Port');  Label = 'MalwareScanning:Port' }
+        )) {
+            $number = 0
+            if (-not [int]::TryParse("$(Resolve-ZynoraSetting $entry.Path)", [ref]$number) -or $number -le 0) {
+                $missing.Add($entry.Label)
+            }
+        }
+
+        foreach ($entry in @(
+            @{ Path = @('Smtp','Enabled');               Label = 'Smtp:Enabled=true' },
+            @{ Path = @('MalwareScanning','Enabled');    Label = 'MalwareScanning:Enabled=true' },
+            @{ Path = @('MalwareScanning','Required');   Label = 'MalwareScanning:Required=true' }
+        )) {
+            if (-not (Test-TrueValue (Resolve-ZynoraSetting $entry.Path))) {
+                $missing.Add($entry.Label)
+            }
+        }
+
+        $healthUrl = "$(Resolve-ZynoraSetting @('Operations','HealthMonitorUrl'))"
+        $alertUrl = "$(Resolve-ZynoraSetting @('Operations','AlertWebhookUrl'))"
+        if ($healthUrl -and $healthUrl -notmatch '^https?://') { $missing.Add('Operations:HealthMonitorUrl (HTTP/HTTPS)') }
+        if ($alertUrl -and $alertUrl -notmatch '^https://') { $missing.Add('Operations:AlertWebhookUrl (HTTPS)') }
+
+        if ($missing.Count -gt 0) {
+            throw "بوابة تشغيل الإنتاج غير مكتملة:`n  - $($missing -join "`n  - ")"
+        }
+
+        Write-Ok 'بوابة قبول المالك والنسخ والمراقبة والبريد وفحص الملفات مكتملة إعدادياً'
+    } else {
+        Write-Warn 'Operations:EnforceProductionReadiness=false — تجاوز طوارئ ظاهر؛ لا يُعدّ قبول إنتاج.'
+    }
 }
 Write-Ok 'الإعدادات تسمح بالإقلاع'
 

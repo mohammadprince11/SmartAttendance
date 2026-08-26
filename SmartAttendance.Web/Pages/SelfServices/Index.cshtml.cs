@@ -33,13 +33,11 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await LoadAsync();
     }
 
     public async Task<IActionResult> OnPostCreateAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         // لا نعتمد EmployeeId القادم من النموذج بلا فحص: لا يُنشأ طلبٌ إلا لموظفٍ ضمن
         // شركات المستخدم، وإلا كان حقنَ بياناتٍ (وسريان موافقات) على موظف شركةٍ أخرى.

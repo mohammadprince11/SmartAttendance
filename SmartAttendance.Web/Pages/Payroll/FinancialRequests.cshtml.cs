@@ -43,7 +43,6 @@ public class FinancialRequestsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         Rows = await FinancialRequestStore.ListAsync(_db, scope, kind: Kind, status: Status, search: Search);
         Employees = await FinancialRequestStore.EmployeeBasicsAsync(_db, scope);
@@ -98,7 +97,6 @@ public class FinancialRequestsModel : PageModel
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var result = await ApprovalWorkflowEngine.ApproveAsync(
             _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note,
             User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value),
@@ -119,7 +117,6 @@ public class FinancialRequestsModel : PageModel
 
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var result = await ApprovalWorkflowEngine.RejectAsync(
             _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note,
             User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value),

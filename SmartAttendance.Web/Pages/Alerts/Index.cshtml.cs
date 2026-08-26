@@ -32,7 +32,6 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         Days = Math.Clamp(Days, 1, 365);
 

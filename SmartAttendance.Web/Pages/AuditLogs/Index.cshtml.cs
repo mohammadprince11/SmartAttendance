@@ -21,7 +21,6 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         Logs = await HrmsDatabase.QueryAsync(
             _dbContext,

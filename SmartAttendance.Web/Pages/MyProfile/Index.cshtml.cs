@@ -187,7 +187,6 @@ END",
 
     private async Task LoadAsync(int employeeId)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         // نافذة الحضور الافتراضية تتبع سياسة فترة الحضور (نفس اعتماد الحضور واليوميات
         // والمسير) بدل «آخر 30 يوماً». التواريخ الصريحة تُحترَم.

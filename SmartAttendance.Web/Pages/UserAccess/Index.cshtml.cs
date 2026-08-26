@@ -153,7 +153,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
 
         if (!IsAdministrator())
         {
@@ -202,7 +201,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSaveAsync()
     {
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
 
         if (!IsAdministrator())
         {
@@ -465,7 +463,6 @@ public class IndexModel : PageModel
         string? search,
         string? status)
     {
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
 
         if (!IsAdministrator())
         {
@@ -654,7 +651,6 @@ WHERE Id = @SystemUserId;
     /// </summary>
     public async Task<IActionResult> OnPostBulkResetPasswordAsync()
     {
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
 
         if (!IsAdministrator())
         {

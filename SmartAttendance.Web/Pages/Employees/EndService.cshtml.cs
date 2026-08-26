@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -58,7 +58,6 @@ public class EndServiceModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         Employee = await LoadEmployeeAsync();
@@ -76,7 +75,6 @@ public class EndServiceModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         Employee = await LoadEmployeeAsync();

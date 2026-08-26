@@ -30,7 +30,6 @@ public class FinancialRequestModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var employeeId = await ResolveEmployeeIdAsync();
         HasEmployee = employeeId > 0;
         if (employeeId > 0)

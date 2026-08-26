@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace SmartAttendance.Web.Pages.Documents;
 
@@ -18,11 +19,19 @@ public class TemplatesModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
+    private readonly IFileThreatScanner _threatScanner;
+    private readonly MalwareScanningOptions _malwareOptions;
 
-    public TemplatesModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    public TemplatesModel(
+        ApplicationDbContext db,
+        IWebHostEnvironment environment,
+        IFileThreatScanner threatScanner,
+        IOptions<MalwareScanningOptions> malwareOptions)
     {
         _db = db;
         _environment = environment;
+        _threatScanner = threatScanner;
+        _malwareOptions = malwareOptions.Value;
     }
 
     [BindProperty(SupportsGet = true, Name = "edit")] public int? EditingId { get; set; }
@@ -115,6 +124,16 @@ public class TemplatesModel : PageModel
             if (!ProtectedFileStore.IsAllowedSize(StampUpload.Length))
             {
                 TempData["ErrorMessage"] = "حجم صورة الختم يتجاوز الحدّ المسموح.";
+                return RedirectToPage(new { edit = TemplateId });
+            }
+
+            if (!await UploadSignatureValidator.IsValidForExtensionAsync(StampUpload, extension)
+                || !FileThreatPolicy.CanStore(
+                    _malwareOptions,
+                    await FileThreatPolicy.ScanUploadAsync(
+                        _threatScanner, StampUpload, HttpContext.RequestAborted)))
+            {
+                TempData["ErrorMessage"] = "رُفضت صورة الختم بعد فحص المحتوى الأمني.";
                 return RedirectToPage(new { edit = TemplateId });
             }
 

@@ -49,13 +49,11 @@ public class LoginModel : PageModel
     public async Task OnGetAsync()
     {
         ApplyNoStoreHeaders();
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         ApplyNoStoreHeaders();
-        await LoginDatabase.EnsureCreatedAsync(_dbContext);
 
         if (string.IsNullOrWhiteSpace(Username) ||
             string.IsNullOrWhiteSpace(Password))

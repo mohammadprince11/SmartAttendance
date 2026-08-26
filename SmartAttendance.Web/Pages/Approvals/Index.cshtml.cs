@@ -62,7 +62,6 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         var sla = await ApprovalWorkflowEngine.ProcessSlaAsync(_dbContext);
         if (sla.Escalated > 0||sla.Reminded>0)
         {
@@ -73,7 +72,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         var result = await ApprovalWorkflowEngine.ApproveAsync(
             _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
         // لا نكتب قرارات الحقول إلا بعد قبول المحرك لهوية صاحب الخطوة؛ وإلا أمكن
@@ -89,7 +87,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         var result = await ApprovalWorkflowEngine.RejectAsync(
             _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
         Message = result.Message;
@@ -100,7 +97,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostReturnAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         var result = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
             _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
         Message=result.Message; MessageIsError=!result.Ok;
@@ -111,7 +107,6 @@ public class IndexModel : PageModel
     /// <summary>اعتماد مجمّع: يقدّم كل طلب محدَّد خطوةً واحدة، ويُفعّل الأثر لِمَن اكتملت لجنته.</summary>
     public async Task<IActionResult> OnPostBulkApproveAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         int ok = 0, final = 0;
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
@@ -131,7 +126,6 @@ public class IndexModel : PageModel
     /// <summary>رفض مجمّع للطلبات المحددة.</summary>
     public async Task<IActionResult> OnPostBulkRejectAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         int ok = 0;
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())

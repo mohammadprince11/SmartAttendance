@@ -47,4 +47,53 @@ public class ApiTokenHotPathTests
         var program = RepoFile("SmartAttendance.Web", "Program.cs");
         Assert.Contains("ApiTokenStore.EnsureAsync", program);
     }
+
+    [Fact]
+    public void LoginSchema_IsStartupOwned_NotRequestOwned()
+    {
+        var program = RepoFile("SmartAttendance.Web", "Program.cs");
+        Assert.Contains("LoginDatabase.EnsureCreatedAsync(migrationDb)", program);
+
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var web = Path.Combine(dir!.FullName, "SmartAttendance.Web");
+        var offenders = Directory.GetFiles(web, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.EndsWith("Program.cs", StringComparison.OrdinalIgnoreCase))
+            .Where(path => File.ReadAllText(path).Contains(
+                "LoginDatabase.EnsureCreatedAsync", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(web, path))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void CoreHrmsSchema_IsStartupOwned_NotPageOrControllerOwned()
+    {
+        var program = RepoFile("SmartAttendance.Web", "Program.cs");
+        Assert.Contains("HrmsDatabase.EnsureCreatedAsync(migrationDb)", program);
+
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var web = Path.Combine(dir!.FullName, "SmartAttendance.Web");
+        var requestRoots = new[]
+        {
+            Path.Combine(web, "Pages"),
+            Path.Combine(web, "Controllers")
+        };
+        var offenders = requestRoots
+            .SelectMany(path => Directory.GetFiles(path, "*.cs", SearchOption.AllDirectories))
+            .Where(path => File.ReadAllText(path).Contains(
+                "HrmsDatabase.EnsureCreatedAsync", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(web, path))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
 }

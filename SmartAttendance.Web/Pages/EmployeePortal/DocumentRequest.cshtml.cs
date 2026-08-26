@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -17,11 +18,19 @@ public class DocumentRequestModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
+    private readonly IFileThreatScanner _threatScanner;
+    private readonly MalwareScanningOptions _malwareOptions;
 
-    public DocumentRequestModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    public DocumentRequestModel(
+        ApplicationDbContext db,
+        IWebHostEnvironment environment,
+        IFileThreatScanner threatScanner,
+        IOptions<MalwareScanningOptions> malwareOptions)
     {
         _db = db;
         _environment = environment;
+        _threatScanner = threatScanner;
+        _malwareOptions = malwareOptions.Value;
     }
 
     [TempData] public string? StatusMessage { get; set; }
@@ -78,6 +87,16 @@ public class DocumentRequestModel : PageModel
             if (!ProtectedFileStore.IsAllowedExtension(extension) || !ProtectedFileStore.IsAllowedSize(Attachment.Length))
             {
                 StatusMessage = "المرفق غير مسموح (النوع أو الحجم).";
+                return RedirectToPage();
+            }
+
+            if (!await UploadSignatureValidator.IsValidForExtensionAsync(Attachment, extension)
+                || !FileThreatPolicy.CanStore(
+                    _malwareOptions,
+                    await FileThreatPolicy.ScanUploadAsync(
+                        _threatScanner, Attachment, HttpContext.RequestAborted)))
+            {
+                StatusMessage = "رُفض المرفق بعد فحص المحتوى الأمني.";
                 return RedirectToPage();
             }
 

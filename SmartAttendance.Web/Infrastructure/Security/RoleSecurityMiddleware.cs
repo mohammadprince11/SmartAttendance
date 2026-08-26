@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
-using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
@@ -13,8 +12,6 @@ namespace SmartAttendance.Web.Infrastructure.Security;
 public class RoleSecurityMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly SemaphoreSlim LoginDatabaseEnsureLock = new(1, 1);
-    private static volatile bool LoginDatabaseIsReady;
 
     public RoleSecurityMiddleware(RequestDelegate next)
     {
@@ -29,8 +26,6 @@ public class RoleSecurityMiddleware
         IAccessRoleService accessRoleService,
         Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
-        await EnsureLoginDatabaseCreatedAsync(dbContext);
-
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "/";
         var accessClass = PublicPathPolicy.Classify(path);
 
@@ -126,32 +121,6 @@ public class RoleSecurityMiddleware
         }
 
         await _next(context);
-    }
-
-    private static async Task EnsureLoginDatabaseCreatedAsync(
-        ApplicationDbContext dbContext)
-    {
-        if (LoginDatabaseIsReady)
-        {
-            return;
-        }
-
-        await LoginDatabaseEnsureLock.WaitAsync();
-
-        try
-        {
-            if (LoginDatabaseIsReady)
-            {
-                return;
-            }
-
-            await LoginDatabase.EnsureCreatedAsync(dbContext);
-            LoginDatabaseIsReady = true;
-        }
-        finally
-        {
-            LoginDatabaseEnsureLock.Release();
-        }
     }
 
     private static void RedirectToLogin(HttpContext context)

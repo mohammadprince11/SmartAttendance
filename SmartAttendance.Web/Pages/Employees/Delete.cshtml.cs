@@ -62,7 +62,6 @@ public class DeleteModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         var employee = await _employeeService.GetByIdAsync(id);
 
