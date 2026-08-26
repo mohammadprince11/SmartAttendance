@@ -12,9 +12,12 @@
 <head>
     <meta charset="utf-8" />
     <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
     </head>
-<body>
-    <div class="efile-toolbar">
+<body class="zy-app">
+    <div class="efile-toolbar zy-scope zy-ui-contract">
         <button type="button" onclick="window.print()">طباعة / حفظ PDF</button>
         <a href="/Employees/Profile?id=@Request.Query["id"]">← عودة لملف الموظف</a>
     </div>

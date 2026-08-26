@@ -109,7 +109,7 @@
     <link rel="stylesheet" href="~/theme/current.css" />
 </head>
 
-<body dir="rtl">
+<body dir="rtl" class="zy-app">
     @{
         var loginUser = Context.User.Identity?.Name;
         var displayNameCookie = Context.Request.Cookies["SA.DisplayName"] ?? Context.User.FindFirst("DisplayName")?.Value;
@@ -920,7 +920,7 @@
                 </div>
             </header>
 
-            <main class="nexora-content zy-scope">
+            <main class="nexora-content zy-scope zy-ui-contract">
                 @RenderBody()
             </main>
         </div>
@@ -943,6 +943,11 @@
        متغيّرات الـ:root المحقونة أدناه؛ وبلا تخصيصٍ محفوظ تبقى القيم الاحتياطية
        داخل الملف = مظهر ما قبل الميزة حرفياً. *@
     <link rel="stylesheet" href="~/css/zynora-tokens.css" asp-append-version="true" />
+
+    @* العقد البصري النهائي: كلاسات zy-* فقط، ويأتي أخيراً كي لا تعيد صفحة قديمة
+       تعريف الزر/الحقل/الجدول بعد التوحيد. *@
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
 
     @* يُسكِت تأثيرات «التمرير-فوق» أثناء السكرول — انظر تعليق السكربت.
        غير مؤجَّل (بلا defer) عمداً: تأجيله يترك أول تمريرةٍ بعد التحميل بلا حماية. *@

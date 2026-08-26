@@ -12,9 +12,12 @@
 <head>
     <meta charset="utf-8" />
     <title>فورمة المخالفة - @violation.ReferenceNo</title>
+    <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
     </head>
-<body>
-    <div class="toolbar">
+<body class="zy-app">
+    <div class="toolbar zy-scope zy-ui-contract">
         <div>
             <strong>فورمة المخالفة: @violation.ReferenceNo</strong>
             <small>@violation.EmployeeName - @violation.EventDate.ToString("yyyy-MM-dd")</small>

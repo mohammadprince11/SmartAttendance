@@ -38,7 +38,7 @@
     <link rel="stylesheet" href="~/css/zynora-employee-portal-shell.css" asp-append-version="true" />
 </head>
 @{ var embed = Context.Request.Query["embed"] == "1"; }
-<body class="nxex-body @(embed ? "nxex-embed" : "")">
+<body class="nxex-body zy-app @(embed ? "nxex-embed" : "")">
     <div id="nxsp-splash" aria-hidden="true">
         <svg viewBox="0 0 1024 1024" role="img" aria-label="ZYNORA">
             <path class="nxsp nxsp-top"    fill="#F7F9FB" d="M170 218h520l-112 126H58z"/>
@@ -106,7 +106,7 @@
         </div>
     </aside>
 
-    <main class="nxex-shell-main">
+    <main class="nxex-shell-main zy-scope zy-ui-contract">
         <div class="nxex-topbar">
             <div>
                 <strong>بوابة الموظف الذكية</strong>
@@ -127,6 +127,9 @@
 
         @RenderBody()
     </main>
+
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
 
     @* ===== شريط التنقّل السفلي (موبايل فقط) — يستبدل الشريط الجانبي والتبويبات المكرّرة ===== *@
     <nav class="nxex-bottom-nav" aria-label="التنقّل السريع">
