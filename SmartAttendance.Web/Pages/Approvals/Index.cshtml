@@ -28,6 +28,16 @@
         return ("📄", "gen");
     }
     string D(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+    string StepStatusLabel(string status) => status switch
+    {
+        "Current" => "الخطوة الحالية",
+        "Approved" => "معتمدة",
+        "Rejected" => "مرفوضة",
+        "Returned" or "WaitingRevision" => "بانتظار التعديل",
+        "Skipped" => "متجاوزة",
+        "Cancelled" => "ملغاة",
+        _ => "قادمة"
+    };
 
     // تنسيق الوقت "HH:mm" (عمود SQL time = TimeSpan).
     string T(TimeSpan? t) => t.HasValue ? $"{(int)t.Value.TotalHours:00}:{t.Value.Minutes:00}" : "";
@@ -192,6 +202,23 @@
                     var meta = string.Join(" · ", new[] { request.EmployeeNo, request.Department }.Where(s => !string.IsNullOrWhiteSpace(s)));
                     <div class="apv-lrow @(firstSel != null && firstSel.Id == request.Id ? "active" : "")" data-target="side_@request.Id" id="row_@request.Id">
                         <span>
+                            @if (flow?.Steps.Count > 0)
+                            {
+                                <section class="apv-flow" aria-label="مسار الموافقة">
+                                    <div class="apv-sect">مسار الموافقة <span>@(string.IsNullOrWhiteSpace(flow.TemplateName) ? "المسار الافتراضي" : flow.TemplateName)</span></div>
+                                    <ol class="apv-flow-list">
+                                        @foreach (var step in flow.Steps)
+                                        {
+                                            var statusClass = step.Status.ToLowerInvariant();
+                                            <li class="apv-flow-step @statusClass">
+                                                <span class="apv-flow-node" aria-hidden="true"></span>
+                                                <span class="apv-flow-copy"><b>@step.DisplayName</b><small>@StepStatusLabel(step.Status)@if (step.EscalatedAt.HasValue) { <em> · مصعّدة</em> }</small></span>
+                                            </li>
+                                        }
+                                    </ol>
+                                </section>
+                            }
+
                             @if (canAct)
                             {
                                 <input type="checkbox" class="apv-chk apv-row" name="Ids" value="@request.Id" form="apvBulkForm" data-row="row_@request.Id" onclick="event.stopPropagation()" />

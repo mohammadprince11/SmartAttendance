@@ -106,6 +106,23 @@
     .apv-dates { direction:ltr; font-weight:900; }
     .apv-reason { font-size:12px; font-weight:700; opacity:.8; line-height:1.6; }
 
+    .apv-flow { margin-top:14px; padding-top:1px; border-top:1px solid var(--zy-migrated-color-ee3e8e9d25); }
+    .apv-flow .apv-sect { display:flex; justify-content:space-between; gap:8px; }
+    .apv-flow .apv-sect span { color:var(--sa-text,var(--zy-text)); font-weight:800; }
+    .apv-flow-list { list-style:none; margin:0; padding:0; display:grid; gap:0; }
+    .apv-flow-step { position:relative; display:flex; align-items:flex-start; gap:10px; min-height:43px; padding-bottom:8px; }
+    .apv-flow-step:not(:last-child)::after { content:""; position:absolute; inset-inline-start:7px; top:16px; bottom:0; width:2px; background:var(--zy-migrated-color-28565ef553); }
+    .apv-flow-node { position:relative; z-index:1; width:16px; height:16px; margin-top:2px; flex:0 0 16px; border:3px solid var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); border-radius:50%; background:var(--sa-muted,var(--zy-muted)); box-shadow:0 0 0 1px var(--zy-migrated-color-28565ef553); }
+    .apv-flow-copy { display:flex; flex-direction:column; min-width:0; }
+    .apv-flow-copy b { font-size:12px; }
+    .apv-flow-copy small { color:var(--sa-muted,var(--zy-muted)); font-size:10px; font-weight:800; }
+    .apv-flow-copy em { color:var(--zy-warning); font-style:normal; }
+    .apv-flow-step.approved .apv-flow-node { background:var(--zy-success); }
+    .apv-flow-step.current .apv-flow-node { background:var(--acc); box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent); }
+    .apv-flow-step.rejected .apv-flow-node,
+    .apv-flow-step.returned .apv-flow-node,
+    .apv-flow-step.waitingrevision .apv-flow-node { background:var(--zy-danger); }
+
     .apv-note { width:100%; box-sizing:border-box; min-height:40px; margin-top:14px; border-radius:11px; border:1px solid var(--zy-migrated-color-5658452bed); background:var(--zy-migrated-color-22ba49161c); color:var(--sa-text,var(--zy-text)); padding:8px 12px; font-weight:700; font-size:13px; }
     html[data-theme="light"] .apv-note { background:var(--zy-white); }
     .apv-decide { display:flex; gap:9px; margin-top:11px; }

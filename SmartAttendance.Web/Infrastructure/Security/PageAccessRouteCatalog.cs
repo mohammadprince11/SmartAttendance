@@ -9,7 +9,8 @@ public static class PageAccessRouteCatalog
     private static readonly IReadOnlyList<Route> Routes = new List<Route>
     {
         new("/index", "Dashboard.Main"), new("/", "Dashboard.Main"),
-        new("/setup", "Setup.Overview"), new("/branding", "Setup.Branding"),
+        new("/settings", "Setup.Overview"), new("/setup", "Setup.Overview"),
+        new("/branding", "Setup.Branding"), new("/auditlogs", "Setup.AuditLogs"),
         new("/employees/peopledashboard", "People.Dashboard"),
         new("/employees/profile", "People.Profile"), new("/employees/edit", "People.Profile"),
         new("/employees/evaluations", "People.Evaluations"),

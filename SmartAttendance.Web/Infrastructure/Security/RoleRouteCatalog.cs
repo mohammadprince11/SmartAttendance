@@ -77,7 +77,6 @@ public static class RoleRouteCatalog
         "/leaverequests",
         "/selfservices",
         "/approvals",
-        "/auditlogs",
         "/systemmaintenance",
         "/employeepermissions"
     };

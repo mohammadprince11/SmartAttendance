@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
@@ -5,6 +6,7 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Pages.AuditLogs;
 
+[Authorize(Roles = "Admin")]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

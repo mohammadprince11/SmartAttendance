@@ -43,6 +43,7 @@ public static class PageCatalog
             new CatalogPage("Setup.Departments", "الأقسام"),
             new CatalogPage("Setup.Positions", "المناصب"),
             new CatalogPage("Setup.Branding", "الهوية والمظهر"),
+            new CatalogPage("Setup.AuditLogs", "سجل التدقيق"),
         }),
         new("Identity", "إدارة المستخدمين", new[]
         {

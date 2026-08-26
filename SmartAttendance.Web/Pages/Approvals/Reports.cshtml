@@ -1,0 +1,72 @@
+@page
+@model SmartAttendance.Web.Pages.Approvals.ReportsModel
+@using static SmartAttendance.Web.Pages.Approvals.ReportsModel
+
+@{
+    ViewData["Title"] = "تقارير الموافقات";
+    string Badge(string status) => status switch { "Approved" => "zy-badge--success", "Rejected" => "zy-badge--danger", "Pending" => "zy-badge--warning", _ => "zy-badge--muted" };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-administration.css" asp-append-version="true" />
+}
+
+<section class="zy-approval-report" dir="rtl">
+    <div class="zy-breadcrumb"><a asp-page="/Approvals/Index">الموافقات</a><span>/</span><b>التقارير</b></div>
+    <header class="zy-page-header">
+        <div><h1>تقارير الموافقات</h1><div class="zy-desc">مؤشرات زمن المعالجة وحالة الطلبات، محصورة بالشركات التي تملك صلاحية رؤيتها.</div></div>
+        <span class="zy-spacer"></span>
+        <a asp-page="./Reports" asp-page-handler="Export" asp-route-format="xlsx" asp-route-Status="@Model.Status" asp-route-RequestType="@Model.RequestType" asp-route-Search="@Model.Search" asp-route-From="@Model.From" asp-route-To="@Model.To" class="zy-btn zy-btn--primary">تصدير Excel</a>
+        <a asp-page="./Reports" asp-page-handler="Export" asp-route-format="csv" asp-route-Status="@Model.Status" asp-route-RequestType="@Model.RequestType" asp-route-Search="@Model.Search" asp-route-From="@Model.From" asp-route-To="@Model.To" class="zy-btn zy-btn--secondary">CSV</a>
+    </header>
+
+    <form method="get" class="zy-filter-bar">
+        <div class="zy-field"><label>الحالة</label><select class="zy-select" asp-for="Status"><option value="All">كل الحالات</option><option value="Pending">قيد الموافقة</option><option value="Approved">معتمدة</option><option value="Rejected">مرفوضة</option></select></div>
+        <div class="zy-field"><label>نوع الطلب</label><select class="zy-select" asp-for="RequestType"><option value="">كل الأنواع</option>@foreach (var type in Model.RequestTypes) { <option value="@type">@DisplayType(type)</option> }</select></div>
+        <div class="zy-field zy-approval-report__search"><label>الموظف</label><input class="zy-input" asp-for="Search" placeholder="الاسم أو الرقم الوظيفي" /></div>
+        <div class="zy-field"><label>من</label><input class="zy-input" type="date" asp-for="From" /></div>
+        <div class="zy-field"><label>إلى</label><input class="zy-input" type="date" asp-for="To" /></div>
+        <button type="submit" class="zy-btn zy-btn--primary">تطبيق</button>
+        <a asp-page="./Reports" class="zy-btn zy-btn--ghost">إعادة الضبط</a>
+    </form>
+
+    <div class="zy-stats">
+        <div class="zy-stat"><span class="zy-stat__icon">Σ</span><div><div class="zy-stat__label">إجمالي الطلبات</div><div class="zy-stat__value">@Model.Totals.Total</div></div></div>
+        <div class="zy-stat"><span class="zy-stat__icon">⋯</span><div><div class="zy-stat__label">قيد الموافقة</div><div class="zy-stat__value">@Model.Totals.Pending</div></div></div>
+        <div class="zy-stat"><span class="zy-stat__icon zy-card__icon--success">✓</span><div><div class="zy-stat__label">معتمدة</div><div class="zy-stat__value">@Model.Totals.Approved</div></div></div>
+        <div class="zy-stat"><span class="zy-stat__icon zy-card__icon--danger">×</span><div><div class="zy-stat__label">مرفوضة</div><div class="zy-stat__value">@Model.Totals.Rejected</div></div></div>
+        <div class="zy-stat"><span class="zy-stat__icon zy-card__icon--warning">48</span><div><div class="zy-stat__label">معلقة 48+ ساعة</div><div class="zy-stat__value">@Model.Totals.OlderThan48Hours</div></div></div>
+        <div class="zy-stat"><span class="zy-stat__icon">س</span><div><div class="zy-stat__label">متوسط المعالجة</div><div class="zy-stat__value">@(Model.Totals.AverageHours?.ToString("0.0") ?? "—")</div><span class="zy-stat__delta zy-stat__delta--flat">ساعة</span></div></div>
+    </div>
+
+    <div class="zy-approval-report__grid">
+        <section class="zy-card">
+            <div class="zy-card__header"><h2>الأداء حسب نوع الطلب</h2></div>
+            <div class="zy-table-wrap zy-approval-report__nested"><table class="zy-table"><thead><tr><th>النوع</th><th>الإجمالي</th><th>معلق</th><th>معتمد</th><th>مرفوض</th><th>متوسط الساعات</th></tr></thead><tbody>
+                @if (Model.ByType.Count == 0) { <tr><td colspan="6"><div class="zy-empty"><b>لا توجد بيانات</b>غيّر نطاق التقرير أو الفلاتر.</div></td></tr> }
+                @foreach (var row in Model.ByType) { <tr><td class="zy-cell-main">@DisplayType(row.RequestType)</td><td>@row.Total</td><td>@row.Pending</td><td>@row.Approved</td><td>@row.Rejected</td><td>@(row.AverageHours?.ToString("0.0") ?? "—")</td></tr> }
+            </tbody></table></div>
+        </section>
+    </div>
+
+    <section class="zy-approval-report__requests">
+        <div class="zy-approval-report__section-title"><div><h2>تفاصيل الطلبات</h2><p>آخر 300 طلب مطابق للفلاتر الحالية.</p></div><span class="zy-badge zy-badge--muted">@Model.Requests.Count صف</span></div>
+        <div class="zy-table-wrap"><table class="zy-table"><thead><tr><th>الطلب</th><th>الموظف</th><th>القسم</th><th>النوع</th><th>الحالة</th><th>الخطوة الحالية</th><th>تاريخ الطلب</th><th>آخر حركة</th><th>الساعات</th></tr></thead><tbody>
+            @if (Model.Requests.Count == 0) { <tr><td colspan="9"><div class="zy-empty"><b>لا توجد طلبات مطابقة</b>جرّب إزالة أحد الفلاتر.</div></td></tr> }
+            @foreach (var request in Model.Requests)
+            {
+                <tr>
+                    <td><a asp-page="/Approvals/Index" asp-route-Search="@request.EmployeeNo" class="zy-approval-report__request-link">#@request.Id</a></td>
+                    <td><div class="zy-cell-main">@request.EmployeeName</div><div class="zy-cell-sub">@request.EmployeeNo</div></td>
+                    <td>@(string.IsNullOrWhiteSpace(request.Department) ? "—" : request.Department)</td>
+                    <td>@DisplayType(request.RequestType)</td>
+                    <td><span class="zy-badge @Badge(request.Status)">@DisplayStatus(request.Status)</span></td>
+                    <td>@(string.IsNullOrWhiteSpace(request.CurrentStep) ? "—" : request.CurrentStep)</td>
+                    <td class="zy-cell-num">@request.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="zy-cell-num">@(request.UpdatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                    <td class="zy-cell-num">@(request.TurnaroundHours?.ToString("0.0") ?? "—")</td>
+                </tr>
+            }
+        </tbody></table></div>
+    </section>
+</section>

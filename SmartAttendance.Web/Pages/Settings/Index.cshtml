@@ -1,0 +1,79 @@
+@page
+@model SmartAttendance.Web.Pages.Settings.IndexModel
+
+@{
+    ViewData["Title"] = "مركز الإعدادات";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-administration.css" asp-append-version="true" />
+}
+
+<section class="zy-settings-hub" dir="rtl">
+    <div class="zy-breadcrumb"><span>زينورا</span><span>/</span><b>الإعدادات</b></div>
+    <header class="zy-page-header">
+        <div>
+            <h1>مركز الإعدادات</h1>
+            <div class="zy-desc">بوابة موحدة لتهيئة الشركة والأمن والموارد البشرية والحضور والرواتب والتكاملات.</div>
+        </div>
+    </header>
+
+    <nav class="zy-settings-jump" aria-label="أقسام الإعدادات">
+        <a href="#company-settings">الشركة</a>
+        <a href="#security-settings">الأمن والصلاحيات</a>
+        <a href="#people-settings">الموارد البشرية</a>
+        <a href="#module-settings">المودلات</a>
+        <a href="#governance-settings">الحوكمة والتكامل</a>
+    </nav>
+
+    <section class="zy-settings-section" id="company-settings">
+        <div class="zy-settings-section__head"><span class="zy-settings-section__mark">01</span><div><h2>تهيئة الشركة</h2><p>الهوية والهيكل والمواقع والسياسات الأساسية.</p></div></div>
+        <div class="zy-settings-grid">
+            <a asp-page="/Setup/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ش</span><span><b>بيانات الشركة والهيكل</b><small>الشركة، الفروع، الأقسام، العملة، المنطقة الزمنية وسياسات الإغلاق.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/Organization/Index" class="zy-settings-card"><span class="zy-settings-card__icon">هـ</span><span><b>الهيكل التنظيمي</b><small>الوحدات التنظيمية والعلاقات الإدارية ومخطط المؤسسة.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/Branding/Index" class="zy-settings-card"><span class="zy-settings-card__icon">هـ</span><span><b>الهوية والثيم</b><small>الشعار والألوان واسم المنتج وهوية الشركة المعروضة.</small></span><i aria-hidden="true">←</i></a>
+        </div>
+    </section>
+
+    <section class="zy-settings-section" id="security-settings">
+        <div class="zy-settings-section__head"><span class="zy-settings-section__mark">02</span><div><h2>الأمن والصلاحيات</h2><p>إدارة الهوية ونطاق البيانات والإجراءات الحساسة.</p></div></div>
+        <div class="zy-settings-grid">
+            <a asp-page="/UserAccess/Index" class="zy-settings-card"><span class="zy-settings-card__icon">م</span><span><b>المستخدمون</b><small>الحسابات، ربط الموظفين، الأدوار وحالة الدخول.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/AccessRoles/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ص</span><span><b>أدوار الوصول</b><small>صلاحيات الصفحات والبيانات والحقول الحساسة والخدمة الذاتية والتقارير.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/EmployeePermissions/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ن</span><span><b>نطاقات الموظفين</b><small>نطاق رؤية بيانات الأشخاص وإدارتها لكل مستخدم.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/AuditLogs/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ت</span><span><b>سجل التدقيق</b><small>تتبع التعديلات والجهة المنفذة والقيم السابقة واللاحقة.</small></span><i aria-hidden="true">←</i></a>
+        </div>
+    </section>
+
+    <section class="zy-settings-section" id="people-settings">
+        <div class="zy-settings-section__head"><span class="zy-settings-section__mark">03</span><div><h2>إعدادات الموارد البشرية</h2><p>قواعد ملف الموظف والموافقات والتعريفات المشتركة.</p></div></div>
+        <div class="zy-settings-grid">
+            <a asp-page="/HrSettings/Index" class="zy-settings-card"><span class="zy-settings-card__icon">م</span><span><b>مركز إعدادات الموارد البشرية</b><small>دليل جميع إعدادات الأشخاص والسياسات المرتبطة بها.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/HrSettings/ApprovalTemplates" class="zy-settings-card"><span class="zy-settings-card__icon">و</span><span><b>قوالب الموافقات والتفويض</b><small>الشروط والخطوات المتوازية والمراقبون والتنبيهات وSLA والتفويض المؤقت.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/HrSettings/Lookups" class="zy-settings-card"><span class="zy-settings-card__icon">ق</span><span><b>القوائم المرجعية</b><small>التعريفات والتصنيفات المستخدمة في نماذج الموارد البشرية.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/HrSettings/EmployeeGroups" class="zy-settings-card"><span class="zy-settings-card__icon">ج</span><span><b>مجموعات الموظفين</b><small>تجميع الموظفين لاستهداف السياسات والعمليات.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/HrSettings/EntityFields" class="zy-settings-card"><span class="zy-settings-card__icon">ح</span><span><b>الحقول الإضافية</b><small>تعريف حقول مخصصة للكيانات وبياناتها.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/HrSettings/FieldControl" class="zy-settings-card"><span class="zy-settings-card__icon">إ</span><span><b>التحكم بالحقول</b><small>الحقول الإلزامية وحالة ظهورها حسب سياق العمل.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/HrSettings/EmployeeCodeSchema" class="zy-settings-card"><span class="zy-settings-card__icon">ر</span><span><b>مخطط ترميز الموظفين</b><small>توليد الرقم المرجعي للموظف وفق مخطط مضبوط.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/EmployeeProfileSettings/Index" class="zy-settings-card"><span class="zy-settings-card__icon">م</span><span><b>حقول ملف الموظف</b><small>تنظيم مجموعات وحقول صفحة ملف الموظف.</small></span><i aria-hidden="true">←</i></a>
+        </div>
+    </section>
+
+    <section class="zy-settings-section" id="module-settings">
+        <div class="zy-settings-section__head"><span class="zy-settings-section__mark">04</span><div><h2>إعدادات المودلات</h2><p>قواعد التشغيل والحساب لكل مودل رئيسي.</p></div></div>
+        <div class="zy-settings-grid">
+            <a asp-page="/AttendanceSettings/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ح</span><span><b>الحضور والانصراف</b><small>سياسات البصمة، النوافذ الزمنية، المعالجة وإعادة التحليل.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/Payroll/Settings" class="zy-settings-card"><span class="zy-settings-card__icon">ر</span><span><b>الرواتب</b><small>الضريبة والضمان والأوعية والحدود وإعدادات المسير.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/Payroll/SalaryItems" class="zy-settings-card"><span class="zy-settings-card__icon">ع</span><span><b>عناصر الراتب</b><small>تعريف مكونات الدخل والاقتطاع وخصائص احتسابها.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/Devices/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ج</span><span><b>أجهزة الحضور</b><small>تعريف الأجهزة وربطها ومتابعة جاهزيتها.</small></span><i aria-hidden="true">←</i></a>
+        </div>
+    </section>
+
+    <section class="zy-settings-section" id="governance-settings">
+        <div class="zy-settings-section__head"><span class="zy-settings-section__mark">05</span><div><h2>الحوكمة والتكامل</h2><p>مراقبة النظام وربطه بالأنظمة الخارجية.</p></div></div>
+        <div class="zy-settings-grid">
+            <a asp-page="/Integrations/Webhooks" class="zy-settings-card"><span class="zy-settings-card__icon">ت</span><span><b>التكاملات وWebhooks</b><small>نقاط الربط والأحداث ومفاتيح التحقق وحالة الإرسال.</small></span><i aria-hidden="true">←</i></a>
+            <a asp-page="/SystemPerformance/Index" class="zy-settings-card"><span class="zy-settings-card__icon">أ</span><span><b>أداء النظام</b><small>مؤشرات الصحة والأداء والتشغيل.</small></span><i aria-hidden="true">←</i></a>
+        </div>
+    </section>
+</section>
