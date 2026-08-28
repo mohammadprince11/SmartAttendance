@@ -42,6 +42,10 @@ public sealed class LocalizationContractTests
         Assert.Contains("login-language-switcher", login, StringComparison.Ordinal);
         Assert.Contains("ZynoraSupportedCultures.All", login, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Culture/Set\"", login, StringComparison.Ordinal);
+        Assert.Contains("id=\"login-language-form\"", login, StringComparison.Ordinal);
+        Assert.Contains("languageSelect.addEventListener(\"change\"", login, StringComparison.Ordinal);
+        Assert.Contains("languageForm.requestSubmit()", login, StringComparison.Ordinal);
+        Assert.DoesNotContain("<button type=\"submit\">@T[\"تطبيق\"]</button>", login, StringComparison.Ordinal);
     }
 
     [Fact]

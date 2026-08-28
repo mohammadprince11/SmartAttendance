@@ -617,10 +617,11 @@ html[data-theme="dark"] .login-page {
     margin-block-end: 28px !important;
 }
 
-.login-language-switcher select,
-.login-language-switcher button {
+.login-language-switcher select {
+    flex: 1 1 auto;
     min-height: 36px !important;
     border-radius: 9px !important;
+    cursor: pointer;
 }
 
 .login-logo {

@@ -35,7 +35,7 @@
             </div>
         </section>
     <div class="login-card">
-        <form method="post" asp-page="/Culture/Set" class="login-language-switcher">
+        <form method="post" asp-page="/Culture/Set" id="login-language-form" class="login-language-switcher">
             <input type="hidden" name="returnUrl" value="@cultureReturnUrl" />
             <label for="login-culture">@T["لغة الواجهة"]</label>
             <select id="login-culture" name="culture" aria-label="@T["لغة الواجهة"]">
@@ -47,8 +47,23 @@
                     </option>
                 }
             </select>
-            <button type="submit">@T["تطبيق"]</button>
         </form>
+
+        <script>
+        (function () {
+            var languageForm = document.getElementById("login-language-form");
+            var languageSelect = document.getElementById("login-culture");
+            var isChangingLanguage = false;
+            if (!languageForm || !languageSelect) return;
+
+            languageSelect.addEventListener("change", function () {
+                if (isChangingLanguage) return;
+                isChangingLanguage = true;
+                languageSelect.setAttribute("aria-busy", "true");
+                languageForm.requestSubmit();
+            });
+        })();
+        </script>
 
         <div class="login-logo">
             <img src="~/brand/zynora-symbol.svg" alt="" aria-hidden="true" />
