@@ -704,6 +704,12 @@ html[data-theme="dark"] .login-page {
     transform: translateY(-1px);
 }
 
+/* لا تسمح لقواعد أزرار الدخول ذات display مخصص بتجاوز سمة hidden. */
+#bio-login-btn[hidden],
+#bio-login-error[hidden] {
+    display: none !important;
+}
+
 @media (max-width: 980px) {
     .nexora-sidebar {
         max-height: 42vh !important;

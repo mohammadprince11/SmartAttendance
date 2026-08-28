@@ -145,6 +145,7 @@ public sealed class LocalizationContractTests
     public void BiometricLogin_IsHiddenInNormalBrowserTabsAndLimitedToInstalledAppMode()
     {
         var login = ReadWeb("Pages", "Account", "Login.cshtml");
+        var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
         var appModeGate = login.IndexOf("if (!isInstalledAppMode || !window.PublicKeyCredential) return;", StringComparison.Ordinal);
         var revealButton = login.IndexOf("btn.hidden = false;", StringComparison.Ordinal);
 
@@ -154,6 +155,9 @@ public sealed class LocalizationContractTests
         Assert.Contains("window.navigator.standalone === true", login, StringComparison.Ordinal);
         Assert.True(appModeGate >= 0, "Expected a normal-browser gate before biometric login is revealed.");
         Assert.True(revealButton > appModeGate, "Biometric login must only be revealed after installed-app mode is verified.");
+        Assert.Contains("#bio-login-btn[hidden]", refresh, StringComparison.Ordinal);
+        Assert.Contains("#bio-login-error[hidden]", refresh, StringComparison.Ordinal);
+        Assert.Contains("display: none !important", refresh, StringComparison.Ordinal);
     }
 
     private static Dictionary<string, string> ReadCatalog(string fileName) =>
