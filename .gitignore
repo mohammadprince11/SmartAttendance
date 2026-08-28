@@ -76,6 +76,9 @@ SmartAttendance.Web/App_Data/AttendanceImports/
 .claude/*
 !.claude/launch.json
 SmartAttendance.Web/App_Data/DataProtection-Keys/
+# قاموس اللغات المُدار من الواجهة يحتوي تعديلات العميل المحلية ويُنسخ مع بيانات التشغيل.
+SmartAttendance.Web/App_Data/localization-dictionary.json
+SmartAttendance.Web/App_Data/localization-dictionary.json.tmp
 
 # LAN dev TLS private key (never commit)
 SmartAttendance.Web/certs/
