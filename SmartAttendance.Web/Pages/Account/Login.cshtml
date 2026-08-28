@@ -162,7 +162,13 @@
                 cancelled: @Html.Raw(passkeyCancelledError),
                 generic: @Html.Raw(passkeyGenericError)
             };
-            if (!window.PublicKeyCredential) return;
+            // المتصفح العادي يدعم WebAuthn أيضاً، لذلك لا يكفي فحص
+            // PublicKeyCredential وحده. نظهر الخيار فقط عند تشغيل زينورا كتطبيق
+            // مثبّت (PWA standalone)، ونبقيه مخفياً داخل تبويب المتصفح العادي.
+            var isInstalledAppMode =
+                (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+                window.navigator.standalone === true;
+            if (!isInstalledAppMode || !window.PublicKeyCredential) return;
             btn.hidden = false;
 
             function a2b(s) {

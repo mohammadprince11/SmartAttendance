@@ -141,6 +141,21 @@ public sealed class LocalizationContractTests
         Assert.DoesNotContain("innerHTML", login, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void BiometricLogin_IsHiddenInNormalBrowserTabsAndLimitedToInstalledAppMode()
+    {
+        var login = ReadWeb("Pages", "Account", "Login.cshtml");
+        var appModeGate = login.IndexOf("if (!isInstalledAppMode || !window.PublicKeyCredential) return;", StringComparison.Ordinal);
+        var revealButton = login.IndexOf("btn.hidden = false;", StringComparison.Ordinal);
+
+        Assert.Contains("id=\"bio-login-btn\"", login, StringComparison.Ordinal);
+        Assert.Contains("id=\"bio-login-btn\" class=\"login-button zyu-8d3380c010b4\" hidden", login, StringComparison.Ordinal);
+        Assert.Contains("window.matchMedia(\"(display-mode: standalone)\").matches", login, StringComparison.Ordinal);
+        Assert.Contains("window.navigator.standalone === true", login, StringComparison.Ordinal);
+        Assert.True(appModeGate >= 0, "Expected a normal-browser gate before biometric login is revealed.");
+        Assert.True(revealButton > appModeGate, "Biometric login must only be revealed after installed-app mode is verified.");
+    }
+
     private static Dictionary<string, string> ReadCatalog(string fileName) =>
         XDocument.Load(Path.Combine(RepoRoot(), "SmartAttendance.Web", "Resources", fileName))
             .Root!
