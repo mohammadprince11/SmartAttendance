@@ -12,7 +12,7 @@ public sealed class UserMenuContractTests
 
         Assert.Contains("data-zy-user-menu-trigger", layout, StringComparison.Ordinal);
         Assert.Contains("data-zy-user-name-trigger", layout, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"فتح قائمة حساب @userMenuDisplayName\"", layout, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@T[\"فتح قائمة حساب {0}\", userMenuDisplayName]\"", layout, StringComparison.Ordinal);
         Assert.Contains("userMenuInitials", layout, StringComparison.Ordinal);
         Assert.Contains("aria-haspopup=\"menu\"", layout, StringComparison.Ordinal);
         Assert.Contains("role=\"menu\"", layout, StringComparison.Ordinal);
@@ -29,13 +29,16 @@ public sealed class UserMenuContractTests
     public void AccountMenu_KeyboardAndDismissalContract_IsImplementedWithoutMarkupInjection()
     {
         var script = ReadWeb("wwwroot", "js", "zynora-user-menu.js");
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
 
         foreach (var key in new[] { "ArrowDown", "ArrowUp", "Home", "End", "Escape" })
             Assert.Contains(key, script, StringComparison.Ordinal);
 
         Assert.Contains("pointerdown", script, StringComparison.Ordinal);
         Assert.Contains("aria-expanded", script, StringComparison.Ordinal);
-        Assert.Contains("data-zy-language-option", script, StringComparison.Ordinal);
+        Assert.Contains("data-zy-language-option", layout, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"/Culture/Set\"", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZY.Language", script, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", script, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -1,8 +1,20 @@
 @page
 @model SmartAttendance.Web.Pages.Account.LoginModel
+@using System.Text.Json
+@using System.Globalization
+@using Microsoft.AspNetCore.WebUtilities
 
 @{
-    ViewData["Title"] = "تسجيل الدخول";
+    ViewData["Title"] = T["تسجيل الدخول"];
+    var passkeyStartError = JsonSerializer.Serialize(T["تعذّر بدء الدخول."].Value);
+    var passkeyVerifyError = JsonSerializer.Serialize(T["فشل الدخول بالمفتاح."].Value);
+    var passkeyCancelledError = JsonSerializer.Serialize(T["أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز."].Value);
+    var passkeyGenericError = JsonSerializer.Serialize(T["تعذّر الدخول بالمفتاح."].Value);
+    var currentCultureName = CultureInfo.CurrentUICulture.Name;
+    var requestedReturnUrl = Request.Query["ReturnUrl"].ToString();
+    var cultureReturnUrl = string.IsNullOrWhiteSpace(requestedReturnUrl)
+        ? Request.Path.Value ?? "/Account/Login"
+        : QueryHelpers.AddQueryString(Request.Path.Value ?? "/Account/Login", "ReturnUrl", requestedReturnUrl);
 }
 <link rel="stylesheet" href="~/css/pages/login-316e15b025.css" asp-append-version="true" />
 
@@ -10,10 +22,25 @@
 
 <div class="login-page">
     <div class="login-card">
+        <form method="post" asp-page="/Culture/Set" class="login-language-switcher">
+            <input type="hidden" name="returnUrl" value="@cultureReturnUrl" />
+            <label for="login-culture">@T["لغة الواجهة"]</label>
+            <select id="login-culture" name="culture" aria-label="@T["لغة الواجهة"]">
+                @foreach (var language in ZynoraSupportedCultures.All)
+                {
+                    <option value="@language.Code"
+                            selected="@(string.Equals(currentCultureName, language.Code, StringComparison.OrdinalIgnoreCase))">
+                        @language.NativeName
+                    </option>
+                }
+            </select>
+            <button type="submit">@T["تطبيق"]</button>
+        </form>
+
         <div class="login-logo">SA</div>
 
-        <h1>تسجيل الدخول</h1>
-        <p>دخول مستخدمي نظام Smart Attendance.</p>
+        <h1>@T["تسجيل الدخول"]</h1>
+        <p>@T["دخول مستخدمي نظام Smart Attendance."]</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
         {
@@ -24,28 +51,28 @@
             <input asp-for="ReturnUrl" type="hidden" />
 
             <div class="login-field">
-                <label>اسم المستخدم</label>
+                <label asp-for="Username">@T["اسم المستخدم"]</label>
                 <input asp-for="Username" autocomplete="username" autofocus />
             </div>
 
             <div class="login-field">
-                <label>كلمة المرور</label>
+                <label asp-for="Password">@T["كلمة المرور"]</label>
                 <input asp-for="Password" type="password" autocomplete="current-password" />
             </div>
 
             <label class="login-check">
                 <input asp-for="RememberMe" />
-                <span>تذكرني</span>
+                <span>@T["تذكرني"]</span>
             </label>
 
-            <button type="submit" class="login-button">دخول</button>
+            <button type="submit" class="login-button">@T["دخول"]</button>
         </form>
 
         @* الدخول بالبصمة/الوجه (Passkey): يظهر فقط حين يدعمه المتصفح — يتطلب مفتاحاً
            مسجَّلاً من بوابة الموظف ومعتمَداً من الموارد البشرية. كلمة المرور تبقى بديلاً. *@
         <button type="button" id="bio-login-btn" class="login-button zyu-8d3380c010b4" hidden
                >
-            🔐 الدخول بالبصمة/الوجه
+            🔐 @T["الدخول بالبصمة/الوجه"]
         </button>
         <div id="bio-login-error" class="login-error zyu-df928149c547" hidden></div>
 
@@ -53,6 +80,12 @@
         (function () {
             var btn = document.getElementById("bio-login-btn");
             var err = document.getElementById("bio-login-error");
+            var messages = {
+                start: @Html.Raw(passkeyStartError),
+                verify: @Html.Raw(passkeyVerifyError),
+                cancelled: @Html.Raw(passkeyCancelledError),
+                generic: @Html.Raw(passkeyGenericError)
+            };
             if (!window.PublicKeyCredential) return;
             btn.hidden = false;
 
@@ -75,7 +108,7 @@
                 try {
                     var r = await fetch("/api/webauthn/login/options", { method: "POST" });
                     var data = await r.json();
-                    if (!r.ok) throw new Error(data.message || "تعذّر بدء الدخول.");
+                    if (!r.ok) throw new Error(data.message || messages.start);
                     var o = data.options;
                     o.challenge = a2b(o.challenge);
                     (o.allowCredentials || []).forEach(function (c) { c.id = a2b(c.id); });
@@ -100,12 +133,12 @@
                         })
                     });
                     var d2 = await r2.json();
-                    if (!r2.ok) throw new Error(d2.message || "فشل الدخول بالمفتاح.");
+                    if (!r2.ok) throw new Error(d2.message || messages.verify);
                     window.location.href = d2.redirect || "/";
                 } catch (e) {
                     err.textContent = e.name === "NotAllowedError"
-                        ? "أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز."
-                        : (e.message || "تعذّر الدخول بالمفتاح.");
+                        ? messages.cancelled
+                        : (e.message || messages.generic);
                     err.hidden = false;
                     btn.disabled = false;
                 }

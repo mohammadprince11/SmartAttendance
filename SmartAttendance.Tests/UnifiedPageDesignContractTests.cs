@@ -28,6 +28,9 @@ public sealed class UnifiedPageDesignContractTests
         var uncovered = Directory.EnumerateFiles(pagesRoot, "*.cshtml", SearchOption.AllDirectories)
             .Where(path => File.ReadAllText(path).Contains("@page", StringComparison.Ordinal))
             .Where(path => !Path.GetFileName(path).Equals("ThemeCss.cshtml", StringComparison.OrdinalIgnoreCase))
+            // Culture endpoints only return JSON or a redirect from their PageModel;
+            // their cshtml files are routing stubs and never render an HTML document.
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}Culture{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Select(path => new { path, source = File.ReadAllText(path) })
             .Where(page => Regex.IsMatch(page.source, @"Layout\s*=\s*null", RegexOptions.IgnoreCase))
             .Where(page => !page.source.Contains("zy-ui-contract", StringComparison.Ordinal)

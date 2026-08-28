@@ -92,6 +92,34 @@
     font-size: 20px;
 }
 
+.login-language-switcher {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    margin-block-end: 10px;
+    color: var(--sa-muted);
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.login-language-switcher select,
+.login-language-switcher button {
+    min-height: 30px;
+    border: 1px solid var(--sa-border);
+    border-radius: 9px;
+    background: var(--sa-input);
+    color: var(--sa-text);
+    padding-inline: 8px;
+    font: inherit;
+}
+
+.login-language-switcher button {
+    cursor: pointer;
+    background: var(--sa-primary);
+    color: #fff;
+}
+
 .login-card h1 {
     margin: 0;
     color: var(--sa-text);

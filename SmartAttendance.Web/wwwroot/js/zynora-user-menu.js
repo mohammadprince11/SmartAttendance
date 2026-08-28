@@ -1,39 +1,6 @@
 (function () {
     "use strict";
 
-    var languageStorageKey = "ZY.Language";
-
-    function currentLanguage() {
-        try {
-            return localStorage.getItem(languageStorageKey) === "en" ? "en" : "ar";
-        } catch (_) {
-            return "ar";
-        }
-    }
-
-    function applyLanguage(language) {
-        var next = language === "en" ? "en" : "ar";
-        var root = document.documentElement;
-        root.lang = next;
-        root.dir = next === "ar" ? "rtl" : "ltr";
-        document.body.dir = root.dir;
-
-        document.querySelectorAll("[data-zy-menu-label]").forEach(function (label) {
-            var translated = label.getAttribute(next === "ar" ? "data-ar" : "data-en");
-            if (translated) label.textContent = translated;
-        });
-
-        document.querySelectorAll("[data-zy-language-code]").forEach(function (code) {
-            code.textContent = next.toUpperCase();
-        });
-
-        document.querySelectorAll("[data-zy-language-option]").forEach(function (option) {
-            option.setAttribute("aria-checked", String(option.getAttribute("data-zy-language-option") === next));
-        });
-
-        try { localStorage.setItem(languageStorageKey, next); } catch (_) { }
-    }
-
     function setupMenu(root) {
         var trigger = root.querySelector("[data-zy-user-menu-trigger]");
         var panel = root.querySelector("[data-zy-user-menu-panel]");
@@ -113,6 +80,7 @@
     function setupLanguageDialog() {
         var dialog = document.querySelector("[data-zy-language-dialog]");
         var openButton = document.querySelector("[data-zy-language-open]");
+        var closeButton = dialog && dialog.querySelector("[data-zy-language-close]");
         if (!dialog || !openButton) return;
 
         openButton.addEventListener("click", function () {
@@ -125,13 +93,7 @@
             else dialog.setAttribute("open", "");
         });
 
-        dialog.querySelectorAll("[data-zy-language-option]").forEach(function (option) {
-            option.addEventListener("click", function () {
-                applyLanguage(option.getAttribute("data-zy-language-option"));
-                dialog.close();
-                openButton.focus();
-            });
-        });
+        if (closeButton) closeButton.addEventListener("click", function () { dialog.close(); });
 
         dialog.addEventListener("click", function (event) {
             if (event.target === dialog) dialog.close();
@@ -141,7 +103,6 @@
     function init() {
         document.querySelectorAll("[data-zy-user-menu]").forEach(setupMenu);
         setupLanguageDialog();
-        applyLanguage(currentLanguage());
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

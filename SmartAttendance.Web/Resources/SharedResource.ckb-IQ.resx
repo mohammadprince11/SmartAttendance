@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="لوحة البيانات" xml:space="preserve"><value>داشبۆرد</value></data>
+  <data name="أشخاص" xml:space="preserve"><value>کەسان</value></data>
+  <data name="رسومات بيانية" xml:space="preserve"><value>شیکارییەکان</value></data>
+  <data name="عرض الموظفين" xml:space="preserve"><value>لیستی کارمەندان</value></data>
+  <data name="عمليات الموارد البشرية" xml:space="preserve"><value>کردارەکانی سەرچاوە مرۆییەکان</value></data>
+  <data name="تفاعل الموظفين" xml:space="preserve"><value>بەشداری کارمەندان</value></data>
+  <data name="تحديثات الموظف" xml:space="preserve"><value>گۆڕانکارییەکانی کارمەند</value></data>
+  <data name="عقود الموظفين" xml:space="preserve"><value>پەیمانەکانی کارمەندان</value></data>
+  <data name="سجلّ العقود" xml:space="preserve"><value>تۆماری پەیمانەکان</value></data>
+  <data name="تحديثات العقود" xml:space="preserve"><value>گۆڕانکارییەکانی پەیمان</value></data>
+  <data name="متابعة الطلبات المخصصة" xml:space="preserve"><value>بەدواداچوونی داواکاری تایبەت</value></data>
+  <data name="إدارة مهام الموظفين" xml:space="preserve"><value>بەڕێوەبردنی ئەرکەکانی کارمەندان</value></data>
+  <data name="المخالفات" xml:space="preserve"><value>سەرپێچییەکان</value></data>
+  <data name="إدارة العهد" xml:space="preserve"><value>بەڕێوەبردنی سامانی سپێردراو</value></data>
+  <data name="متابعة تقييمات" xml:space="preserve"><value>بەدواداچوونی هەڵسەنگاندن</value></data>
+  <data name="إنهاء الموظف — تسوية الفروقات" xml:space="preserve"><value>کۆتایی خزمەتی کارمەند — یەکلاکردنەوە</value></data>
+  <data name="تخصيص رئيس الوحدة المؤقت" xml:space="preserve"><value>بەڕێوەبەری کاتی یەکە</value></data>
+  <data name="أرصدة الإجازات" xml:space="preserve"><value>باڵانسی مۆڵەتەکان</value></data>
+  <data name="التنبيهات والانتهاءات" xml:space="preserve"><value>ئاگادارکردنەوە و بەسەرچوون</value></data>
+  <data name="الهياكل التنظيمية" xml:space="preserve"><value>پێکهاتە ڕێکخراوەییەکان</value></data>
+  <data name="وحدات العمل" xml:space="preserve"><value>یەکەکانی کار</value></data>
+  <data name="الهيكل الإداري" xml:space="preserve"><value>پێکهاتەی کارگێڕی</value></data>
+  <data name="الهياكل الثلاث المتوازية" xml:space="preserve"><value>سێ پێکهاتە هاوتەریبەکە</value></data>
+  <data name="مركز الوثائق" xml:space="preserve"><value>ناوەندی بەڵگەنامەکان</value></data>
+  <data name="أرشيف وثائق الموظف" xml:space="preserve"><value>ئەرشیفی بەڵگەنامەی کارمەند</value></data>
+  <data name="توليد وثائق الموظفين" xml:space="preserve"><value>دروستکردنی بەڵگەنامەی کارمەندان</value></data>
+  <data name="طلبات الوثائق" xml:space="preserve"><value>داواکاری بەڵگەنامە</value></data>
+  <data name="وثائق الشركة وفئاتها" xml:space="preserve"><value>بەڵگەنامە و پۆلەکانی کۆمپانیا</value></data>
+  <data name="مركز بطاقات الموظفين" xml:space="preserve"><value>ناوەندی کارتی کارمەندان</value></data>
+  <data name="قوالب البطاقات" xml:space="preserve"><value>قاڵبی کارت</value></data>
+  <data name="بطاقات الموظفين وطباعتها" xml:space="preserve"><value>کارت و چاپکردنی کارمەندان</value></data>
+  <data name="التقارير" xml:space="preserve"><value>ڕاپۆرتەکان</value></data>
+  <data name="إعدادات الموارد البشرية" xml:space="preserve"><value>ڕێکخستنەکانی سەرچاوە مرۆییەکان</value></data>
+  <data name="طلبات الموظفين المخصصة" xml:space="preserve"><value>داواکاری تایبەتی کارمەندان</value></data>
+  <data name="إعدادات المخالفات" xml:space="preserve"><value>ڕێکخستنەکانی سەرپێچی</value></data>
+  <data name="التهيئة" xml:space="preserve"><value>ئامادەکاری</value></data>
+  <data name="قائمة المخالفات وقواعدها" xml:space="preserve"><value>لیست و یاساکانی سەرپێچی</value></data>
+  <data name="إقرارات الموظفين" xml:space="preserve"><value>دانپێدانانەکانی کارمەندان</value></data>
+  <data name="قوالب الإقرارات" xml:space="preserve"><value>قاڵبی دانپێدانان</value></data>
+  <data name="متابعة الإقرارات" xml:space="preserve"><value>بەدواداچوونی دانپێدانان</value></data>
+  <data name="منشئ الوثائق" xml:space="preserve"><value>دروستکەری بەڵگەنامە</value></data>
+  <data name="مختبر الصيغ" xml:space="preserve"><value>تاقیگەی فۆرمولا</value></data>
+  <data name="فترة التجربة" xml:space="preserve"><value>ماوەی تاقیکردنەوە</value></data>
+  <data name="فترة الإنذار" xml:space="preserve"><value>ماوەی ئاگادارکردنەوە</value></data>
+  <data name="إعدادات الخدمة الذاتية" xml:space="preserve"><value>ڕێکخستنەکانی خزمەتگوزاری خۆکار</value></data>
+  <data name="أسباب الإيقاف" xml:space="preserve"><value>هۆکارەکانی ڕاگرتن</value></data>
+  <data name="مركز الإشعارات" xml:space="preserve"><value>ناوەندی ئاگادارکردنەوە</value></data>
+  <data name="القوائم المرجعية" xml:space="preserve"><value>لیستە سەرچاوەییەکان</value></data>
+  <data name="مخطط رمز الموظف" xml:space="preserve"><value>پلانی کۆدی کارمەند</value></data>
+  <data name="استوديو الحقول" xml:space="preserve"><value>ستۆدیۆی خانەکان</value></data>
+  <data name="قوالب الموافقات" xml:space="preserve"><value>قاڵبی پەسەندکردن</value></data>
+  <data name="حقول الكيانات" xml:space="preserve"><value>خانەکانی یەکەکان</value></data>
+  <data name="مجموعات الموظفين" xml:space="preserve"><value>گرووپی کارمەندان</value></data>
+  <data name="صلاحيات الموظفين" xml:space="preserve"><value>دەسەڵاتی کارمەندان</value></data>
+  <data name="الحضور والانصراف" xml:space="preserve"><value>ئامادەبوون و ڕۆشتن</value></data>
+  <data name="نظرة عامة" xml:space="preserve"><value>پوختە</value></data>
+  <data name="إدارة الحضور" xml:space="preserve"><value>بەڕێوەبردنی ئامادەبوون</value></data>
+  <data name="اعتماد الحضور" xml:space="preserve"><value>پەسەندکردنی ئامادەبوون</value></data>
+  <data name="الإجراءات المقترحة" xml:space="preserve"><value>هەنگاوە پێشنیارکراوەکان</value></data>
+  <data name="العمل من المنزل" xml:space="preserve"><value>کارکردن لە ماڵەوە</value></data>
+  <data name="طلبات البصمة المفقودة" xml:space="preserve"><value>داواکاری تۆماری ونبوو</value></data>
+  <data name="الجداول والمناوبات" xml:space="preserve"><value>خشتە و شێفتەکان</value></data>
+  <data name="مناوبات العمل الثابتة" xml:space="preserve"><value>شێفتی جێگیری کار</value></data>
+  <data name="التعديلات المؤقتة" xml:space="preserve"><value>گۆڕانکارییە کاتییەکان</value></data>
+  <data name="جدولة المناوبات" xml:space="preserve"><value>خشتەکردنی شێفت</value></data>
+  <data name="قواعد المناوبات" xml:space="preserve"><value>یاساکانی شێفت</value></data>
+  <data name="القواعد الفترية" xml:space="preserve"><value>یاسا ماوەییەکان</value></data>
+  <data name="تهيئة المناوبات" xml:space="preserve"><value>ئامادەکردنی شێفتەکان</value></data>
+  <data name="الأجهزة" xml:space="preserve"><value>ئامێرەکان</value></data>
+  <data name="اعتماد مفاتيح البصمة/الوجه" xml:space="preserve"><value>پەسەندکردنی کلیلە بایۆمەترەکان</value></data>
+  <data name="أيام العطل" xml:space="preserve"><value>ڕۆژانی پشوو</value></data>
+  <data name="المواقع الجغرافية للموظفين" xml:space="preserve"><value>شوێنی جوگرافی کارمەندان</value></data>
+  <data name="المسير" xml:space="preserve"><value>مووچە</value></data>
+  <data name="رسوم الرواتب" xml:space="preserve"><value>هێڵکاری مووچە</value></data>
+  <data name="استعلام القسائم" xml:space="preserve"><value>پرسیاری پسوڵەی مووچە</value></data>
+  <data name="نظام المحاكاة" xml:space="preserve"><value>سیستەمی هاوشێوەکردن</value></data>
+  <data name="مدقق الحركات" xml:space="preserve"><value>پشکنەری مامەڵەکان</value></data>
+  <data name="تقارير الرواتب" xml:space="preserve"><value>ڕاپۆرتی مووچەکان</value></data>
+  <data name="كشف الرواتب" xml:space="preserve"><value>تۆماری مووچە</value></data>
+  <data name="مركز الطلبات المالية" xml:space="preserve"><value>ناوەندی داواکاری دارایی</value></data>
+  <data name="الحركات الشهرية" xml:space="preserve"><value>مامەڵە مانگانەکان</value></data>
+  <data name="حركات الدخل" xml:space="preserve"><value>مامەڵەکانی داهات</value></data>
+  <data name="حركات الاقتطاع" xml:space="preserve"><value>مامەڵەکانی بڕین</value></data>
+  <data name="العمل الإضافي" xml:space="preserve"><value>کاتی زیادە</value></data>
+  <data name="تعديل أيام الراتب" xml:space="preserve"><value>گۆڕینی ڕۆژانی مووچە</value></data>
+  <data name="بدل إجازة" xml:space="preserve"><value>بدەلی مۆڵەت</value></data>
+  <data name="التزامات ومستحقات الموظف" xml:space="preserve"><value>بەرپرسیارێتی و شایستەیی کارمەند</value></data>
+  <data name="القروض والسُّلف" xml:space="preserve"><value>قەرز و پێشەکی</value></data>
+  <data name="زيادات الراتب" xml:space="preserve"><value>زیادکردنی مووچە</value></data>
+  <data name="نهاية الخدمة" xml:space="preserve"><value>کۆتایی خزمەت</value></data>
+  <data name="حساب الاحتياطي" xml:space="preserve"><value>ژماردنی پاشەکەوت</value></data>
+  <data name="تحديث المعلومات المالية" xml:space="preserve"><value>نوێکردنەوەی زانیاری دارایی</value></data>
+  <data name="معلومات الدفع" xml:space="preserve"><value>زانیاری پارەدان</value></data>
+  <data name="إعدادات الرواتب" xml:space="preserve"><value>ڕێکخستنەکانی مووچە</value></data>
+  <data name="عناصر الراتب" xml:space="preserve"><value>بڕگەکانی مووچە</value></data>
+  <data name="الضريبة والضمان" xml:space="preserve"><value>باج و دڵنیایی کۆمەڵایەتی</value></data>
+  <data name="أسعار الصرف" xml:space="preserve"><value>نرخی ئاڵوگۆڕ</value></data>
+  <data name="قوالب ملفات البنوك" xml:space="preserve"><value>قاڵبی فایلە بانکییەکان</value></data>
+  <data name="سلم الرواتب" xml:space="preserve"><value>پێوەری مووچە</value></data>
+  <data name="الموافقات" xml:space="preserve"><value>پەسەندکردنەکان</value></data>
+  <data name="مركز الموافقات" xml:space="preserve"><value>ناوەندی پەسەندکردن</value></data>
+  <data name="طلبات الخدمة الذاتية" xml:space="preserve"><value>داواکاری خزمەتگوزاری خۆکار</value></data>
+  <data name="طلبات المشرفين" xml:space="preserve"><value>داواکاری سەرپەرشتیاران</value></data>
+  <data name="تقارير الموافقات" xml:space="preserve"><value>ڕاپۆرتی پەسەندکردنەکان</value></data>
+  <data name="اللجان ومجموعاتها" xml:space="preserve"><value>لیژنە و گرووپەکان</value></data>
+  <data name="تفضيلات التفويض" xml:space="preserve"><value>هەڵبژاردەکانی سپاردن</value></data>
+  <data name="الإعدادات" xml:space="preserve"><value>ڕێکخستنەکان</value></data>
+  <data name="مركز الإعدادات" xml:space="preserve"><value>ناوەندی ڕێکخستنەکان</value></data>
+  <data name="تهيئة الشركة" xml:space="preserve"><value>ئامادەکردنی کۆمپانیا</value></data>
+  <data name="إدارة المستخدمين" xml:space="preserve"><value>بەڕێوەبردنی بەکارهێنەران</value></data>
+  <data name="أدوار الوصول" xml:space="preserve"><value>ڕۆڵەکانی دەستگەیشتن</value></data>
+  <data name="سجل التدقيق" xml:space="preserve"><value>تۆماری پشکنین</value></data>
+  <data name="الهوية والثيم" xml:space="preserve"><value>ناسنامە و ڕووکار</value></data>
+  <data name="التكاملات" xml:space="preserve"><value>یەکخستنەکان</value></data>
+  <data name="زينورا · عمليات موارد بشرية ذكية" xml:space="preserve"><value>ZYNORA · کردارە زیرەکەکانی سەرچاوە مرۆییەکان</value></data>
+  <data name="القائمة الجانبية" xml:space="preserve"><value>لیستی تەنیشت</value></data>
+  <data name="القائمة الرئيسية" xml:space="preserve"><value>لیستی سەرەکی</value></data>
+  <data name="ابحث عن صفحة أو إعداد…" xml:space="preserve"><value>بگەڕێ بۆ پەڕە یان ڕێکخستن…</value></data>
+  <data name="البحث في صفحات النظام" xml:space="preserve"><value>گەڕان لە پەڕەکانی سیستەم</value></data>
+  <data name="تبديل الوضع الفاتح والداكن" xml:space="preserve"><value>گۆڕینی دۆخی ڕووناک و تاریک</value></data>
+  <data name="الوضع الفاتح / الداكن" xml:space="preserve"><value>دۆخی ڕووناک / تاریک</value></data>
+  <data name="فتح قائمة حساب {0}" xml:space="preserve"><value>کردنەوەی لیستی هەژماری {0}</value></data>
+  <data name="إعدادات الحساب" xml:space="preserve"><value>ڕێکخستنەکانی هەژمار</value></data>
+  <data name="تغيير اللغة" xml:space="preserve"><value>گۆڕینی زمان</value></data>
+  <data name="تغيير العملة" xml:space="preserve"><value>گۆڕینی دراو</value></data>
+  <data name="حسب الصلاحية" xml:space="preserve"><value>پێویستی بە دەسەڵات هەیە</value></data>
+  <data name="تغيير كلمة المرور" xml:space="preserve"><value>گۆڕینی وشەی نهێنی</value></data>
+  <data name="توقيع الموظف" xml:space="preserve"><value>واژۆی کارمەند</value></data>
+  <data name="يتطلب ربط موظف" xml:space="preserve"><value>پێویستی بە پڕۆفایلی کارمەند هەیە</value></data>
+  <data name="أمان الدخول والبصمة" xml:space="preserve"><value>ئاسایشی چوونەژوورەوە و بایۆمەتری</value></data>
+  <data name="تسجيل الخروج" xml:space="preserve"><value>چوونەدەرەوە</value></data>
+  <data name="اختر لغة واتجاه واجهة النظام." xml:space="preserve"><value>زمان و ئاراستەی ڕووکار هەڵبژێرە.</value></data>
+  <data name="إغلاق" xml:space="preserve"><value>داخستن</value></data>
+  <data name="لغة الواجهة" xml:space="preserve"><value>زمانی ڕووکار</value></data>
+  <data name="دخول" xml:space="preserve"><value>چوونەژوورەوە</value></data>
+  <data name="حفظ" xml:space="preserve"><value>پاشەکەوتکردن</value></data>
+  <data name="إلغاء" xml:space="preserve"><value>هەڵوەشاندنەوە</value></data>
+  <data name="بحث" xml:space="preserve"><value>گەڕان</value></data>
+  <data name="إضافة" xml:space="preserve"><value>زیادکردن</value></data>
+  <data name="تعديل" xml:space="preserve"><value>دەستکاریکردن</value></data>
+  <data name="حذف" xml:space="preserve"><value>سڕینەوە</value></data>
+  <data name="عرض" xml:space="preserve"><value>پیشاندان</value></data>
+  <data name="نعم" xml:space="preserve"><value>بەڵێ</value></data>
+  <data name="لا" xml:space="preserve"><value>نەخێر</value></data>
+  <data name="تسجيل الدخول" xml:space="preserve"><value>چوونەژوورەوە</value></data>
+  <data name="دخول مستخدمي نظام Smart Attendance." xml:space="preserve"><value>بچۆ ژوورەوە بۆ زینۆرا HR.</value></data>
+  <data name="اسم المستخدم" xml:space="preserve"><value>ناوی بەکارهێنەر</value></data>
+  <data name="كلمة المرور" xml:space="preserve"><value>وشەی نهێنی</value></data>
+  <data name="تذكرني" xml:space="preserve"><value>بیرم بخەرەوە</value></data>
+  <data name="الدخول بالبصمة/الوجه" xml:space="preserve"><value>چوونەژوورەوە بە پەنجەمۆر/ڕوو</value></data>
+  <data name="تعذّر بدء الدخول." xml:space="preserve"><value>دەستپێکردنی چوونەژوورەوە سەرکەوتوو نەبوو.</value></data>
+  <data name="فشل الدخول بالمفتاح." xml:space="preserve"><value>چوونەژوورەوە بە کلیلی پاس سەرکەوتوو نەبوو.</value></data>
+  <data name="أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز." xml:space="preserve"><value>کردارەکە هەڵوەشایەوە یان هیچ کلیلی پاسێک لەم ئامێرە تۆمار نەکراوە.</value></data>
+  <data name="تعذّر الدخول بالمفتاح." xml:space="preserve"><value>چوونەژوورەوە بە کلیلی پاس نەکرا.</value></data>
+  <data name="الحالة" xml:space="preserve"><value>دۆخ</value></data>
+  <data name="الموظف" xml:space="preserve"><value>فەرمانبەر</value></data>
+  <data name="الكل" xml:space="preserve"><value>هەموو</value></data>
+  <data name="ملاحظة" xml:space="preserve"><value>تێبینی</value></data>
+  <data name="القسم" xml:space="preserve"><value>بەش</value></data>
+  <data name="السنة" xml:space="preserve"><value>ساڵ</value></data>
+  <data name="المبلغ" xml:space="preserve"><value>بڕ</value></data>
+  <data name="إجراءات" xml:space="preserve"><value>کردارەکان</value></data>
+  <data name="اسم الموظف" xml:space="preserve"><value>ناوی فەرمانبەر</value></data>
+  <data name="الشهر" xml:space="preserve"><value>مانگ</value></data>
+  <data name="النوع" xml:space="preserve"><value>جۆر</value></data>
+  <data name="الشركة" xml:space="preserve"><value>کۆمپانیا</value></data>
+  <data name="المسمى الوظيفي" xml:space="preserve"><value>ناونیشانی کار</value></data>
+  <data name="معتمد" xml:space="preserve"><value>پەسەندکراو</value></data>
+  <data name="الفرع" xml:space="preserve"><value>لق</value></data>
+  <data name="الموظفون" xml:space="preserve"><value>فەرمانبەران</value></data>
+  <data name="الفترة" xml:space="preserve"><value>ماوە</value></data>
+  <data name="إلى" xml:space="preserve"><value>بۆ</value></data>
+  <data name="الاسم" xml:space="preserve"><value>ناو</value></data>
+  <data name="السبب" xml:space="preserve"><value>هۆکار</value></data>
+  <data name="الكود" xml:space="preserve"><value>کۆد</value></data>
+  <data name="المصدر" xml:space="preserve"><value>سەرچاوە</value></data>
+  <data name="رمز" xml:space="preserve"><value>کۆد</value></data>
+  <data name="من" xml:space="preserve"><value>لە</value></data>
+  <data name="أخرى" xml:space="preserve"><value>هیتر</value></data>
+  <data name="أخرى (نص حر)…" xml:space="preserve"><value>هیتر (دەقی ئازاد)…</value></data>
+  <data name="اختر..." xml:space="preserve"><value>هەڵبژێرە...</value></data>
+  <data name="اسم البند (نص حر)" xml:space="preserve"><value>ناوی بڕگە (دەقی ئازاد)</value></data>
+  <data name="الإجمالي" xml:space="preserve"><value>کۆی گشتی</value></data>
+  <data name="تاريخ الحركة" xml:space="preserve"><value>بەرواری مامەڵە</value></data>
+  <data name="رمز الموظف" xml:space="preserve"><value>کۆدی فەرمانبەر</value></data>
+  <data name="كل الأقسام" xml:space="preserve"><value>هەموو بەشەکان</value></data>
+  <data name="كل الفروع" xml:space="preserve"><value>هەموو لقەکان</value></data>
+  <data name="من تاريخ" xml:space="preserve"><value>لە بەرواری</value></data>
+  <data name="موقع العمل" xml:space="preserve"><value>شوێنی کار</value></data>
+  <data name="اختر" xml:space="preserve"><value>هەڵبژێرە</value></data>
+  <data name="التاريخ" xml:space="preserve"><value>بەروار</value></data>
+  <data name="التالي" xml:space="preserve"><value>دواتر</value></data>
+  <data name="الرقم المرجعي" xml:space="preserve"><value>ژمارەی سەرچاوە</value></data>
+  <data name="السابق" xml:space="preserve"><value>پێشوو</value></data>
+  <data name="المحدد:" xml:space="preserve"><value>هەڵبژێردراو:</value></data>
+  <data name="بحث بالاسم أو الرمز" xml:space="preserve"><value>گەڕان بە ناو یان کۆد</value></data>
+  <data name="كل الموظفين النشطين" xml:space="preserve"><value>هەموو فەرمانبەرە چالاکەکان</value></data>
+  <data name="نشط" xml:space="preserve"><value>چالاک</value></data>
+  <data name="— اختر من الكتالوج —" xml:space="preserve"><value>— لە پێڕست هەڵبژێرە —</value></data>
+  <data name="أكواد الموظفين" xml:space="preserve"><value>کۆدەکانی فەرمانبەران</value></data>
+  <data name="أيام" xml:space="preserve"><value>ڕۆژ</value></data>
+  <data name="إلى تاريخ" xml:space="preserve"><value>تا بەرواری</value></data>
+  <data name="اختر الشركة" xml:space="preserve"><value>کۆمپانیا هەڵبژێرە</value></data>
+  <data name="استيراد" xml:space="preserve"><value>هاوردەکردن</value></data>
+  <data name="اسم الموظف *" xml:space="preserve"><value>ناوی فەرمانبەر *</value></data>
+  <data name="البند" xml:space="preserve"><value>بڕگە</value></data>
+  <data name="الجنسية" xml:space="preserve"><value>ڕەگەزنامە</value></data>
+  <data name="الحضور اليومي" xml:space="preserve"><value>ئامادەبوونی ڕۆژانە</value></data>
+  <data name="الصافي" xml:space="preserve"><value>پوخت</value></data>
+  <data name="العلاوات" xml:space="preserve"><value>دەرامەتە زیادەکان</value></data>
+  <data name="الملف (.xlsx أو .csv)" xml:space="preserve"><value>فایل (.xlsx یان .csv)</value></data>
+  <data name="تحديد الظاهر" xml:space="preserve"><value>هەڵبژاردنی دیار</value></data>
+  <data name="تنسيق الملف:" xml:space="preserve"><value>فۆرماتی فایل:</value></data>
+  <data name="خاضع للضريبة" xml:space="preserve"><value>باج لەسەرە</value></data>
+  <data name="ساعات العمل" xml:space="preserve"><value>کاتژمێرەکانی کار</value></data>
+  <data name="قيد الموافقة" xml:space="preserve"><value>چاوەڕێی پەسەندکردن</value></data>
+  <data name="كل المسميات" xml:space="preserve"><value>هەموو ناونیشانەکان</value></data>
+  <data name="مسح الكل" xml:space="preserve"><value>سڕینەوەی هەموو</value></data>
+  <data name="مقفل" xml:space="preserve"><value>داخراو</value></data>
+  <data name="ملاحظات" xml:space="preserve"><value>تێبینییەکان</value></data>
+  <data name="ملف إكسل" xml:space="preserve"><value>فایلی Excel</value></data>
+  <data name="مواطن" xml:space="preserve"><value>هاووڵاتی</value></data>
+  <data name="— اختر —" xml:space="preserve"><value>— هەڵبژێرە —</value></data>
+  <data name="اختيار يدوي" xml:space="preserve"><value>هەڵبژاردنی دەستی</value></data>
+  <data name="الأساسي" xml:space="preserve"><value>بنەڕەتی</value></data>
+  <data name="الضريبة" xml:space="preserve"><value>باج</value></data>
+  <data name="الملف (.xlsx أو .csv) *" xml:space="preserve"><value>فایل (.xlsx یان .csv) *</value></data>
+  <data name="المنصب" xml:space="preserve"><value>پۆست</value></data>
+  <data name="الهاتف" xml:space="preserve"><value>تەلەفۆن</value></data>
+  <data name="تطبيق" xml:space="preserve"><value>جێبەجێکردن</value></data>
+  <data name="حسب معايير" xml:space="preserve"><value>بەپێی پێوەر</value></data>
+  <data name="رجوع للقائمة" xml:space="preserve"><value>گەڕانەوە بۆ پێڕست</value></data>
+  <data name="قائمة الموظفين" xml:space="preserve"><value>پێڕستی فەرمانبەران</value></data>
+  <data name="كود الموظف" xml:space="preserve"><value>کۆدی فەرمانبەر</value></data>
+  <data name="مسح" xml:space="preserve"><value>سڕینەوە</value></data>
+  <data name="مسودة" xml:space="preserve"><value>ڕەشنووس</value></data>
+  <data name="نوع الدفعة" xml:space="preserve"><value>جۆری پارەدان</value></data>
+  <data name="استيراد إكسل" xml:space="preserve"><value>هاوردەکردنی Excel</value></data>
+  <data name="البريد الإلكتروني" xml:space="preserve"><value>ئیمەیڵ</value></data>
+  <data name="الجهاز" xml:space="preserve"><value>ئامێر</value></data>
+  <data name="الخروج المبكر" xml:space="preserve"><value>دەرچوونی زوو</value></data>
+  <data name="الديانة" xml:space="preserve"><value>ئایین</value></data>
+  <data name="الراتب الأساسي" xml:space="preserve"><value>مووچەی بنەڕەتی</value></data>
+  <data name="الراتب الكلي" xml:space="preserve"><value>کۆی مووچە</value></data>
+  <data name="الفترة الحالية" xml:space="preserve"><value>ماوەی ئێستا</value></data>
+  <data name="بحث: موظف/بند/رقم مرجعي" xml:space="preserve"><value>گەڕان: فەرمانبەر/بڕگە/سەرچاوە</value></data>
+  <data name="تاريخ التعيين" xml:space="preserve"><value>بەرواری دامەزراندن</value></data>
+  <data name="تاريخ السريان" xml:space="preserve"><value>بەرواری جێبەجێبوون</value></data>
+  <data name="تاريخ الميلاد" xml:space="preserve"><value>بەرواری لەدایکبوون</value></data>
+  <data name="تحت المراجعة" xml:space="preserve"><value>لە ژێر پێداچوونەوە</value></data>
+  <data name="حاضر" xml:space="preserve"><value>ئامادە</value></data>
+  <data name="خارج الراتب" xml:space="preserve"><value>لە دەرەوەی مووچە</value></data>
+  <data name="ختم الخروج" xml:space="preserve"><value>کاتی دەرچوون</value></data>
+  <data name="ختم الدخول" xml:space="preserve"><value>کاتی هاتن</value></data>
+  <data name="داخل الراتب" xml:space="preserve"><value>لە ناو مووچە</value></data>
+  <data name="رقم الهوية" xml:space="preserve"><value>ژمارەی ناسنامە</value></data>
+  <data name="ساعات التأخير" xml:space="preserve"><value>کاتژمێرەکانی دواکەوتن</value></data>
+  <data name="صافي الراتب" xml:space="preserve"><value>مووچەی پوخت</value></data>
+  <data name="عدد الحركات" xml:space="preserve"><value>ژمارەی مامەڵەکان</value></data>
+  <data name="غائب" xml:space="preserve"><value>غایب</value></data>
+  <data name="فعال" xml:space="preserve"><value>چالاک</value></data>
+  <data name="كل الأنواع" xml:space="preserve"><value>هەموو جۆرەکان</value></data>
+  <data name="كل الحالات" xml:space="preserve"><value>هەموو دۆخەکان</value></data>
+  <data name="معتمدة" xml:space="preserve"><value>پەسەندکراو</value></data>
+  <data name="معلومات الحركة" xml:space="preserve"><value>زانیاری مامەڵە</value></data>
+  <data name="نوع العقد" xml:space="preserve"><value>جۆری گرێبەست</value></data>
+  <data name="يُطبَّق على" xml:space="preserve"><value>جێبەجێ دەکرێت لەسەر</value></data>
+  <data name="طباعة" xml:space="preserve"><value>چاپکردن</value></data>
+  <data name="إدخال جماعي" xml:space="preserve"><value>تۆمارکردنی کۆمەڵی</value></data>
+  <data name="اختياري" xml:space="preserve"><value>ئارەزوومەندانە</value></data>
+  <data name="استقالة" xml:space="preserve"><value>دەستلەکارکێشانەوە</value></data>
+  <data name="الاستقطاعات" xml:space="preserve"><value>بڕینەکان</value></data>
+  <data name="الاسم الكامل" xml:space="preserve"><value>ناوی تەواو</value></data>
+  <data name="البريد الشخصي" xml:space="preserve"><value>ئیمەیڵی کەسی</value></data>
+  <data name="البلد" xml:space="preserve"><value>وڵات</value></data>
+  <data name="الجنس" xml:space="preserve"><value>ڕەگەز</value></data>
+  <data name="الحالة الاجتماعية" xml:space="preserve"><value>دۆخی خێزانی</value></data>
+  <data name="الخروج" xml:space="preserve"><value>دەرچوون</value></data>
+  <data name="الدخل" xml:space="preserve"><value>داهات</value></data>
+  <data name="الدخول" xml:space="preserve"><value>هاتن</value></data>
+  <data name="الدرجة الوظيفية" xml:space="preserve"><value>پلەی کار</value></data>
+  <data name="الرواتب" xml:space="preserve"><value>مووچەکان</value></data>
+  <data name="الضمان" xml:space="preserve"><value>دەستەبەری کۆمەڵایەتی</value></data>
+  <data name="العملة" xml:space="preserve"><value>دراو</value></data>
+  <data name="القيمة" xml:space="preserve"><value>بەها</value></data>
+  <data name="الكفيل" xml:space="preserve"><value>کەفیل</value></data>
+  <data name="المدير المباشر" xml:space="preserve"><value>بەڕێوەبەری ڕاستەوخۆ</value></data>
+  <data name="المرجع" xml:space="preserve"><value>سەرچاوە</value></data>
+  <data name="امتداد الهاتف" xml:space="preserve"><value>درێژکراوەی تەلەفۆن</value></data>
+  <data name="بصمة ناقصة" xml:space="preserve"><value>پەنجەمۆری ناتەواو</value></data>
+  <data name="تاريخ الحضور" xml:space="preserve"><value>بەرواری ئامادەبوون</value></data>
+  <data name="تحديد الكل" xml:space="preserve"><value>هەڵبژاردنی هەموو</value></data>
+  <data name="تفاصيل الطلب" xml:space="preserve"><value>وردەکاری داواکاری</value></data>
+  <data name="تنبيه مهم" xml:space="preserve"><value>ئاگاداری گرنگ</value></data>
+  <data name="رقم الموظف" xml:space="preserve"><value>ژمارەی فەرمانبەر</value></data>
+  <data name="رقم جواز السفر" xml:space="preserve"><value>ژمارەی پاسپۆرت</value></data>
+  <data name="طريقة الدفع" xml:space="preserve"><value>شێوازی پارەدان</value></data>
+  <data name="قسيمة راتب" xml:space="preserve"><value>پسولەی مووچە</value></data>
+  <data name="مجموع الدخل" xml:space="preserve"><value>کۆی داهات</value></data>
+  <data name="مرفوض" xml:space="preserve"><value>ڕەتکراوە</value></data>
+  <data name="مرفوضة" xml:space="preserve"><value>ڕەتکراوە</value></data>
+  <data name="معطّل" xml:space="preserve"><value>ناچالاک</value></data>
+  <data name="ملاحظات HR" xml:space="preserve"><value>تێبینی HR</value></data>
+  <data name="نوع الدوام" xml:space="preserve"><value>جۆری کاتی کار</value></data>
+  <data name="نوع الطلب" xml:space="preserve"><value>جۆری داواکاری</value></data>
+  <data name="وفاة" xml:space="preserve"><value>مردن</value></data>
+</root>
