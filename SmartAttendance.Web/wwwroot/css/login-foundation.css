@@ -173,32 +173,48 @@
     padding-inline-end: 46px;
 }
 
-.login-password-toggle {
-    position: absolute;
+.login-password-control > .login-password-toggle {
+    position: absolute !important;
     inset-inline-end: 5px;
     inset-block-start: 50%;
     translate: 0 -50%;
-    width: 34px;
-    height: 34px;
+    inline-size: 32px !important;
+    min-inline-size: 32px !important;
+    max-inline-size: 32px !important;
+    block-size: 32px !important;
+    min-block-size: 32px !important;
+    max-block-size: 32px !important;
     display: grid;
     place-items: center;
-    border: 0;
-    border-radius: 9px;
-    background: transparent;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 50%;
+    background: transparent !important;
     color: var(--sa-muted);
     cursor: pointer;
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+    transition: color 140ms ease, opacity 140ms ease;
 }
 
-.login-password-toggle:hover,
-.login-password-toggle:focus-visible,
-.login-password-toggle[aria-pressed="true"] {
-    background: color-mix(in srgb, var(--sa-primary) 15%, transparent);
+.login-password-control > .login-password-toggle:hover,
+.login-password-control > .login-password-toggle[aria-pressed="true"] {
+    background: transparent !important;
     color: var(--sa-primary);
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
 }
 
-.login-password-toggle:focus-visible {
+.login-password-control > .login-password-toggle:focus-visible {
+    background: transparent !important;
     outline: 2px solid var(--sa-primary);
     outline-offset: 1px;
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
 }
 
 .login-password-toggle svg {
