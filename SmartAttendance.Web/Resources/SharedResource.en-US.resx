@@ -318,4 +318,10 @@
   <data name="بيانات الدخول غير صحيحة أو الحساب غير متاح مؤقتاً." xml:space="preserve">
     <value>The credentials are incorrect or the account is temporarily unavailable.</value>
   </data>
+  <data name="نؤمن أن مستقبل الموارد البشرية لا يُبنى على كثرة الإجراءات، بل على منظومة ذكية توحّد البيانات، وتفهم الإنسان، وتحوّل كل معلومة إلى قرار أكثر دقة، وكل عملية إلى تجربة أكثر كفاءة." xml:space="preserve">
+    <value>We believe the future of Human Resources is not built on the complexity of processes, but on an intelligent ecosystem that unifies data, understands people, transforms every insight into a more precise decision, and every process into a more efficient experience.</value>
+  </data>
+  <data name="الدقة • الأمان • الذكاء • الكفاءة" xml:space="preserve">
+    <value>Accuracy • Security • Intelligence • Efficiency</value>
+  </data>
 </root>

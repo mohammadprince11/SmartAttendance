@@ -55,6 +55,25 @@ public sealed class LocalizationContractTests
     }
 
     [Fact]
+    public void LoginMissionAndPrinciples_AreLocalizedInEverySupportedLanguage()
+    {
+        const string mission = "نؤمن أن مستقبل الموارد البشرية لا يُبنى على كثرة الإجراءات، بل على منظومة ذكية توحّد البيانات، وتفهم الإنسان، وتحوّل كل معلومة إلى قرار أكثر دقة، وكل عملية إلى تجربة أكثر كفاءة.";
+        const string principles = "الدقة • الأمان • الذكاء • الكفاءة";
+        var login = ReadWeb("Pages", "Account", "Login.cshtml");
+        var english = ReadCatalog("SharedResource.en-US.resx");
+        var kurdish = ReadCatalog("SharedResource.ckb-IQ.resx");
+
+        Assert.Contains($"@T[\"{mission}\"]", login, StringComparison.Ordinal);
+        Assert.Contains($"@T[\"{principles}\"]", login, StringComparison.Ordinal);
+        Assert.DoesNotContain("@T[\"الموظفون\"] · @T[\"الحضور والانصراف\"] · @T[\"الرواتب\"]", login, StringComparison.Ordinal);
+
+        Assert.Equal("We believe the future of Human Resources is not built on the complexity of processes, but on an intelligent ecosystem that unifies data, understands people, transforms every insight into a more precise decision, and every process into a more efficient experience.", english[mission]);
+        Assert.Equal("Accuracy • Security • Intelligence • Efficiency", english[principles]);
+        Assert.Equal("ئێمە باوەڕمان وایە کە داهاتووی بەڕێوەبردنی سەرچاوە مرۆییەکان بە زۆری پرۆسە و ڕێکارەکان دروست نابێت، بەڵکو بە سیستەمێکی زیرەک کە داتا یەکدەخات، مرۆڤ تێدەگات، هەر زانیارییەک دەگۆڕێت بۆ بڕیارێکی وردتر، و هەر پرۆسەیەک بۆ ئەزموونێکی کاراتر و بەرهەمدارتر.", kurdish[mission]);
+        Assert.Equal("وردبینی • ئاسایش • زیرەکی • کارامەیی", kurdish[principles]);
+    }
+
+    [Fact]
     public void EnglishAndKurdishCatalogs_HaveMatchingNonEmptyKeys()
     {
         var english = ReadCatalog("SharedResource.en-US.resx");
