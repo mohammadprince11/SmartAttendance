@@ -577,9 +577,9 @@ html[data-theme="dark"] .login-page {
 .zy-scope .login-visual__copy h2 {
     margin: 0;
     color: #FFFFFF !important;
-    font-size: clamp(19px, 1.75vw, 25px) !important;
-    font-weight: 720;
-    line-height: 1.75;
+    font-size: clamp(16px, 1.25vw, 19px) !important;
+    font-weight: 680;
+    line-height: 1.7;
     text-wrap: pretty;
 }
 
@@ -728,8 +728,8 @@ html[data-theme="dark"] .login-page {
     }
 
     .login-visual__copy h2 {
-        font-size: 19px !important;
-        line-height: 1.7;
+        font-size: 17px !important;
+        line-height: 1.65;
     }
 }
 
