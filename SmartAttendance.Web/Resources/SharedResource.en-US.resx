@@ -310,4 +310,6 @@
   <data name="نوع الدوام" xml:space="preserve"><value>Work schedule type</value></data>
   <data name="نوع الطلب" xml:space="preserve"><value>Request type</value></data>
   <data name="وفاة" xml:space="preserve"><value>Death</value></data>
+  <data name="إظهار كلمة المرور" xml:space="preserve"><value>Show password</value></data>
+  <data name="إخفاء كلمة المرور" xml:space="preserve"><value>Hide password</value></data>
 </root>

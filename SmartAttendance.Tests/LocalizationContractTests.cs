@@ -78,6 +78,20 @@ public sealed class LocalizationContractTests
         Assert.DoesNotContain("localStorage", script, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void LoginPasswordVisibilityToggle_IsAccessibleAndDoesNotAlterThePasswordValue()
+    {
+        var login = ReadWeb("Pages", "Account", "Login.cshtml");
+
+        Assert.Contains("id=\"password-visibility-toggle\"", login, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"Password\"", login, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"false\"", login, StringComparison.Ordinal);
+        Assert.Contains("input.type = willShow ? \"text\" : \"password\"", login, StringComparison.Ordinal);
+        Assert.Contains("toggle.dataset.hideLabel", login, StringComparison.Ordinal);
+        Assert.DoesNotContain("input.value =", login, StringComparison.Ordinal);
+        Assert.DoesNotContain("innerHTML", login, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Dictionary<string, string> ReadCatalog(string fileName) =>
         XDocument.Load(Path.Combine(RepoRoot(), "SmartAttendance.Web", "Resources", fileName))
             .Root!

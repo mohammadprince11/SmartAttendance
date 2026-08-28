@@ -310,4 +310,6 @@
   <data name="نوع الدوام" xml:space="preserve"><value>جۆری کاتی کار</value></data>
   <data name="نوع الطلب" xml:space="preserve"><value>جۆری داواکاری</value></data>
   <data name="وفاة" xml:space="preserve"><value>مردن</value></data>
+  <data name="إظهار كلمة المرور" xml:space="preserve"><value>پیشاندانی وشەی نهێنی</value></data>
+  <data name="إخفاء كلمة المرور" xml:space="preserve"><value>شاردنەوەی وشەی نهێنی</value></data>
 </root>

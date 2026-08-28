@@ -57,7 +57,28 @@
 
             <div class="login-field">
                 <label asp-for="Password">@T["كلمة المرور"]</label>
-                <input asp-for="Password" type="password" autocomplete="current-password" />
+                <div class="login-password-control">
+                    <input asp-for="Password" type="password" autocomplete="current-password" />
+                    <button type="button"
+                            id="password-visibility-toggle"
+                            class="login-password-toggle"
+                            aria-controls="Password"
+                            aria-pressed="false"
+                            aria-label="@T["إظهار كلمة المرور"]"
+                            title="@T["إظهار كلمة المرور"]"
+                            data-show-label="@T["إظهار كلمة المرور"]"
+                            data-hide-label="@T["إخفاء كلمة المرور"]">
+                        <svg class="login-password-toggle__show" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                            <circle cx="12" cy="12" r="2.75" />
+                        </svg>
+                        <svg class="login-password-toggle__hide" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
+                            <path d="M4 4 20 20" />
+                            <path d="M9.4 6.45A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.3 3.05M14.6 17.55A10.7 10.7 0 0 1 12 18c-6 0-9.5-6-9.5-6a15 15 0 0 1 2.3-3.05" />
+                            <path d="M9.95 9.95A2.75 2.75 0 0 0 14.05 14.05" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <label class="login-check">
@@ -67,6 +88,30 @@
 
             <button type="submit" class="login-button">@T["دخول"]</button>
         </form>
+
+        <script>
+        (function () {
+            var input = document.getElementById("Password");
+            var toggle = document.getElementById("password-visibility-toggle");
+            if (!input || !toggle) return;
+
+            var showIcon = toggle.querySelector(".login-password-toggle__show");
+            var hideIcon = toggle.querySelector(".login-password-toggle__hide");
+
+            toggle.addEventListener("click", function () {
+                var willShow = input.type === "password";
+                input.type = willShow ? "text" : "password";
+                toggle.setAttribute("aria-pressed", willShow ? "true" : "false");
+
+                var label = willShow ? toggle.dataset.hideLabel : toggle.dataset.showLabel;
+                toggle.setAttribute("aria-label", label);
+                toggle.setAttribute("title", label);
+                showIcon.hidden = willShow;
+                hideIcon.hidden = !willShow;
+                input.focus({ preventScroll: true });
+            });
+        })();
+        </script>
 
         @* الدخول بالبصمة/الوجه (Passkey): يظهر فقط حين يدعمه المتصفح — يتطلب مفتاحاً
            مسجَّلاً من بوابة الموظف ومعتمَداً من الموارد البشرية. كلمة المرور تبقى بديلاً. *@

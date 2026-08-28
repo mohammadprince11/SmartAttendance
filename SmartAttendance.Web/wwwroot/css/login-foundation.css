@@ -164,6 +164,57 @@
     font-weight: 900;
 }
 
+.login-password-control {
+    position: relative;
+}
+
+.login-password-control > input {
+    width: 100%;
+    padding-inline-end: 46px;
+}
+
+.login-password-toggle {
+    position: absolute;
+    inset-inline-end: 5px;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--sa-muted);
+    cursor: pointer;
+}
+
+.login-password-toggle:hover,
+.login-password-toggle:focus-visible,
+.login-password-toggle[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--sa-primary) 15%, transparent);
+    color: var(--sa-primary);
+}
+
+.login-password-toggle:focus-visible {
+    outline: 2px solid var(--sa-primary);
+    outline-offset: 1px;
+}
+
+.login-password-toggle svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.login-password-toggle svg[hidden] {
+    display: none;
+}
+
 .login-check {
     display: inline-flex;
     align-items: center;
