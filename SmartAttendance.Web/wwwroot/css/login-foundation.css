@@ -175,7 +175,7 @@
 
 .login-password-control > .login-password-toggle {
     position: absolute !important;
-    inset-inline-end: 3px;
+    inset-inline-end: 10px;
     inset-block-start: 50%;
     translate: 0 -50%;
     inline-size: 32px !important;
