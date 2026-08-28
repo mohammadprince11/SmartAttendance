@@ -161,14 +161,14 @@ public sealed class DictionaryModel : PageModel
     {
         var columns = new[]
         {
-            new ReportExportService.Column("CultureCode", "CultureCode"),
-            new ReportExportService.Column("NativeName", "NativeName"),
-            new ReportExportService.Column("EnglishName", "EnglishName"),
-            new ReportExportService.Column("Direction", "Direction"),
-            new ReportExportService.Column("Key", "Key"),
-            new ReportExportService.Column("Translation", "Translation")
+            new ReportExportService.Column("CultureCode", "رمز اللغة"),
+            new ReportExportService.Column("NativeName", "اسم اللغة"),
+            new ReportExportService.Column("EnglishName", "الاسم بالإنجليزية"),
+            new ReportExportService.Column("Direction", "الاتجاه"),
+            new ReportExportService.Column("Key", "النص العربي / المفتاح"),
+            new ReportExportService.Column("Translation", "الترجمة")
         };
-        var export = ReportExportService.Build("xlsx", "Dictionary", columns, rows);
+        var export = ReportExportService.Build("xlsx", "القاموس", columns, rows);
         return File(export.Bytes, export.ContentType, $"{fileName}.xlsx");
     }
 }

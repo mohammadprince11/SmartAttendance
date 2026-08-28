@@ -60,12 +60,23 @@ public static class ReportExportService
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>
 """);
-            Text(zip, "xl/workbook.xml", """
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets>
-</workbook>
-""");
+            var workbookEntry = zip.CreateEntry("xl/workbook.xml", CompressionLevel.Fastest);
+            using (var workbookStream = workbookEntry.Open())
+            using (var workbookWriter = XmlWriter.Create(workbookStream, new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = false }))
+            {
+                workbookWriter.WriteStartDocument(true);
+                workbookWriter.WriteStartElement("workbook", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+                workbookWriter.WriteAttributeString("xmlns", "r", null, "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+                workbookWriter.WriteStartElement("sheets");
+                workbookWriter.WriteStartElement("sheet");
+                workbookWriter.WriteAttributeString("name", WorksheetName(title));
+                workbookWriter.WriteAttributeString("sheetId", "1");
+                workbookWriter.WriteAttributeString("r", "id", "http://schemas.openxmlformats.org/officeDocument/2006/relationships", "rId1");
+                workbookWriter.WriteEndElement();
+                workbookWriter.WriteEndElement();
+                workbookWriter.WriteEndElement();
+                workbookWriter.WriteEndDocument();
+            }
             Text(zip, "xl/_rels/workbook.xml.rels", """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -160,6 +171,15 @@ public static class ReportExportService
         var name = string.Empty;
         while (index > 0) { index--; name = (char)('A' + index % 26) + name; index /= 26; }
         return name;
+    }
+
+    private static string WorksheetName(string? title)
+    {
+        var value = new string((title ?? string.Empty)
+            .Where(character => character is not '[' and not ']' and not ':' and not '*' and not '?' and not '/' and not '\\')
+            .ToArray()).Trim();
+        if (value.Length == 0) value = "تقرير";
+        return value.Length <= 31 ? value : value[..31];
     }
 
     private static string Sanitize(string? value) => new((value ?? string.Empty)

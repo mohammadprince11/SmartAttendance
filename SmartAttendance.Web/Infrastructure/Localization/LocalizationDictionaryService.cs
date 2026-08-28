@@ -42,6 +42,16 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 {
     private const int MaxUploadBytes = 8 * 1024 * 1024;
     private const int MaxRows = 100_000;
+    private static readonly IReadOnlyDictionary<string, string[]> ImportHeaderAliases =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["CultureCode"] = ["رمز اللغة", "CultureCode"],
+            ["NativeName"] = ["اسم اللغة", "NativeName"],
+            ["EnglishName"] = ["الاسم بالإنجليزية", "EnglishName"],
+            ["Direction"] = ["الاتجاه", "Direction"],
+            ["Key"] = ["النص العربي / المفتاح", "المفتاح", "Key"],
+            ["Translation"] = ["الترجمة", "Translation"]
+        };
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -167,14 +177,21 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         if (rows.Count < 2) throw new InvalidOperationException("ملف القاموس لا يحتوي صفوف بيانات.");
         if (rows.Count > MaxRows) throw new InvalidOperationException("ملف القاموس تجاوز الحد الأعلى للصفوف.");
 
-        var headers = rows[0]
+        var sourceHeaders = rows[0]
             .Select((value, index) => new { Name = value.Trim(), Index = index })
             .Where(item => item.Name.Length > 0)
-            .ToDictionary(item => item.Name, item => item.Index, StringComparer.OrdinalIgnoreCase);
-        var required = new[] { "CultureCode", "NativeName", "EnglishName", "Direction", "Key", "Translation" };
-        var missing = required.Where(header => !headers.ContainsKey(header)).ToArray();
+            .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Index, StringComparer.OrdinalIgnoreCase);
+        var headers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (canonicalName, aliases) in ImportHeaderAliases)
+        {
+            var alias = aliases.FirstOrDefault(sourceHeaders.ContainsKey);
+            if (alias is not null) headers[canonicalName] = sourceHeaders[alias];
+        }
+
+        var missing = ImportHeaderAliases.Keys.Where(header => !headers.ContainsKey(header)).ToArray();
         if (missing.Length > 0)
-            throw new InvalidOperationException($"أعمدة الملف ناقصة: {string.Join(", ", missing)}");
+            throw new InvalidOperationException($"أعمدة الملف ناقصة: {string.Join("، ", missing.Select(header => ImportHeaderAliases[header][0]))}");
 
         string Cell(string[] row, string name) => headers[name] < row.Length ? row[headers[name]].Trim() : string.Empty;
         var parsed = rows.Skip(1)

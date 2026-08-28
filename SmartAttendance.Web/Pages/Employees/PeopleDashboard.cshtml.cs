@@ -59,6 +59,10 @@ public class PeopleDashboardModel : PageModel
 
     public async Task OnGetAsync()
     {
+        // هذه الصفحة تقرأ سجل إنهاء الخدمات مباشرة. بعض قواعد البيانات القديمة
+        // لا تحتوي جدول EmployeeEndServices بعد، لذلك نهيئ مخطط دورة حياة الموظف
+        // قبل أول استعلام بدلاً من إظهار صفحة خطأ للمستخدم.
+        await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
 
         var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
         var role = PeopleAccessContext.GetRole(HttpContext);

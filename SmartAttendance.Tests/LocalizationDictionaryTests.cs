@@ -24,12 +24,12 @@ public sealed class LocalizationDictionaryTests
             var sourceKey = (await service.GetRowsAsync()).First().Key;
             var columns = new[]
             {
-                new ReportExportService.Column("CultureCode", "CultureCode"),
-                new ReportExportService.Column("NativeName", "NativeName"),
-                new ReportExportService.Column("EnglishName", "EnglishName"),
-                new ReportExportService.Column("Direction", "Direction"),
-                new ReportExportService.Column("Key", "Key"),
-                new ReportExportService.Column("Translation", "Translation")
+                new ReportExportService.Column("CultureCode", "رمز اللغة"),
+                new ReportExportService.Column("NativeName", "اسم اللغة"),
+                new ReportExportService.Column("EnglishName", "الاسم بالإنجليزية"),
+                new ReportExportService.Column("Direction", "الاتجاه"),
+                new ReportExportService.Column("Key", "النص العربي / المفتاح"),
+                new ReportExportService.Column("Translation", "الترجمة")
             };
             var export = ReportExportService.Build("xlsx", "Dictionary", columns,
             [
@@ -54,6 +54,33 @@ public sealed class LocalizationDictionaryTests
 
             await service.DeleteLanguageAsync("fr-FR");
             Assert.Null(await service.FindLanguageAsync("fr-FR"));
+
+            var legacyExport = ReportExportService.Build("xlsx", "Dictionary",
+            [
+                new ReportExportService.Column("CultureCode", "CultureCode"),
+                new ReportExportService.Column("NativeName", "NativeName"),
+                new ReportExportService.Column("EnglishName", "EnglishName"),
+                new ReportExportService.Column("Direction", "Direction"),
+                new ReportExportService.Column("Key", "Key"),
+                new ReportExportService.Column("Translation", "Translation")
+            ],
+            [
+                new Dictionary<string, string>
+                {
+                    ["CultureCode"] = "fr-FR",
+                    ["NativeName"] = "Français",
+                    ["EnglishName"] = "French",
+                    ["Direction"] = "ltr",
+                    ["Key"] = sourceKey,
+                    ["Translation"] = "Traduction héritée"
+                }
+            ]);
+            await using var legacyStream = new MemoryStream(legacyExport.Bytes);
+            var legacyImported = await service.ImportAsync(legacyStream, "legacy-fr-FR.xlsx", replace: true);
+            Assert.True(legacyImported.IsNewLanguage);
+            Assert.Equal("Traduction héritée", (await service.GetCatalogAsync("fr-FR"))[sourceKey]);
+
+            await service.DeleteLanguageAsync("fr-FR");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteLanguageAsync("ar-IQ"));
         }
         finally
@@ -78,6 +105,8 @@ public sealed class LocalizationDictionaryTests
         Assert.Contains("OnPostDeleteLanguageAsync", model, StringComparison.Ordinal);
         Assert.Contains("CultureCode", model, StringComparison.Ordinal);
         Assert.Contains("Translation", model, StringComparison.Ordinal);
+        Assert.Contains("رمز اللغة", model, StringComparison.Ordinal);
+        Assert.Contains("النص العربي / المفتاح", model, StringComparison.Ordinal);
         Assert.Contains("asp-page-handler=\"Save\"", page, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Settings/Dictionary\"", settings, StringComparison.Ordinal);
         Assert.Contains("AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>", program, StringComparison.Ordinal);
