@@ -46,6 +46,17 @@ public sealed class LocalizationContractTests
         Assert.Contains("languageSelect.addEventListener(\"change\"", login, StringComparison.Ordinal);
         Assert.Contains("languageForm.requestSubmit()", login, StringComparison.Ordinal);
         Assert.DoesNotContain("<button type=\"submit\">@T[\"تطبيق\"]</button>", login, StringComparison.Ordinal);
+
+        var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
+        Assert.Contains("id=\"login-theme-toggle\"", login, StringComparison.Ordinal);
+        Assert.Contains("document.addEventListener(\"click\"", login, StringComparison.Ordinal);
+        Assert.Contains("window.ZynoraTheme.toggle()", login, StringComparison.Ordinal);
+        Assert.Contains("localStorage.setItem(\"ZY.Theme\", nextTheme)", login, StringComparison.Ordinal);
+        Assert.Contains(".login-language-switcher label", refresh, StringComparison.Ordinal);
+        Assert.Contains("white-space: nowrap", refresh, StringComparison.Ordinal);
+        Assert.Contains("max-width: 230px", refresh, StringComparison.Ordinal);
+        Assert.Contains(".login-language-switcher .login-theme-toggle svg", refresh, StringComparison.Ordinal);
+        Assert.Contains("padding: 0 !important", refresh, StringComparison.Ordinal);
     }
 
     [Fact]

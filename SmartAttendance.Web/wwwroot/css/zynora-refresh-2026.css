@@ -614,14 +614,41 @@ html[data-theme="dark"] .login-page {
 
 .login-language-switcher {
     justify-content: flex-start !important;
+    width: 100%;
     margin-block-end: 28px !important;
 }
 
+.login-language-switcher label {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .login-language-switcher select {
-    flex: 1 1 auto;
+    flex: 1 1 170px;
+    width: 100%;
+    min-width: 0;
+    max-width: 230px;
     min-height: 36px !important;
     border-radius: 9px !important;
     cursor: pointer;
+}
+
+.login-language-switcher .login-theme-toggle {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-color: var(--zy-border-strong) !important;
+    background: var(--zy-surface-raised) !important;
+    color: var(--zy-text) !important;
+}
+
+.login-language-switcher .login-theme-toggle svg {
+    flex: 0 0 17px;
+    width: 17px !important;
+    min-width: 17px;
+    height: 17px !important;
 }
 
 .login-logo {
