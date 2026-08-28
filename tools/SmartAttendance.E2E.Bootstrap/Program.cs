@@ -75,6 +75,7 @@ foreach (var batch in Regex.Split(
 
 await SalaryItemStore.EnsureAsync(db);
 await EmployeeAllowanceSchema.EnsureAsync(db);
+await EmployeeEngagementSchema.EnsureAsync(db);
 await PayrollTransactionStore.EnsureAsync(db);
 await PayrollRunStore.EnsureAsync(db);
 await HrmsDatabase.EnsureCreatedAsync(db);
