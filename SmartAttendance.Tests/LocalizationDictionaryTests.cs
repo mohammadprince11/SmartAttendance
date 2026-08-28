@@ -96,6 +96,7 @@ public sealed class LocalizationDictionaryTests
         var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Settings", "Dictionary.cshtml"));
         var model = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Settings", "Dictionary.cshtml.cs"));
         var settings = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Settings", "Index.cshtml"));
+        var layout = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Shared", "_Layout.cshtml"));
         var program = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Program.cs"));
 
         Assert.Contains("[Authorize(Roles = \"Admin\")]", model, StringComparison.Ordinal);
@@ -109,8 +110,35 @@ public sealed class LocalizationDictionaryTests
         Assert.Contains("النص العربي / المفتاح", model, StringComparison.Ordinal);
         Assert.Contains("asp-page-handler=\"Save\"", page, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Settings/Dictionary\"", settings, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"/Settings/Dictionary\"", layout, StringComparison.Ordinal);
         Assert.Contains("AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>", program, StringComparison.Ordinal);
         Assert.Contains("UseMiddleware<DynamicDictionaryCultureMiddleware>", program, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DictionaryService_DiscoversVisibleTextWrittenDirectlyInRazorPages()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "zynora-dictionary-scan-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var webRoot = Path.Combine(RepoRoot(), "SmartAttendance.Web");
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["LocalizationDictionary:Path"] = Path.Combine(directory, "dictionary.json")
+            }).Build();
+            var service = new LocalizationDictionaryService(new TestEnvironment(webRoot), configuration);
+
+            var rows = await service.GetRowsAsync();
+
+            Assert.Contains(rows, item => item.CultureCode == "ar-IQ" &&
+                item.Key == "بوابة موحدة لتهيئة الشركة والأمن والموارد البشرية والحضور والرواتب والتكاملات.");
+            Assert.True(rows.Where(item => item.CultureCode == "ar-IQ").Select(item => item.Key).Distinct().Count() > 630);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     private static string RepoRoot()

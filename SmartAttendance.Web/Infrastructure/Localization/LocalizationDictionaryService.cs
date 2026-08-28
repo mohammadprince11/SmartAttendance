@@ -59,6 +59,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     };
 
     private readonly string _statePath;
+    private readonly Lazy<IReadOnlyCollection<string>> _scannedSourceKeys;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private DictionaryState? _state;
 
@@ -66,6 +67,9 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     {
         _statePath = configuration["LocalizationDictionary:Path"]
             ?? Path.Combine(environment.ContentRootPath, "App_Data", "localization-dictionary.json");
+        _scannedSourceKeys = new Lazy<IReadOnlyCollection<string>>(
+            () => LocalizationSourceTextScanner.Scan(environment.ContentRootPath),
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public async Task<IReadOnlyList<DictionaryLanguage>> GetLanguagesAsync(CancellationToken cancellationToken = default)
@@ -348,10 +352,11 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         state.Languages.FirstOrDefault(item => string.Equals(item.Code, culture, StringComparison.OrdinalIgnoreCase))
         ?? throw new InvalidOperationException("اللغة المطلوبة غير موجودة.");
 
-    private static SortedSet<string> GetSourceKeys(DictionaryState state)
+    private SortedSet<string> GetSourceKeys(DictionaryState state)
     {
         var keys = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var key in LoadCompiledCatalog("en-US").Keys) keys.Add(key);
+        foreach (var key in _scannedSourceKeys.Value) keys.Add(key);
         foreach (var language in state.Translations.Values)
             foreach (var key in language.Keys) keys.Add(key);
         return keys;

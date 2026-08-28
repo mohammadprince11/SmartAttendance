@@ -889,11 +889,12 @@
                             <span class="nexora-chevron"></span>
                         </summary>
                         <div class="nexora-nav-group-links" data-ky-title="الإعدادات">
-                            <a asp-page="/Settings/Index" class="nexora-nav-link ky-drawer-title @(IsUnder("/Settings") ? "active nexora-active" : "")"><span>مركز الإعدادات</span></a>
+                            <a asp-page="/Settings/Index" class="nexora-nav-link ky-drawer-title @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active nexora-active" : "")"><span>مركز الإعدادات</span></a>
                             <a asp-page="/Setup/Index" class="nexora-nav-link @(IsUnder("/Setup") ? "active nexora-active" : "")"><span>تهيئة الشركة</span></a>
                             <a asp-page="/UserAccess/Index" class="nexora-nav-link @(IsUnder("/UserAccess") ? "active nexora-active" : "")"><span>إدارة المستخدمين</span></a>
                             <a asp-page="/AccessRoles/Index" class="nexora-nav-link @(IsUnder("/AccessRoles") ? "active nexora-active" : "")"><span>أدوار الوصول</span></a>
                             <a asp-page="/AuditLogs/Index" class="nexora-nav-link @(IsUnder("/AuditLogs") ? "active nexora-active" : "")"><span>سجل التدقيق</span></a>
+                            <a asp-page="/Settings/Dictionary" class="nexora-nav-link @(IsUnder("/Settings/Dictionary") ? "active nexora-active" : "")"><span>قاموس اللغات</span></a>
                             <a asp-page="/Branding/Index" class="nexora-nav-link @(IsUnder("/Branding") ? "active nexora-active" : "")"><span>الهوية والثيم</span></a>
                             <a asp-page="/Integrations/Webhooks" class="nexora-nav-link @(IsUnder("/Integrations") ? "active nexora-active" : "")"><span>التكاملات</span></a>
                         </div>
