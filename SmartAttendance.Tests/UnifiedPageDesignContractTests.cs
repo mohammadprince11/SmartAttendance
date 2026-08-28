@@ -126,6 +126,34 @@ public sealed class UnifiedPageDesignContractTests
     }
 
     [Fact]
+    public void Refresh2026_IsTheFinalVisualAuthorityAndLoginUsesTheNewBrandStage()
+    {
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
+        var login = ReadWeb("Pages", "Account", "Login.cshtml");
+        var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
+
+        Assert.True(
+            layout.LastIndexOf("zynora-refresh-2026.css", StringComparison.Ordinal) >
+            layout.LastIndexOf("zynora-direction.css", StringComparison.Ordinal),
+            "The refresh stylesheet must remain the final visual authority.");
+        Assert.Contains("data-theme=\"light\"", layout, StringComparison.Ordinal);
+        Assert.Contains("refresh-2026-v1", layout, StringComparison.Ordinal);
+
+        Assert.Contains("login-stage", login, StringComparison.Ordinal);
+        Assert.Contains("login-visual", login, StringComparison.Ordinal);
+        Assert.Contains("zynora-symbol.svg", login, StringComparison.Ordinal);
+
+        foreach (var selector in new[]
+                 {
+                     ".nexora-sidebar", ".nexora-topbar", ".zy-ui-contract .zy-card",
+                     ".zy-ui-contract .zy-table", ".login-stage", ".login-visual"
+                 })
+        {
+            Assert.Contains(selector, refresh, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void RazorImports_DoNotRegisterTheBroadRuntimeAdapterAsATagHelper()
     {
         var imports = ReadWeb("Pages", "_ViewImports.cshtml");

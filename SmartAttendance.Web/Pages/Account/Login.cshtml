@@ -21,6 +21,21 @@
 <link rel="stylesheet" href="~/css/login-foundation.css" asp-append-version="true" />
 
 <div class="login-page">
+    <div class="login-stage">
+        <section class="login-visual" aria-label="ZYNORA HR">
+            <div class="login-visual__brand">
+                <img src="~/brand/zynora-logo-horizontal-light.svg" alt="ZYNORA HR" />
+            </div>
+            <div class="login-visual__copy">
+                <span>ZYNORA WORKSPACE</span>
+                <h2>@T["الموظفون"] · @T["الحضور والانصراف"] · @T["الرواتب"]</h2>
+            </div>
+            <div class="login-visual__modules" aria-hidden="true">
+                <span>@T["الموظفون"]</span>
+                <span>@T["الحضور والانصراف"]</span>
+                <span>@T["الرواتب"]</span>
+            </div>
+        </section>
     <div class="login-card">
         <form method="post" asp-page="/Culture/Set" class="login-language-switcher">
             <input type="hidden" name="returnUrl" value="@cultureReturnUrl" />
@@ -37,7 +52,9 @@
             <button type="submit">@T["تطبيق"]</button>
         </form>
 
-        <div class="login-logo">SA</div>
+        <div class="login-logo">
+            <img src="~/brand/zynora-symbol.svg" alt="" aria-hidden="true" />
+        </div>
 
         <h1>@T["تسجيل الدخول"]</h1>
         <p>@T["دخول مستخدمي نظام Smart Attendance."]</p>
@@ -195,5 +212,6 @@
         @* أُزيل عرض «الدخول الافتراضي» — كان يكشف حساب الأدمن وكلمة مروره لأي زائر
            لصفحة الدخول (بما فيهم غير المصادَقين على الإنترنت العام). بيانات الدخول
            تُسلَّم للمسؤول خارج التطبيق. راجع docs/SECURITY-CREDENTIAL-ROTATION.md *@
+    </div>
     </div>
 </div>

@@ -49,15 +49,24 @@
                 "expanded"
             );
 
-            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الافتراضي **داكن**
-            // بقرار محمد 2026-08-02 مع اعتماد لوحة الهوية v2 — اللوحة الداكنة هي
-            // الوجه الأول للمنتج. ولا نتبع تفضيل الجهاز هنا عمداً: مَن لم يختر
-            // يجب أن يرى هويةَ المنتج لا إعدادَ نظامه. اختيارُه يبقى محفوظاً.
+            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الهوية الجديدة
+            // Light-first لراحة القراءة اليومية؛ يبقى الداكن خياراً محفوظاً.
             var zyTheme = null;
             try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
 
+            // نُظهر الهوية الفاتحة الجديدة مرة واحدة لكل متصفح عند ترقية التصميم.
+            // بعد ذلك يبقى اختيار المستخدم (فاتح/داكن) محفوظاً بصورة طبيعية.
+            try {
+                var visualVersion = "refresh-2026-v1";
+                if (localStorage.getItem("ZY.VisualVersion") !== visualVersion) {
+                    zyTheme = "light";
+                    localStorage.setItem("ZY.Theme", zyTheme);
+                    localStorage.setItem("ZY.VisualVersion", visualVersion);
+                }
+            } catch (e) { }
+
             if (zyTheme !== "light" && zyTheme !== "dark") {
-                zyTheme = "dark";
+                zyTheme = "light";
             }
 
             document.documentElement.setAttribute("data-theme", zyTheme);
@@ -1101,6 +1110,8 @@
        تعريف الزر/الحقل/الجدول بعد التوحيد. *@
     <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-direction.css" asp-append-version="true" />
+    @* ZYNORA 2026 — طبقة الهوية النهائية، تُحمّل أخيراً لتوحّد القديم والجديد. *@
+    <link rel="stylesheet" href="~/css/zynora-refresh-2026.css" asp-append-version="true" />
     <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
 
     @* يُسكِت تأثيرات «التمرير-فوق» أثناء السكرول — انظر تعليق السكربت.

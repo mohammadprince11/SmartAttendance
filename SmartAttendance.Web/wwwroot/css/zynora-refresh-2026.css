@@ -1,0 +1,693 @@
+/* ========================================================================== 
+   ZYNORA 2026 — Unified visual refresh
+   One final visual authority for the application shell and canonical controls.
+   It consumes the existing semantic brand tokens, so company branding remains.
+   ========================================================================== */
+
+:root {
+    --zy-sidebar-width: 264px;
+    --zy-topbar-height: 68px;
+    --zy-content-max: 1840px;
+
+    --zy-radius-xs: 6px;
+    --zy-radius-sm: 8px;
+    --zy-radius-md: 10px;
+    --zy-radius-lg: 14px;
+    --zy-radius-xl: 18px;
+
+    --radius: 10px;
+    --radius-lg: 14px;
+    --control-h: 42px;
+    --fs-page-title: 1.5rem;
+    --fs-section: 1rem;
+    --fs-card-title: .9375rem;
+    --fs-body: .875rem;
+    --fs-small: .75rem;
+    --fs-tiny: .6875rem;
+    --lh-tight: 1.35;
+    --lh-body: 1.65;
+
+    --zy-button-h: 42px;
+    --zy-button-pad-x: 16px;
+    --zy-button-radius: 10px;
+    --zy-button-font: 14px;
+    --zy-button-weight: 700;
+    --zy-control-h: 42px;
+    --zy-control-pad-x: 13px;
+    --zy-control-radius: 10px;
+    --zy-control-font: 14px;
+    --zy-control-gap: 14px;
+    --zy-dropdown-h: 42px;
+    --zy-dropdown-radius: 10px;
+    --zy-dropdown-font: 14px;
+    --zy-calendar-h: 42px;
+    --zy-calendar-radius: 10px;
+    --zy-calendar-font: 14px;
+
+    --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .05);
+    --shadow-pop: 0 18px 48px rgba(15, 23, 42, .16);
+}
+
+html[data-theme="light"] {
+    color-scheme: light;
+
+    --zy-bg: #F5F7FA;
+    --zy-bg-elevated: #FFFFFF;
+    --zy-surface: #FFFFFF;
+    --zy-surface-raised: #F7F9FC;
+    --zy-surface-soft: #F1F4F8;
+    --zy-input: #FFFFFF;
+    --zy-text: #172033;
+    --zy-text-muted: #667085;
+    --zy-border: #E4E9F0;
+    --zy-border-strong: #B8C4D2;
+    --zy-table-row-alt: #FAFBFC;
+    --zy-primary-soft: color-mix(in srgb, var(--brand-primary) 10%, #FFFFFF);
+    --zy-shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+    --zy-shadow-md: 0 8px 24px rgba(15, 23, 42, .06);
+    --zy-shadow-lg: 0 20px 56px rgba(15, 23, 42, .12);
+
+    --color-background: #F5F7FA;
+    --color-surface: #FFFFFF;
+    --color-border: #E4E9F0;
+    --color-border-strong: #AEBCCB;
+    --color-text-primary: #172033;
+    --color-text-secondary: #667085;
+}
+
+html[data-theme="dark"] {
+    --zy-bg: #101521;
+    --zy-bg-elevated: #151C2B;
+    --zy-surface: #182131;
+    --zy-surface-raised: #202B3D;
+    --zy-surface-soft: #222D3E;
+    --zy-input: #131B29;
+    --zy-text: #F2F4F7;
+    --zy-text-muted: #A4ADBD;
+    --zy-border: #2B3749;
+    --zy-border-strong: #506078;
+    --color-background: #101521;
+    --color-surface: #182131;
+    --color-border: #2B3749;
+    --color-border-strong: #60708A;
+    --color-text-primary: #F2F4F7;
+    --color-text-secondary: #A4ADBD;
+}
+
+html,
+body {
+    background: var(--zy-bg) !important;
+}
+
+body {
+    background-image: none !important;
+    color: var(--zy-text) !important;
+    font-family: "Segoe UI Variable", "Noto Sans Arabic", "Tajawal", "Segoe UI", sans-serif !important;
+    font-size: 14px;
+}
+
+/* Application shell ------------------------------------------------------- */
+.nexora-shell {
+    background: var(--zy-bg) !important;
+}
+
+.nexora-main {
+    background: var(--zy-bg) !important;
+    background-image: none !important;
+}
+
+.nexora-sidebar {
+    padding: 14px 12px 18px !important;
+    background: var(--zy-surface) !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    scrollbar-width: thin;
+}
+
+html[dir="rtl"] .nexora-sidebar {
+    border-inline-start: 1px solid var(--zy-border) !important;
+}
+
+html[dir="ltr"] .nexora-sidebar {
+    border-inline-end: 1px solid var(--zy-border) !important;
+}
+
+.nexora-brand-card {
+    min-height: 74px;
+    display: grid !important;
+    align-content: center;
+    margin: 0 2px 14px !important;
+    padding: 10px 12px 16px !important;
+    border-block-end: 1px solid var(--zy-border) !important;
+}
+
+.nexora-brand-logo {
+    width: min(100%, 186px) !important;
+}
+
+html[data-theme="light"] .nexora-brand-logo {
+    content: url("/brand/zynora-logo-horizontal-dark.svg");
+}
+
+.nexora-brand-tagline {
+    margin-block-start: 7px !important;
+    color: var(--zy-text-muted) !important;
+    font-size: 10px !important;
+    letter-spacing: .04em;
+}
+
+.nexora-nav {
+    gap: 6px !important;
+}
+
+.nexora-nav-group {
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+}
+
+.nexora-nav-group[open] {
+    border: 0 !important;
+    background: var(--zy-surface-raised) !important;
+}
+
+.nexora-nav-link,
+.nexora-nav-group > summary,
+html[data-theme="light"] .nexora-nav-link,
+html[data-theme="light"] .nexora-nav-group > summary {
+    min-height: 42px !important;
+    gap: 11px !important;
+    padding: 9px 11px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: var(--zy-text-muted) !important;
+    font-size: 13px !important;
+    font-weight: 650 !important;
+    box-shadow: none !important;
+}
+
+.nexora-nav-group > summary,
+html[data-theme="light"] .nexora-nav-group > summary {
+    color: var(--zy-text) !important;
+    font-weight: 750 !important;
+}
+
+.nexora-nav-link:hover,
+.nexora-nav-group > summary:hover,
+html[data-theme="light"] .nexora-nav-link:hover,
+html[data-theme="light"] .nexora-nav-group > summary:hover {
+    background: var(--zy-surface-soft) !important;
+    color: var(--zy-text) !important;
+}
+
+.nexora-nav-link.active,
+.nexora-nav-link.nexora-active,
+.nexora-nav-link[aria-current="page"],
+html[data-theme="light"] .nexora-nav-link.active,
+html[data-theme="light"] .nexora-nav-link.nexora-active,
+html[data-theme="light"] .nexora-nav-link[aria-current="page"] {
+    position: relative;
+    background: var(--zy-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+    box-shadow: none !important;
+}
+
+.nexora-nav-link.active::before,
+.nexora-nav-link.nexora-active::before,
+.nexora-nav-link[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    inset-block: 9px;
+    inset-inline-start: 0;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--color-primary);
+}
+
+.nexora-nav-link.active span,
+.nexora-nav-link.nexora-active span,
+.nexora-nav-link[aria-current="page"] span {
+    color: inherit !important;
+}
+
+.nexora-nav-group-links {
+    gap: 2px !important;
+    padding: 2px 9px 9px !important;
+}
+
+.nexora-nav-group-links .nexora-nav-link {
+    min-height: 36px !important;
+    padding-block: 7px !important;
+    font-size: 12.5px !important;
+}
+
+.nexora-nav-dot {
+    width: 18px !important;
+    height: 18px !important;
+    flex-basis: 18px !important;
+    color: currentColor !important;
+    opacity: .82;
+}
+
+.nexora-topbar {
+    min-height: var(--zy-topbar-height) !important;
+    padding: 10px 24px !important;
+    background: color-mix(in srgb, var(--zy-surface) 94%, transparent) !important;
+    border-block-end: 1px solid var(--zy-border) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(18px) saturate(1.25) !important;
+}
+
+.nexora-page-title {
+    color: var(--zy-text) !important;
+    font-size: 21px !important;
+    font-weight: 800 !important;
+}
+
+.nexora-page-subtitle {
+    color: var(--zy-text-muted) !important;
+    font-size: 11.5px !important;
+    font-weight: 550 !important;
+}
+
+.zy-command-search {
+    max-width: 520px;
+}
+
+.zy-command-search__field {
+    height: 42px !important;
+    padding-inline: 13px 10px !important;
+    border-color: var(--zy-border) !important;
+    border-radius: 11px !important;
+    background: var(--zy-surface-raised) !important;
+    box-shadow: none !important;
+}
+
+.zy-command-search__field:focus-within {
+    background: var(--zy-surface) !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px var(--zy-primary-soft) !important;
+}
+
+.zy-command-search__field input {
+    font-size: 13px !important;
+}
+
+.zy-theme-btn,
+.zy-user-menu__trigger,
+.zy-bell-button {
+    border-radius: 10px !important;
+}
+
+.zy-user-menu__avatar {
+    border-radius: 10px !important;
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+}
+
+.nexora-content {
+    padding: 24px 28px 36px !important;
+}
+
+/* Canonical components ---------------------------------------------------- */
+.zy-ui-contract .zy-page-header {
+    margin-block-end: 18px !important;
+}
+
+.zy-ui-contract .zy-page-title {
+    font-size: 24px !important;
+    letter-spacing: -.015em;
+}
+
+.zy-ui-contract .zy-card,
+.zy-ui-contract .zy-filter-bar,
+.zy-ui-contract .zy-table-wrap,
+.zy-ui-contract :where(.card, .panel, [class*="-card"]):not(.nxcal__panel) {
+    border: 1px solid var(--zy-border) !important;
+    border-radius: 14px !important;
+    background: var(--zy-surface) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+/* مؤشرات صفحات الأشخاص: تبقى في سطر واحد على شاشات العمل المعتادة. */
+.zy-ui-contract .zhr-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.zy-ui-contract .zy-input,
+.zy-ui-contract .zy-select,
+.zy-ui-contract .zy-textarea,
+.zy-scope input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(.nxcal-native):not(.nxcs-native),
+.zy-scope select:not(.nxcs-native):not([multiple]):not([size]),
+.zy-scope textarea {
+    border: 1px solid var(--zy-border-strong) !important;
+    border-radius: 10px !important;
+    background: var(--zy-input) !important;
+    color: var(--zy-text) !important;
+    box-shadow: none !important;
+}
+
+.zy-ui-contract :where(.zy-input, .zy-select, .zy-textarea):focus,
+.zy-scope :where(input, select, textarea):focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px var(--zy-primary-soft) !important;
+}
+
+.zy-ui-contract .zy-btn {
+    border-radius: 10px !important;
+    font-size: 13.5px !important;
+    font-weight: 750 !important;
+    box-shadow: none !important;
+}
+
+.zy-ui-contract .zy-btn--primary {
+    background: var(--color-primary-strong) !important;
+    border-color: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+}
+
+.zy-ui-contract .zy-btn--secondary {
+    background: var(--zy-surface) !important;
+    border-color: var(--zy-border-strong) !important;
+}
+
+.zy-ui-contract .zy-table-wrap {
+    overflow: clip auto !important;
+}
+
+.zy-ui-contract .zy-table th {
+    height: 44px;
+    padding: 10px 14px !important;
+    background: var(--zy-surface-raised) !important;
+    border-block-end-color: var(--zy-border) !important;
+    color: var(--zy-text-muted) !important;
+    font-size: 12px !important;
+    letter-spacing: .01em;
+}
+
+.zy-ui-contract .zy-table td {
+    min-height: 48px;
+    padding: 11px 14px !important;
+    border-block-end-color: var(--zy-border) !important;
+    font-size: 13.5px !important;
+}
+
+.zy-ui-contract .zy-table tbody tr:hover > td {
+    background: var(--zy-primary-soft) !important;
+}
+
+.zy-ui-contract .zy-badge {
+    min-height: 28px;
+    border: 0 !important;
+    padding-inline: 10px !important;
+    font-size: 11px !important;
+}
+
+.zy-user-menu__panel,
+.zy-command-search__results,
+.nxcs-menu,
+.nxcal__panel,
+dialog {
+    border-color: var(--zy-border) !important;
+    border-radius: 14px !important;
+    background: var(--zy-surface) !important;
+    box-shadow: var(--shadow-pop) !important;
+}
+
+/* Login ------------------------------------------------------------------- */
+.login-page {
+    min-height: calc(100dvh - 28px) !important;
+    padding: 14px !important;
+    background:
+        radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--brand-primary) 13%, transparent), transparent 30%),
+        linear-gradient(145deg, #F8FAFD, #EEF3F8) !important;
+}
+
+html[data-theme="dark"] .login-page {
+    background:
+        radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 32%),
+        var(--zy-bg) !important;
+}
+
+.login-stage {
+    width: min(1040px, 100%);
+    min-height: 620px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(390px, .92fr);
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 12%, var(--zy-border));
+    border-radius: 24px;
+    background: var(--zy-surface);
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .14);
+}
+
+.login-visual {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 28px;
+    padding: 44px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 12% 4%, rgba(255,255,255,.18), transparent 30%),
+        linear-gradient(155deg, color-mix(in srgb, var(--brand-primary) 88%, #0F172A), #111D33 76%);
+    color: #FFFFFF;
+}
+
+.login-visual::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -110px;
+    inset-block-end: -130px;
+    width: 340px;
+    aspect-ratio: 1;
+    border: 72px solid rgba(255,255,255,.055);
+    border-radius: 50%;
+}
+
+.login-visual__brand,
+.login-visual__copy,
+.login-visual__modules {
+    position: relative;
+    z-index: 1;
+}
+
+.login-visual__brand img {
+    width: min(250px, 72%);
+    height: auto;
+}
+
+.login-visual__copy {
+    max-width: 500px;
+}
+
+.login-visual__copy > span {
+    display: inline-block;
+    margin-block-end: 12px;
+    color: rgba(255,255,255,.66);
+    font: 700 11px/1.4 "Segoe UI", sans-serif;
+    letter-spacing: .16em;
+}
+
+.zy-scope .login-visual__copy h2 {
+    margin: 0;
+    color: #FFFFFF !important;
+    font-size: clamp(26px, 3vw, 39px) !important;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.login-visual__modules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.login-visual__modules span {
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.88);
+    font-size: 12px;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+}
+
+.login-card {
+    width: 100% !important;
+    align-self: center;
+    padding: 38px 44px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--zy-surface) !important;
+    box-shadow: none !important;
+    text-align: start !important;
+}
+
+.login-language-switcher {
+    justify-content: flex-start !important;
+    margin-block-end: 28px !important;
+}
+
+.login-language-switcher select,
+.login-language-switcher button {
+    min-height: 36px !important;
+    border-radius: 9px !important;
+}
+
+.login-logo {
+    width: 48px !important;
+    height: 48px !important;
+    margin: 0 0 18px !important;
+    border: 1px solid var(--zy-border);
+    border-radius: 14px !important;
+    background: var(--zy-surface-raised) !important;
+}
+
+.login-logo img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.login-card h1 {
+    font-size: 28px !important;
+    letter-spacing: -.02em;
+}
+
+.login-card > p {
+    margin: 7px 0 26px !important;
+    color: var(--zy-text-muted) !important;
+    font-size: 13.5px !important;
+    font-weight: 550 !important;
+}
+
+.login-form {
+    gap: 15px !important;
+}
+
+.login-field {
+    gap: 7px !important;
+}
+
+.login-field label,
+.login-check span {
+    color: var(--zy-text) !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+}
+
+.login-field input {
+    min-height: 46px !important;
+    border: 1px solid var(--zy-border-strong) !important;
+    border-radius: 11px !important;
+    background: var(--zy-input) !important;
+    padding-inline: 13px !important;
+    color: var(--zy-text) !important;
+    font-size: 14px;
+}
+
+.login-password-control > input {
+    padding-inline-end: 54px !important;
+}
+
+.login-password-control > .login-password-toggle {
+    inset-inline-end: 10px !important;
+}
+
+.login-check {
+    margin-block: 1px 3px;
+}
+
+.login-button {
+    min-height: 46px !important;
+    border: 0 !important;
+    border-radius: 11px !important;
+    background: var(--color-primary-strong) !important;
+    color: var(--color-on-primary) !important;
+    font-size: 14px !important;
+    font-weight: 750 !important;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--brand-primary) 20%, transparent) !important;
+}
+
+.login-button:hover:not(:disabled) {
+    background: var(--color-primary-hover) !important;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 980px) {
+    .nexora-sidebar {
+        max-height: 42vh !important;
+    }
+
+    .nexora-topbar {
+        padding: 14px 16px !important;
+    }
+
+    .nexora-content {
+        padding: 18px !important;
+    }
+
+    .login-stage {
+        width: min(620px, 100%);
+        min-height: auto;
+        grid-template-columns: 1fr;
+    }
+
+    .login-visual {
+        min-height: 230px;
+        padding: 28px 30px;
+    }
+
+    .login-visual__copy h2 {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 640px) {
+    :root {
+        --fs-body: .875rem;
+        --fs-small: .75rem;
+        --fs-tiny: .6875rem;
+        --control-h: 42px;
+    }
+
+    .nexora-content {
+        padding: 12px !important;
+    }
+
+    .login-page {
+        padding: 0 !important;
+    }
+
+    .login-stage {
+        min-height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .login-visual {
+        min-height: 190px;
+        padding: 24px;
+    }
+
+    .login-visual__modules {
+        display: none;
+    }
+
+    .login-card {
+        padding: 30px 24px 36px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-button:hover:not(:disabled) {
+        transform: none;
+    }
+}
