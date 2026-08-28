@@ -10,7 +10,50 @@
     var attributes = ["placeholder", "title", "aria-label"];
     var catalog = Object.create(null);
     var composedKeys = [];
+    var templateKeys = [];
     var arabicText = /[\u0600-\u06ff]/;
+
+    function escapeRegExp(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function buildTemplate(key) {
+        var placeholders = [];
+        var cursor = 0;
+        var expression = "^";
+        var matcher = /\{(\d+)\}/g;
+        var match;
+
+        while ((match = matcher.exec(key)) !== null) {
+            expression += escapeRegExp(key.slice(cursor, match.index));
+            expression += "([\\s\\S]+?)";
+            placeholders.push(Number(match[1]));
+            cursor = match.index + match[0].length;
+        }
+
+        expression += escapeRegExp(key.slice(cursor)) + "$";
+        return {
+            key: key,
+            expression: new RegExp(expression),
+            placeholders: placeholders
+        };
+    }
+
+    function translateTemplate(key) {
+        for (var index = 0; index < templateKeys.length; index += 1) {
+            var template = templateKeys[index];
+            var match = template.expression.exec(key);
+            if (!match) continue;
+
+            var translated = catalog[template.key];
+            template.placeholders.forEach(function (placeholder, captureIndex) {
+                translated = translated.split("{" + placeholder + "}").join(match[captureIndex + 1]);
+            });
+            return translated;
+        }
+
+        return key;
+    }
 
     function isExcluded(node) {
         var element = node instanceof Element ? node : node.parentElement;
@@ -42,7 +85,8 @@
         if (!arabicText.test(key)) return value;
         var translated = Object.prototype.hasOwnProperty.call(catalog, key)
             ? catalog[key]
-            : translateComposed(key);
+            : translateTemplate(key);
+        if (translated === key) translated = translateComposed(key);
         return translated !== key ? leading + translated + trailing : value;
     }
 
@@ -79,7 +123,7 @@
         node.querySelectorAll("*").forEach(translateElement);
     }
 
-    fetch("/Culture/Catalog?culture=" + encodeURIComponent(culture) + "&v=20260828-2", {
+    fetch("/Culture/Catalog?culture=" + encodeURIComponent(culture) + "&v=20260828-3", {
         cache: "no-store",
         credentials: "same-origin",
         headers: { "Accept": "application/json" }
@@ -90,12 +134,19 @@
         })
         .then(function (payload) {
             catalog = payload.translations || Object.create(null);
+            templateKeys = Object.keys(catalog)
+                .filter(function (key) {
+                    return arabicText.test(key) && /\{\d+\}/.test(key);
+                })
+                .map(buildTemplate)
+                .sort(function (left, right) { return right.key.length - left.key.length; });
             composedKeys = Object.keys(catalog)
                 .filter(function (key) {
                     return arabicText.test(key) && key.indexOf("{") === -1 && key.length > 1;
                 })
                 .sort(function (left, right) { return right.length - left.length; });
             root.dir = payload.direction || root.dir;
+            document.title = translateValue(document.title);
             translateTree(document.body);
 
             new MutationObserver(function (mutations) {

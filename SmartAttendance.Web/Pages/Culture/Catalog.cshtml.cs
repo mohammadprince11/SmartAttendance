@@ -12,15 +12,19 @@ namespace SmartAttendance.Web.Pages.Culture;
 [AllowAnonymous]
 public sealed class CatalogModel : PageModel
 {
-    public IActionResult OnGet()
+    public IActionResult OnGet(string? culture)
     {
+        var targetCulture = ZynoraSupportedCultures.TryGet(culture, out var requestedCulture)
+            ? requestedCulture.Culture
+            : CultureInfo.CurrentUICulture;
+
         // Load only the exact satellite catalog. There is intentionally no neutral
         // .resx: Arabic source strings are their own fallback keys.
         var manager = new ResourceManager(
             "SmartAttendance.Web.Resources.SharedResource",
             typeof(SharedResource).Assembly);
         var resourceSet = manager.GetResourceSet(
-            CultureInfo.CurrentUICulture,
+            targetCulture,
             createIfNotExists: true,
             tryParents: false);
         var translations = resourceSet?
@@ -34,8 +38,8 @@ public sealed class CatalogModel : PageModel
 
         return new JsonResult(new
         {
-            culture = System.Globalization.CultureInfo.CurrentUICulture.Name,
-            direction = System.Globalization.CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr",
+            culture = targetCulture.Name,
+            direction = targetCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr",
             translations
         });
     }

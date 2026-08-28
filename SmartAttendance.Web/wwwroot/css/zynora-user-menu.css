@@ -34,6 +34,7 @@
 }
 
 .zy-user-menu__name {
+    min-width: 0;
     max-width: 190px;
     overflow: hidden;
     color: var(--zy-text);
@@ -85,6 +86,13 @@
     border-radius: var(--zy-radius-md);
     background: var(--zy-surface);
     box-shadow: var(--zy-shadow-lg);
+}
+
+/* In LTR the account trigger sits beside the left sidebar. Open the panel
+   toward the content area so it never slips underneath the sidebar. */
+html[dir="ltr"] .zy-user-menu__panel {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
 }
 
 .zy-user-menu__panel[hidden] {

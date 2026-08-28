@@ -111,12 +111,58 @@ public sealed class LocalizationContractTests
         Assert.Contains("MutationObserver", script, StringComparison.Ordinal);
         Assert.Contains("Object.prototype.hasOwnProperty.call", script, StringComparison.Ordinal);
         Assert.Contains("translateComposed", script, StringComparison.Ordinal);
+        Assert.Contains("translateTemplate", script, StringComparison.Ordinal);
+        Assert.Contains("buildTemplate", script, StringComparison.Ordinal);
+        Assert.Contains("document.title = translateValue(document.title)", script, StringComparison.Ordinal);
         Assert.Contains("characterData: true", script, StringComparison.Ordinal);
         Assert.Contains("attributes: true", script, StringComparison.Ordinal);
         Assert.Contains("data-zy-no-localize", script, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("localStorage", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("NoStore = true", catalog, StringComparison.Ordinal);
+        Assert.Contains("OnGet(string? culture)", catalog, StringComparison.Ordinal);
+        Assert.Contains("ZynoraSupportedCultures.TryGet", catalog, StringComparison.Ordinal);
+        Assert.Contains("targetCulture.TextInfo.IsRightToLeft", catalog, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CompanySetup_IsCoveredInEnglishAndKurdishIncludingDynamicCounts()
+    {
+        var english = ReadCatalog("SharedResource.en-US.resx");
+        var kurdish = ReadCatalog("SharedResource.ckb-IQ.resx");
+        var requiredKeys = new[]
+        {
+            "إعداد الشركة وهيكل العمل",
+            "إدارة هوية الشركة، مواقع العمل، الأقسام، وسياسات الغلق من مكان واحد.",
+            "بيانات الشركة",
+            "مواقع العمل والفروع",
+            "سياسات الغلق",
+            "{0} موظف فعال،",
+            "{0} موقع عمل فعال،",
+            "{0} قسم فعال."
+        };
+
+        Assert.All(requiredKeys, key => Assert.True(english.ContainsKey(key), $"Missing English key: {key}"));
+        Assert.All(requiredKeys, key => Assert.True(kurdish.ContainsKey(key), $"Missing Kurdish key: {key}"));
+        Assert.DoesNotContain(requiredKeys, key => string.Equals(english[key], key, StringComparison.Ordinal));
+        Assert.DoesNotContain(requiredKeys, key => string.Equals(kurdish[key], key, StringComparison.Ordinal));
+
+        var setup = ReadWeb("Pages", "Setup", "Index.cshtml");
+        Assert.Contains("ViewData[\"Title\"] = T[\"إعداد الشركة\"]", setup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UserMenu_OpensIntoTheContentAreaInEnglish()
+    {
+        var menu = ReadWeb("wwwroot", "css", "zynora-user-menu.css");
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
+        var login = ReadWeb("Pages", "Account", "Login.cshtml");
+
+        Assert.Contains("html[dir=\"ltr\"] .zy-user-menu__panel", menu, StringComparison.Ordinal);
+        Assert.Contains("inset-inline-start: 0", menu, StringComparison.Ordinal);
+        Assert.Contains("inset-inline-end: auto", menu, StringComparison.Ordinal);
+        Assert.Contains("data-zy-no-localize", layout, StringComparison.Ordinal);
+        Assert.Contains("data-zy-no-localize", login, StringComparison.Ordinal);
     }
 
     [Fact]

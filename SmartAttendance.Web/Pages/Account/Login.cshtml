@@ -42,6 +42,7 @@
                 @foreach (var language in ZynoraSupportedCultures.All)
                 {
                     <option value="@language.Code"
+                            data-zy-no-localize
                             selected="@(string.Equals(currentCultureName, language.Code, StringComparison.OrdinalIgnoreCase))">
                         @language.NativeName
                     </option>
