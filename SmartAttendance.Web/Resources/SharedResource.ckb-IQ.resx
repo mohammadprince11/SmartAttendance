@@ -592,4 +592,54 @@
   <data name="ترجمة {0}" xml:space="preserve"><value>وەرگێڕانی {0}</value></data>
   <data name="تم حفظ الترجمة وتفعيلها مباشرة." xml:space="preserve"><value>وەرگێڕان پاشەکەوت و دەستبەجێ چالاک کرا.</value></data>
   <data name="اختر ملف Excel أو CSV أولاً." xml:space="preserve"><value>سەرەتا فایلێکی Excel یان CSV هەڵبژێرە.</value></data>
+  <data name="داشبورد الأشخاص" xml:space="preserve"><value>داشبۆردی کارمەندان</value></data>
+  <data name="نظرة شاملة على القوى العاملة" xml:space="preserve"><value>تێڕوانینێکی گشتی بۆ هێزی کار</value></data>
+  <data name="مؤشرات الموظفين، الحركة الوظيفية وتوزيع القوى العاملة في شاشة واحدة." xml:space="preserve"><value>پێوەرەکانی کارمەندان، جووڵەی پیشەیی و دابەشبوونی هێزی کار لە یەک شاشەدا.</value></data>
+  <data name="ملخص القوى العاملة" xml:space="preserve"><value>پوختەی هێزی کار</value></data>
+  <data name="موظف فعال" xml:space="preserve"><value>کارمەندی چالاک</value></data>
+  <data name="نسبة النشاط" xml:space="preserve"><value>ڕێژەی چالاکی</value></data>
+  <data name="فترة القياس" xml:space="preserve"><value>ماوەی پێوانە</value></data>
+  <data name="شهراً" xml:space="preserve"><value>مانگ</value></data>
+  <data name="مؤشرات الموظفين الرئيسية" xml:space="preserve"><value>پێوەرە سەرەکییەکانی کارمەندان</value></data>
+  <data name="فعال حالياً" xml:space="preserve"><value>ئێستا چالاک</value></data>
+  <data name="جديد هذا الشهر" xml:space="preserve"><value>نوێی ئەم مانگە</value></data>
+  <data name="انضمام جديد" xml:space="preserve"><value>بەشداریی نوێ</value></data>
+  <data name="في فترة التجربة" xml:space="preserve"><value>لە ماوەی تاقیکردنەوەدا</value></data>
+  <data name="يوماً من المباشرة" xml:space="preserve"><value>ڕۆژ لە دەستپێکردنەوە</value></data>
+  <data name="موقوف عن العمل" xml:space="preserve"><value>ڕاگیراو لە کار</value></data>
+  <data name="حالة غير نشطة" xml:space="preserve"><value>دۆخی ناچالاک</value></data>
+  <data name="أُنهي هذا الشهر" xml:space="preserve"><value>ئەم مانگە کۆتایی هات</value></data>
+  <data name="إنهاء خدمة" xml:space="preserve"><value>کۆتایی خزمەت</value></data>
+  <data name="الحركة الوظيفية" xml:space="preserve"><value>جووڵەی پیشەیی</value></data>
+  <data name="معدل الدوران" xml:space="preserve"><value>ڕێژەی گۆڕانی کارمەندان</value></data>
+  <data name="آخر 12 شهراً" xml:space="preserve"><value>دوا 12 مانگ</value></data>
+  <data name="المعدل الإجمالي" xml:space="preserve"><value>ڕێژەی گشتی</value></data>
+  <data name="المغادرات الطوعية" xml:space="preserve"><value>جێهێشتنی ئارەزوومەندانە</value></data>
+  <data name="المغادرات غير الطوعية" xml:space="preserve"><value>جێهێشتنی نائارەزوومەندانە</value></data>
+  <data name="نسبة الطوعي من المغادرات" xml:space="preserve"><value>ڕێژەی ئارەزوومەندانە لە جێهێشتنەکان</value></data>
+  <data name="معدل الدوران الطوعي" xml:space="preserve"><value>ڕێژەی گۆڕانی ئارەزوومەندانە</value></data>
+  <data name="توزيع الموظفين" xml:space="preserve"><value>دابەشبوونی کارمەندان</value></data>
+  <data name="تكافؤ الجنسين" xml:space="preserve"><value>هاوسەنگی ڕەگەز</value></data>
+  <data name="الفعالون" xml:space="preserve"><value>چالاکەکان</value></data>
+  <data name="إجمالي البيانات المصنّفة" xml:space="preserve"><value>کۆی داتای پۆلێنکراو</value></data>
+  <data name="توزيع الجنسين" xml:space="preserve"><value>دابەشبوونی ڕەگەز</value></data>
+  <data name="ذكور" xml:space="preserve"><value>نێر</value></data>
+  <data name="إناث" xml:space="preserve"><value>مێ</value></data>
+  <data name="لا توجد بيانات جنس مصنّفة للموظفين الفعالين." xml:space="preserve"><value>هیچ داتایەکی ڕەگەزی پۆلێنکراو بۆ کارمەندە چالاکەکان نییە.</value></data>
+  <data name="التركيبة السكانية" xml:space="preserve"><value>پێکهاتەی دانیشتوانی</value></data>
+  <data name="شرائح الأعمار" xml:space="preserve"><value>گرووپەکانی تەمەن</value></data>
+  <data name="موظف" xml:space="preserve"><value>کارمەند</value></data>
+  <data name="لا توجد بيانات أعمار متاحة." xml:space="preserve"><value>هیچ داتایەکی تەمەن بەردەست نییە.</value></data>
+  <data name="الاستقرار الوظيفي" xml:space="preserve"><value>جێگیری پیشەیی</value></data>
+  <data name="مدة الخدمة" xml:space="preserve"><value>ماوەی خزمەت</value></data>
+  <data name="الموظفون الفعالون" xml:space="preserve"><value>کارمەندە چالاکەکان</value></data>
+  <data name="لا توجد بيانات مدة خدمة متاحة." xml:space="preserve"><value>هیچ داتایەکی ماوەی خزمەت بەردەست نییە.</value></data>
+  <data name="أقل من سنة" xml:space="preserve"><value>کەمتر لە ساڵێک</value></data>
+  <data name="1 – 3 سنوات" xml:space="preserve"><value>1–3 ساڵ</value></data>
+  <data name="3 – 5 سنوات" xml:space="preserve"><value>3–5 ساڵ</value></data>
+  <data name="أكثر من 5 سنوات" xml:space="preserve"><value>زیاتر لە 5 ساڵ</value></data>
+  <data name="أقل من 25" xml:space="preserve"><value>کەمتر لە 25</value></data>
+  <data name="25 – 35" xml:space="preserve"><value>25–35</value></data>
+  <data name="35 – 45" xml:space="preserve"><value>35–45</value></data>
+  <data name="45 فأكثر" xml:space="preserve"><value>45 و زیاتر</value></data>
 </root>

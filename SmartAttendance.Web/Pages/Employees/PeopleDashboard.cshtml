@@ -1,83 +1,195 @@
 @page "/Employees/PeopleDashboard"
 @model SmartAttendance.Web.Pages.Employees.PeopleDashboardModel
 
-@*
-    داشبورد الأشخاص (نمط كيان 18.7) — يعيد استخدام ستايل اللوحة التنفيذية
-    (zynora-exec-dashboard.css) بمؤشرات مودل الأشخاص المتخصصة.
-*@
-
 @{
-    ViewData["Title"] = "داشبورد الأشخاص";
-    static int Pct(int part, int total) => total <= 0 ? 0 : (int)Math.Round(part * 100.0 / total);
-    var genderTotal = Math.Max(1, Model.MaleCount + Model.FemaleCount);
+    ViewData["Title"] = T["داشبورد الأشخاص"].Value;
+
+    static int Pct(int part, int total) => total <= 0
+        ? 0
+        : (int)Math.Round(part * 100.0 / total);
+
+    var genderTotal = Model.MaleCount + Model.FemaleCount;
+    var malePct = Pct(Model.MaleCount, genderTotal);
+    var femalePct = Pct(Model.FemaleCount, genderTotal);
+    var activePct = Pct(Model.ActiveEmployees, Model.TotalEmployees);
+    var totalExits = Model.VoluntaryExits + Model.InvoluntaryExits;
+    var voluntaryShare = Pct(Model.VoluntaryExits, totalExits);
+    var turnoverGauge = Math.Clamp(Model.TurnoverRate, 0, 100);
+    var ageMax = Math.Max(1, Model.AgeBuckets.Count == 0 ? 1 : Model.AgeBuckets.Max(bucket => bucket.Count));
+    var tenureMax = Math.Max(1, Model.TenureBuckets.Count == 0 ? 1 : Model.TenureBuckets.Max(bucket => bucket.Count));
+    var pageDirection = System.Globalization.CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
 }
 
-<link rel="stylesheet" href="~/css/zynora-exec-dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/people-dashboard.css" asp-append-version="true" />
 
-<section class="zxd-page" dir="rtl">
-    <header class="zxd-head">
-        <div>
-            <h1>داشبورد الأشخاص</h1>
-            <div class="zxd-date">مؤشرات القوى العاملة ومعدل الدوران — نطاق سنة للخروج</div>
+<section class="ppd-page" dir="@pageDirection">
+    <header class="ppd-hero">
+        <div class="ppd-hero-copy">
+            <span class="ppd-eyebrow">@T["نظرة شاملة على القوى العاملة"]</span>
+            <h1>@T["داشبورد الأشخاص"]</h1>
+            <p>@T["مؤشرات الموظفين، الحركة الوظيفية وتوزيع القوى العاملة في شاشة واحدة."]</p>
+            <div class="ppd-hero-meta" aria-label="@T["ملخص القوى العاملة"]">
+                <span><i class="ppd-status-dot"></i> @Model.ActiveEmployees @T["موظف فعال"]</span>
+                <span>@T["نسبة النشاط"] @activePct%</span>
+                <span>@T["فترة القياس"] 12 @T["شهراً"]</span>
+            </div>
         </div>
-        <a class="zxd-chip" href="/Employees">قائمة الموظفين ←</a>
+        <a class="ppd-primary-action" href="/Employees">
+            <span>@T["قائمة الموظفين"]</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+        </a>
     </header>
 
-    <div class="zxd-kpis">
-        <a class="zxd-kpi" href="/Employees"><span class="ic">👥</span><div><b>@Model.TotalEmployees.ToString("N0")</b><span>الموظفون</span><small>فعال @Model.ActiveEmployees</small></div></a>
-        <a class="zxd-kpi green" href="/Employees"><span class="ic">🆕</span><div><b>@Model.NewThisMonth</b><span>جديد هذا الشهر</span></div></a>
-        <a class="zxd-kpi amber" href="/HrSettings/ProbationPeriod"><span class="ic">⏳</span><div><b>@Model.InProbation</b><span>في فترة التجربة</span><small>@Model.ProbationDays يوماً من المباشرة</small></div></a>
-        <a class="zxd-kpi red" href="/Employees?Status=inactive"><span class="ic">⏸️</span><div><b>@Model.Suspended</b><span>موقوف عن العمل</span></div></a>
-        <a class="zxd-kpi red" href="/Employees/EndServiceList"><span class="ic">🚪</span><div><b>@Model.EndedThisMonth</b><span>أُنهي هذا الشهر</span></div></a>
-    </div>
+    <section class="ppd-kpi-grid" aria-label="@T["مؤشرات الموظفين الرئيسية"]">
+        <a class="ppd-kpi ppd-kpi-primary" href="/Employees">
+            <span class="ppd-kpi-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            </span>
+            <span class="ppd-kpi-copy"><small>@T["إجمالي الموظفين"]</small><b>@Model.TotalEmployees.ToString("N0")</b><em>@Model.ActiveEmployees @T["فعال حالياً"]</em></span>
+            <span class="ppd-kpi-arrow">‹</span>
+        </a>
 
-    <div class="zxd-row-3">
-        <div class="zxd-card">
-            <h2>معدل الدوران <small>آخر 12 شهراً</small></h2>
-            <div class="zxd-minis">
-                <div class="zxd-mini"><b>@Model.TurnoverRate%</b><span>الإجمالي</span></div>
-                <div class="zxd-mini"><b>@Model.VoluntaryRate%</b><span>الطوعي (استقالات)</span></div>
-                <div class="zxd-mini"><b>@Model.VoluntaryExits</b><span>مغادرة طوعية</span></div>
-                <div class="zxd-mini"><b>@Model.InvoluntaryExits</b><span>مغادرة غير طوعية</span></div>
-            </div>
-        </div>
+        <a class="ppd-kpi ppd-kpi-success" href="/Employees">
+            <span class="ppd-kpi-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M16 11h6" /></svg>
+            </span>
+            <span class="ppd-kpi-copy"><small>@T["جديد هذا الشهر"]</small><b>@Model.NewThisMonth.ToString("N0")</b><em>@T["انضمام جديد"]</em></span>
+            <span class="ppd-kpi-arrow">‹</span>
+        </a>
 
-        <div class="zxd-card">
-            <h2>تكافؤ الجنسين <small>الفعالون</small></h2>
-            <div class="zxd-pulse">
-                <div class="zxd-pulse-row teal"><b>ذكور</b><span class="bar"><i data-zy-style="width:@Pct(Model.MaleCount, genderTotal)%"></i></span><span>@Model.MaleCount (@Pct(Model.MaleCount, genderTotal)%)</span></div>
-                <div class="zxd-pulse-row green"><b>إناث</b><span class="bar"><i data-zy-style="width:@Pct(Model.FemaleCount, genderTotal)%"></i></span><span>@Model.FemaleCount (@Pct(Model.FemaleCount, genderTotal)%)</span></div>
-            </div>
-        </div>
+        <a class="ppd-kpi ppd-kpi-warning" href="/HrSettings/ProbationPeriod">
+            <span class="ppd-kpi-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2M9 2h6" /></svg>
+            </span>
+            <span class="ppd-kpi-copy"><small>@T["في فترة التجربة"]</small><b>@Model.InProbation.ToString("N0")</b><em>@Model.ProbationDays @T["يوماً من المباشرة"]</em></span>
+            <span class="ppd-kpi-arrow">‹</span>
+        </a>
 
-        <div class="zxd-card">
-            <h2>شرائح الأعمار</h2>
-            <div class="zxd-dist">
-                @{ var ageMax = Math.Max(1, Model.AgeBuckets.Count == 0 ? 1 : Model.AgeBuckets.Max(b => b.Count)); }
-                @foreach (var bucket in Model.AgeBuckets)
-                {
-                    <div class="zxd-dist-row">
-                        <span class="n">@bucket.Label</span>
-                        <span class="bar"><i data-zy-style="width:@Math.Max(3, bucket.Count * 100 / ageMax)%"></i></span>
-                        <span class="v">@bucket.Count</span>
+        <a class="ppd-kpi ppd-kpi-danger" href="/Employees?Status=inactive">
+            <span class="ppd-kpi-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 9v6M15 9v6" /></svg>
+            </span>
+            <span class="ppd-kpi-copy"><small>@T["موقوف عن العمل"]</small><b>@Model.Suspended.ToString("N0")</b><em>@T["حالة غير نشطة"]</em></span>
+            <span class="ppd-kpi-arrow">‹</span>
+        </a>
+
+        <a class="ppd-kpi ppd-kpi-danger" href="/Employees/EndServiceList">
+            <span class="ppd-kpi-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" /></svg>
+            </span>
+            <span class="ppd-kpi-copy"><small>@T["أُنهي هذا الشهر"]</small><b>@Model.EndedThisMonth.ToString("N0")</b><em>@T["إنهاء خدمة"]</em></span>
+            <span class="ppd-kpi-arrow">‹</span>
+        </a>
+    </section>
+
+    <div class="ppd-insight-grid">
+        <section class="ppd-card ppd-turnover-card">
+            <header class="ppd-card-head">
+                <div><span class="ppd-card-kicker">@T["الحركة الوظيفية"]</span><h2>@T["معدل الدوران"]</h2></div>
+                <span class="ppd-period">@T["آخر 12 شهراً"]</span>
+            </header>
+            <div class="ppd-turnover-body">
+                <div class="ppd-gauge" data-zy-style="--value:@turnoverGauge">
+                    <div class="ppd-gauge-core"><strong>@Model.TurnoverRate%</strong><span>@T["المعدل الإجمالي"]</span></div>
+                </div>
+                <div class="ppd-turnover-summary">
+                    <div class="ppd-summary-row">
+                        <span><i class="is-teal"></i>@T["المغادرات الطوعية"]</span>
+                        <b>@Model.VoluntaryExits</b>
                     </div>
+                    <div class="ppd-summary-row">
+                        <span><i class="is-red"></i>@T["المغادرات غير الطوعية"]</span>
+                        <b>@Model.InvoluntaryExits</b>
+                    </div>
+                    <div class="ppd-share">
+                        <div><span>@T["نسبة الطوعي من المغادرات"]</span><b>@voluntaryShare%</b></div>
+                        <span class="ppd-share-track"><i data-zy-style="width:@voluntaryShare%"></i></span>
+                    </div>
+                </div>
+            </div>
+            <footer class="ppd-card-foot">
+                <span>@T["معدل الدوران الطوعي"]</span><strong>@Model.VoluntaryRate%</strong>
+            </footer>
+        </section>
+
+        <section class="ppd-card ppd-gender-card">
+            <header class="ppd-card-head">
+                <div><span class="ppd-card-kicker">@T["توزيع الموظفين"]</span><h2>@T["تكافؤ الجنسين"]</h2></div>
+                <span class="ppd-period">@T["الفعالون"]</span>
+            </header>
+            <div class="ppd-gender-total">
+                <span>@T["إجمالي البيانات المصنّفة"]</span>
+                <strong>@genderTotal.ToString("N0")</strong>
+            </div>
+            <div class="ppd-gender-bar" aria-label="@T["توزيع الجنسين"]">
+                @if (genderTotal > 0)
+                {
+                    <i class="male" data-zy-style="width:@malePct%"></i>
+                    <i class="female" data-zy-style="width:@femalePct%"></i>
+                }
+                else
+                {
+                    <i class="empty" data-zy-style="width:100%"></i>
                 }
             </div>
-        </div>
+            <div class="ppd-gender-list">
+                <div><span><i class="male"></i>@T["ذكور"]</span><strong>@Model.MaleCount</strong><em>@malePct%</em></div>
+                <div><span><i class="female"></i>@T["إناث"]</span><strong>@Model.FemaleCount</strong><em>@femalePct%</em></div>
+            </div>
+            @if (genderTotal == 0)
+            {
+                <p class="ppd-inline-note">@T["لا توجد بيانات جنس مصنّفة للموظفين الفعالين."]</p>
+            }
+        </section>
     </div>
 
-    <div class="zxd-card">
-        <h2>مدة الخدمة</h2>
-        <div class="zxd-dist">
-            @{ var tenureMax = Math.Max(1, Model.TenureBuckets.Count == 0 ? 1 : Model.TenureBuckets.Max(b => b.Count)); }
-            @foreach (var bucket in Model.TenureBuckets)
-            {
-                <div class="zxd-dist-row">
-                    <span class="n">@bucket.Label</span>
-                    <span class="bar"><i data-zy-style="width:@Math.Max(3, bucket.Count * 100 / tenureMax)%"></i></span>
-                    <span class="v">@bucket.Count</span>
-                </div>
-            }
-        </div>
+    <div class="ppd-distribution-grid">
+        <section class="ppd-card ppd-distribution-card">
+            <header class="ppd-card-head">
+                <div><span class="ppd-card-kicker">@T["التركيبة السكانية"]</span><h2>@T["شرائح الأعمار"]</h2></div>
+                <span class="ppd-period">@Model.AgeBuckets.Sum(bucket => bucket.Count) @T["موظف"]</span>
+            </header>
+            <div class="ppd-bars">
+                @if (Model.AgeBuckets.Count == 0)
+                {
+                    <div class="ppd-empty">@T["لا توجد بيانات أعمار متاحة."]</div>
+                }
+                else
+                {
+                    @foreach (var bucket in Model.AgeBuckets)
+                    {
+                        var width = Math.Max(4, bucket.Count * 100 / ageMax);
+                        <div class="ppd-bar-row">
+                            <div><span>@T[bucket.Label]</span><b>@bucket.Count</b></div>
+                            <span class="ppd-bar-track"><i data-zy-style="width:@width%"></i></span>
+                        </div>
+                    }
+                }
+            </div>
+        </section>
+
+        <section class="ppd-card ppd-distribution-card ppd-tenure-card">
+            <header class="ppd-card-head">
+                <div><span class="ppd-card-kicker">@T["الاستقرار الوظيفي"]</span><h2>@T["مدة الخدمة"]</h2></div>
+                <span class="ppd-period">@T["الموظفون الفعالون"]</span>
+            </header>
+            <div class="ppd-bars">
+                @if (Model.TenureBuckets.Count == 0)
+                {
+                    <div class="ppd-empty">@T["لا توجد بيانات مدة خدمة متاحة."]</div>
+                }
+                else
+                {
+                    @foreach (var bucket in Model.TenureBuckets)
+                    {
+                        var width = Math.Max(4, bucket.Count * 100 / tenureMax);
+                        <div class="ppd-bar-row">
+                            <div><span>@T[bucket.Label]</span><b>@bucket.Count</b></div>
+                            <span class="ppd-bar-track"><i data-zy-style="width:@width%"></i></span>
+                        </div>
+                    }
+                }
+            </div>
+        </section>
     </div>
 </section>

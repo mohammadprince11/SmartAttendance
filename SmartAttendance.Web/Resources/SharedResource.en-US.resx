@@ -592,4 +592,54 @@
   <data name="ترجمة {0}" xml:space="preserve"><value>{0} translation</value></data>
   <data name="تم حفظ الترجمة وتفعيلها مباشرة." xml:space="preserve"><value>The translation was saved and activated immediately.</value></data>
   <data name="اختر ملف Excel أو CSV أولاً." xml:space="preserve"><value>Select an Excel or CSV file first.</value></data>
+  <data name="داشبورد الأشخاص" xml:space="preserve"><value>People dashboard</value></data>
+  <data name="نظرة شاملة على القوى العاملة" xml:space="preserve"><value>Complete workforce overview</value></data>
+  <data name="مؤشرات الموظفين، الحركة الوظيفية وتوزيع القوى العاملة في شاشة واحدة." xml:space="preserve"><value>Employee indicators, workforce movement, and workforce distribution in one view.</value></data>
+  <data name="ملخص القوى العاملة" xml:space="preserve"><value>Workforce summary</value></data>
+  <data name="موظف فعال" xml:space="preserve"><value>active employees</value></data>
+  <data name="نسبة النشاط" xml:space="preserve"><value>Active rate</value></data>
+  <data name="فترة القياس" xml:space="preserve"><value>Measurement period</value></data>
+  <data name="شهراً" xml:space="preserve"><value>months</value></data>
+  <data name="مؤشرات الموظفين الرئيسية" xml:space="preserve"><value>Key employee indicators</value></data>
+  <data name="فعال حالياً" xml:space="preserve"><value>currently active</value></data>
+  <data name="جديد هذا الشهر" xml:space="preserve"><value>New this month</value></data>
+  <data name="انضمام جديد" xml:space="preserve"><value>New joiner</value></data>
+  <data name="في فترة التجربة" xml:space="preserve"><value>On probation</value></data>
+  <data name="يوماً من المباشرة" xml:space="preserve"><value>days from joining</value></data>
+  <data name="موقوف عن العمل" xml:space="preserve"><value>Suspended</value></data>
+  <data name="حالة غير نشطة" xml:space="preserve"><value>Inactive status</value></data>
+  <data name="أُنهي هذا الشهر" xml:space="preserve"><value>Ended this month</value></data>
+  <data name="إنهاء خدمة" xml:space="preserve"><value>End of service</value></data>
+  <data name="الحركة الوظيفية" xml:space="preserve"><value>Workforce movement</value></data>
+  <data name="معدل الدوران" xml:space="preserve"><value>Turnover rate</value></data>
+  <data name="آخر 12 شهراً" xml:space="preserve"><value>Last 12 months</value></data>
+  <data name="المعدل الإجمالي" xml:space="preserve"><value>Overall rate</value></data>
+  <data name="المغادرات الطوعية" xml:space="preserve"><value>Voluntary departures</value></data>
+  <data name="المغادرات غير الطوعية" xml:space="preserve"><value>Involuntary departures</value></data>
+  <data name="نسبة الطوعي من المغادرات" xml:space="preserve"><value>Voluntary share of departures</value></data>
+  <data name="معدل الدوران الطوعي" xml:space="preserve"><value>Voluntary turnover rate</value></data>
+  <data name="توزيع الموظفين" xml:space="preserve"><value>Employee distribution</value></data>
+  <data name="تكافؤ الجنسين" xml:space="preserve"><value>Gender balance</value></data>
+  <data name="الفعالون" xml:space="preserve"><value>Active</value></data>
+  <data name="إجمالي البيانات المصنّفة" xml:space="preserve"><value>Total classified records</value></data>
+  <data name="توزيع الجنسين" xml:space="preserve"><value>Gender distribution</value></data>
+  <data name="ذكور" xml:space="preserve"><value>Male</value></data>
+  <data name="إناث" xml:space="preserve"><value>Female</value></data>
+  <data name="لا توجد بيانات جنس مصنّفة للموظفين الفعالين." xml:space="preserve"><value>No classified gender data is available for active employees.</value></data>
+  <data name="التركيبة السكانية" xml:space="preserve"><value>Demographics</value></data>
+  <data name="شرائح الأعمار" xml:space="preserve"><value>Age groups</value></data>
+  <data name="موظف" xml:space="preserve"><value>employees</value></data>
+  <data name="لا توجد بيانات أعمار متاحة." xml:space="preserve"><value>No age data is available.</value></data>
+  <data name="الاستقرار الوظيفي" xml:space="preserve"><value>Workforce stability</value></data>
+  <data name="مدة الخدمة" xml:space="preserve"><value>Service length</value></data>
+  <data name="الموظفون الفعالون" xml:space="preserve"><value>Active employees</value></data>
+  <data name="لا توجد بيانات مدة خدمة متاحة." xml:space="preserve"><value>No service-length data is available.</value></data>
+  <data name="أقل من سنة" xml:space="preserve"><value>Less than one year</value></data>
+  <data name="1 – 3 سنوات" xml:space="preserve"><value>1–3 years</value></data>
+  <data name="3 – 5 سنوات" xml:space="preserve"><value>3–5 years</value></data>
+  <data name="أكثر من 5 سنوات" xml:space="preserve"><value>More than 5 years</value></data>
+  <data name="أقل من 25" xml:space="preserve"><value>Under 25</value></data>
+  <data name="25 – 35" xml:space="preserve"><value>25–35</value></data>
+  <data name="35 – 45" xml:space="preserve"><value>35–45</value></data>
+  <data name="45 فأكثر" xml:space="preserve"><value>45 and above</value></data>
 </root>
