@@ -12,6 +12,7 @@
     var currentDirection = currentCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
     var currentLanguageCode = currentCulture.TwoLetterISOLanguageName.ToUpperInvariant();
     var currentReturnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var isLoginPage = Context.Request.Path.StartsWithSegments("/Account/Login");
 }
 
 <!DOCTYPE html>
@@ -125,7 +126,7 @@
     <link rel="stylesheet" href="~/theme/current.css" />
 </head>
 
-<body dir="@currentDirection" class="zy-app">
+<body dir="@currentDirection" class="zy-app@(isLoginPage ? " zy-login-shell" : string.Empty)">
     @{
         var loginUser = Context.User.Identity?.Name;
         var displayNameCookie = Context.Request.Cookies["SA.DisplayName"] ?? Context.User.FindFirst("DisplayName")?.Value;

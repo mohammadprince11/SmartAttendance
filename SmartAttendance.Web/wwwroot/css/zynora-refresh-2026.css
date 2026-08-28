@@ -498,8 +498,29 @@ dialog {
 }
 
 /* Login ------------------------------------------------------------------- */
+/*
+   The public login page still renders inside the authenticated shell markup.
+   Make that shell a true full-viewport canvas: otherwise the global content
+   padding leaves a differently coloured outer rectangle and shifts the stage
+   away from the viewport centre.
+*/
+body.zy-login-shell,
+.zy-login-shell .nexora-shell,
+.zy-login-shell .nexora-main,
+.zy-login-shell .nexora-content {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+}
+
+.zy-login-shell .nexora-content {
+    padding: 0 !important;
+    background: transparent !important;
+}
+
 .login-page {
-    min-height: calc(100dvh - 28px) !important;
+    min-height: 100dvh !important;
     padding: 14px !important;
     background:
         radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--brand-primary) 13%, transparent), transparent 30%),
