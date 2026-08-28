@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -38,6 +39,7 @@ public static class AttendanceSourceStore
     public sealed class AttendanceSource
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string ReadType { get; set; } = "Excel";   // Excel | DbView | Api
         public string? ConfigValue { get; set; }          // اسم العرض/الجدول أو عنوان الـ API
@@ -56,6 +58,7 @@ BEGIN
     CREATE TABLE AttendanceSources
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NULL,
         Name nvarchar(150) NOT NULL,
         ReadType nvarchar(20) NOT NULL DEFAULT(N'Excel'),
         ConfigValue nvarchar(300) NULL,
@@ -74,16 +77,19 @@ END;
 """);
     }
 
-    public static async Task<List<AttendanceSource>> ListAsync(ApplicationDbContext dbContext)
+    public static async Task<List<AttendanceSource>> ListAsync(ApplicationDbContext dbContext, CompanyScope scope, int? companyId)
     {
         await EnsureAsync(dbContext);
+        if (companyId is > 0 && !scope.Allows(companyId.Value))
+            throw new UnauthorizedAccessException("Attendance source company is outside the effective scope.");
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM AttendanceSources ORDER BY Name;",
-            command => { },
+            "SELECT * FROM AttendanceSources WHERE (IsSystem = 1 AND CompanyId IS NULL) OR (IsSystem = 0 AND CompanyId = @CompanyId AND " + scope.ToSqlPredicate("CompanyId") + ") ORDER BY Name;",
+            command => HrmsDatabase.AddParameter(command, "@CompanyId", companyId is > 0 ? companyId.Value : DBNull.Value),
             reader => new AttendanceSource
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = reader["CompanyId"] == DBNull.Value ? null : HrmsDatabase.GetInt(reader, "CompanyId"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 ReadType = HrmsDatabase.GetString(reader, "ReadType") is { Length: > 0 } t ? t : "Excel",
                 ConfigValue = HrmsDatabase.GetString(reader, "ConfigValue") is { Length: > 0 } c ? c : null,
@@ -93,19 +99,21 @@ END;
             });
     }
 
-    public static async Task SaveAsync(ApplicationDbContext dbContext, AttendanceSource source)
+    public static async Task SaveAsync(ApplicationDbContext dbContext, CompanyScope scope, AttendanceSource source)
     {
         await EnsureAsync(dbContext);
+        if (source.CompanyId is not > 0 || !scope.Allows(source.CompanyId.Value))
+            throw new UnauthorizedAccessException("Attendance source company is outside the effective scope.");
 
         if (source.Id > 0)
         {
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                """
+                $"""
 UPDATE AttendanceSources
 SET Name = @Name, ReadType = @ReadType, ConfigValue = @Config,
     UsesSemantics = @Semantics, IsActive = @Active
-WHERE Id = @Id;
+WHERE Id = @Id AND IsSystem = 0 AND CompanyId = @CompanyId AND {scope.ToSqlPredicate("CompanyId")};
 """,
                 command =>
                 {
@@ -118,25 +126,32 @@ WHERE Id = @Id;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
                 """
-INSERT INTO AttendanceSources (Name, ReadType, ConfigValue, UsesSemantics, IsSystem, IsActive)
-VALUES (@Name, @ReadType, @Config, @Semantics, 0, @Active);
+INSERT INTO AttendanceSources (CompanyId, Name, ReadType, ConfigValue, UsesSemantics, IsSystem, IsActive)
+VALUES (@CompanyId, @Name, @ReadType, @Config, @Semantics, 0, @Active);
 """,
                 command => AddParameters(command, source));
         }
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId, int id)
     {
         await EnsureAsync(dbContext);
+        if (companyId <= 0 || !scope.Allows(companyId))
+            throw new UnauthorizedAccessException("Attendance source company is outside the effective scope.");
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE FROM AttendanceSources WHERE Id = @Id AND IsSystem = 0;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+            "DELETE FROM AttendanceSources WHERE Id = @Id AND CompanyId = @CompanyId AND IsSystem = 0 AND " + scope.ToSqlPredicate("CompanyId") + ";",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
+            });
     }
 
     private static void AddParameters(System.Data.Common.DbCommand command, AttendanceSource source)
     {
         HrmsDatabase.AddParameter(command, "@Name", source.Name);
+        HrmsDatabase.AddParameter(command, "@CompanyId", source.CompanyId!.Value);
         HrmsDatabase.AddParameter(command, "@ReadType", source.ReadType);
         HrmsDatabase.AddParameter(command, "@Config", (object?)source.ConfigValue ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Semantics", source.UsesSemantics ? 1 : 0);

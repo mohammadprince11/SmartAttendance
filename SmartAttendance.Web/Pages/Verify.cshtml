@@ -4,6 +4,7 @@
     Layout = null;
     ViewData["Title"] = "التحقق من وثيقة";
 }
+<link rel="stylesheet" href="~/css/pages/verify-d7f0fd1224.css" asp-append-version="true" />
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -11,34 +12,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>التحقق من وثيقة</title>
     <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
-    <style>
-        body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-            background:var(--zy-bg,#f4f6f8); color:var(--zy-text,#0f2233);
-            font-family:var(--zy-font-ar, system-ui, sans-serif); padding:24px; }
-        .vf { width:100%; max-width:520px; background:var(--zy-surface,#fff);
-            border:1px solid var(--zy-border,#dfe5ea); border-radius:16px; padding:32px;
-            box-shadow:var(--zy-shadow-md, 0 6px 24px rgba(0,0,0,.06)); }
-        .vf h1 { margin:0 0 6px; font-size:1.25rem; }
-        .vf p.sub { margin:0 0 22px; font-size:.875rem; color:var(--zy-text-muted,#5b6b78); line-height:1.7; }
-        .vf label { display:flex; flex-direction:column; gap:6px; font-size:.8125rem;
-            color:var(--zy-text-muted,#5b6b78); margin-bottom:14px; }
-        .vf input { padding:11px 13px; border:1px solid var(--zy-border,#dfe5ea);
-            border-radius:8px; background:var(--zy-input,#fff); color:inherit;
-            font-family:inherit; font-size:1rem; letter-spacing:.04em; }
-        .vf button { width:100%; border:0; border-radius:10px; padding:12px;
-            background:var(--zy-electric-teal,#18c7bd); color:#fff; font-family:inherit;
-            font-size:.9375rem; font-weight:700; cursor:pointer; }
-        .res { border-radius:10px; padding:16px; margin-bottom:20px; font-size:.9375rem; line-height:1.8; }
-        .res.ok { background:var(--zy-success-soft, #e7f7ef); border-inline-start:4px solid var(--zy-success,#1a9e5f); }
-        .res.no { background:var(--zy-danger-soft, #fdecec); border-inline-start:4px solid var(--zy-danger,#d94a4a); }
-        .res dl { margin:12px 0 0; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:.875rem; }
-        .res dt { color:var(--zy-text-muted,#5b6b78); }
-        .res dd { margin:0; font-weight:600; }
-        .note { font-size:.75rem; color:var(--zy-text-muted,#5b6b78); margin-top:18px; line-height:1.7; }
-    </style>
-</head>
-<body>
-    <main class="vf">
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
+    </head>
+<body class="zy-app">
+    <main class="vf zy-scope zy-ui-contract">
         <h1>التحقق من وثيقة</h1>
         <p class="sub">
             أدخل رمز التحقق المطبوع على الوثيقة، وعامل التحقق المرافق له،

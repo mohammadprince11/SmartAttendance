@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -52,14 +52,14 @@ jobs:
           dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
           -c Release
           --no-build
-          --filter "FullyQualifiedName!~ProductionClosureSqlTests"
+          --filter "FullyQualifiedName!~ProductionClosureSqlTests&FullyQualifiedName!~AccessRoleServiceIntegrationTests&FullyQualifiedName!~ThemeStoreIntegrationTests&FullyQualifiedName!~CrossCompanyResourceDenialTests&FullyQualifiedName!~SecurityAuditLogTests&FullyQualifiedName!~TenantIsolationIntegrationTests"
           --logger "trx;LogFileName=unit-tests.trx"
           --results-directory ${{ github.workspace }}/TestResults
           --collect:"XPlat Code Coverage"
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: unit-test-results
           path: ${{ github.workspace }}/TestResults/**
@@ -70,10 +70,12 @@ jobs:
     name: SQL Server Acceptance
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      ZYNORA_E2E_DATABASE_NAME: SmartAttendance_E2E_SQL_${{ github.run_id }}_${{ github.run_attempt }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -82,7 +84,7 @@ jobs:
         run: git diff --check origin/main...HEAD
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -98,6 +100,15 @@ jobs:
         shell: pwsh
         run: sqllocaldb start MSSQLLocalDB
 
+      - name: Create disposable integration database
+        shell: pwsh
+        run: |
+          $password = [Guid]::NewGuid().ToString('N') + 'Aa1!'
+          $connection = "Server=(localdb)\MSSQLLocalDB;Database=$env:ZYNORA_E2E_DATABASE_NAME;Integrated Security=true;TrustServerCertificate=true;MultipleActiveResultSets=true"
+          $env:ZYNORA_BOOTSTRAP_ADMIN_PASSWORD = $password
+          "SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION=$connection" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release -- setup
+
       - name: Tenant isolation and sequence invariants
         shell: pwsh
         run: >
@@ -108,9 +119,30 @@ jobs:
           --logger "trx;LogFileName=sql-acceptance.trx"
           --results-directory ${{ github.workspace }}/SqlAcceptanceResults
 
+      - name: Legacy integration invariants on disposable SQL
+        shell: pwsh
+        run: >
+          dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj
+          -c Release
+          --no-build
+          --filter "FullyQualifiedName~AccessRoleServiceIntegrationTests|FullyQualifiedName~ThemeStoreIntegrationTests|FullyQualifiedName~CrossCompanyResourceDenialTests|FullyQualifiedName~SecurityAuditLogTests|FullyQualifiedName~TenantIsolationIntegrationTests"
+          --logger "trx;LogFileName=sql-integration.trx"
+          --results-directory ${{ github.workspace }}/SqlAcceptanceResults
+
+      - name: Remove disposable integration database
+        if: always()
+        shell: pwsh
+        run: |
+          $bootstrap = 'tools/SmartAttendance.E2E.Bootstrap/bin/Release/net10.0/SmartAttendance.E2E.Bootstrap.exe'
+          if (Test-Path $bootstrap) {
+            & $bootstrap teardown
+          } else {
+            Write-Host 'Bootstrap was not built; no disposable database could have been created.'
+          }
+
       - name: Upload SQL acceptance results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sql-acceptance-results
           path: ${{ github.workspace }}/SqlAcceptanceResults/**
@@ -124,10 +156,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -149,7 +181,7 @@ jobs:
 
       - name: Upload audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nuget-audit
           path: vulnerable-packages.txt
@@ -157,38 +189,35 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: Playwright E2E (optional)
+    name: Playwright E2E
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     needs: build-and-test
-    # لا يعمل إلا بتوفر بيئة اختبار مخصصة عبر أسرار المستودع — وممنوع تشغيله
-    # على الإنتاج. غياب الأسرار يتخطى الوظيفة بلا فشل وبلا بيانات اعتماد افتراضية.
-    if: >
-      github.event_name == 'workflow_dispatch' &&
-      vars.ZYNORA_E2E_ENABLED == 'true'
+    env:
+      ZYNORA_E2E_BASE_URL: http://127.0.0.1:5086
+      ZYNORA_E2E_USERNAME: admin
+      ZYNORA_E2E_DATABASE_NAME: SmartAttendance_E2E_${{ github.run_id }}_${{ github.run_attempt }}
+      ASPNETCORE_ENVIRONMENT: Development
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
-      - name: Verify E2E secrets present
+      - name: Create disposable E2E identity and database
         shell: pwsh
-        env:
-          BASE_URL: ${{ secrets.ZYNORA_E2E_BASE_URL }}
-          E2E_USER: ${{ secrets.ZYNORA_E2E_USERNAME }}
-          E2E_PASS: ${{ secrets.ZYNORA_E2E_PASSWORD }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:BASE_URL) -or
-              [string]::IsNullOrWhiteSpace($env:E2E_USER) -or
-              [string]::IsNullOrWhiteSpace($env:E2E_PASS)) {
-            Write-Error 'أسرار E2E ناقصة — عرّف ZYNORA_E2E_BASE_URL و_USERNAME و_PASSWORD.'
-            exit 1
-          }
+          $password = [Guid]::NewGuid().ToString('N') + 'Aa1!'
+          $connection = "Server=(localdb)\MSSQLLocalDB;Database=$env:ZYNORA_E2E_DATABASE_NAME;Integrated Security=true;TrustServerCertificate=true;MultipleActiveResultSets=true"
+          "ZYNORA_E2E_PASSWORD=$password" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "ZYNORA_BOOTSTRAP_ADMIN_PASSWORD=$password" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "ConnectionStrings__DefaultConnection=$connection" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          $env:ZYNORA_BOOTSTRAP_ADMIN_PASSWORD = $password
+          dotnet run --project tools/SmartAttendance.E2E.Bootstrap -c Release -- setup
 
       - name: Build E2E
         shell: pwsh
@@ -202,24 +231,69 @@ jobs:
           if (-not $ps1) { Write-Error 'playwright.ps1 غير موجود — تحقق من حزمة Microsoft.Playwright.'; exit 1 }
           & $ps1.FullName install --with-deps chromium
 
-      - name: Run E2E
+      - name: Run E2E against disposable ZYNORA host
         shell: pwsh
-        env:
-          ZYNORA_E2E_BASE_URL: ${{ secrets.ZYNORA_E2E_BASE_URL }}
-          ZYNORA_E2E_USERNAME: ${{ secrets.ZYNORA_E2E_USERNAME }}
-          ZYNORA_E2E_PASSWORD: ${{ secrets.ZYNORA_E2E_PASSWORD }}
-        run: >
-          dotnet test SmartAttendance.E2E/SmartAttendance.E2E.csproj
-          -c Release
-          --no-build
-          --logger "trx;LogFileName=e2e-tests.trx"
-          --results-directory ${{ github.workspace }}/E2EResults
+        run: |
+          $stdout = Join-Path $env:RUNNER_TEMP 'zynora-e2e-web.stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'zynora-e2e-web.stderr.log'
+          $arguments = @(
+            'run', '--project', 'SmartAttendance.Web/SmartAttendance.Web.csproj',
+            '-c', 'Release', '--no-build', '--no-launch-profile',
+            '--urls', $env:ZYNORA_E2E_BASE_URL
+          )
+          $process = Start-Process dotnet -ArgumentList $arguments -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+              if ($process.HasExited) { break }
+              try {
+                $response = Invoke-WebRequest "$env:ZYNORA_E2E_BASE_URL/Account/Login" -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) {
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw 'Disposable ZYNORA web host did not become ready.'
+            }
+
+            dotnet test SmartAttendance.E2E/SmartAttendance.E2E.csproj `
+              -c Release `
+              --no-build `
+              --logger "trx;LogFileName=e2e-tests.trx" `
+              --results-directory "${{ github.workspace }}/E2EResults"
+            if ($LASTEXITCODE -ne 0) { throw "Playwright E2E failed with exit code $LASTEXITCODE." }
+          }
+          finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Remove disposable database
+        if: always()
+        shell: pwsh
+        run: |
+          $bootstrap = 'tools/SmartAttendance.E2E.Bootstrap/bin/Release/net10.0/SmartAttendance.E2E.Bootstrap.exe'
+          if (Test-Path $bootstrap) {
+            & $bootstrap teardown
+          } else {
+            Write-Host 'Bootstrap was not built; no disposable database could have been created.'
+          }
 
       - name: Upload E2E results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-test-results
           path: ${{ github.workspace }}/E2EResults/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload E2E host logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-host-logs
+          path: ${{ runner.temp }}/zynora-e2e-web.*.log
           if-no-files-found: warn
           retention-days: 14

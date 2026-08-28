@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Permissions.Services;
 using SmartAttendance.Application.Permissions.ViewModels;
@@ -9,9 +9,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public class PermissionService : IPermissionService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
 
-    public PermissionService(IUnitOfWork unitOfWork, IMapper mapper)
+    public PermissionService(IUnitOfWork unitOfWork, IModelMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

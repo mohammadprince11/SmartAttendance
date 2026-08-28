@@ -59,28 +59,23 @@ public class SimulatorModel : PageModel
 
     public async Task OnGetAsync()
     {
-        Items = (await SalaryItemStore.ListAsync(_db))
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (scope.IsDeniedAll) return;
+
+        Items = (await SalaryItemStore.ListAsync(_db, scope, CompanyId))
             .Where(i => i.IsActive && i.ItemType is "Income" or "Deduction")
             .ToList();
 
         if (ItemIds.Count == 0) return;
 
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        if (scope.IsDeniedAll) return;
-
         var selected = Items.Where(i => ItemIds.Contains(i.Id)).ToList();
         if (selected.Count == 0) return;
 
         // موظفو النطاق (بالشركة إن حُدّدت) + بحث نصي — ثم مرشّح عزل الشركات.
-        var rows = await HrConditionFacts.LoadAsync(_db, companyId: CompanyId);
-        if (!scope.IsUnrestricted)
-        {
-            var allowed = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
-                _db, rows.Select(r => r.Id), scope, HttpContext.RequestAborted);
-            rows = rows.Where(r => allowed.Contains(r.Id)).ToList();
-        }
+        var rows = await HrConditionFacts.LoadAsync(
+            _db, companyId: CompanyId, authorizationScope: scope);
 
-        var names = await LoadNamesAsync(rows.Select(r => r.Id).ToList());
+        var names = await LoadNamesAsync(rows.Select(r => r.Id).ToList(), scope);
         if (!string.IsNullOrWhiteSpace(Search))
         {
             var q = Search.Trim();
@@ -90,7 +85,7 @@ public class SimulatorModel : PageModel
         }
 
         // الإسنادات القائمة (العلاوات بملف الموظف) لتمييز «مؤهل وليس بملفه».
-        var assigned = await LoadAssignmentsAsync(rows.Select(r => r.Id).ToList());
+        var assigned = await LoadAssignmentsAsync(rows.Select(r => r.Id).ToList(), scope);
 
         var asOf = DateOnly.FromDateTime(DateTime.Today);
         var results = new List<ResultRow>();
@@ -143,24 +138,24 @@ public class SimulatorModel : PageModel
         Ran = true;
     }
 
-    private async Task<Dictionary<int, string>> LoadNamesAsync(List<int> ids)
+    private async Task<Dictionary<int, string>> LoadNamesAsync(List<int> ids, CompanyScope scope)
     {
         if (ids.Count == 0) return new();
         var list = await HrmsDatabase.QueryAsync(
             _db,
-            "SELECT Id, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0;",
+            $"SELECT Id, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")};",
             command => { },
             reader => (Id: HrmsDatabase.GetInt(reader, "Id"), Name: HrmsDatabase.GetString(reader, "FullName")));
         var wanted = ids.ToHashSet();
         return list.Where(x => wanted.Contains(x.Id)).ToDictionary(x => x.Id, x => x.Name);
     }
 
-    private async Task<Dictionary<int, HashSet<int>>> LoadAssignmentsAsync(List<int> ids)
+    private async Task<Dictionary<int, HashSet<int>>> LoadAssignmentsAsync(List<int> ids, CompanyScope scope)
     {
         if (ids.Count == 0) return new();
         var pairs = await HrmsDatabase.QueryAsync(
             _db,
-            "SELECT EmployeeId, SalaryItemId FROM EmployeeAllowances WHERE ISNULL(IsDeleted,0)=0 AND SalaryItemId IS NOT NULL;",
+            $"SELECT a.EmployeeId, a.SalaryItemId FROM EmployeeAllowances a INNER JOIN Employees e ON e.Id=a.EmployeeId WHERE ISNULL(a.IsDeleted,0)=0 AND a.SalaryItemId IS NOT NULL AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
             command => { },
             reader => (Emp: HrmsDatabase.GetInt(reader, "EmployeeId"), Item: HrmsDatabase.GetInt(reader, "SalaryItemId")));
         var wanted = ids.ToHashSet();

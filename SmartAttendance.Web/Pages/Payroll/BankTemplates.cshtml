@@ -5,54 +5,16 @@
 
 @{
     ViewData["Title"] = "قوالب ملفات البنوك";
-    var acc = "#2dd4bf";
     var tplJson = JsonSerializer.Serialize(Model.Templates.Select(t => new {
-        t.Id, t.Name, t.BankName, t.Delimiter, t.IncludeHeader, t.IsDefault, t.IsActive,
+        t.Id, t.CompanyId, t.Name, t.BankName, t.Delimiter, t.IncludeHeader, t.IsDefault, t.IsActive,
         Columns = t.Columns, Headers = t.Headers
     }));
     var fieldsJson = JsonSerializer.Serialize(Model.Fields.Select(f => new { f.Key, f.Label }));
 }
+<link rel="stylesheet" href="~/css/pages/banktemplates-e58bedda52.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .bt-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
-    .bt-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .bt-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .bt-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .bt-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .bt-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
-    .bt-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .bt-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
-    .bt-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
-    .bt-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); overflow:hidden; }
-    .bt-row { padding:14px 16px; border-bottom:1px solid rgba(143,168,188,.08); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-    .bt-row:last-child { border-bottom:0; }
-    .bt-name { font-weight:1000; font-size:14px; }
-    .bt-meta { font-size:11.5px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .bt-chip { display:inline-block; padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:900; }
-    .bt-chip.def { background:color-mix(in srgb,var(--acc) 18%,transparent); color:var(--acc); }
-    .bt-chip.off { background:rgba(143,168,188,.16); color:#8FA8BC; }
-    .bt-cols { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
-    .bt-col { font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px; background:rgba(0,0,0,.14); direction:ltr; }
-    html[data-theme="light"] .bt-col { background:#f2f7fb; }
-    .bt-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
-    .bt-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
-    .bt-empty { padding:28px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-
-    .bt-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
-    .bt-form select, .bt-form input { min-height:36px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
-    html[data-theme="light"] .bt-form select, html[data-theme="light"] .bt-form input { background:#fff; }
-    .bt-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .bt-cole { display:flex; flex-direction:column; gap:6px; }
-    .bt-cole-item { display:grid; grid-template-columns:22px 130px 1fr 30px; gap:6px; align-items:center; }
-    .bt-cole-item input[type=checkbox] { min-height:auto; }
-    .bt-cole-item .fname { font-size:12px; font-weight:800; }
-    .bt-cole-item input.hdr { min-height:32px; font-size:12px; }
-    .bt-mv { border:0; background:rgba(45,212,191,.14); color:var(--acc); border-radius:6px; min-height:30px; cursor:pointer; font-weight:900; }
-</style>
 
 <section class="bt-page" dir="rtl">
     <header class="bt-head">
@@ -62,6 +24,21 @@
         </div>
         <button type="button" class="bt-btn" onclick="btOpen(0)">+ قالب جديد</button>
     </header>
+
+    <form method="get" class="bt-card zyu-47a5dde148b8">
+        <label>الشركة
+            <select name="CompanyId" onchange="this.form.submit()">
+                @if (Model.Companies.Count > 1)
+                {
+                    <option value="">كل الشركات المصرح بها</option>
+                }
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+        </label>
+    </form>
 
     @if (TempData["BtMessage"] != null)
     {
@@ -78,8 +55,9 @@
             @foreach (var t in Model.Templates)
             {
                 <div class="bt-row">
-                    <div style="min-width:0">
+                    <div class="zyu-22a08c80a960">
                         <span class="bt-name">@t.Name</span>
+                        <span class="bt-chip">@(t.CompanyId is null ? "عام" : Model.Companies.FirstOrDefault(c => c.Id == t.CompanyId)?.Name ?? $"شركة #{t.CompanyId}")</span>
                         @if (t.IsDefault) { <span class="bt-chip def">افتراضي</span> }
                         @if (!t.IsActive) { <span class="bt-chip off">معطّل</span> }
                         <div class="bt-meta">@(string.IsNullOrWhiteSpace(t.BankName) ? "بلا بنك محدد" : t.BankName) · فاصل: @BankFileTemplateStore.Delimiters.FirstOrDefault(d => d.Key == t.Delimiter).Label · @(t.IncludeHeader ? "بترويسة" : "بلا ترويسة")</div>
@@ -88,9 +66,9 @@
                             { <span class="bt-col">@BankFileTemplateStore.LabelOf(c)</span> }
                         </div>
                     </div>
-                    <div style="display:flex;gap:6px">
+                    <div class="zyu-69374f356aba">
                         <button type="button" class="bt-btn ghost sm" onclick="btEdit(@t.Id)">تعديل</button>
-                        <form method="post" asp-page-handler="Delete" style="display:inline"><input type="hidden" name="id" value="@t.Id" />
+                        <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4"><input type="hidden" name="id" value="@t.Id" />
                             <button type="submit" class="bt-btn danger sm" data-zyconfirm="حذف القالب؟">حذف</button></form>
                     </div>
                 </div>
@@ -106,8 +84,9 @@
             <button type="button" class="hrms-slideover-close" onclick="btClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Save" class="bt-form" style="display:flex;flex-direction:column;gap:12px" onsubmit="return btCollect()">
+            <form method="post" asp-page-handler="Save" class="bt-form zyu-f0de252a84a8" onsubmit="return btCollect()">
                 <input type="hidden" name="Id" id="bt-Id" value="0" />
+                <input type="hidden" name="CompanyId" id="bt-CompanyId" value="@Model.CompanyId" />
                 <input type="hidden" name="HeadersJoined" id="bt-HeadersJoined" />
                 <div class="bt-grid2">
                     <label>اسم القالب *<input name="Name" id="bt-Name" required placeholder="مثال: الرافدين" /></label>
@@ -120,15 +99,15 @@
                             { <option value="@key">@label</option> }
                         </select>
                     </label>
-                    <div style="display:flex;flex-direction:column;gap:6px;justify-content:center">
-                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IncludeHeader" id="bt-IncludeHeader" value="true" checked /> إدراج صف الترويسة</label>
-                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsDefault" id="bt-IsDefault" value="true" /> القالب الافتراضي</label>
-                        <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" id="bt-IsActive" value="true" checked /> مفعّل</label>
+                    <div class="zyu-d2295b832ec2">
+                        <label class="zyu-95e15889185d"><input type="checkbox" name="IncludeHeader" id="bt-IncludeHeader" value="true" checked /> إدراج صف الترويسة</label>
+                        <label class="zyu-95e15889185d"><input type="checkbox" name="IsDefault" id="bt-IsDefault" value="true" /> القالب الافتراضي</label>
+                        <label class="zyu-95e15889185d"><input type="checkbox" name="IsActive" id="bt-IsActive" value="true" checked /> مفعّل</label>
                     </div>
                 </div>
 
                 <div>
-                    <label style="margin-bottom:6px">الأعمدة (حدّد وأعد الترتيب؛ الرأس المخصص اختياري)</label>
+                    <label class="zyu-f85c702c688c">الأعمدة (حدّد وأعد الترتيب؛ الرأس المخصص اختياري)</label>
                     <div class="bt-cole" id="bt-cols"></div>
                 </div>
 
@@ -175,6 +154,7 @@
         function btOpen(id, t){
             var f = document.querySelector('#bt-slide form'); f.reset();
             document.getElementById('bt-Id').value = (t && t.Id) || 0;
+            document.getElementById('bt-CompanyId').value = (t && t.CompanyId) || '@(Model.CompanyId?.ToString() ?? "")';
             document.getElementById('bt-title').textContent = (t && t.Id) ? 'تعديل قالب بنك' : 'قالب بنك جديد';
             if (t && t.Id){
                 document.getElementById('bt-Name').value = t.Name;

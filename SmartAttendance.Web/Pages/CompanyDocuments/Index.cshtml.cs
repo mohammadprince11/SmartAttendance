@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace SmartAttendance.Web.Pages.CompanyDocuments;
 
@@ -10,15 +12,24 @@ namespace SmartAttendance.Web.Pages.CompanyDocuments;
 /// وثائق الشركة وفئاتها — وثائق **مشتركة** (لوائح · نماذج · تعاميم) تمييزاً عن
 /// وثائق الموظف. الجمهور بمحرّك الشروط العام.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
+    private readonly IFileThreatScanner _threatScanner;
+    private readonly MalwareScanningOptions _malwareOptions;
 
-    public IndexModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    public IndexModel(
+        ApplicationDbContext db,
+        IWebHostEnvironment environment,
+        IFileThreatScanner threatScanner,
+        IOptions<MalwareScanningOptions> malwareOptions)
     {
         _db = db;
         _environment = environment;
+        _threatScanner = threatScanner;
+        _malwareOptions = malwareOptions.Value;
     }
 
     [BindProperty(SupportsGet = true, Name = "edit")] public int? EditingId { get; set; }
@@ -87,6 +98,16 @@ public class IndexModel : PageModel
             if (!ProtectedFileStore.IsAllowedSize(Upload.Length))
             {
                 TempData["ErrorMessage"] = "حجم الملف يتجاوز الحدّ المسموح (10 ميغابايت).";
+                return RedirectToPage(new { edit = DocumentId });
+            }
+
+            if (!await UploadSignatureValidator.IsValidForExtensionAsync(Upload, extension)
+                || !FileThreatPolicy.CanStore(
+                    _malwareOptions,
+                    await FileThreatPolicy.ScanUploadAsync(
+                        _threatScanner, Upload, HttpContext.RequestAborted)))
+            {
+                TempData["ErrorMessage"] = "رُفض الملف بعد فحص المحتوى الأمني.";
                 return RedirectToPage(new { edit = DocumentId });
             }
 

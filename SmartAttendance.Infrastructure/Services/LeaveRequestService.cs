@@ -1,4 +1,5 @@
-using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
 using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Application.LeaveRequests.Services;
@@ -17,9 +18,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public class LeaveRequestService : ILeaveRequestService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
 
-    public LeaveRequestService(IUnitOfWork unitOfWork, IMapper mapper)
+    public LeaveRequestService(IUnitOfWork unitOfWork, IModelMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -35,33 +36,28 @@ public class LeaveRequestService : ILeaveRequestService
             return Array.Empty<LeaveRequestListViewModel>();
         }
 
-        var leaveRequests = await _unitOfWork.LeaveRequests.GetAllAsync();
-        var employees = await _unitOfWork.Employees.GetAllAsync();
+        var query =
+            from leaveRequest in _unitOfWork.LeaveRequests.Query().AsNoTracking()
+            join employee in _unitOfWork.Employees.Query().AsNoTracking()
+                on leaveRequest.EmployeeId equals employee.Id
+            select new { LeaveRequest = leaveRequest, Employee = employee };
 
-        var employeeLookup = employees.ToDictionary(x => x.Id, x => new
+        if (scope.OnlyEmployeeId is { } employeeId)
+            query = query.Where(row => row.Employee.Id == employeeId);
+        if (!scope.IsUnrestricted)
         {
-            x.EmployeeNo,
-            x.FullName,
-            x.CompanyId
-        });
+            var allowedCompanies = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(row => row.Employee.CompanyId.HasValue &&
+                                       allowedCompanies.Contains(row.Employee.CompanyId.Value));
+        }
 
-        var result = leaveRequests
-            // الحصر قبل الإسقاط: صفٌّ خارج النطاق لا يُبنى له ViewModel أصلاً.
-            // موظّفٌ غير معروف بالجدول يسقط أيضاً — لا نُسلّم ما لا نعرف شركته.
-            .Where(request =>
-                employeeLookup.TryGetValue(request.EmployeeId, out var owner) &&
-                scope.Allows(owner.CompanyId, request.EmployeeId))
-            .Select(leaveRequest =>
+        var scopedRows = await query.ToListAsync();
+        var result = scopedRows.Select(row =>
             {
-                var model = _mapper.Map<LeaveRequestListViewModel>(leaveRequest);
-
-                if (employeeLookup.TryGetValue(leaveRequest.EmployeeId, out var employee))
-                {
-                    model.EmployeeNo = employee.EmployeeNo;
-                    model.EmployeeName = employee.FullName;
-                }
-
-                model.TotalDays = leaveRequest.ToDate.DayNumber - leaveRequest.FromDate.DayNumber + 1;
+                var model = _mapper.Map<LeaveRequestListViewModel>(row.LeaveRequest);
+                model.EmployeeNo = row.Employee.EmployeeNo;
+                model.EmployeeName = row.Employee.FullName;
+                model.TotalDays = row.LeaveRequest.ToDate.DayNumber - row.LeaveRequest.FromDate.DayNumber + 1;
 
                 return model;
             });
@@ -230,14 +226,19 @@ public class LeaveRequestService : ILeaveRequestService
             return Array.Empty<EmployeeListViewModel>();
         }
 
-        var employees = await _unitOfWork.Employees.GetAllAsync();
+        var query = _unitOfWork.Employees.Query().AsNoTracking().Where(employee => employee.IsActive);
+        if (scope.OnlyEmployeeId is { } employeeId)
+            query = query.Where(employee => employee.Id == employeeId);
+        if (!scope.IsUnrestricted)
+        {
+            var allowedCompanies = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(employee => employee.CompanyId.HasValue &&
+                                            allowedCompanies.Contains(employee.CompanyId.Value));
+        }
 
-        return employees
-            .Where(x => x.IsActive)
-            // المنتقي معروضٌ ويُختار منه: بلا حصره يقرأ مستخدم شركة A أسماء
-            // وأرقام موظفي B، ثم يُنشئ لهم إجازات.
-            .Where(x => scope.Allows(x.CompanyId, x.Id))
+        return (await query
             .OrderBy(x => x.FullName)
+            .ToListAsync())
             .Select(x => new EmployeeListViewModel
             {
                 Id = x.Id,

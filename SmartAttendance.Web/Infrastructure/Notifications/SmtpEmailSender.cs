@@ -57,6 +57,14 @@ public sealed class SmtpEmailSender : IEmailSender
             SubjectEncoding = System.Text.Encoding.UTF8
         };
         mail.To.Add(new MailAddress(message.ToAddress));
+        foreach (var attachment in message.Attachments ?? Array.Empty<EmailAttachment>())
+        {
+            if (attachment.Bytes.Length == 0) continue;
+            mail.Attachments.Add(new Attachment(
+                new MemoryStream(attachment.Bytes, writable: false),
+                attachment.FileName,
+                attachment.ContentType));
+        }
         return mail;
     }
 

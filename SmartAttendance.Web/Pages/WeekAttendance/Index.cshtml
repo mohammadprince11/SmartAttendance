@@ -6,49 +6,10 @@
     ViewData["Title"] = "الحضور الأسبوعي";
     var (year, week) = Model.Period;
 }
+<link rel="stylesheet" href="~/css/pages/index-566b9d55cf.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .mat-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, #DCEAF4); }
-    .mat-head {
-        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-        padding: 16px 20px; border: 1px solid rgba(73,111,151,.22); border-radius: 20px;
-        background: radial-gradient(circle at 90% 10%, rgba(18,217,227,.12), transparent 36%),
-                    linear-gradient(135deg, rgba(9,31,52,.95), rgba(5,16,29,.95));
-    }
-    html[data-theme="light"] .mat-head { background: linear-gradient(135deg, #fff, #f2f7fb); }
-    .mat-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
-    .mat-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .mat-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, #12D9E3, #0ea5b5); color: #04141d; }
-    .mat-btn.ghost { background: transparent; border: 1px solid rgba(73,111,151,.3); color: inherit; }
-    .mat-btn.ok { background: linear-gradient(135deg, #4ade80, #22c55e); }
-    .mat-btn.lock { background: linear-gradient(135deg, #facc15, #eab308); }
-    .mat-btn.no { background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171; }
-
-    .mat-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid rgba(73,111,151,.22); border-radius: 16px; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .mat-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, #8FA8BC); display: flex; flex-direction: column; gap: 4px; }
-    .mat-bar input, .mat-bar select { min-height: 36px; border-radius: 10px; border: 1px solid rgba(73,111,151,.25); background: rgba(0,0,0,.16); color: var(--sa-text, #DCEAF4); padding: 6px 10px; font-size: 13px; }
-    html[data-theme="light"] .mat-bar input, html[data-theme="light"] .mat-bar select { background: #fff; color: inherit; }
-    .mat-stat { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid rgba(73,111,151,.22); }
-    .mat-stat b { direction: ltr; display: inline-block; }
-
-    .mat-table-card { border: 1px solid rgba(73,111,151,.22); border-radius: 18px; overflow: auto; background: var(--sa-surface, rgba(8,25,43,.9)); }
-    .mat-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
-    .mat-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, #8FA8BC); border-bottom: 1px solid rgba(73,111,151,.22); background: rgba(0,0,0,.12); }
-    html[data-theme="light"] .mat-table th { background: #f2f7fb; }
-    .mat-table td { padding: 9px 12px; border-bottom: 1px solid rgba(143,168,188,.08); white-space: nowrap; }
-    .mat-table tr:hover td { background: rgba(18,217,227,.04); }
-    .mat-num { direction: ltr; text-align: start; font-weight: 900; }
-    .mat-num.warn { color: #facc15; } .mat-num.bad { color: #f87171; }
-    .mat-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
-    .mat-chip.UnderReview { background: rgba(250,204,21,.12); color: #facc15; }
-    .mat-chip.Approved { background: rgba(74,222,128,.12); color: #4ade80; }
-    .mat-chip.Locked { background: rgba(18,217,227,.12); color: #12D9E3; }
-    .mat-empty { padding: 28px; text-align: center; color: var(--sa-muted, #8FA8BC); font-weight: 800; }
-    .mat-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.08); }
-    .mat-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
-</style>
 
 <section class="mat-page" dir="rtl">
     <partial name="_AttendanceApprovalViews" />
@@ -99,10 +60,10 @@
             </select>
         </label>
         <button type="submit" class="mat-btn ghost">عرض</button>
-        <div style="display:flex;gap:8px;margin-inline-start:auto">
-            <span class="mat-stat" style="color:#facc15">تحت المراجعة <b>@Model.UnderReviewCount</b></span>
-            <span class="mat-stat" style="color:#4ade80">معتمد <b>@Model.ApprovedCount</b></span>
-            <span class="mat-stat" style="color:#12D9E3">مقفل <b>@Model.LockedCount</b></span>
+        <div class="zyu-454b71f2df7a">
+            <span class="mat-stat zyu-fecc85c94a43">تحت المراجعة <b>@Model.UnderReviewCount</b></span>
+            <span class="mat-stat zyu-22d70a2892cd">معتمد <b>@Model.ApprovedCount</b></span>
+            <span class="mat-stat zyu-474799ee2243">مقفل <b>@Model.LockedCount</b></span>
         </div>
     </form>
 
@@ -113,20 +74,23 @@
         <input type="hidden" name="Filter" value="@Model.Filter" />
         <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
 
-        <div class="mat-bar" style="align-items:center">
-            <label style="flex-direction:row;align-items:center;gap:6px;font-size:12px;color:inherit">
+        <div class="mat-bar zyu-4a0b63657981">
+            <label class="zyu-081564a256b8">
                 <input type="checkbox" onchange="matToggleAll(this)" /> تحديد الصفحة
             </label>
-            <span id="mat-count" style="font-size:12px;font-weight:900;color:#12D9E3">0 محدد</span>
+            <span id="mat-count" class="zyu-067034cc892a">0 محدد</span>
             <button type="submit" asp-page-handler="Approve" class="mat-btn ok"
                     data-zyconfirm="اعتماد المحدد — تأكيد؟">اعتماد المحدد</button>
             <button type="submit" asp-page-handler="Lock" class="mat-btn lock"
                     data-zyconfirm="قفل الأسبوع — تأكيد؟">قفل</button>
             <button type="submit" asp-page-handler="Reopen" class="mat-btn no"
                     data-zyconfirm="إرجاع للمراجعة — تأكيد؟">إرجاع للمراجعة</button>
+            <input type="text" name="UnlockReason" maxlength="500" placeholder="سبب فتح المقفل (إلزامي)" />
+            <button type="submit" asp-page-handler="Unlock" class="mat-btn no"
+                    data-zyconfirm="فتح المقفل إلى معتمد وتسجيل السبب — تأكيد؟">فتح المقفل</button>
         </div>
 
-        <div class="mat-table-card" style="margin-top:14px">
+        <div class="mat-table-card zyu-c53ea1da2385">
             @if (Model.Rows.Count == 0)
             {
                 <div class="mat-empty">لا أسابيع مبنية — شغّل «بناء الأسبوع من اليوميات» بعد «تحديث الحضور».</div>
@@ -136,7 +100,7 @@
                 <table class="mat-table">
                     <thead>
                         <tr>
-                            <th style="width:34px"></th><th>الموظف</th><th>أيام العمل</th><th>حاضر</th><th>غائب</th>
+                            <th class="zyu-d12729b3d536"></th><th>الموظف</th><th>أيام العمل</th><th>حاضر</th><th>غائب</th>
                             <th>بصمة ناقصة</th><th>إجازة بدون راتب</th><th>ساعات التأخير</th><th>الخروج المبكر</th><th>ساعات العمل</th><th>الحالة</th>
                         </tr>
                     </thead>
@@ -145,14 +109,11 @@
                         {
                             <tr>
                                 <td>
-                                    @if (row.Status != "Locked")
-                                    {
-                                        <input type="checkbox" name="SelectedIds" value="@row.Id" onchange="matCount()" />
-                                    }
+                                    <input type="checkbox" name="SelectedIds" value="@row.Id" onchange="matCount()" />
                                 </td>
-                                <td><b>@row.EmployeeName</b> <span style="color:var(--sa-muted,#8FA8BC)">· @row.EmployeeNo</span></td>
+                                <td><b>@row.EmployeeName</b> <span class="zyu-c8664f4c9a37">· @row.EmployeeNo</span></td>
                                 <td class="mat-num">@row.WorkDays</td>
-                                <td class="mat-num" style="color:#4ade80">@row.PresentDays</td>
+                                <td class="mat-num zyu-22d70a2892cd">@row.PresentDays</td>
                                 <td class="mat-num @(row.AbsentDays > 0 ? "bad" : "")">@row.AbsentDays</td>
                                 <td class="mat-num @(row.IncompleteDays > 0 ? "warn" : "")">@row.IncompleteDays</td>
                                 <td class="mat-num @(row.UnpaidLeaveDays > 0 ? "bad" : "")">@row.UnpaidLeaveDays</td>

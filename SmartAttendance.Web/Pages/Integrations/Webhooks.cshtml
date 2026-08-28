@@ -1,0 +1,95 @@
+@page "/Integrations/Webhooks"
+@model SmartAttendance.Web.Pages.Integrations.WebhooksModel
+@{
+    ViewData["Title"] = "Webhooks";
+}
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+
+<main class="hrms-page" dir="rtl">
+    <header class="hrms-page-head">
+        <div>
+            <h1>Webhooks</h1>
+            <p>إرسال أحداث زينورا إلى الأنظمة الخارجية بتوقيع HMAC وإعادة محاولة موثوقة.</p>
+            <nav><strong>Webhooks</strong> · <a href="/Integrations/DeviceConnectors">أجهزة الحضور</a> · <a href="/Integrations/Accounting">المحاسبة</a></nav>
+        </div>
+        <form method="get">
+            <select name="CompanyId" onchange="this.form.submit()" aria-label="الشركة">
+                <option value="">اختر الشركة</option>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+        </form>
+    </header>
+
+    @if (TempData["SuccessMessage"] is string success) { <div class="hrms-alert success">@success</div> }
+    @if (TempData["ErrorMessage"] is string error) { <div class="hrms-alert danger">@error</div> }
+    @if (TempData["WebhookSecret"] is string secret)
+    {
+        <div class="hrms-alert warning">
+            <strong>سر التوقيع—يظهر مرة واحدة:</strong>
+            <code dir="ltr">@secret</code>
+            <p>انسخه الآن إلى مخزن أسرار النظام المستلم. لا يُحفظ كنص صريح في زينورا.</p>
+        </div>
+    }
+
+    @if (Model.CompanyId is > 0)
+    {
+        <section class="hrms-card">
+            <h2>اشتراك جديد</h2>
+            <form method="post" asp-page-handler="Save" class="hrms-form-grid">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <input type="hidden" name="id" value="0" />
+                <label>الاسم<input name="name" required maxlength="150" /></label>
+                <label>عنوان HTTPS<input name="endpointUrl" type="url" dir="ltr" required maxlength="1000" placeholder="https://erp.example.com/hooks/zynora" /></label>
+                <label>الأحداث<input name="eventsCsv" dir="ltr" value="*" required placeholder="employee.updated,payroll.issued" /></label>
+                <label><input type="checkbox" name="isActive" value="true" checked /> نشط</label>
+                <button class="hrms-btn-primary" type="submit">إنشاء وتوليد السر</button>
+            </form>
+        </section>
+
+        <section class="hrms-card">
+            <div class="hrms-card-head">
+                <h2>الاشتراكات</h2>
+                <form method="post" asp-page-handler="Test">
+                    <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                    <button class="hrms-btn-secondary" type="submit">إرسال حدث اختبار</button>
+                </form>
+            </div>
+            @if (Model.Subscriptions.Count == 0)
+            {
+                <p class="hrms-empty">لا توجد اشتراكات لهذه الشركة.</p>
+            }
+            else
+            {
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table">
+                        <thead><tr><th>الاسم</th><th>الوجهة</th><th>الأحداث</th><th>الحالة</th><th>إجراء</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in Model.Subscriptions)
+                        {
+                            <tr>
+                                <td>@item.Name</td>
+                                <td dir="ltr">@item.EndpointUrl</td>
+                                <td dir="ltr">@item.EventsCsv</td>
+                                <td>@(item.IsActive ? "نشط" : "معطل")</td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <form method="post" asp-page-handler="Disable">
+                                            <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="hrms-btn-danger" type="submit" data-zyconfirm="تعطيل الاشتراك؟">تعطيل</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</main>

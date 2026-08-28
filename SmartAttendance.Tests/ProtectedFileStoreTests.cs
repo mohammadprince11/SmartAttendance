@@ -97,6 +97,23 @@ public class ProtectedFileStoreTests
     public void EmployeesAreIsolatedByFolder() =>
         Assert.StartsWith("employee-42/", ProtectedFileStore.BuildStorageKey(42, "Training", ".pdf"));
 
+    [Fact]
+    public void StorageCategory_IsRecoveredOnlyForMatchingEmployee()
+    {
+        var key = ProtectedFileStore.BuildStorageKey(42, "financial", ".pdf");
+
+        Assert.True(ProtectedFileStore.TryGetCategory(key, 42, out var category));
+        Assert.Equal("financial", category);
+        Assert.False(ProtectedFileStore.TryGetCategory(key, 41, out _));
+    }
+
+    [Theory]
+    [InlineData("employee-42/noseparator.pdf")]
+    [InlineData("employee-42/fina/ncial_abc.pdf")]
+    [InlineData("employee-42/_abc.pdf")]
+    public void MalformedStorageCategory_IsRejected(string key) =>
+        Assert.False(ProtectedFileStore.TryGetCategory(key, 42, out _));
+
     // ===== نوع المحتوى =====
 
     [Fact]

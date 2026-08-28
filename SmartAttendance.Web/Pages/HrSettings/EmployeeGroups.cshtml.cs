@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.HrSettings;
 
@@ -11,13 +13,18 @@ namespace SmartAttendance.Web.Pages.HrSettings;
 /// (فرع/قسم/نوع دوام/فعال فقط) وتُحسب عضويتها حيّاً — تُستهدف لاحقاً
 /// بالإعلانات والتقارير والطلبات. جدول ذاتي الإنشاء EmployeeGroups.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class EmployeeGroupsModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public EmployeeGroupsModel(ApplicationDbContext dbContext)
+    public EmployeeGroupsModel(
+        ApplicationDbContext dbContext,
+        ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     public sealed class GroupRow
@@ -39,26 +46,13 @@ public class EmployeeGroupsModel : PageModel
     public List<(int Id, string Name)> Departments { get; set; } = new();
     public List<string> WorkTypes { get; set; } = new();
 
-    private static async Task EnsureAsync(ApplicationDbContext db) =>
-        await HrmsDatabase.ExecuteAsync(db, """
-IF OBJECT_ID('EmployeeGroups', 'U') IS NULL
-BEGIN
-    CREATE TABLE EmployeeGroups
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Name nvarchar(150) NOT NULL,
-        Note nvarchar(500) NULL,
-        BranchId int NULL,
-        DepartmentId int NULL,
-        WorkType nvarchar(50) NULL,
-        ActiveOnly bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-END;
-""");
+    // Compatibility shim for existing handlers. EmployeeGroups is created by the
+    // numbered SQL migrator (20260826-19), never by a page request.
+    private static Task EnsureAsync(ApplicationDbContext db) => Task.CompletedTask;
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureAsync(_dbContext);
 
         // العضوية تُحسب حيّاً من شروط المجموعة — لا تخزين للأعضاء.
@@ -101,10 +95,12 @@ ORDER BY g.Name;
             .Select(d => new { d.Id, d.Name }).ToListAsync())
             .Select(d => (d.Id, d.Name)).ToList();
         WorkTypes = await HrLookups.ValuesAsync(_dbContext, "worktypes");
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAddAsync(string name, string? note, int? branchId, int? departmentId, string? workType, bool activeOnly)
     {
+        if (!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureAsync(_dbContext);
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -130,6 +126,7 @@ VALUES (@Name, @Note, @BranchId, @DepartmentId, @WorkType, @ActiveOnly);
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureAsync(_dbContext);
         await HrmsDatabase.ExecuteAsync(
             _dbContext,
@@ -138,4 +135,7 @@ VALUES (@Name, @Note, @BranchId, @DepartmentId, @WorkType, @ActiveOnly);
         TempData["SuccessMessage"] = "تم حذف المجموعة.";
         return RedirectToPage();
     }
+
+    private async Task<bool> IsGlobalAdministratorAsync() =>
+        (await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted;
 }

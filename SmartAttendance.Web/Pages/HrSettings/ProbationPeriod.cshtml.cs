@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.HrSettings;
 
@@ -14,6 +16,7 @@ namespace SmartAttendance.Web.Pages.HrSettings;
 /// النظام القائم** ما لم يُنشئ المستخدم نسخة. والنُسَخ تحمل ما تغيّره فقط، فتعديل
 /// الأمّ يسري على كل نسخة لم تخصّص ذلك الحقل.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class ProbationPeriodModel : PageModel
 {
     private readonly ApplicationDbContext _db;

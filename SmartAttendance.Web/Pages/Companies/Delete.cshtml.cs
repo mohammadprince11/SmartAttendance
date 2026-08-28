@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Companies;
 
@@ -11,11 +12,13 @@ public class DeleteModel : PageModel
 {
     private readonly ICompanyService _companyService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public DeleteModel(ICompanyService companyService, ApplicationDbContext dbContext)
+    public DeleteModel(ICompanyService companyService, ApplicationDbContext dbContext,ICompanyScopeProvider companyScope)
     {
         _companyService = companyService;
         _dbContext = dbContext;
+        _companyScope=companyScope;
     }
 
     public CompanyDetailsViewModel Company { get; set; } = new();
@@ -26,6 +29,7 @@ public class DeleteModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
+        if(!(await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted) return Forbid();
         var company = await _companyService.GetByIdAsync(id);
 
         if (company == null)
@@ -39,6 +43,7 @@ public class DeleteModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(int id)
     {
+        if(!(await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted) return Forbid();
         var hasLinkedData = await HasCompanyLinkedDataAsync(id);
         var deleted = await _companyService.DeleteAsync(id);
 

@@ -10,20 +10,8 @@ namespace SmartAttendance.Tests;
 /// </summary>
 public sealed class PayslipPrintIsolationGuardTests
 {
-    private static string PayslipPage()
-    {
-        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
-            dir = dir.Parent;
-
-        Assert.NotNull(dir);
-        return File.ReadAllText(Path.Combine(
-            dir!.FullName,
-            "SmartAttendance.Web",
-            "Pages",
-            "Payroll",
-            "PayslipInquiry.cshtml"));
-    }
+    private static string PayslipPage() =>
+        RazorPageAssetReader.ReadWithLinkedPageCss("Payroll", "PayslipInquiry.cshtml");
 
     [Fact]
     public void PrintButtonUsesAnIsolatedDocument_NotTheApplicationWindow()
@@ -43,10 +31,10 @@ public sealed class PayslipPrintIsolationGuardTests
         var page = PayslipPage();
 
         Assert.Matches(
-            new Regex(@"@@media\s+print[\s\S]*?\.ps\s*\{[^}]*border\s*:\s*0\s*!important", RegexOptions.CultureInvariant),
+            new Regex(@"@media\s+print[\s\S]*?\.ps\s*\{[^}]*border\s*:\s*0\s*!important", RegexOptions.CultureInvariant),
             page);
         Assert.DoesNotContain("ps-print-bg", page);
-        Assert.Contains("background:#fff!important", page);
+        Assert.Contains("background:var(--zy-white)!important", page);
     }
 
     [Fact]

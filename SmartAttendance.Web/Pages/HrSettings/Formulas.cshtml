@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "مختبر الصيغ";
 }
+<link rel="stylesheet" href="~/css/pages/formulas-72dffbb7c7.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -33,27 +34,27 @@
 
         <input type="hidden" asp-for="FormulaId" />
 
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--zy-text-muted)">
+        <label class="zyu-8fbe49f3670f">
             الصيغة
             <textarea asp-for="Expression" rows="3" dir="ltr"
-                      style="padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:ui-monospace,monospace;font-size:.9375rem"
+                      class="zyu-05d14e7b8973"
                       placeholder="MIN(Basic * 0.25, 300000)"></textarea>
         </label>
 
         <div>
             <p class="zyp-section-title">المتغيّرات المتاحة (نفس ما يمرّره المسير حرفياً)</p>
-            <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
+            <div class="zyp-actions zyu-2d1bdd415249">
                 @foreach (var (key, label) in SmartAttendance.Web.Pages.HrSettings.FormulasModel.Variables)
                 {
-                    <span class="zyp-rank" style="min-width:auto;padding:4px 10px" title="@label">@key</span>
+                    <span class="zyp-rank zyu-f6f43bccf0b3" title="@label">@key</span>
                 }
                 @foreach (var c in Model.Constants.Where(c => c.IsActive))
                 {
-                    <span class="zyp-rank" style="min-width:auto;padding:4px 10px;border-style:dashed"
+                    <span class="zyp-rank zyu-5c017805b839"
                           title="@c.Name — ثابت مسمّى = @SmartAttendance.Web.Infrastructure.Hrms.SalaryConstantStore.Format(c.Value)">@c.Key</span>
                 }
             </div>
-            <p class="zyp-hint" style="margin-top:8px">
+            <p class="zyp-hint zyu-43a97fe4943c">
                 والدوال: <code>ROUND(x[,n])</code> · <code>MIN(..)</code> · <code>MAX(..)</code> ·
                 <code>ABS(x)</code> · <code>IF(شرط، صحّ، خطأ)</code>، وعوامل المقارنة
                 <code dir="ltr">&lt; &gt; &lt;= &gt;= = &lt;&gt;</code> (تُرجع 1 أو 0).
@@ -72,13 +73,13 @@
 
         @if (Model.TestResult is not null)
         {
-            <p class="zyc-summary" style="border-inline-start-color:var(--zy-success)">
+            <p class="zyc-summary zyu-dd043d9005ae">
                 <b>الناتج: @Model.TestResult</b>
             </p>
         }
         @if (Model.TestError is not null)
         {
-            <p class="zyc-summary" style="border-inline-start-color:var(--zy-danger)">
+            <p class="zyc-summary zyu-690c891d389b">
                 <b>خطأ بالصيغة:</b> @Model.TestError
             </p>
         }
@@ -126,7 +127,7 @@
                 @foreach (var (expression, purpose) in SmartAttendance.Web.Pages.HrSettings.FormulasModel.Examples)
                 {
                     <tr>
-                        <td dir="ltr" style="font-family:ui-monospace,monospace">@expression</td>
+                        <td dir="ltr" class="zyu-3bf10d99b485">@expression</td>
                         <td class="zyp-conditions">@purpose</td>
                     </tr>
                 }
@@ -158,7 +159,7 @@
                         <th>الاسم</th>
                         <th>الصيغة</th>
                         <th>الوصف</th>
-                        <th style="width:170px"></th>
+                        <th class="zyu-55d8ffef28ea"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,15 +167,15 @@
                     {
                         <tr class="@(row.IsActive ? "" : "zyp-inactive")">
                             <td><b>@row.Name</b></td>
-                            <td dir="ltr" style="font-family:ui-monospace,monospace;font-size:.8125rem">@row.Expression</td>
+                            <td dir="ltr" class="zyu-e4d0ac829ac0">@row.Expression</td>
                             <td class="zyp-conditions">@row.Description</td>
                             <td>
                                 <div class="zyp-actions">
-                                    <form method="post" asp-page-handler="Load" style="display:inline">
+                                    <form method="post" asp-page-handler="Load" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@row.Id" />
                                         <button type="submit">افتح وجرّب</button>
                                     </form>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@row.Id" />
                                         <button type="submit" data-zyconfirm="حذف الصيغة من المكتبة؟">حذف</button>
                                     </form>
@@ -202,7 +203,7 @@
             </p>
         </header>
 
-        <form method="post" asp-page-handler="SaveConstant" class="zyp-editor-grid" style="margin-bottom:16px">
+        <form method="post" asp-page-handler="SaveConstant" class="zyp-editor-grid zyu-bf4a218e05ab">
             <label>
                 <span>المفتاح</span>
                 <input asp-for="ConstantKey" dir="ltr" placeholder="MinimumWage" />
@@ -219,7 +220,7 @@
                 <span>ملاحظة</span>
                 <input asp-for="ConstantNote" placeholder="مرجع القرار أو تاريخ السريان" />
             </label>
-            <div class="zyp-actions" style="align-self:end">
+            <div class="zyp-actions zyu-edcd900711b9">
                 <button type="submit" class="zy-btn">حفظ الثابت</button>
             </div>
         </form>
@@ -237,19 +238,19 @@
                         <th>الاسم</th>
                         <th>القيمة</th>
                         <th>ملاحظة</th>
-                        <th style="width:90px"></th>
+                        <th class="zyu-f47e3b970dce"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var c in Model.Constants)
                     {
                         <tr class="@(c.IsActive ? "" : "zyp-inactive")">
-                            <td dir="ltr" style="font-family:ui-monospace,monospace"><b>@c.Key</b></td>
+                            <td dir="ltr" class="zyu-3bf10d99b485"><b>@c.Key</b></td>
                             <td>@c.Name</td>
                             <td dir="ltr">@SmartAttendance.Web.Infrastructure.Hrms.SalaryConstantStore.Format(c.Value)</td>
                             <td class="zyp-conditions">@c.Note</td>
                             <td>
-                                <form method="post" asp-page-handler="DeleteConstant" style="display:inline">
+                                <form method="post" asp-page-handler="DeleteConstant" class="zyu-6b8b63d565c4">
                                     <input type="hidden" name="id" value="@c.Id" />
                                     <button type="submit" data-zyconfirm="حذف الثابت؟ الصيغ التي تستعمله ستفشل.">حذف</button>
                                 </form>

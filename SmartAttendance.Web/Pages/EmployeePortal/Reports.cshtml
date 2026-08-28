@@ -3,23 +3,8 @@
 @{
     ViewData["Title"] = "تقاريري";
 }
+<link rel="stylesheet" href="~/css/pages/reports-ca2cf8cdbf.css" asp-append-version="true" />
 
-<style>
-    .epr { direction: rtl; display: grid; gap: 14px; max-width: 1000px; margin: 0 auto; padding: 8px 4px 40px; }
-    .epr h1 { margin: 0; font-size: 22px; font-weight: 1000; }
-    .epr-hint { color: #9fb3c7; font-size: 12.5px; font-weight: 800; margin: 4px 0 0; }
-    .epr-card { border: 1px solid var(--sa-border, rgba(148,163,184,.22)); border-radius: 14px;
-        background: var(--sa-surface, rgba(6,16,29,.55)); padding: 14px 16px; }
-    .epr-list { display: grid; gap: 10px; }
-    .epr-item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
-        border: 1px solid var(--sa-border, rgba(148,163,184,.22)); border-radius: 12px; padding: 12px 14px;
-        text-decoration: none; color: inherit; font-weight: 900; }
-    .epr-table-wrap { overflow-x: auto; }
-    .epr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .epr-table th, .epr-table td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--sa-border, rgba(148,163,184,.18)); }
-    .epr-table th { font-weight: 1000; }
-    .epr-empty { color: #9fb3c7; font-weight: 800; }
-</style>
 
 <div class="epr">
     <div>
@@ -62,9 +47,9 @@
     else
     {
         <div class="epr-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
+            <div class="zyu-625f4867b2e4">
                 <b>@Model.Current.Name</b>
-                <a asp-page="./Reports" style="font-weight:900">رجوع</a>
+                <a asp-page="./Reports" class="zyu-52ee95b95fbc">رجوع</a>
             </div>
 
             @if (Model.Rows.Count == 0)

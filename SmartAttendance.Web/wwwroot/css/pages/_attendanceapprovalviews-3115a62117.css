@@ -1,0 +1,8 @@
+/* Source: Pages/Shared/_AttendanceApprovalViews.cshtml */
+.att-views { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px;
+            border: 1px solid var(--sa-border, var(--zy-migrated-color-b9678111e3)); border-radius: 14px;
+            background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+        .att-view { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 900;
+            color: var(--sa-muted, var(--zy-muted)); text-decoration: none; border: 1px solid transparent; }
+        .att-view:hover { color: var(--sa-text, var(--zy-text)); }
+        .att-view.is-active { color: var(--zy-on-primary); background: linear-gradient(135deg, var(--zy-primary), var(--zy-primary-strong)); }

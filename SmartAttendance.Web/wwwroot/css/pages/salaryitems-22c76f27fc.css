@@ -1,0 +1,76 @@
+/* Source: Pages/Payroll/SalaryItems.cshtml */
+.si-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,var(--zy-text)); }
+    .si-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:20px; background:linear-gradient(135deg,var(--zy-migrated-color-2d2722bfd0),var(--zy-migrated-color-d38141ec79)); }
+    html[data-theme="light"] .si-head { background:linear-gradient(135deg,var(--zy-white),var(--zy-migrated-color-c2da37727c)); }
+    .si-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .si-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .si-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,var(--zy-primary),var(--zy-primary-strong)); color:var(--zy-on-primary); }
+    .si-btn.ghost { background:transparent; border:1px solid var(--zy-migrated-color-28565ef553); color:inherit; }
+    .si-btn.sm { min-height:30px; padding:4px 11px; font-size:12px; }
+    .si-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px; overflow-x:auto; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    .si-table { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+    .si-table th { text-align:start; padding:11px 13px; font-size:11px; font-weight:1000; color:var(--sa-muted,var(--zy-muted)); border-bottom:1px solid var(--zy-migrated-color-b9678111e3); background:var(--zy-migrated-color-733a2ff5ad); }
+    html[data-theme="light"] .si-table th { background:var(--zy-migrated-color-c2da37727c); }
+    .si-table td { padding:10px 13px; border-bottom:1px solid var(--zy-migrated-color-89acc81486); }
+    .si-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; background:var(--zy-migrated-color-335feb4bcf); color:var(--zy-primary); }
+    .si-chip.ded { background:var(--zy-migrated-color-e92da98547); color:var(--zy-danger); }
+    .si-chip.sys { background:var(--zy-migrated-color-e58aa135ec); color:var(--zy-accent); }
+    .si-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid var(--zy-migrated-color-ab4e1fef3b); background:var(--zy-migrated-color-39bb173a0d); }
+    .si-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .si-form input, .si-form select { min-height:36px; border-radius:10px; border:1px solid var(--zy-migrated-color-6a77190266); background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:6px 10px; }
+    html[data-theme="light"] .si-form input, html[data-theme="light"] .si-form select { background:var(--zy-white); }
+    .si-checks { display:flex; gap:16px; flex-wrap:wrap; }
+    .si-checks label { flex-direction:row; align-items:center; gap:6px; }
+    /* ===== بوابة المعادلة ===== */
+    .si-fx { display:flex; flex-direction:column; gap:10px; border:1px solid var(--zy-migrated-color-6a77190266); border-radius:12px; padding:12px; background:var(--zy-migrated-color-bee9f73d54); }
+    .si-fx-expr { min-height:50px; border:1px solid var(--zy-migrated-color-be03a00597); border-radius:10px; background:var(--zy-migrated-color-5111224827); color:inherit; padding:8px 10px; direction:ltr; text-align:start; font-family:ui-monospace,monospace; font-size:14px; font-weight:800; resize:vertical; width:100%; }
+    html[data-theme="light"] .si-fx-expr { background:var(--zy-white); }
+    .si-fx-body { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .si-fx-vars { display:flex; flex-direction:column; gap:4px; max-height:210px; overflow:auto; }
+    .si-fx-var { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; border:1px solid var(--zy-migrated-color-0aac1ba379); border-radius:8px; cursor:pointer; font-size:12px; font-weight:800; background:transparent; color:inherit; text-align:start; }
+    .si-fx-var:hover { background:color-mix(in srgb,var(--zy-primary) 9%,transparent); border-color:var(--zy-migrated-color-9d8f3bda04); }
+    .si-fx-var .plus { color:var(--zy-primary); font-weight:1000; font-size:15px; }
+    .si-fx-pad { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; align-content:start; }
+    .si-fx-key { min-height:34px; border:1px solid var(--zy-migrated-color-6a77190266); border-radius:8px; background:var(--zy-migrated-color-86260cb36b); color:inherit; font-weight:900; font-size:13px; cursor:pointer; }
+    html[data-theme="light"] .si-fx-key { background:var(--zy-migrated-color-c2da37727c); }
+    .si-fx-key:hover { background:color-mix(in srgb,var(--zy-primary) 12%,transparent); }
+    .si-fx-key.fn { font-size:10px; color:var(--zy-accent); }
+    .si-fx-key.op { color:var(--zy-primary); }
+    .si-fx-key.clr { color:var(--zy-danger); }
+    .si-fx-test { display:flex; flex-wrap:wrap; gap:8px; align-items:end; border-top:1px dashed var(--zy-migrated-color-28565ef553); padding-top:10px; }
+    .si-fx-test label { font-size:10px; gap:2px; }
+    .si-fx-test input { width:82px; min-height:30px; }
+    .si-fx-result { font-weight:1000; color:var(--zy-success); direction:ltr; font-size:15px; }
+    .si-fx-result.err { color:var(--zy-danger); font-size:12px; }
+    .si-fx-hint { font-size:11px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+
+/* Static inline utilities migrated from Pages/Payroll/SalaryItems.cshtml */
+
+.zyu-9c40389b4ad8 { display:flex;gap:8px; }
+
+.zyu-39c68df36fcc { display:flex;gap:8px;align-items:center; }
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-a49cca52becd { font-size:12px; }
+
+.zyu-3906353e543a { direction:ltr;color:var(--zy-accent);font-size:11px; }
+
+.zyu-3439e223626b { font-size:11px;color:var(--sa-muted,var(--zy-muted)); }
+
+.zyu-667bbbde05a1 { text-align:end;white-space:nowrap; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-94c76e9c8583 { color:var(--zy-danger); }
+
+.zyu-f0de252a84a8 { display:flex;flex-direction:column;gap:12px; }
+
+.zyu-71658681447f { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+
+.zyu-e3c5aae289df { display:none;flex-direction:column;gap:6px; }
+
+.zyu-ab79ea2b8573 { margin:0; }
+
+.zyu-67c6459975c9 { display:flex;flex-direction:column;gap:6px; }

@@ -103,7 +103,6 @@ public class CreateModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
@@ -122,7 +121,6 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
@@ -182,7 +180,6 @@ public class CreateModel : PageModel
         string? loginUsername = null;
         if (CreateLoginAccount)
         {
-            await LoginDatabase.EnsureCreatedAsync(_dbContext);
 
             loginUsername = string.IsNullOrWhiteSpace(LoginUsername)
                 ? Employee.EmployeeNo?.Trim()

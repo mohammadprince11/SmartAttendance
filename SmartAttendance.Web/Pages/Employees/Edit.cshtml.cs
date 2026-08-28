@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Branches.ViewModels;
@@ -98,7 +98,6 @@ public class EditModel : PageModel
             return Forbid();
         }
 
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
 
@@ -129,7 +128,6 @@ public class EditModel : PageModel
             return Forbid();
         }
 
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();

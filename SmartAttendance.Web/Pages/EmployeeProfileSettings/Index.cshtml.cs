@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeeProfileSettings;
 
@@ -13,12 +14,14 @@ namespace SmartAttendance.Web.Pages.EmployeeProfileSettings;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
     private const int FieldLabelMaxLength = 150;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext,ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope=companyScope;
     }
 
     public List<ProfileSectionView> Sections { get; private set; } = new();
@@ -34,16 +37,19 @@ public class IndexModel : PageModel
     [BindProperty]
     public SectionInput Section { get; set; } = new();
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
         await LoadAsync();
+        return Page();
     }
 
     // ---------- Section management (dynamic tabs/groups) ----------
 
     public async Task<IActionResult> OnPostAddSectionAsync()
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         var label = NormalizeLabel(Section.Label);
@@ -75,6 +81,7 @@ VALUES (@Key, @Label, @SortOrder, 0, 1);
 
     public async Task<IActionResult> OnPostUpdateSectionAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         var label = NormalizeLabel(Section.Label);
@@ -106,6 +113,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostToggleSectionAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         await HrmsDatabase.ExecuteAsync(
@@ -124,6 +132,7 @@ WHERE Id = @Id AND IsSystem = 0;
 
     public async Task<IActionResult> OnPostDeleteSectionAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         var fieldCount = await HrmsDatabase.QueryAsync(
@@ -154,6 +163,7 @@ WHERE s.Id = @Id;
 
     public async Task<IActionResult> OnPostAddFieldAsync()
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         Field.SectionKey = NormalizeSectionKey(Field.SectionKey);
@@ -231,6 +241,7 @@ VALUES
 
     public async Task<IActionResult> OnPostUpdateFieldAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         EditField.SectionKey = NormalizeSectionKey(EditField.SectionKey);
@@ -312,6 +323,7 @@ END;
 
     public async Task<IActionResult> OnPostToggleFieldAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         if (id <= 0 || !await FieldExistsAsync(id))
@@ -336,6 +348,7 @@ WHERE Id = @Id;
 
     public async Task<IActionResult> OnPostDeleteFieldAsync(int id)
     {
+        if(!await IsGlobalAdministratorAsync()) return Forbid();
         await EnsureSchemaAsync();
 
         if (id <= 0 || !await FieldExistsAsync(id))
@@ -420,95 +433,12 @@ ORDER BY SortOrder, Id;
             .ToList();
     }
 
-    private async Task EnsureSchemaAsync()
-    {
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[EmployeeProfileFieldDefinitions]
-    (
-        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [SectionKey] nvarchar(80) NOT NULL,
-        [FieldKey] nvarchar(120) NOT NULL,
-        [FieldLabel] nvarchar(150) NOT NULL,
-        [FieldType] nvarchar(40) NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_FieldType DEFAULT N'text',
-        [IsRequired] bit NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_IsRequired DEFAULT 0,
-        [IsActive] bit NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_IsActive DEFAULT 1,
-        [SortOrder] int NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_SortOrder DEFAULT 0,
-        [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_CreatedAt DEFAULT SYSUTCDATETIME(),
-        [UpdatedAt] datetime2 NULL
-    );
-END;
+    private async Task<bool> IsGlobalAdministratorAsync() =>
+        (await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted;
 
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'UX_EmployeeProfileFieldDefinitions_FieldKey'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]')
-)
-BEGIN
-    CREATE UNIQUE INDEX UX_EmployeeProfileFieldDefinitions_FieldKey
-    ON [dbo].[EmployeeProfileFieldDefinitions] ([FieldKey]);
-END;
-
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'IX_EmployeeProfileFieldDefinitions_Section'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]')
-)
-BEGIN
-    CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section
-    ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [SortOrder], [Id]);
-END;
-
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'IX_EmployeeProfileFieldDefinitions_Section_Label'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]')
-)
-BEGIN
-    CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section_Label
-    ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [FieldLabel]);
-END;
-
-IF OBJECT_ID(N'[dbo].[EmployeeCustomFields]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[EmployeeCustomFields]
-    (
-        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [EmployeeId] int NOT NULL,
-        [FieldKey] nvarchar(120) NOT NULL,
-        [FieldLabel] nvarchar(150) NULL,
-        [FieldValue] nvarchar(max) NULL,
-        [UpdatedAt] datetime2 NULL
-    );
-END;
-
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'UX_EmployeeCustomFields_Employee_Field'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeCustomFields]')
-)
-BEGIN
-    CREATE UNIQUE INDEX UX_EmployeeCustomFields_Employee_Field
-    ON [dbo].[EmployeeCustomFields] ([EmployeeId], [FieldKey]);
-END;
-
-IF COL_LENGTH('EmployeeProfileFieldDefinitions', 'FieldOptions') IS NULL
-    ALTER TABLE EmployeeProfileFieldDefinitions ADD FieldOptions nvarchar(max) NULL;
-""");
-
-        await EmployeeProfileSections.EnsureSchemaAsync(_dbContext);
-    }
+    // Compatibility shim for existing handlers. Dynamic-profile schema and seed
+    // data are owned by numbered migration 20260826-20.
+    private Task EnsureSchemaAsync() => Task.CompletedTask;
 
     private async Task<bool> FieldExistsAsync(int id)
     {

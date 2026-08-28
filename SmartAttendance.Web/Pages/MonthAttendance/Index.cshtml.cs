@@ -36,6 +36,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int PageNumber { get; set; } = 1;
 
+    [BindProperty]
+    public string? UnlockReason { get; set; }
+
     public const int PageSize = 50;
 
     public List<MonthAttendanceStore.MonthRow> Rows { get; set; } = new();
@@ -129,6 +132,23 @@ public class IndexModel : PageModel
 
     public Task<IActionResult> OnPostLockAsync() => TransitionAsync(
         MonthAttendanceStore.LockAsync, "قُفل {0} شهراً للرواتب.");
+
+    public async Task<IActionResult> OnPostUnlockAsync()
+    {
+        var ids = SelectedIds();
+        if (ids.Count == 0 || string.IsNullOrWhiteSpace(UnlockReason))
+            TempData["SuccessMessage"] = "حدد صفوفاً مقفلة واكتب سبب الفتح.";
+        else
+        {
+            var count = await MonthAttendanceStore.UnlockAsync(
+                _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted), ids,
+                User.Identity?.Name, HttpContext.Connection.RemoteIpAddress?.ToString(), UnlockReason);
+            TempData["SuccessMessage"] = count == 0
+                ? "لا صفوف مقفلة ضمن المحدد أو لا تملك نطاقها."
+                : $"فُتح {count} شهراً إلى حالة معتمد وسُجل السبب في سجل التدقيق.";
+        }
+        return RedirectToPage(new { Month, Search, Filter, PageNumber });
+    }
 
     private List<int> SelectedIds() =>
         Request.Form["SelectedIds"]

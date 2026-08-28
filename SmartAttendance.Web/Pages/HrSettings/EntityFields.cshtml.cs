@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.HrSettings;
 
@@ -9,6 +11,7 @@ namespace SmartAttendance.Web.Pages.HrSettings;
 /// باني حقول الكيانات (الداينمك مرحلة 2 — نمط كيان «الحقول الإضافية»):
 /// الأدمن يضيف حقولاً مخصصة لأي كيان فرعي بملف الموظف وتظهر بسلايدات الملف 360°.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class EntityFieldsModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;

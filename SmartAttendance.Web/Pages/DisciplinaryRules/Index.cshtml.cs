@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 // اسمٌ مستعار لازم: صنف `PenaltyRule` بهذا الملف فيه خاصية اسمها `PenaltyAction`،
 // فتحجب الصنفَ العام ذا الاسم نفسه. التأهيل بـ`Hrms.` يفكّ التعارض بلا إعادة تسمية
@@ -21,11 +22,13 @@ public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext, IWebHostEnvironment environment)
+    public IndexModel(ApplicationDbContext dbContext, IWebHostEnvironment environment, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _environment = environment;
+        _companyScope = companyScope;
     }
 
     public string Tab { get; private set; } = "setup";
@@ -501,7 +504,7 @@ WHERE Id = @Id;
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
 
-        int saved = 0, added = 0, removed = 0;
+        int saved = 0, added = 0;
 
         for (var i = 0; rowName is not null && i < rowName.Length; i++)
         {
@@ -1146,7 +1149,8 @@ VALUES
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
 
         // وجهة الخصم وأسباب الإيقاف: قوائم يملكها مودلان آخران — تُقرأ ولا تُنسَخ.
-        DeductionItems = (await SalaryItemStore.ListAsync(_dbContext))
+        DeductionItems = (await SalaryItemStore.ListAsync(
+                _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted)))
             .Where(x => x.IsActive && string.Equals(x.ItemType, "Deduction", StringComparison.OrdinalIgnoreCase))
             .OrderBy(x => x.SortOrder).ThenBy(x => x.Name)
             .ToList();

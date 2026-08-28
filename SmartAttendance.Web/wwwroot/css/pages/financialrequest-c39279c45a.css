@@ -1,0 +1,41 @@
+/* Source: Pages/EmployeePortal/FinancialRequest.cshtml */
+.efr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,var(--zy-text)); }
+    .efr-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); padding:18px; }
+    .efr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .efr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .efr-kinds { display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:8px; margin-bottom:14px; }
+    .efr-kinds label { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 6px; border:1px solid var(--zy-migrated-color-5658452bed); border-radius:14px; cursor:pointer; text-align:center; font-size:11px; font-weight:900; }
+    .efr-kinds label.on { border-color:var(--zy-migrated-color-b035e56d5f); background:color-mix(in srgb,var(--zy-migrated-color-b035e56d5f) 12%,transparent); color:var(--zy-migrated-color-b035e56d5f); }
+    .efr-kinds .ic { font-size:22px; }
+    .efr-kinds input { display:none; }
+    .efr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .efr-grid .full { grid-column:1/-1; }
+    /* صف واحد: الأقساط (أقصر) + الشهر + السنة */
+    .efr-row3 { grid-column:1/-1; display:flex; gap:10px; align-items:flex-end; }
+    .efr-row3 .efr-field { flex:1; min-width:0; }
+    .efr-row3 #efrFldCount { flex:0 0 78px; }
+    .efr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); }
+    .efr-field input, .efr-field select, .efr-field textarea { min-height:42px; box-sizing:border-box; border-radius:12px; border:1px solid var(--zy-migrated-color-5658452bed); background:var(--zy-migrated-color-22ba49161c); color:var(--sa-text,var(--zy-text)); padding:8px 12px; font-weight:800; font-size:14px; }
+    html[data-theme="light"] .efr-field input, html[data-theme="light"] .efr-field select, html[data-theme="light"] .efr-field textarea { background:var(--zy-white); }
+    .efr-field select { appearance:none; -webkit-appearance:none; padding-inline-start:38px;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2338bdf8' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:12px center; }
+    .efr-field select:focus { outline:none; border-color:var(--zy-migrated-color-90ffe2ffd6); }
+    .efr-field select option { background:var(--zy-migrated-color-461900512f); color:var(--sa-text,var(--zy-text)); }
+    html[data-theme="light"] .efr-field select option { background:var(--zy-white); color:var(--zy-migrated-color-461900512f); }
+    .efr-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:var(--zy-migrated-color-b035e56d5f); }
+    .efr-submit { min-height:46px; margin-top:14px; width:100%; border:0; border-radius:14px; background:var(--zy-migrated-color-b035e56d5f); color:var(--zy-on-primary); font-weight:1000; font-size:15px; cursor:pointer; }
+    .efr-alert { padding:12px 14px; border-radius:12px; background:var(--zy-migrated-color-0316533f36); border:1px solid var(--zy-migrated-color-d6254606fc); color:var(--zy-migrated-color-0f176030df); font-weight:900; font-size:13px; }
+    .efr-list { display:flex; flex-direction:column; gap:8px; }
+    .efr-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border:1px solid var(--zy-migrated-color-0aac1ba379); border-radius:14px; font-size:13px; }
+    .efr-row .amt { direction:ltr; font-weight:1000; }
+    .efr-pill { font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; border:1px solid var(--zy-migrated-color-28565ef553); }
+    .efr-pill.Pending { color:var(--zy-warning); border-color:var(--zy-migrated-color-e73df561f6); }
+    .efr-pill.Approved { color:var(--zy-migrated-color-0f176030df); border-color:var(--zy-migrated-color-d6254606fc); }
+    .efr-pill.Rejected { color:var(--zy-danger); border-color:var(--zy-migrated-color-348f8741cc); }
+    .efr-del { background:transparent; border:1px solid var(--zy-migrated-color-348f8741cc); color:var(--zy-danger); border-radius:10px; padding:4px 10px; font-size:11px; font-weight:900; cursor:pointer; }
+
+/* Static inline utilities migrated from Pages/EmployeePortal/FinancialRequest.cshtml */
+
+.zyu-541964fc246f { opacity:.6; }
+
+.zyu-a4e017b7b0ef { display:flex;align-items:center;gap:8px; }

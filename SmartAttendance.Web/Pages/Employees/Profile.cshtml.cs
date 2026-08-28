@@ -6,6 +6,7 @@ using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -24,6 +25,8 @@ public partial class ProfileModel : PageModel
     private readonly IPermissionAuthorizationService _permissionAuthorizationService;
 
     private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
+    private readonly Infrastructure.Security.IFileThreatScanner _threatScanner;
+    private readonly Infrastructure.Security.MalwareScanningOptions _malwareOptions;
 
     // لتمرير نطاق الشركات للمسار القانونيّ لحذف العقود (ContractRegisterStore).
     private readonly Infrastructure.Security.ICompanyScopeProvider _companyScope;
@@ -33,12 +36,16 @@ public partial class ProfileModel : PageModel
         IWebHostEnvironment environment,
         IPermissionAuthorizationService permissionAuthorizationService,
         Infrastructure.Security.IProtectedFileService protectedFiles,
+        Infrastructure.Security.IFileThreatScanner threatScanner,
+        IOptions<Infrastructure.Security.MalwareScanningOptions> malwareOptions,
         Infrastructure.Security.ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
         _environment = environment;
         _permissionAuthorizationService = permissionAuthorizationService;
         _protectedFiles = protectedFiles;
+        _threatScanner = threatScanner;
+        _malwareOptions = malwareOptions.Value;
         _companyScope = companyScope;
     }
 

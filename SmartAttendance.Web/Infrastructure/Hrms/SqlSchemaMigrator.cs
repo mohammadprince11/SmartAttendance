@@ -1497,6 +1497,898 @@ BEGIN
     );
 END;
 """),
+
+        new(
+            "20260825-01-bank-template-company-scope",
+            """
+IF OBJECT_ID('BankFileTemplates', 'U') IS NOT NULL
+   AND COL_LENGTH('BankFileTemplates', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE BankFileTemplates ADD CompanyId int NULL;
+    CREATE INDEX IX_BankFileTemplates_Company ON BankFileTemplates (CompanyId, IsActive, IsDefault);
+END;
+
+-- القالبان زُرعا تاريخياً بوصفهما نموذجين غير مؤكدين؛ يمنع تعطيلهما تصديراً بنكياً
+-- بتنسيق تخميني، مع إبقاء الصفوف للمراجعة والتدقيق بدلاً من حذفها.
+IF OBJECT_ID('BankFileTemplates', 'U') IS NOT NULL
+    UPDATE BankFileTemplates
+    SET IsActive = 0
+WHERE Name IN (N'الرافدين (نموذج)', N'الرشيد (نموذج)') AND CompanyId IS NULL;
+"""),
+        new(
+            "20260826-01-salary-item-company-scope",
+            """
+IF OBJECT_ID('SalaryItems', 'U') IS NOT NULL
+   AND COL_LENGTH('SalaryItems', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE SalaryItems ADD CompanyId int NULL;
+    CREATE INDEX IX_SalaryItems_Company ON SalaryItems (CompanyId, IsActive, ItemType);
+END;
+"""),
+        new(
+            "20260826-02-people-report-company-scope",
+            """
+IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL
+   AND COL_LENGTH('PeopleReports', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE PeopleReports ADD CompanyId int NULL;
+    CREATE INDEX IX_PeopleReports_Company ON PeopleReports (CompanyId, IsSystem, IsDeleted);
+END;
+"""),
+        new(
+            "20260826-03-payroll-profile-company-scope",
+            """
+IF OBJECT_ID('PayrollTaxProfiles', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollTaxProfiles', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE PayrollTaxProfiles ADD CompanyId int NULL;
+    CREATE INDEX IX_PayrollTaxProfiles_Company ON PayrollTaxProfiles (CompanyId, IsActive, SortOrder);
+END;
+
+IF OBJECT_ID('PayrollGosiProfiles', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollGosiProfiles', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE PayrollGosiProfiles ADD CompanyId int NULL;
+    CREATE INDEX IX_PayrollGosiProfiles_Company ON PayrollGosiProfiles (CompanyId, IsActive, SortOrder);
+END;
+"""),
+        new(
+            "20260826-04-attendance-source-company-scope",
+            """
+IF OBJECT_ID('AttendanceSources', 'U') IS NOT NULL
+   AND COL_LENGTH('AttendanceSources', 'CompanyId') IS NULL
+BEGIN
+    ALTER TABLE AttendanceSources ADD CompanyId int NULL;
+    CREATE INDEX IX_AttendanceSources_Company ON AttendanceSources (CompanyId, IsSystem, IsActive);
+END;
+"""),
+        new(
+            "20260826-05-webhook-outbox",
+            """
+IF OBJECT_ID('WebhookSubscriptions', 'U') IS NULL
+BEGIN
+    CREATE TABLE WebhookSubscriptions
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_WebhookSubscriptions PRIMARY KEY,
+        CompanyId int NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        EndpointUrl nvarchar(1000) NOT NULL,
+        ProtectedSecret nvarchar(max) NOT NULL,
+        EventsCsv nvarchar(1000) NOT NULL CONSTRAINT DF_WebhookSubscriptions_Events DEFAULT(N'*'),
+        IsActive bit NOT NULL CONSTRAINT DF_WebhookSubscriptions_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_WebhookSubscriptions_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_WebhookSubscriptions_Company FOREIGN KEY (CompanyId) REFERENCES Companies(Id)
+    );
+    CREATE INDEX IX_WebhookSubscriptions_Company ON WebhookSubscriptions(CompanyId, IsActive);
+END;
+
+IF OBJECT_ID('WebhookDeliveries', 'U') IS NULL
+BEGIN
+    CREATE TABLE WebhookDeliveries
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_WebhookDeliveries PRIMARY KEY,
+        SubscriptionId int NOT NULL,
+        CompanyId int NOT NULL,
+        EventType nvarchar(150) NOT NULL,
+        PayloadJson nvarchar(max) NOT NULL,
+        IdempotencyKey nvarchar(200) NOT NULL,
+        Status nvarchar(20) NOT NULL,
+        AttemptCount int NOT NULL CONSTRAINT DF_WebhookDeliveries_Attempts DEFAULT(0),
+        NextAttemptAt datetime2 NOT NULL,
+        LastAttemptAt datetime2 NULL,
+        SentAt datetime2 NULL,
+        LastStatusCode int NULL,
+        LastError nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_WebhookDeliveries_Created DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_WebhookDeliveries_Subscription FOREIGN KEY (SubscriptionId) REFERENCES WebhookSubscriptions(Id),
+        CONSTRAINT FK_WebhookDeliveries_Company FOREIGN KEY (CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_WebhookDeliveries_Idempotency UNIQUE (SubscriptionId, IdempotencyKey)
+    );
+    CREATE INDEX IX_WebhookDeliveries_Due
+        ON WebhookDeliveries(Status, NextAttemptAt, AttemptCount) INCLUDE(SubscriptionId, CompanyId);
+END;
+"""),
+        new(
+            "20260826-06-device-connector-inbox",
+            """
+IF OBJECT_ID('IntegrationApiKeys', 'U') IS NULL
+BEGIN
+    CREATE TABLE IntegrationApiKeys
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_IntegrationApiKeys PRIMARY KEY,
+        CompanyId int NOT NULL,
+        Name nvarchar(150) NOT NULL,
+        TokenHash char(64) NOT NULL,
+        ScopesCsv nvarchar(500) NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_IntegrationApiKeys_Active DEFAULT(1),
+        ExpiresAt datetime2 NULL,
+        LastUsedAt datetime2 NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_IntegrationApiKeys_Created DEFAULT(SYSUTCDATETIME()),
+        RevokedAt datetime2 NULL,
+        CONSTRAINT FK_IntegrationApiKeys_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_IntegrationApiKeys_Hash UNIQUE(TokenHash)
+    );
+    CREATE INDEX IX_IntegrationApiKeys_Company ON IntegrationApiKeys(CompanyId,IsActive);
+END;
+
+IF OBJECT_ID('DeviceConnectorHeartbeats', 'U') IS NULL
+BEGIN
+    CREATE TABLE DeviceConnectorHeartbeats
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_DeviceConnectorHeartbeats PRIMARY KEY,
+        CompanyId int NOT NULL,
+        ConnectorKey nvarchar(100) NOT NULL,
+        LastSeenAt datetime2 NOT NULL,
+        LastSuccessAt datetime2 NULL,
+        LastError nvarchar(1000) NULL,
+        LastBatchCount int NOT NULL CONSTRAINT DF_DeviceHeartbeat_Count DEFAULT(0),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DeviceHeartbeat_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_DeviceConnectorHeartbeats_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_DeviceConnectorHeartbeats_CompanyKey UNIQUE(CompanyId,ConnectorKey)
+    );
+END;
+
+IF OBJECT_ID('DevicePunchInbox', 'U') IS NULL
+BEGIN
+    CREATE TABLE DevicePunchInbox
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_DevicePunchInbox PRIMARY KEY,
+        CompanyId int NOT NULL,
+        IntegrationKeyId int NOT NULL,
+        ConnectorKey nvarchar(100) NOT NULL,
+        ExternalId nvarchar(200) NOT NULL,
+        EmployeeNo nvarchar(100) NOT NULL,
+        PunchedAt datetimeoffset NOT NULL,
+        PunchType nvarchar(20) NULL,
+        DeviceCode nvarchar(100) NULL,
+        PayloadHash char(64) NOT NULL,
+        Status nvarchar(20) NOT NULL,
+        AttemptCount int NOT NULL CONSTRAINT DF_DevicePunchInbox_Attempts DEFAULT(0),
+        NextAttemptAt datetime2 NOT NULL CONSTRAINT DF_DevicePunchInbox_Next DEFAULT(SYSUTCDATETIME()),
+        LastError nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DevicePunchInbox_Created DEFAULT(SYSUTCDATETIME()),
+        ProcessedAt datetime2 NULL,
+        CONSTRAINT FK_DevicePunchInbox_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT FK_DevicePunchInbox_Key FOREIGN KEY(IntegrationKeyId) REFERENCES IntegrationApiKeys(Id),
+        CONSTRAINT UQ_DevicePunchInbox_External UNIQUE(CompanyId,IntegrationKeyId,ExternalId)
+    );
+    CREATE INDEX IX_DevicePunchInbox_Queue ON DevicePunchInbox(CompanyId,Status,CreatedAt);
+END;
+"""),
+        new(
+            "20260826-07-accounting-adapter",
+            """
+IF OBJECT_ID('AccountingAccountMappings', 'U') IS NULL
+BEGIN
+    CREATE TABLE AccountingAccountMappings
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_AccountingAccountMappings PRIMARY KEY,
+        CompanyId int NOT NULL,
+        AccountRole nvarchar(60) NOT NULL,
+        AccountCode nvarchar(100) NOT NULL,
+        AccountName nvarchar(200) NOT NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_AccountingMappings_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_AccountingMappings_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_AccountingMappings_Role UNIQUE(CompanyId,AccountRole)
+    );
+END;
+
+IF OBJECT_ID('AccountingJournalExports', 'U') IS NULL
+BEGIN
+    CREATE TABLE AccountingJournalExports
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_AccountingJournalExports PRIMARY KEY,
+        CompanyId int NOT NULL,
+        RunId int NOT NULL,
+        Format nvarchar(20) NOT NULL,
+        PayloadHash char(64) NOT NULL,
+        ExportedBy nvarchar(150) NOT NULL,
+        ExportedAt datetime2 NOT NULL,
+        CONSTRAINT FK_AccountingJournalExports_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT FK_AccountingJournalExports_Run FOREIGN KEY(RunId) REFERENCES PayrollRuns(Id)
+    );
+    CREATE INDEX IX_AccountingJournalExports_Run ON AccountingJournalExports(CompanyId,RunId,ExportedAt);
+END;
+"""),
+        new(
+            "20260826-08-report-group-sort",
+            """
+IF OBJECT_ID('PeopleReports', 'U') IS NULL
+BEGIN
+    CREATE TABLE PeopleReports
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PeopleReports PRIMARY KEY,
+        CompanyId int NULL,
+        Name nvarchar(200) NOT NULL,
+        Description nvarchar(500) NULL,
+        DatasetKey nvarchar(60) NOT NULL,
+        FilterKey nvarchar(60) NULL,
+        ColumnsCsv nvarchar(max) NOT NULL,
+        OwnerUser nvarchar(150) NULL,
+        IsSystem bit NOT NULL CONSTRAINT DF_PeopleReports_IsSystem_Migration DEFAULT(0),
+        IsShared bit NOT NULL CONSTRAINT DF_PeopleReports_IsShared_Migration DEFAULT(0),
+        ShareWithEmployees bit NULL,
+        SharedWithCsv nvarchar(max) NULL,
+        FilterColumnsCsv nvarchar(max) NULL,
+        GroupColumnKey nvarchar(60) NULL,
+        SortColumnKey nvarchar(60) NULL,
+        SortDescending bit NOT NULL CONSTRAINT DF_PeopleReports_SortDescending_Migration DEFAULT(0),
+        SortOrder int NOT NULL CONSTRAINT DF_PeopleReports_SortOrder_Migration DEFAULT(0),
+        IsDeleted bit NOT NULL CONSTRAINT DF_PeopleReports_IsDeleted_Migration DEFAULT(0),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PeopleReports_CreatedAt_Migration DEFAULT(SYSUTCDATETIME())
+    );
+    CREATE INDEX IX_PeopleReports_Company ON PeopleReports(CompanyId,IsSystem,IsDeleted);
+END;
+
+IF OBJECT_ID('PeopleReports', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PeopleReports', 'GroupColumnKey') IS NULL
+        ALTER TABLE PeopleReports ADD GroupColumnKey nvarchar(60) NULL;
+    IF COL_LENGTH('PeopleReports', 'SortColumnKey') IS NULL
+        ALTER TABLE PeopleReports ADD SortColumnKey nvarchar(60) NULL;
+    IF COL_LENGTH('PeopleReports', 'SortDescending') IS NULL
+        ALTER TABLE PeopleReports ADD SortDescending bit NOT NULL CONSTRAINT DF_PeopleReports_SortDescending DEFAULT(0);
+END;
+"""),
+        new(
+            "20260826-09-report-schedules",
+            """
+IF OBJECT_ID('ReportSchedules', 'U') IS NULL
+BEGIN
+    CREATE TABLE ReportSchedules
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ReportSchedules PRIMARY KEY,
+        CompanyId int NOT NULL,
+        ReportId int NOT NULL,
+        OwnerUserId int NOT NULL,
+        OwnerUser nvarchar(150) NOT NULL,
+        RecipientsCsv nvarchar(2000) NOT NULL,
+        Frequency nvarchar(20) NOT NULL,
+        HourUtc int NOT NULL,
+        DayOfWeek int NULL,
+        NextRunAt datetime2 NOT NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ReportSchedules_Active DEFAULT(1),
+        AttemptCount int NOT NULL CONSTRAINT DF_ReportSchedules_Attempts DEFAULT(0),
+        ProcessingAt datetime2 NULL,
+        RetryAt datetime2 NULL,
+        LastRunAt datetime2 NULL,
+        LastSent bit NULL,
+        LastError nvarchar(1000) NULL,
+        CreatedAt datetime2 NOT NULL,
+        CONSTRAINT FK_ReportSchedules_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT FK_ReportSchedules_Report FOREIGN KEY(ReportId) REFERENCES PeopleReports(Id),
+        CONSTRAINT FK_ReportSchedules_User FOREIGN KEY(OwnerUserId) REFERENCES SystemUsers(Id),
+        CONSTRAINT CK_ReportSchedules_Frequency CHECK(Frequency IN (N'Daily',N'Weekly')),
+        CONSTRAINT CK_ReportSchedules_Hour CHECK(HourUtc BETWEEN 0 AND 23),
+        CONSTRAINT CK_ReportSchedules_Day CHECK(DayOfWeek IS NULL OR DayOfWeek BETWEEN 0 AND 6)
+    );
+    CREATE INDEX IX_ReportSchedules_Due ON ReportSchedules(IsActive,NextRunAt) INCLUDE(CompanyId,ReportId);
+    CREATE INDEX IX_ReportSchedules_Owner ON ReportSchedules(CompanyId,OwnerUser,IsActive);
+END;
+
+IF OBJECT_ID('ReportScheduleDeliveries', 'U') IS NULL
+BEGIN
+    CREATE TABLE ReportScheduleDeliveries
+    (
+        Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_ReportScheduleDeliveries PRIMARY KEY,
+        ScheduleId int NOT NULL,
+        OccurrenceAt datetime2 NOT NULL,
+        Recipient nvarchar(320) NOT NULL,
+        SentAt datetime2 NULL,
+        CONSTRAINT FK_ReportScheduleDeliveries_Schedule FOREIGN KEY(ScheduleId) REFERENCES ReportSchedules(Id),
+        CONSTRAINT UQ_ReportScheduleDeliveries UNIQUE(ScheduleId,OccurrenceAt,Recipient)
+    );
+END;
+"""),
+        new(
+            "20260826-10-dashboard-company-layouts",
+            """
+IF OBJECT_ID('DashboardWidgets', 'U') IS NULL
+BEGIN
+    CREATE TABLE DashboardWidgets
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_DashboardWidgets PRIMARY KEY,
+        CompanyId int NULL,
+        Title nvarchar(150) NOT NULL CONSTRAINT DF_DashboardWidgets_Title DEFAULT(N''),
+        Metric nvarchar(40) NOT NULL,
+        ChartKind nvarchar(20) NOT NULL CONSTRAINT DF_DashboardWidgets_Kind DEFAULT(N'Number'),
+        SortOrder int NOT NULL CONSTRAINT DF_DashboardWidgets_Order DEFAULT(0),
+        IsVisible bit NOT NULL CONSTRAINT DF_DashboardWidgets_Visible DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_DashboardWidgets_Created DEFAULT(SYSUTCDATETIME())
+    );
+    INSERT INTO DashboardWidgets(Metric,ChartKind,SortOrder) VALUES
+      (N'ActiveEmployees',N'Number',1),(N'NewHiresMonth',N'Number',2),(N'TodayPresent',N'Number',3),
+      (N'TodayLate',N'Number',4),(N'TodayAbsent',N'Number',5),(N'PendingRequests',N'Number',6),
+      (N'ByBranch',N'HBars',10),(N'ByDepartment',N'HBars',11),(N'TodayStatus',N'Donut',12),
+      (N'ByMaritalStatus',N'Donut',13),(N'ByNationality',N'Columns',14),(N'ByAge',N'Columns',15),
+      (N'ByServiceYears',N'Columns',16),(N'ByGender',N'Donut',17),(N'ByContractType',N'Donut',18);
+END;
+ELSE IF COL_LENGTH('DashboardWidgets','CompanyId') IS NULL
+    ALTER TABLE DashboardWidgets ADD CompanyId int NULL;
+
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('DashboardWidgets') AND name='IX_DashboardWidgets_Company')
+    CREATE INDEX IX_DashboardWidgets_Company ON DashboardWidgets(CompanyId,SortOrder,Id);
+"""),
+        new(
+            "20260826-11-approval-template-company-scope",
+            """
+IF OBJECT_ID('ApprovalTemplates','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalTemplates
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTemplates PRIMARY KEY,
+        CompanyId int NOT NULL,
+        RequestType nvarchar(64) NOT NULL,Name nvarchar(150) NOT NULL,NameEn nvarchar(150) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Active DEFAULT(1),Priority int NOT NULL CONSTRAINT DF_ApprovalTemplates_Priority DEFAULT(0),
+        HasConditions bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Conditions DEFAULT(0),CondBranchId int NULL,CondDepartmentId int NULL,CondWorkType nvarchar(50) NULL,
+        AutoRejectUnknownCommittee bit NOT NULL CONSTRAINT DF_ApprovalTemplates_AutoReject DEFAULT(0),CancelLimitDays int NULL,
+        CommentRequiredOnReject bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Comment DEFAULT(0),AttachmentRequiredOnRequest bit NOT NULL CONSTRAINT DF_ApprovalTemplates_Attachment DEFAULT(0),
+        EscalationDays int NULL,EscalationTo nvarchar(30) NULL,NotifyJson nvarchar(max) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalTemplates_Created DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_ApprovalTemplates_Company_New FOREIGN KEY(CompanyId) REFERENCES Companies(Id)
+    );
+    CREATE TABLE ApprovalTemplateSteps
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTemplateSteps PRIMARY KEY,TemplateId int NOT NULL,StepOrder int NOT NULL,
+        ApproverType nvarchar(20) NOT NULL,RoleName nvarchar(50) NULL,UserName nvarchar(150) NULL,DisplayName nvarchar(150) NOT NULL,
+        CONSTRAINT FK_ApprovalTemplateSteps_Template FOREIGN KEY(TemplateId) REFERENCES ApprovalTemplates(Id)
+    );
+    CREATE TABLE ApprovalTemplateWatchers
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalTemplateWatchers PRIMARY KEY,TemplateId int NOT NULL,UserName nvarchar(150) NOT NULL,
+        CONSTRAINT FK_ApprovalTemplateWatchers_Template FOREIGN KEY(TemplateId) REFERENCES ApprovalTemplates(Id)
+    );
+    CREATE INDEX IX_ApprovalTemplates_CompanyType ON ApprovalTemplates(CompanyId,RequestType,IsActive,Priority);
+END;
+
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplates','CompanyId') IS NULL
+BEGIN
+    ALTER TABLE ApprovalTemplates ADD CompanyId int NULL;
+
+    DECLARE @TemplateId int,@CompanyId int,@CloneId int;
+    DECLARE templates CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM ApprovalTemplates WHERE CompanyId IS NULL;
+    OPEN templates; FETCH NEXT FROM templates INTO @TemplateId;
+    WHILE @@FETCH_STATUS=0
+    BEGIN
+        DECLARE companies CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM Companies WHERE IsDeleted=0;
+        OPEN companies; FETCH NEXT FROM companies INTO @CompanyId;
+        WHILE @@FETCH_STATUS=0
+        BEGIN
+            INSERT INTO ApprovalTemplates(CompanyId,RequestType,Name,NameEn,IsActive,Priority,HasConditions,CondBranchId,CondDepartmentId,CondWorkType,AutoRejectUnknownCommittee,CancelLimitDays,CommentRequiredOnReject,AttachmentRequiredOnRequest,EscalationDays,EscalationTo,NotifyJson,CreatedAt)
+            SELECT @CompanyId,RequestType,Name,NameEn,IsActive,Priority,HasConditions,CondBranchId,CondDepartmentId,CondWorkType,AutoRejectUnknownCommittee,CancelLimitDays,CommentRequiredOnReject,AttachmentRequiredOnRequest,EscalationDays,EscalationTo,NotifyJson,CreatedAt
+            FROM ApprovalTemplates WHERE Id=@TemplateId;
+            SET @CloneId=SCOPE_IDENTITY();
+            INSERT INTO ApprovalTemplateSteps(TemplateId,StepOrder,ApproverType,RoleName,UserName,DisplayName)
+              SELECT @CloneId,StepOrder,ApproverType,RoleName,UserName,DisplayName FROM ApprovalTemplateSteps WHERE TemplateId=@TemplateId;
+            INSERT INTO ApprovalTemplateWatchers(TemplateId,UserName)
+              SELECT @CloneId,UserName FROM ApprovalTemplateWatchers WHERE TemplateId=@TemplateId;
+            FETCH NEXT FROM companies INTO @CompanyId;
+        END
+        CLOSE companies; DEALLOCATE companies;
+        FETCH NEXT FROM templates INTO @TemplateId;
+    END
+    CLOSE templates; DEALLOCATE templates;
+
+    DELETE s FROM ApprovalTemplateSteps s INNER JOIN ApprovalTemplates t ON t.Id=s.TemplateId WHERE t.CompanyId IS NULL;
+    DELETE w FROM ApprovalTemplateWatchers w INNER JOIN ApprovalTemplates t ON t.Id=w.TemplateId WHERE t.CompanyId IS NULL;
+    DELETE FROM ApprovalTemplates WHERE CompanyId IS NULL;
+    ALTER TABLE ApprovalTemplates ALTER COLUMN CompanyId int NOT NULL;
+    ALTER TABLE ApprovalTemplates ADD CONSTRAINT FK_ApprovalTemplates_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id);
+    CREATE INDEX IX_ApprovalTemplates_CompanyType ON ApprovalTemplates(CompanyId,RequestType,IsActive,Priority);
+END;
+"""),
+        new(
+            "20260826-12-approval-temporary-delegations",
+            """
+IF OBJECT_ID('ApprovalRequestFlows','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalRequestFlows(RequestId int NOT NULL CONSTRAINT PK_ApprovalRequestFlows PRIMARY KEY,TemplateId int NULL,TemplateName nvarchar(150) NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Name DEFAULT(N''),CommentRequiredOnReject bit NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Comment DEFAULT(0),AttachmentRequiredOnRequest bit NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Attachment DEFAULT(0),CancelLimitDays int NULL,EscalationDays int NULL,EscalationTo nvarchar(30) NULL,Escalated bit NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Escalated DEFAULT(0),CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalRequestFlows_Created DEFAULT(SYSUTCDATETIME()));
+END;
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalRequestSteps(Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalRequestSteps PRIMARY KEY,RequestId int NOT NULL,StepOrder int NOT NULL,ApproverType nvarchar(20) NOT NULL,RoleName nvarchar(50) NULL,UserName nvarchar(150) NULL,DisplayName nvarchar(150) NOT NULL,Status nvarchar(20) NOT NULL CONSTRAINT DF_ApprovalRequestSteps_Status DEFAULT('Pending'),CurrentSince datetime2 NULL,ActionBy nvarchar(150) NULL,ActionAt datetime2 NULL,Note nvarchar(500) NULL,DelegatedFrom nvarchar(100) NULL);
+ CREATE INDEX IX_ApprovalRequestSteps_Request ON ApprovalRequestSteps(RequestId,StepOrder);
+END;
+ELSE IF COL_LENGTH('ApprovalRequestSteps','DelegatedFrom') IS NULL
+ ALTER TABLE ApprovalRequestSteps ADD DelegatedFrom nvarchar(100) NULL;
+
+IF OBJECT_ID('ApprovalHistories','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalHistories(Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalHistories PRIMARY KEY,RequestId int NOT NULL,StepName nvarchar(80) NOT NULL,Action nvarchar(30) NOT NULL,ActionBy nvarchar(150) NULL,ActionAt datetime2 NOT NULL CONSTRAINT DF_ApprovalHistories_ActionAt DEFAULT(SYSUTCDATETIME()),Notes nvarchar(max) NULL,DelegatedFrom nvarchar(100) NULL);
+END;
+ELSE IF COL_LENGTH('ApprovalHistories','DelegatedFrom') IS NULL
+ ALTER TABLE ApprovalHistories ADD DelegatedFrom nvarchar(100) NULL;
+
+IF OBJECT_ID('ApprovalDelegations','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalDelegations
+ (
+  Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalDelegations PRIMARY KEY,
+  CompanyId int NOT NULL,DelegatorUserName nvarchar(100) NOT NULL,DelegateUserName nvarchar(100) NOT NULL,
+  StartsAt datetime2 NOT NULL,EndsAt datetime2 NOT NULL,IsActive bit NOT NULL CONSTRAINT DF_ApprovalDelegations_Active DEFAULT(1),
+  CreatedBy nvarchar(150) NOT NULL,CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalDelegations_Created DEFAULT(SYSUTCDATETIME()),
+  RevokedAt datetime2 NULL,RevokedBy nvarchar(150) NULL,
+  CONSTRAINT FK_ApprovalDelegations_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+  CONSTRAINT CK_ApprovalDelegations_Window CHECK(EndsAt>StartsAt),
+  CONSTRAINT CK_ApprovalDelegations_DifferentUsers CHECK(DelegatorUserName<>DelegateUserName)
+ );
+ CREATE INDEX IX_ApprovalDelegations_ActiveDelegate ON ApprovalDelegations(CompanyId,DelegateUserName,IsActive,StartsAt,EndsAt);
+END;
+"""),
+        new(
+            "20260826-13-approval-parallel-stages",
+            """
+IF OBJECT_ID('ApprovalTemplateSteps','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplateSteps','StageOrder') IS NULL
+BEGIN
+ ALTER TABLE ApprovalTemplateSteps ADD StageOrder int NULL;
+ EXEC sp_executesql N'UPDATE ApprovalTemplateSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL; ALTER TABLE ApprovalTemplateSteps ALTER COLUMN StageOrder int NOT NULL;';
+END;
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL AND COL_LENGTH('ApprovalRequestSteps','StageOrder') IS NULL
+BEGIN
+ ALTER TABLE ApprovalRequestSteps ADD StageOrder int NULL;
+ EXEC sp_executesql N'UPDATE ApprovalRequestSteps SET StageOrder=StepOrder WHERE StageOrder IS NULL; ALTER TABLE ApprovalRequestSteps ALTER COLUMN StageOrder int NOT NULL;';
+END;
+"""),
+        new(
+            "20260826-14-approval-sla-reminders-alternates",
+            """
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalTemplates','ReminderHours') IS NULL ALTER TABLE ApprovalTemplates ADD ReminderHours int NULL;
+ IF COL_LENGTH('ApprovalTemplates','EscalationAlternateUser') IS NULL ALTER TABLE ApprovalTemplates ADD EscalationAlternateUser nvarchar(100) NULL;
+END;
+IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalRequestFlows','ReminderHours') IS NULL ALTER TABLE ApprovalRequestFlows ADD ReminderHours int NULL;
+ IF COL_LENGTH('ApprovalRequestFlows','EscalationAlternateUser') IS NULL ALTER TABLE ApprovalRequestFlows ADD EscalationAlternateUser nvarchar(100) NULL;
+END;
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalRequestSteps','ReminderSentAt') IS NULL ALTER TABLE ApprovalRequestSteps ADD ReminderSentAt datetime2 NULL;
+ IF COL_LENGTH('ApprovalRequestSteps','EscalatedAt') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedAt datetime2 NULL;
+ IF COL_LENGTH('ApprovalRequestSteps','EscalatedToRole') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedToRole nvarchar(50) NULL;
+ IF COL_LENGTH('ApprovalRequestSteps','EscalatedToUser') IS NULL ALTER TABLE ApprovalRequestSteps ADD EscalatedToUser nvarchar(100) NULL;
+END;
+"""),
+        new(
+            "20260826-15-approval-value-field-conditions",
+            """
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('ApprovalTemplates','CondMinAmount') IS NULL ALTER TABLE ApprovalTemplates ADD CondMinAmount decimal(18,2) NULL;
+ IF COL_LENGTH('ApprovalTemplates','CondMaxAmount') IS NULL ALTER TABLE ApprovalTemplates ADD CondMaxAmount decimal(18,2) NULL;
+ IF COL_LENGTH('ApprovalTemplates','CondChangedFieldKey') IS NULL ALTER TABLE ApprovalTemplates ADD CondChangedFieldKey nvarchar(60) NULL;
+END;
+"""),
+        new(
+            "20260826-16-approval-policy-snapshots",
+            """
+IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL AND COL_LENGTH('ApprovalRequestFlows','NotifyJson') IS NULL
+    ALTER TABLE ApprovalRequestFlows ADD NotifyJson nvarchar(max) NULL;
+
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+   AND OBJECT_ID('ApprovalRequestWatchers','U') IS NULL
+BEGIN
+ CREATE TABLE ApprovalRequestWatchers
+ (
+  Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalRequestWatchers PRIMARY KEY,
+  RequestId int NOT NULL,
+  UserName nvarchar(150) NOT NULL,
+  CONSTRAINT FK_ApprovalRequestWatchers_Request FOREIGN KEY(RequestId) REFERENCES SelfServiceRequests(Id)
+ );
+ CREATE UNIQUE INDEX UX_ApprovalRequestWatchers_RequestUser ON ApprovalRequestWatchers(RequestId,UserName);
+END;
+"""),
+        new(
+            "20260826-17-payroll-adjustment-runs",
+            """
+IF OBJECT_ID('PayrollRuns','U') IS NOT NULL
+BEGIN
+ IF COL_LENGTH('PayrollRuns','RunType') IS NULL
+     ALTER TABLE PayrollRuns ADD RunType nvarchar(20) NOT NULL CONSTRAINT DF_PayrollRuns_RunType DEFAULT(N'Regular');
+ IF COL_LENGTH('PayrollRuns','AdjustmentReason') IS NULL
+     ALTER TABLE PayrollRuns ADD AdjustmentReason nvarchar(500) NULL;
+ IF COL_LENGTH('PayrollRuns','OriginalRunId') IS NULL
+     ALTER TABLE PayrollRuns ADD OriginalRunId int NULL;
+ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollRuns') AND name='IX_PayrollRuns_OriginalRun')
+     EXEC sp_executesql N'CREATE INDEX IX_PayrollRuns_OriginalRun ON PayrollRuns(OriginalRunId) WHERE OriginalRunId IS NOT NULL;';
+END;
+"""),
+        // Employee profile attachments used to create their persistent table from
+        // a Razor Page request. Keep the historical shape, including ProtectedKey,
+        // but make the operation reviewable and one-time.
+        new(
+            "20260826-18-employee-profile-files",
+            """
+IF OBJECT_ID(N'[dbo].[EmployeeProfileFiles]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeProfileFiles]
+    (
+        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [EmployeeId] int NOT NULL,
+        [Category] nvarchar(50) NOT NULL,
+        [FileName] nvarchar(260) NOT NULL,
+        [StoredPath] nvarchar(500) NOT NULL,
+        [ContentType] nvarchar(120) NULL,
+        [SizeBytes] bigint NOT NULL CONSTRAINT DF_EmployeeProfileFiles_SizeBytes DEFAULT 0,
+        [UploadedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileFiles_UploadedAt DEFAULT SYSUTCDATETIME(),
+        [UploadedBy] nvarchar(150) NULL,
+        [ProtectedKey] nvarchar(400) NULL
+    );
+
+    CREATE INDEX IX_EmployeeProfileFiles_Employee_Category
+        ON [dbo].[EmployeeProfileFiles] ([EmployeeId], [Category], [UploadedAt]);
+END;
+"""),
+
+        // Saved employee groups were the last page-local CREATE TABLE statement.
+        new(
+            "20260826-19-employee-groups",
+            """
+IF OBJECT_ID(N'[dbo].[EmployeeGroups]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeGroups]
+    (
+        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [Name] nvarchar(150) NOT NULL,
+        [Note] nvarchar(500) NULL,
+        [BranchId] int NULL,
+        [DepartmentId] int NULL,
+        [WorkType] nvarchar(50) NULL,
+        [ActiveOnly] bit NOT NULL CONSTRAINT DF_EmployeeGroups_ActiveOnly DEFAULT(1),
+        [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeGroups_CreatedAt DEFAULT(SYSUTCDATETIME())
+    );
+END;
+"""),
+
+        // Dynamic employee-profile definitions/values/sections previously mutated
+        // schema from both an admin page and import paths.
+        new(
+            "20260826-20-employee-profile-dynamic-schema",
+            """
+IF OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeProfileFieldDefinitions]
+    (
+        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [SectionKey] nvarchar(80) NOT NULL,
+        [FieldKey] nvarchar(120) NOT NULL,
+        [FieldLabel] nvarchar(150) NOT NULL,
+        [FieldType] nvarchar(40) NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_FieldType DEFAULT N'text',
+        [IsRequired] bit NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_IsRequired DEFAULT 0,
+        [IsActive] bit NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_IsActive DEFAULT 1,
+        [SortOrder] int NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_SortOrder DEFAULT 0,
+        [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_CreatedAt DEFAULT SYSUTCDATETIME(),
+        [UpdatedAt] datetime2 NULL,
+        [FieldOptions] nvarchar(max) NULL
+    );
+END;
+ELSE IF COL_LENGTH('EmployeeProfileFieldDefinitions', 'FieldOptions') IS NULL
+    ALTER TABLE EmployeeProfileFieldDefinitions ADD FieldOptions nvarchar(max) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_EmployeeProfileFieldDefinitions_FieldKey' AND object_id=OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]'))
+    CREATE UNIQUE INDEX UX_EmployeeProfileFieldDefinitions_FieldKey ON [dbo].[EmployeeProfileFieldDefinitions] ([FieldKey]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_EmployeeProfileFieldDefinitions_Section' AND object_id=OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]'))
+    CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [SortOrder], [Id]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'IX_EmployeeProfileFieldDefinitions_Section_Label' AND object_id=OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]'))
+    CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section_Label ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [FieldLabel]);
+
+IF OBJECT_ID(N'[dbo].[EmployeeCustomFields]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeCustomFields]
+    (
+        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [EmployeeId] int NOT NULL,
+        [FieldKey] nvarchar(120) NOT NULL,
+        [FieldLabel] nvarchar(150) NULL,
+        [FieldValue] nvarchar(max) NULL,
+        [UpdatedAt] datetime2 NULL
+    );
+END;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_EmployeeCustomFields_Employee_Field' AND object_id=OBJECT_ID(N'[dbo].[EmployeeCustomFields]'))
+    CREATE UNIQUE INDEX UX_EmployeeCustomFields_Employee_Field ON [dbo].[EmployeeCustomFields] ([EmployeeId], [FieldKey]);
+
+IF OBJECT_ID(N'[dbo].[EmployeeProfileSections]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeProfileSections]
+    (
+        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [SectionKey] nvarchar(80) NOT NULL,
+        [Label] nvarchar(150) NOT NULL,
+        [SortOrder] int NOT NULL CONSTRAINT DF_EmployeeProfileSections_SortOrder DEFAULT 0,
+        [IsSystem] bit NOT NULL CONSTRAINT DF_EmployeeProfileSections_IsSystem DEFAULT 0,
+        [IsActive] bit NOT NULL CONSTRAINT DF_EmployeeProfileSections_IsActive DEFAULT 1,
+        [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileSections_CreatedAt DEFAULT SYSUTCDATETIME(),
+        [UpdatedAt] datetime2 NULL
+    );
+    CREATE UNIQUE INDEX UX_EmployeeProfileSections_Key ON [dbo].[EmployeeProfileSections] ([SectionKey]);
+END;
+
+IF NOT EXISTS (SELECT 1 FROM EmployeeProfileSections)
+BEGIN
+    INSERT INTO EmployeeProfileSections (SectionKey, Label, SortOrder, IsSystem, IsActive)
+    VALUES
+        (N'basic', N'البيانات الأساسية', 10, 1, 1),
+        (N'personal', N'المعلومات الشخصية', 20, 1, 1),
+        (N'job', N'المعلومات الوظيفية', 30, 1, 1),
+        (N'financial', N'المعلومات المالية', 40, 1, 1),
+        (N'additional', N'معلومات إضافية', 50, 1, 1);
+END;
+"""),
+
+        // EffectiveDate was added by a request handler. The column is now a
+        // tracked, idempotent migration.
+        new(
+            "20260826-21-employee-update-effective-date",
+            """
+IF OBJECT_ID(N'[dbo].[EmployeeUpdateBatches]', N'U') IS NOT NULL
+   AND COL_LENGTH('EmployeeUpdateBatches', 'EffectiveDate') IS NULL
+    ALTER TABLE EmployeeUpdateBatches ADD EffectiveDate date NULL;
+"""),
+
+        // مصدر الطلب ثابت وقابل للتدقيق: لا نستنتجه من اسم المستخدم أو نوع الطلب.
+        // الصفوف التاريخية تبقى Legacy بدل ادّعاء أنها ذاتية أو إدارية بلا دليل.
+        new(
+            "20260826-22-approval-request-source",
+            """
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NULL
+        ALTER TABLE SelfServiceRequests ADD RequestSource nvarchar(20) NOT NULL
+            CONSTRAINT DF_SelfServiceRequests_RequestSource DEFAULT(N'Legacy');
+    IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('SelfServiceRequests') AND name='CK_SelfServiceRequests_RequestSource')
+        EXEC sp_executesql N'
+        ALTER TABLE SelfServiceRequests ADD CONSTRAINT CK_SelfServiceRequests_RequestSource
+            CHECK(RequestSource IN (N''SelfService'',N''Admin'',N''Legacy''));';
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SelfServiceRequests') AND name='IX_SelfServiceRequests_Source')
+        EXEC sp_executesql N'CREATE INDEX IX_SelfServiceRequests_Source ON SelfServiceRequests(RequestSource,Status,CreatedAt);';
+END;
+"""),
+
+        // لجان موافقات قابلة لإعادة الاستخدام + لجان خارجية. أعضاء اللجنة الداخلية
+        // يُجمَّدون على الطلب في ApprovalRequestStepMembers لحظة بدء المسار.
+        new(
+            "20260826-23-approval-committees",
+            """
+IF OBJECT_ID('ApprovalCommitteeGroups','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalCommitteeGroups
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalCommitteeGroups PRIMARY KEY,
+        CompanyId int NOT NULL,Name nvarchar(150) NOT NULL,Description nvarchar(500) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ApprovalCommitteeGroups_Active DEFAULT(1),
+        CreatedBy nvarchar(150) NOT NULL,CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalCommitteeGroups_Created DEFAULT(SYSUTCDATETIME()),UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_ApprovalCommitteeGroups_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_ApprovalCommitteeGroups_Name UNIQUE(CompanyId,Name)
+    );
+    CREATE INDEX IX_ApprovalCommitteeGroups_Company ON ApprovalCommitteeGroups(CompanyId,IsActive);
+END;
+
+IF OBJECT_ID('ApprovalCommitteeGroupMembers','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalCommitteeGroupMembers
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalCommitteeGroupMembers PRIMARY KEY,
+        GroupId int NOT NULL,UserName nvarchar(150) NOT NULL,SortOrder int NOT NULL CONSTRAINT DF_ApprovalCommitteeGroupMembers_Sort DEFAULT(0),
+        CONSTRAINT FK_ApprovalCommitteeGroupMembers_Group FOREIGN KEY(GroupId) REFERENCES ApprovalCommitteeGroups(Id),
+        CONSTRAINT UQ_ApprovalCommitteeGroupMembers_User UNIQUE(GroupId,UserName)
+    );
+END;
+
+IF OBJECT_ID('ApprovalExternalCommittees','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalExternalCommittees
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalExternalCommittees PRIMARY KEY,
+        CompanyId int NOT NULL,Name nvarchar(150) NOT NULL,ContactName nvarchar(150) NULL,ContactEmail nvarchar(320) NULL,Notes nvarchar(1000) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_ApprovalExternalCommittees_Active DEFAULT(1),
+        CreatedBy nvarchar(150) NOT NULL,CreatedAt datetime2 NOT NULL CONSTRAINT DF_ApprovalExternalCommittees_Created DEFAULT(SYSUTCDATETIME()),UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_ApprovalExternalCommittees_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT UQ_ApprovalExternalCommittees_Name UNIQUE(CompanyId,Name)
+    );
+    CREATE INDEX IX_ApprovalExternalCommittees_Company ON ApprovalExternalCommittees(CompanyId,IsActive);
+END;
+
+IF OBJECT_ID('ApprovalTemplateSteps','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ApprovalTemplateSteps','CommitteeGroupId') IS NULL ALTER TABLE ApprovalTemplateSteps ADD CommitteeGroupId int NULL;
+    IF COL_LENGTH('ApprovalTemplateSteps','ExternalCommitteeId') IS NULL ALTER TABLE ApprovalTemplateSteps ADD ExternalCommitteeId int NULL;
+    IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_ApprovalTemplateSteps_CommitteeGroup')
+        ALTER TABLE ApprovalTemplateSteps ADD CONSTRAINT FK_ApprovalTemplateSteps_CommitteeGroup FOREIGN KEY(CommitteeGroupId) REFERENCES ApprovalCommitteeGroups(Id);
+    IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_ApprovalTemplateSteps_ExternalCommittee')
+        ALTER TABLE ApprovalTemplateSteps ADD CONSTRAINT FK_ApprovalTemplateSteps_ExternalCommittee FOREIGN KEY(ExternalCommitteeId) REFERENCES ApprovalExternalCommittees(Id);
+END;
+
+IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ApprovalRequestSteps','CommitteeGroupId') IS NULL ALTER TABLE ApprovalRequestSteps ADD CommitteeGroupId int NULL;
+    IF COL_LENGTH('ApprovalRequestSteps','ExternalCommitteeId') IS NULL ALTER TABLE ApprovalRequestSteps ADD ExternalCommitteeId int NULL;
+END;
+
+IF OBJECT_ID('ApprovalRequestStepMembers','U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalRequestStepMembers
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApprovalRequestStepMembers PRIMARY KEY,
+        StepId int NOT NULL,UserName nvarchar(150) NOT NULL,
+        CONSTRAINT FK_ApprovalRequestStepMembers_Step FOREIGN KEY(StepId) REFERENCES ApprovalRequestSteps(Id),
+        CONSTRAINT UQ_ApprovalRequestStepMembers_User UNIQUE(StepId,UserName)
+    );
+    CREATE INDEX IX_ApprovalRequestStepMembers_User ON ApprovalRequestStepMembers(UserName,StepId);
+END;
+"""),
+
+        // الطلب المخصّص المبني بباني النماذج يصير طلب خدمة ذاتية حقيقياً: الرابط
+        // واحد-لواحد يربط لقطة الأسئلة/الإجابات بسريان الموافقة المجمّد. الاستبيانات
+        // تبقى بلا RequestId لأنها إجابات تحليلية وليست قرارات إدارية.
+        new(
+            "20260826-24-form-submission-approval-link",
+            """
+IF OBJECT_ID('FormSubmissions','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('FormSubmissions','RequestId') IS NULL
+        ALTER TABLE FormSubmissions ADD RequestId int NULL;
+    IF COL_LENGTH('FormSubmissions','ClientRequestToken') IS NULL
+        ALTER TABLE FormSubmissions ADD ClientRequestToken uniqueidentifier NULL;
+
+    IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_FormSubmissions_SelfServiceRequest')
+        EXEC sp_executesql N'
+        ALTER TABLE FormSubmissions ADD CONSTRAINT FK_FormSubmissions_SelfServiceRequest
+            FOREIGN KEY(RequestId) REFERENCES SelfServiceRequests(Id);';
+
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('FormSubmissions') AND name='UX_FormSubmissions_Request')
+        EXEC sp_executesql N'
+        CREATE UNIQUE INDEX UX_FormSubmissions_Request ON FormSubmissions(RequestId)
+            WHERE RequestId IS NOT NULL;';
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('FormSubmissions') AND name='UX_FormSubmissions_ClientRequestToken')
+        EXEC sp_executesql N'
+        CREATE UNIQUE INDEX UX_FormSubmissions_ClientRequestToken ON FormSubmissions(ClientRequestToken)
+            WHERE ClientRequestToken IS NOT NULL;';
+END;
+"""),
+
+        // أسعار صرف مؤرّخة لكل شركة. Rate يعني: وحدة من FromCurrency تساوي Rate
+        // من ToCurrency. سطر المسير يجمد العملة والسعر/تاريخه المستخدم كي يبقى الرقم
+        // قابلاً للتدقيق حتى لو عُدّلت الأسعار لاحقاً.
+        new(
+            "20260826-25-currency-exchange-rates",
+            """
+IF OBJECT_ID('CurrencyExchangeRates','U') IS NULL
+BEGIN
+    CREATE TABLE CurrencyExchangeRates
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CurrencyExchangeRates PRIMARY KEY,
+        CompanyId int NOT NULL,
+        FromCurrency char(3) NOT NULL,
+        ToCurrency char(3) NOT NULL,
+        EffectiveDate date NOT NULL,
+        Rate decimal(28,12) NOT NULL,
+        Note nvarchar(500) NULL,
+        IsActive bit NOT NULL CONSTRAINT DF_CurrencyExchangeRates_Active DEFAULT(1),
+        CreatedBy nvarchar(150) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_CurrencyExchangeRates_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        CONSTRAINT FK_CurrencyExchangeRates_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id),
+        CONSTRAINT CK_CurrencyExchangeRates_Rate CHECK(Rate>0),
+        CONSTRAINT CK_CurrencyExchangeRates_Currencies CHECK(FromCurrency<>ToCurrency),
+        CONSTRAINT UQ_CurrencyExchangeRates UNIQUE(CompanyId,FromCurrency,ToCurrency,EffectiveDate)
+    );
+    CREATE INDEX IX_CurrencyExchangeRates_Effective
+        ON CurrencyExchangeRates(CompanyId,FromCurrency,ToCurrency,IsActive,EffectiveDate DESC);
+END;
+
+IF OBJECT_ID('PayrollRunLines','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('PayrollRunLines','SourceCurrency') IS NULL
+        ALTER TABLE PayrollRunLines ADD SourceCurrency char(3) NULL;
+    IF COL_LENGTH('PayrollRunLines','PayrollCurrency') IS NULL
+        ALTER TABLE PayrollRunLines ADD PayrollCurrency char(3) NULL;
+    IF COL_LENGTH('PayrollRunLines','ExchangeRate') IS NULL
+        ALTER TABLE PayrollRunLines ADD ExchangeRate decimal(28,12) NULL;
+    IF COL_LENGTH('PayrollRunLines','ExchangeRateDate') IS NULL
+        ALTER TABLE PayrollRunLines ADD ExchangeRateDate date NULL;
+END;
+"""),
+
+        // إغلاق اعتماد ملفات الضريبة/الضمان على EnsureAsync بطلب الصفحة. في قاعدة
+        // جديدة كانت هجرة CompanyId القديمة تمر قبل وجود الجداول، ثم ينشئها المتجر
+        // لاحقاً بلا CompanyId فيفشل أول مسير. هنا يصير المخطط كاملاً وقت الإقلاع.
+        new(
+            "20260826-26-payroll-statutory-profile-schema",
+            """
+IF OBJECT_ID('PayrollTaxProfiles','U') IS NULL
+BEGIN
+    CREATE TABLE PayrollTaxProfiles
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PayrollTaxProfiles PRIMARY KEY,
+        CompanyId int NULL,Name nvarchar(150) NOT NULL,
+        ExemptionAmount decimal(18,2) NOT NULL CONSTRAINT DF_PayrollTaxProfiles_Exemption DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_PayrollTaxProfiles_Active DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,SortOrder int NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PayrollTaxProfiles_Created DEFAULT(SYSUTCDATETIME())
+    );
+END;
+ELSE
+BEGIN
+    IF COL_LENGTH('PayrollTaxProfiles','CompanyId') IS NULL ALTER TABLE PayrollTaxProfiles ADD CompanyId int NULL;
+    IF COL_LENGTH('PayrollTaxProfiles','ConditionsJson') IS NULL ALTER TABLE PayrollTaxProfiles ADD ConditionsJson nvarchar(max) NULL;
+    IF COL_LENGTH('PayrollTaxProfiles','SortOrder') IS NULL ALTER TABLE PayrollTaxProfiles ADD SortOrder int NULL;
+END;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollTaxProfiles') AND name='IX_PayrollTaxProfiles_Company')
+    CREATE INDEX IX_PayrollTaxProfiles_Company ON PayrollTaxProfiles(CompanyId,IsActive,SortOrder);
+
+IF OBJECT_ID('PayrollTaxBrackets','U') IS NULL
+BEGIN
+    CREATE TABLE PayrollTaxBrackets
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PayrollTaxBrackets PRIMARY KEY,
+        CompanyId int NULL,ProfileId int NOT NULL,
+        FromAmount decimal(18,2) NOT NULL CONSTRAINT DF_PayrollTaxBrackets_From DEFAULT(0),
+        ToAmount decimal(18,2) NULL,Rate decimal(9,4) NOT NULL CONSTRAINT DF_PayrollTaxBrackets_Rate DEFAULT(0)
+    );
+    CREATE INDEX IX_PayrollTaxBrackets_Profile ON PayrollTaxBrackets(ProfileId,FromAmount);
+END;
+
+IF OBJECT_ID('PayrollGosiProfiles','U') IS NULL
+BEGIN
+    CREATE TABLE PayrollGosiProfiles
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PayrollGosiProfiles PRIMARY KEY,
+        CompanyId int NULL,Name nvarchar(150) NOT NULL,
+        EmployeeRate decimal(9,4) NOT NULL CONSTRAINT DF_PayrollGosiProfiles_EmployeeRate DEFAULT(0),
+        CompanyRate decimal(9,4) NOT NULL CONSTRAINT DF_PayrollGosiProfiles_CompanyRate DEFAULT(0),
+        Ceiling decimal(18,2) NOT NULL CONSTRAINT DF_PayrollGosiProfiles_Ceiling DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_PayrollGosiProfiles_Active DEFAULT(1),
+        ConditionsJson nvarchar(max) NULL,SortOrder int NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PayrollGosiProfiles_Created DEFAULT(SYSUTCDATETIME())
+    );
+END;
+ELSE
+BEGIN
+    IF COL_LENGTH('PayrollGosiProfiles','CompanyId') IS NULL ALTER TABLE PayrollGosiProfiles ADD CompanyId int NULL;
+    IF COL_LENGTH('PayrollGosiProfiles','ConditionsJson') IS NULL ALTER TABLE PayrollGosiProfiles ADD ConditionsJson nvarchar(max) NULL;
+    IF COL_LENGTH('PayrollGosiProfiles','SortOrder') IS NULL ALTER TABLE PayrollGosiProfiles ADD SortOrder int NULL;
+END;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollGosiProfiles') AND name='IX_PayrollGosiProfiles_Company')
+    CREATE INDEX IX_PayrollGosiProfiles_Company ON PayrollGosiProfiles(CompanyId,IsActive,SortOrder);
+
+IF NOT EXISTS(SELECT 1 FROM PayrollGosiProfiles)
+    INSERT INTO PayrollGosiProfiles(CompanyId,Name,EmployeeRate,CompanyRate,Ceiling)
+    VALUES(NULL,N'الضمان الاجتماعي — العراق (مبدئي، تحتاج تأكيد محاسب)',5,12,0);
+IF NOT EXISTS(SELECT 1 FROM PayrollTaxProfiles)
+BEGIN
+    INSERT INTO PayrollTaxProfiles(CompanyId,Name,ExemptionAmount)
+    VALUES(NULL,N'ضريبة الدخل — العراق (مبدئي، تحتاج تأكيد محاسب)',250000);
+    DECLARE @TaxProfileId int=SCOPE_IDENTITY();
+    INSERT INTO PayrollTaxBrackets(ProfileId,FromAmount,ToAmount,Rate) VALUES
+      (@TaxProfileId,0,250000,3),(@TaxProfileId,250000,500000,5),
+      (@TaxProfileId,500000,1000000,10),(@TaxProfileId,1000000,NULL,15);
+END;
+"""),
     };
 
     /// <summary>

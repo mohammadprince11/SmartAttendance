@@ -77,8 +77,9 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         await ResolvePermissionsAsync();
+        var scope = await _companyScope.GetAsync();
 
-        Items = await MissingPunchRequestStore.ListAsync(_db, await _companyScope.GetAsync(), new MissingPunchRequestStore.Filter
+        Items = await MissingPunchRequestStore.ListAsync(_db, scope, new MissingPunchRequestStore.Filter
         {
             Search = Search,
             Status = Status,
@@ -91,14 +92,14 @@ public class IndexModel : PageModel
         });
 
         // العدّادات على كامل الطلبات (بلا فلتر الحالة) لعرض النبض الصحيح
-        var all = await MissingPunchRequestStore.ListAsync(_db, await _companyScope.GetAsync(), new MissingPunchRequestStore.Filter());
+        var all = await MissingPunchRequestStore.ListAsync(_db, scope, new MissingPunchRequestStore.Filter());
         PendingCount = all.Count(r => r.Status == MissingPunchRequestStore.Pending);
         ApprovedCount = all.Count(r => r.Status == MissingPunchRequestStore.Approved);
         RejectedCount = all.Count(r => r.Status == MissingPunchRequestStore.Rejected);
 
         Semantics = await PunchSemanticStore.ListAsync(_db);
         Employees = await HrmsDatabase.QueryAsync(_db,
-            "SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 ORDER BY FullName;",
+            $"SELECT Id, ISNULL(EmployeeNo, N'') AS EmployeeNo, ISNULL(FullName, N'') AS FullName FROM Employees WHERE ISNULL(IsDeleted,0)=0 AND ISNULL(IsActive,1)=1 AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")} ORDER BY FullName;",
             command => { },
             reader => new EmployeeOption
             {
@@ -107,7 +108,7 @@ public class IndexModel : PageModel
                 Name = HrmsDatabase.GetString(reader, "FullName")
             });
 
-        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
+        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db, authorizationScope: scope);
     }
 
     private object Route() => new { Search, Status, PunchType, FDept, FBranch, FPosition, From, To };
@@ -150,7 +151,8 @@ public class IndexModel : PageModel
             Source = "مباشر"
         };
 
-        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_db, req, UserName);
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(
+            _db, await _companyScope.GetAsync(), req, UserName);
         TempData["MpMessage"] = message;
         TempData["MpOk"] = ok;
         return RedirectToPage(Route());

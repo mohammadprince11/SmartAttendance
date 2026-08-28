@@ -34,10 +34,22 @@ public static class LoginRateLimitPolicy
 
         return normalized == "/account/login" ||
                normalized == "/api/auth/login" ||
+               normalized == "/api/v1/auth/login" ||
                // WebAuthn: التحقّق يقبل تأكيداً بلا كوكي (دخول بالبصمة) فهو مسار دخول.
                normalized == "/api/webauthn/login/options" ||
-               normalized == "/api/webauthn/login/verify";
+               normalized == "/api/v1/webauthn/login/options" ||
+               normalized == "/api/webauthn/login/verify" ||
+               normalized == "/api/v1/webauthn/login/verify";
     }
+
+    /// <summary>
+    /// يستهلك الدلو طلبُ المصادقة الفعلي فقط. عرض نموذج الدخول بـ GET ليس محاولة
+    /// كلمة مرور، واحتسابه يسمح لمهاجم بحجب صفحة الدخول عن عنوان مشترك بمجرد
+    /// تحديثها دون إرسال أي اعتماد.
+    /// </summary>
+    public static bool AppliesToAttempt(string? method, string? path) =>
+        string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase) &&
+        AppliesTo(path);
 
     /// <summary>
     /// مفتاح التقسيم: عنوان الطالب، أو <c>unknown</c> حين يتعذّر.

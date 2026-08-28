@@ -530,8 +530,14 @@ ORDER BY e.EmployeeNo;
     private static async Task<List<Dictionary<string, string>>> LoadOnlinePunchesAsync(
         ApplicationDbContext db, ReportFilters f)
     {
+        var reportScope = f.Scope ?? Security.CompanyScope.DeniedAll();
+        if (reportScope.IsDeniedAll)
+        {
+            return new List<Dictionary<string, string>>();
+        }
+
         var (from, to) = AttendanceRange(f);
-        var rows = await OnlinePunchStore.ListAsync(db, f.Scope, new OnlinePunchStore.Filter
+        var rows = await OnlinePunchStore.ListAsync(db, reportScope, new OnlinePunchStore.Filter
         {
             From = from, To = to, Search = f.Search, Top = 2000
         });

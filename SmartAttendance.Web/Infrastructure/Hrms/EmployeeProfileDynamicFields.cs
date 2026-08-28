@@ -156,83 +156,9 @@ END;
         }
     }
 
-    public static async Task EnsureSchemaAsync(ApplicationDbContext dbContext)
-    {
-        await HrmsDatabase.ExecuteAsync(
-            dbContext,
-            """
-IF OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[EmployeeProfileFieldDefinitions]
-    (
-        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [SectionKey] nvarchar(80) NOT NULL,
-        [FieldKey] nvarchar(120) NOT NULL,
-        [FieldLabel] nvarchar(150) NOT NULL,
-        [FieldType] nvarchar(40) NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_FieldType DEFAULT N'text',
-        [IsRequired] bit NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_IsRequired DEFAULT 0,
-        [IsActive] bit NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_IsActive DEFAULT 1,
-        [SortOrder] int NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_SortOrder DEFAULT 0,
-        [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_EmployeeProfileFieldDefinitions_CreatedAt DEFAULT SYSUTCDATETIME(),
-        [UpdatedAt] datetime2 NULL
-    );
-END;
-
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'UX_EmployeeProfileFieldDefinitions_FieldKey'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]')
-)
-BEGIN
-    CREATE UNIQUE INDEX UX_EmployeeProfileFieldDefinitions_FieldKey
-    ON [dbo].[EmployeeProfileFieldDefinitions] ([FieldKey]);
-END;
-
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'IX_EmployeeProfileFieldDefinitions_Section'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeProfileFieldDefinitions]')
-)
-BEGIN
-    CREATE INDEX IX_EmployeeProfileFieldDefinitions_Section
-    ON [dbo].[EmployeeProfileFieldDefinitions] ([SectionKey], [SortOrder], [Id]);
-END;
-
-IF OBJECT_ID(N'[dbo].[EmployeeCustomFields]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[EmployeeCustomFields]
-    (
-        [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [EmployeeId] int NOT NULL,
-        [FieldKey] nvarchar(120) NOT NULL,
-        [FieldLabel] nvarchar(150) NULL,
-        [FieldValue] nvarchar(max) NULL,
-        [UpdatedAt] datetime2 NULL
-    );
-END;
-
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = N'UX_EmployeeCustomFields_Employee_Field'
-      AND object_id = OBJECT_ID(N'[dbo].[EmployeeCustomFields]')
-)
-BEGIN
-    CREATE UNIQUE INDEX UX_EmployeeCustomFields_Employee_Field
-    ON [dbo].[EmployeeCustomFields] ([EmployeeId], [FieldKey]);
-END;
-
-IF COL_LENGTH('EmployeeProfileFieldDefinitions', 'FieldOptions') IS NULL
-    ALTER TABLE EmployeeProfileFieldDefinitions ADD FieldOptions nvarchar(max) NULL;
-""");
-
-        await EmployeeProfileSections.EnsureSchemaAsync(dbContext);
-    }
+    // Kept for source compatibility with import code. Schema creation moved to
+    // SqlSchemaMigrator migration 20260826-20.
+    public static Task EnsureSchemaAsync(ApplicationDbContext dbContext) => Task.CompletedTask;
 
     public static string NormalizeFieldType(string? value)
     {

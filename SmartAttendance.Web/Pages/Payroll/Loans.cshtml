@@ -10,75 +10,10 @@
     var active = Model.Loans.Count(l => l.Status == LoanStore.Approved);
 }
 @Html.AntiForgeryToken()
+<link rel="stylesheet" href="~/css/pages/loans-73f3517eb4.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .ln-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
-    .ln-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .ln-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .ln-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .ln-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .ln-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .ln-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
-    .ln-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .ln-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
-    .ln-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
-    .ln-btn.apply { background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.5); color:#34d399; }
-    .ln-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
-    .ln-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
-    .ln-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
-    .ln-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
-    .ln-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
-    .ln-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .ln-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-    .ln-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
-    .ln-filter input, .ln-filter select { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
-    html[data-theme="light"] .ln-filter input, html[data-theme="light"] .ln-filter select { background:#fff; }
-    /* شريط «ترحيل المستحق»: كل العناصر بنفس الارتفاع (42px مطابق للمنتقي المخصّص) */
-    .ln-post { align-items:center; gap:8px; }
-    .ln-post input, .ln-post button { min-height:42px; box-sizing:border-box; }
-    /* منتقي الشهر مبنيّ كـ nexora-select (width:100%!important) — نُقيّده لعرض رقمين */
-    .ln-post .nxcs-select { width:74px !important; min-width:74px !important; max-width:74px !important; flex:0 0 74px !important; }
-    /* الفلاتر متجاورة في سطر واحد */
-    .ln-filters { flex-wrap:nowrap; align-items:center; }
-    .ln-filters input, .ln-filters button { min-height:42px; box-sizing:border-box; white-space:nowrap; }
-    .ln-filters input[name="Search"] { flex:1 1 200px; min-width:140px; }
-    .ln-filters .nxcs-select { width:150px !important; min-width:150px !important; max-width:150px !important; flex:0 0 150px !important; }
-    .ln-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .ln-table { width:100%; border-collapse:collapse; font-size:13px; min-width:1040px; }
-    .ln-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
-    html[data-theme="light"] .ln-table th { background:#f2f7fb; }
-    .ln-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
-    .ln-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
-    /* أرقام LTR لكن محاذاة لنفس حافة العنوان (يمين في RTL) حتى تقع تحت عنوانها */
-    .ln-table td.ln-num { direction:ltr; font-weight:900; text-align:right; }
-    .ln-num { direction:ltr; font-weight:900; }
-    .ln-pill { font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; border:1px solid rgba(73,111,151,.3); }
-    .ln-pill.Pending { color:#facc15; border-color:rgba(250,204,21,.4); }
-    .ln-pill.Approved { color:#34d399; border-color:rgba(52,211,153,.4); }
-    .ln-pill.Closed { color:#8FA8BC; }
-    .ln-pill.Rejected { color:#f87171; border-color:rgba(248,113,113,.4); }
-    .ln-modal-bg { position:fixed; inset:0; background:rgba(2,8,16,.7); z-index:120; display:none; align-items:flex-start; justify-content:center; overflow:auto; padding:40px 16px; }
-    .ln-modal-bg.open { display:flex; }
-    .ln-modal { width:min(640px,100%); border:1px solid rgba(73,111,151,.3); border-radius:18px; background:var(--sa-surface,#0a1c30); padding:20px; }
-    html[data-theme="light"] .ln-modal { background:#fff; }
-    .ln-modal h2 { margin:0 0 14px; font-size:17px; }
-    .ln-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .ln-grid .full { grid-column:1/-1; }
-    .ln-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .ln-field input, .ln-field select, .ln-field textarea { min-height:38px; border-radius:11px; border:1px solid rgba(73,111,151,.28); background:rgba(0,0,0,.18); color:var(--sa-text,#DCEAF4); padding:7px 11px; font-weight:800; font-size:13px; }
-    html[data-theme="light"] .ln-field input, html[data-theme="light"] .ln-field select, html[data-theme="light"] .ln-field textarea { background:#fff; }
-    /* منتقي الموظف (نمط كيان) داخل حقل النموذج */
-    .ln-field .empk-code { border-radius:10px 0 0 10px; }
-    .ln-field .empk-name { border-radius:0 10px 10px 0; }
-    .ln-preview { grid-column:1/-1; font-size:13px; font-weight:900; color:var(--acc); }
-    .ln-modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
-    .ln-sched { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
-    .ln-sched th, .ln-sched td { padding:6px 10px; border-bottom:1px solid rgba(143,168,188,.12); text-align:start; }
-</style>
 
 <section class="ln-page" dir="rtl">
     <header class="ln-head">
@@ -95,7 +30,7 @@
                         <option value="@m" selected="@(m == Model.PostMonth)">@m.ToString("00")</option>
                     }
                 </select>
-                <input name="PostYear" type="number" value="@Model.PostYear" style="width:88px" />
+                <input name="PostYear" type="number" value="@Model.PostYear" class="zyu-2b524186b864" />
                 <button type="submit" class="ln-btn warn">ترحيل المستحق</button>
             </form>
             <button type="button" class="ln-btn" onclick="lnOpen(0)">+ قرض / سُلفة</button>
@@ -146,36 +81,36 @@
                 {
                     <tr>
                         <td class="ln-num">@l.ReferenceNo</td>
-                        <td><b>@l.EmployeeName</b><br /><span style="opacity:.6;font-size:11px">@l.EmployeeNo · @l.Department</span></td>
+                        <td><b>@l.EmployeeName</b><br /><span class="zyu-7ef101cd4277">@l.EmployeeNo · @l.Department</span></td>
                         <td>@l.TypeText</td>
                         <td class="ln-num">@l.Amount.ToString("N0")</td>
                         <td class="ln-num">@l.PaidCount / @l.InstallmentCount</td>
                         <td class="ln-num">@l.MonthlyAmount.ToString("N0")</td>
-                        <td class="ln-num" style="color:#34d399">@l.PaidAmount.ToString("N0")</td>
-                        <td class="ln-num" style="color:@acc">@l.Remaining.ToString("N0")</td>
+                        <td class="ln-num zyu-c15fd6731792">@l.PaidAmount.ToString("N0")</td>
+                        <td class="ln-num" data-zy-style="color:@acc">@l.Remaining.ToString("N0")</td>
                         <td class="ln-num">@l.StartPeriodText</td>
                         <td><span class="ln-pill @l.Status">@l.StatusText</span></td>
-                        <td style="white-space:nowrap">
+                        <td class="zyu-eb99a4c193ed">
                             <button type="button" class="ln-btn ghost sm" onclick="lnSchedule(@l.Id)">جدول</button>
                             @if (l.Status == LoanStore.Pending)
                             {
                                 <button type="button" class="ln-btn ghost sm" onclick="lnOpen(@l.Id)">تعديل</button>
-                                <form method="post" asp-page-handler="SetStatus" style="display:inline">
+                                <form method="post" asp-page-handler="SetStatus" class="zyu-6b8b63d565c4">
                                     <input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="status" value="Approved" />
                                     <button type="submit" class="ln-btn apply sm">اعتماد</button>
                                 </form>
-                                <form method="post" asp-page-handler="SetStatus" style="display:inline">
+                                <form method="post" asp-page-handler="SetStatus" class="zyu-6b8b63d565c4">
                                     <input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="status" value="Rejected" />
                                     <button type="submit" class="ln-btn danger sm">رفض</button>
                                 </form>
-                                <form method="post" asp-page-handler="Delete" style="display:inline" data-zyconfirm="حذف القرض @l.ReferenceNo؟">
+                                <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4" data-zyconfirm="حذف القرض @l.ReferenceNo؟">
                                     <input type="hidden" name="id" value="@l.Id" />
                                     <button type="submit" class="ln-btn danger sm">حذف</button>
                                 </form>
                             }
                             else if (l.Status == LoanStore.Approved)
                             {
-                                <form method="post" asp-page-handler="SetStatus" style="display:inline" data-zyconfirm="إغلاق القرض يدوياً؟ لن تُخصم أقساطه القادمة.">
+                                <form method="post" asp-page-handler="SetStatus" class="zyu-6b8b63d565c4" data-zyconfirm="إغلاق القرض يدوياً؟ لن تُخصم أقساطه القادمة.">
                                     <input type="hidden" name="id" value="@l.Id" /><input type="hidden" name="status" value="Closed" />
                                     <button type="submit" class="ln-btn warn sm">إغلاق</button>
                                 </form>
@@ -185,7 +120,7 @@
                 }
                 @if (!Model.Loans.Any())
                 {
-                    <tr><td colspan="11" style="text-align:center;opacity:.6;padding:26px">لا قروض — أنشئ قرضاً أو سُلفة من الزر أعلاه.</td></tr>
+                    <tr><td colspan="11" class="zyu-a86ea7877c05">لا قروض — أنشئ قرضاً أو سُلفة من الزر أعلاه.</td></tr>
                 }
             </tbody>
         </table>
@@ -249,9 +184,9 @@
 </div>
 
 <div class="ln-modal-bg" id="lnSchedBg">
-    <div class="ln-modal" style="width:min(460px,100%)">
+    <div class="ln-modal zyu-eff172f03ec0">
         <h2>جدول الأقساط</h2>
-        <div id="lnSchedBody" style="font-size:13px">جارٍ التحميل…</div>
+        <div id="lnSchedBody" class="zyu-5e461f0709b6">جارٍ التحميل…</div>
         <div class="ln-modal-actions"><button type="button" class="ln-btn ghost" onclick="document.getElementById('lnSchedBg').classList.remove('open')">إغلاق</button></div>
     </div>
 </div>
@@ -318,7 +253,7 @@
                     rows.forEach(function (r) {
                         html += "<tr><td>" + r.seqNo + "</td><td>" + r.dueText + "</td><td class='ln-num'>" +
                             (r.amount).toLocaleString() + "</td><td>" +
-                            (r.isPosted ? "<span style='color:#34d399'>مُخصَم</span>" : "<span style='color:#facc15'>مستحق</span>") + "</td></tr>";
+                            (r.isPosted ? "<span data-zy-style='color:#34d399'>مُخصَم</span>" : "<span data-zy-style='color:#facc15'>مستحق</span>") + "</td></tr>";
                     });
                     body.innerHTML = html + "</tbody></table>";
                 })

@@ -26,6 +26,7 @@ public class IndexModel : PageModel
     private Task<CompanyScope> ScopeAsync() => _companyScope.GetAsync(HttpContext.RequestAborted);
 
     [BindProperty(SupportsGet = true)] public string Status { get; set; } = "Pending";
+    [BindProperty(SupportsGet = true)] public string Source { get; set; } = "All";
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
     [BindProperty(SupportsGet = true)] public string? RequestType { get; set; }
     [BindProperty(SupportsGet = true)] public int? DepartmentId { get; set; }
@@ -43,8 +44,10 @@ public class IndexModel : PageModel
 
     public List<ApprovalRow> Requests { get; set; } = new();
     public Dictionary<int, ApprovalWorkflowEngine.FlowState> Flows { get; set; } = new();
+    public Dictionary<int, List<ApprovalWorkflowEngine.HistoryState>> Histories { get; set; } = new();
     public Dictionary<int, List<DataChangeRequestStore.ProposedField>> DataChanges { get; set; } = new();
     public Dictionary<int, FinancialRequestStore.Detail> FinancialRequests { get; set; } = new();
+    public Dictionary<int, List<FormSubmissionStore.Answer>> CustomRequestAnswers { get; set; } = new();
 
     // قوائم الفلاتر
     public List<Lookup> Departments { get; set; } = new();
@@ -62,34 +65,44 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        var escalated = await ApprovalWorkflowEngine.EscalateOverdueAsync(_dbContext);
-        if (escalated > 0)
+        var sla = await ApprovalWorkflowEngine.ProcessSlaAsync(_dbContext);
+        if (sla.Escalated > 0||sla.Reminded>0)
         {
-            Message = $"تم تصعيد {escalated} طلب متأخر حسب قواعد قوالبها.";
+            Message = $"معالجة SLA: {sla.Reminded} تذكير، {sla.Escalated} تصعيد.";
         }
         await LoadAsync();
     }
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        // سجّل قرار الحقول قبل البتّ (طلبات تعديل البيانات فقط تتأثر؛ غيرها بلا حقول = بلا أثر).
-        await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
-        var result = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, await ScopeAsync(), id, ActorName(), Note);
+        var result = await ApprovalWorkflowEngine.ApproveAsync(
+            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
+        // لا نكتب قرارات الحقول إلا بعد قبول المحرك لهوية صاحب الخطوة؛ وإلا أمكن
+        // لمستخدم يرى الشاشة أن يغيّر قرارات طلب ثم يترك اعتماده لشخص مخوّل.
+        if (result.Ok)
+            await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
         Message = result.Message;
         MessageIsError = !result.Ok;
-        if (result.FinalApproved) await ApplyEffectsAsync(id);
+        if (result.FinalApproved) await ApplyEffectsAsync(id, await ScopeAsync());
         await LoadAsync();
         return Page();
     }
 
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
-        var result = await ApprovalWorkflowEngine.RejectAsync(_dbContext, await ScopeAsync(), id, ActorName(), Note);
+        var result = await ApprovalWorkflowEngine.RejectAsync(
+            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
         Message = result.Message;
         MessageIsError = !result.Ok;
+        await LoadAsync();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostReturnAsync(int id)
+    {
+        var result = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
+        Message=result.Message; MessageIsError=!result.Ok;
         await LoadAsync();
         return Page();
     }
@@ -97,14 +110,14 @@ public class IndexModel : PageModel
     /// <summary>اعتماد مجمّع: يقدّم كل طلب محدَّد خطوةً واحدة، ويُفعّل الأثر لِمَن اكتملت لجنته.</summary>
     public async Task<IActionResult> OnPostBulkApproveAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         int ok = 0, final = 0;
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
-            var r = await ApprovalWorkflowEngine.ApproveAsync(_dbContext, scope, id, ActorName(), Note);
+            var r = await ApprovalWorkflowEngine.ApproveAsync(
+                _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
-            if (r.FinalApproved) { await ApplyEffectsAsync(id); final++; }
+            if (r.FinalApproved) { await ApplyEffectsAsync(id, scope); final++; }
         }
         Message = ok == 0 ? "لم يُعتمد أي طلب (تحقق من الصلاحية/الخطوة)." :
             $"تم اعتماد خطوة لـ {ok} طلب" + (final > 0 ? $"، منها {final} اكتملت لجنتها وفُعِّل أثرها." : ".");
@@ -116,12 +129,12 @@ public class IndexModel : PageModel
     /// <summary>رفض مجمّع للطلبات المحددة.</summary>
     public async Task<IActionResult> OnPostBulkRejectAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         int ok = 0;
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
-            var r = await ApprovalWorkflowEngine.RejectAsync(_dbContext, scope, id, ActorName(), Note);
+            var r = await ApprovalWorkflowEngine.RejectAsync(
+                _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
         }
         Message = ok == 0 ? "لم يُرفض أي طلب." : $"تم رفض {ok} طلب.";
@@ -130,11 +143,11 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    private async Task ApplyEffectsAsync(int id)
+    private async Task ApplyEffectsAsync(int id, CompanyScope scope)
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
-        await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, id, ActorName(), ip);
+        await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, scope, id, ActorName(), ip);
         await ShiftRequestStore.ApplyIfShiftRequestAsync(_dbContext, id);
 
         // الإجازة/المغادرة المعتمَدة تغيّر اليومية — أعد تحليلها إن كان المفتاح مفعّلاً.
@@ -143,14 +156,21 @@ public class IndexModel : PageModel
 
     private string ActorName() => User?.Identity?.Name ?? "HR";
 
+    private IEnumerable<string> ActorRoles() =>
+        User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)
+            .Select(claim => claim.Value);
+
+    private int? ActorEmployeeId() =>
+        int.TryParse(User.FindFirst("EmployeeId")?.Value, out var id) && id > 0 ? id : null;
+
     private async Task LoadAsync()
     {
-        await LoadFilterOptionsAsync();
-
         // 🔴 كانت هذه الشاشة تسرد وتعدّ طلبات **كل الشركات**: مستخدم مقيَّد يرى طلبات
         // موظفي شركاتٍ أخرى ويبتّها. الحصر بوصل الطلب بموظفه ثم بنطاق المستخدم.
         var scope = await ScopeAsync();
+        Source = Source is "SelfService" or "Admin" or "Legacy" ? Source : "All";
         var scopeFilter = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
+        await LoadFilterOptionsAsync(scope);
 
         var counts = await HrmsDatabase.QueryAsync(
             _dbContext,
@@ -159,9 +179,10 @@ SELECT ISNULL(r.Status,'Pending') AS S, COUNT(*) AS C
 FROM SelfServiceRequests r
 INNER JOIN Employees e ON e.Id = r.EmployeeId
 WHERE {scopeFilter}
+  AND (@Source = 'All' OR r.RequestSource = @Source)
 GROUP BY ISNULL(r.Status,'Pending');
 """,
-            null,
+            command => HrmsDatabase.AddParameter(command, "@Source", Source),
             reader => new { S = HrmsDatabase.GetString(reader, "S"), C = HrmsDatabase.GetInt(reader, "C") });
         PendingCount = counts.FirstOrDefault(x => x.S == "Pending")?.C ?? 0;
         ApprovedCount = counts.FirstOrDefault(x => x.S == "Approved")?.C ?? 0;
@@ -179,6 +200,7 @@ SELECT TOP 300
     ISNULL(b.Name, '') AS BranchName,
     ISNULL(e.Position, '') AS Position,
     r.RequestType,
+    r.RequestSource,
     r.FromDate,
     r.ToDate,
     r.StartTime,
@@ -196,6 +218,7 @@ LEFT JOIN Employees m ON e.DirectManagerId = m.Id
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
 WHERE {scopeFilter}
+  AND (@Source = 'All' OR r.RequestSource = @Source)
   AND (@Status = 'All' OR r.Status = @Status)
   AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
   AND (@ReqType IS NULL OR r.RequestType = @ReqType)
@@ -211,6 +234,7 @@ ORDER BY r.CreatedAt DESC;
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Status", Status);
+                HrmsDatabase.AddParameter(command, "@Source", Source);
                 HrmsDatabase.AddParameter(command, "@Search", NullIfEmpty(Search));
                 HrmsDatabase.AddParameter(command, "@ReqType", NullIfEmpty(RequestType));
                 HrmsDatabase.AddParameter(command, "@DeptId", (object?)DepartmentId ?? DBNull.Value);
@@ -232,6 +256,7 @@ ORDER BY r.CreatedAt DESC;
                 Branch = HrmsDatabase.GetString(reader, "BranchName"),
                 Position = HrmsDatabase.GetString(reader, "Position"),
                 RequestType = HrmsDatabase.GetString(reader, "RequestType"),
+                RequestSource = HrmsDatabase.GetString(reader, "RequestSource"),
                 FromDate = HrmsDatabase.GetDateOnly(reader, "FromDate"),
                 ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate"),
                 StartTime = HrmsDatabase.GetTimeSpan(reader, "StartTime"),
@@ -250,6 +275,8 @@ ORDER BY r.CreatedAt DESC;
         DataChanges = await DataChangeRequestStore.ListFieldsForRequestsAsync(_dbContext, dataChangeIds);
 
         FinancialRequests = await FinancialRequestStore.ListForRequestsAsync(_dbContext, Requests.Select(r => r.Id));
+        CustomRequestAnswers = await FormSubmissionStore.LoadAnswersForRequestsAsync(
+            _dbContext, Requests.Select(r => r.Id), scope);
 
         Flows = new Dictionary<int, ApprovalWorkflowEngine.FlowState>();
         foreach (var request in Requests)
@@ -263,21 +290,23 @@ ORDER BY r.CreatedAt DESC;
             }
             if (flow != null) Flows[request.Id] = flow;
         }
+        Histories = await ApprovalWorkflowEngine.GetHistoriesAsync(_dbContext, scope, Requests.Select(request => request.Id));
     }
 
-    private async Task LoadFilterOptionsAsync()
+    private async Task LoadFilterOptionsAsync(CompanyScope scope)
     {
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
         Departments = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT Id, Name FROM Departments ORDER BY Name",
+            $"SELECT Id,Name FROM Departments WHERE IsDeleted=0 AND {companyPredicate} ORDER BY Name",
             null, r => new Lookup(HrmsDatabase.GetInt(r, "Id"), HrmsDatabase.GetString(r, "Name")));
         Branches = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT Id, Name FROM Branches ORDER BY Name",
+            $"SELECT Id,Name FROM Branches WHERE IsDeleted=0 AND {companyPredicate} ORDER BY Name",
             null, r => new Lookup(HrmsDatabase.GetInt(r, "Id"), HrmsDatabase.GetString(r, "Name")));
         Positions = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT DISTINCT Position FROM Employees WHERE ISNULL(Position,'') <> '' ORDER BY Position",
+            $"SELECT DISTINCT Position FROM Employees WHERE IsDeleted=0 AND {companyPredicate} AND ISNULL(Position,'')<>'' ORDER BY Position",
             null, r => HrmsDatabase.GetString(r, "Position"));
         RequestTypes = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT DISTINCT RequestType FROM SelfServiceRequests WHERE ISNULL(RequestType,'') <> '' ORDER BY RequestType",
+            $"SELECT DISTINCT r.RequestType FROM SelfServiceRequests r INNER JOIN Employees e ON e.Id=r.EmployeeId WHERE e.IsDeleted=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")} AND ISNULL(r.RequestType,'')<>'' ORDER BY r.RequestType",
             null, r => HrmsDatabase.GetString(r, "RequestType"));
     }
 
@@ -287,7 +316,7 @@ ORDER BY r.CreatedAt DESC;
     public bool HasActiveFilters =>
         !string.IsNullOrWhiteSpace(Search) || !string.IsNullOrWhiteSpace(RequestType) ||
         DepartmentId.HasValue || BranchId.HasValue || !string.IsNullOrWhiteSpace(Position) ||
-        ReqFrom.HasValue || ReqTo.HasValue || ActFrom.HasValue || ActTo.HasValue;
+        ReqFrom.HasValue || ReqTo.HasValue || ActFrom.HasValue || ActTo.HasValue || Source != "All";
 
     public record Lookup(int Id, string Name);
 
@@ -302,6 +331,7 @@ ORDER BY r.CreatedAt DESC;
         public string Branch { get; set; } = string.Empty;
         public string Position { get; set; } = string.Empty;
         public string RequestType { get; set; } = string.Empty;
+        public string RequestSource { get; set; } = string.Empty;
         public DateOnly? FromDate { get; set; }
         public DateOnly? ToDate { get; set; }
         public TimeSpan? StartTime { get; set; }

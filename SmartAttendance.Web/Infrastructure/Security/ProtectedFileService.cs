@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
@@ -35,11 +36,22 @@ public sealed class ProtectedFileService : IProtectedFileService
 
     private readonly IDataProtector _protector;
     private readonly IWebHostEnvironment _environment;
+    private readonly IFileThreatScanner _threatScanner;
+    private readonly MalwareScanningOptions _malwareOptions;
+    private readonly ILogger<ProtectedFileService> _logger;
 
-    public ProtectedFileService(IDataProtectionProvider provider, IWebHostEnvironment environment)
+    public ProtectedFileService(
+        IDataProtectionProvider provider,
+        IWebHostEnvironment environment,
+        IFileThreatScanner threatScanner,
+        IOptions<MalwareScanningOptions> malwareOptions,
+        ILogger<ProtectedFileService> logger)
     {
         _protector = provider.CreateProtector(ProtectorPurpose);
         _environment = environment;
+        _threatScanner = threatScanner;
+        _malwareOptions = malwareOptions.Value;
+        _logger = logger;
     }
 
     private string Root => ProtectedFileStore.ResolveRoot(_environment.ContentRootPath);
@@ -65,6 +77,16 @@ public sealed class ProtectedFileService : IProtectedFileService
         // التوقيع الفعلي للملف يُفحص أيضاً: الامتداد وحده يُزوَّر بإعادة التسمية.
         if (!await UploadSignatureValidator.IsValidForExtensionAsync(file, extension))
         {
+            return null;
+        }
+
+        var scan = await FileThreatPolicy.ScanUploadAsync(
+            _threatScanner, file, cancellationToken);
+        if (!FileThreatPolicy.CanStore(_malwareOptions, scan))
+        {
+            _logger.LogWarning(
+                "رُفض مرفق محمي بسبب نتيجة فحص malware: {Verdict}.",
+                scan.Verdict);
             return null;
         }
 

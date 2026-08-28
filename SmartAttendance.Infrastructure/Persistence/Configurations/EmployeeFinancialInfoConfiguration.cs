@@ -36,7 +36,7 @@ public class EmployeeFinancialInfoConfiguration : IEntityTypeConfiguration<Emplo
             nameof(EmployeeFinancialInfo.HourlyRate), nameof(EmployeeFinancialInfo.SocialSecuritySalary),
             nameof(EmployeeFinancialInfo.PreviousTaxSalary), nameof(EmployeeFinancialInfo.PreviousTaxExemption),
             nameof(EmployeeFinancialInfo.PreviousTaxAmount), nameof(EmployeeFinancialInfo.PreviousMinSalary),
-            nameof(EmployeeFinancialInfo.PreviousMinTaxAmount)
+            nameof(EmployeeFinancialInfo.PreviousMinTaxAmount), nameof(EmployeeFinancialInfo.CurrentTaxSalary)
         })
         {
             builder.Property(money).HasColumnType("decimal(18,4)");

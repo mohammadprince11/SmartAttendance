@@ -4,17 +4,11 @@
 @{
     ViewData["Title"] = "توليد الوثائق";
 }
+<link rel="stylesheet" href="~/css/pages/generate-2743afab94.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
-<style>
-    .zydoc-preview { border:1px solid var(--zy-border); border-radius:var(--zy-radius-md);
-        background:#fff; color:#111; padding:32px; line-height:2; font-size:.9375rem;
-        max-height:60vh; overflow:auto; }
-    .zydoc-preview table { border-collapse:collapse; }
-    .zydoc-preview td, .zydoc-preview th { border:1px solid #ccc; padding:6px 10px; }
-</style>
 
 <section class="nxhs-page" dir="rtl">
     <header class="nxhs-titlebar">
@@ -69,9 +63,9 @@
             <p class="zyp-section-title">توليد جماعي — الصق أكواد الموظفين</p>
             <p class="zyp-hint">كودٌ مخطئ واحد يعني موظفاً بلا وثيقة بصمت، فالمفقود يُعرض بنصّه بعد التوليد.</p>
             <textarea asp-for="BulkCodes" rows="3" dir="ltr"
-                      style="width:100%;padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:ui-monospace,monospace;font-size:.8125rem"
+                      class="zyu-b67765f127f8"
                       placeholder="E-001, E-002, E-003"></textarea>
-            <p style="margin-top:8px">
+            <p class="zyu-43a97fe4943c">
                 <button type="submit" asp-page-handler="Bulk" class="zyc-add-rule">أصدر للأكواد الملصوقة</button>
             </p>
         </div>
@@ -88,7 +82,7 @@
 
             @if (Model.PreviewUnresolved.Count > 0)
             {
-                <p class="zyc-summary" style="border-inline-start-color:var(--zy-warning)">
+                <p class="zyc-summary zyu-bc6a54692fba">
                     ⚠ رموز بلا قيمة ستظهر كما هي: <b>@string.Join("، ", Model.PreviewUnresolved)</b>
                 </p>
             }
@@ -122,7 +116,7 @@
                         <th>تاريخ الإصدار</th>
                         <th>المصدر</th>
                         <th>أصدرها</th>
-                        <th style="width:150px"></th>
+                        <th class="zyu-662c8e43345e"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -147,7 +141,7 @@
                             <td>
                                 <div class="zyp-actions">
                                     <a asp-page="./View" asp-route-id="@row.Id">عرض وطباعة</a>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@row.Id" />
                                         <button type="submit" data-zyconfirm="حذف الوثيقة من الأرشيف؟">حذف</button>
                                     </form>

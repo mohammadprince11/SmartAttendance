@@ -5,6 +5,7 @@
     ViewData["Title"] = "إدارة الحضور";
     var importOpen = (Model.Tab ?? "").Equals("import", StringComparison.OrdinalIgnoreCase) || Model.Preview != null || Model.ImportResult != null;
 }
+<link rel="stylesheet" href="~/css/pages/index-4d23d19264.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/attendance-operations-stable.css" asp-append-version="true" />
@@ -87,7 +88,7 @@
                 </p>
                 @if (Model.HasUnanalyzedRows && Model.ProcessedRecords.Any())
                 {
-                    <p class="hrms-alert warning" style="margin-top:8px">
+                    <p class="hrms-alert warning zyu-43a97fe4943c">
                         ⚠️ @Model.UnanalyzedRows صفاً <strong>لم يُحلَّل بعد</strong> — يظهر بحالة «غير محلَّل» بلا احتساب
                         (لا تأخير ولا خروج مبكر ولا ساعات). شغّل <strong>«تحديث الحضور»</strong> من
                         <a asp-page="/DayAttendance/Index">الحضور اليومي</a> ليُحلَّل بالمحرّك الرسمي وحده
@@ -206,7 +207,7 @@
                             <td>@(punch.CheckOut?.ToString("HH:mm") ?? "-")</td>
                             <td>@(punch.DurationHours?.ToString("0.##") is { Length: > 0 } h ? $"{h} س" : "-")</td>
                             <td>
-                                <form method="post" asp-page-handler="DeleteOtherPunch" style="display:inline">
+                                <form method="post" asp-page-handler="DeleteOtherPunch" class="zyu-6b8b63d565c4">
                                     <input type="hidden" name="id" value="@punch.Id" />
                                     <input type="hidden" name="ProcessFromDate" value="@Model.ProcessFromDate?.ToString("yyyy-MM-dd")" />
                                     <input type="hidden" name="ProcessToDate" value="@Model.ProcessToDate?.ToString("yyyy-MM-dd")" />
@@ -327,7 +328,7 @@
 
                 <button type="button" class="hrms-btn-secondary punch-add" data-add-pair>+ إضافة زوج بصمة</button>
 
-                <div class="hrms-field" style="margin-top:12px">
+                <div class="hrms-field zyu-0ee7f66ad9c0">
                     <label>ملاحظة</label>
                     <input asp-for="Correction.Notes" id="editNotes" placeholder="اكتب سبب التعديل حتى يظهر في سجل العمليات" />
                 </div>

@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="~/css/employee-end-service.css" asp-append-version="true" />
 
 <div class="endservice-page">
-    
+
     <div asp-validation-summary="All" class="endservice-alert danger"></div>
 <div class="endservice-head">
         <div>
@@ -79,7 +79,7 @@
         </section>
 
         <form method="post" class="endservice-layout" id="endServiceForm" novalidate>
-            
+
             @Html.AntiForgeryToken()
 <input type="hidden" asp-for="Id" />
 

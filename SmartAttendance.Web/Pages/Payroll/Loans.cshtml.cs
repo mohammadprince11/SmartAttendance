@@ -75,6 +75,14 @@ public class LoansModel : PageModel
             return RedirectToPage();
         }
 
+        var scope = await ScopeAsync();
+        if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                _db, loan.EmployeeId, scope, HttpContext.RequestAborted))
+        {
+            TempData["SuccessMessage"] = "الموظف أو القرض خارج نطاق صلاحيتك.";
+            return RedirectToPage();
+        }
+
         // المرحلة 6: مرفق القرض (عقد/كفالة) خارج wwwroot والقراءة عبر /files.
         if (attachment is { Length: > 0 })
         {
@@ -90,7 +98,7 @@ public class LoansModel : PageModel
 
         try
         {
-            await LoanStore.SaveAsync(_db, await ScopeAsync(), loan, CurrentUser);
+            await LoanStore.SaveAsync(_db, scope, loan, CurrentUser);
         }
         catch (UnauthorizedAccessException)
         {

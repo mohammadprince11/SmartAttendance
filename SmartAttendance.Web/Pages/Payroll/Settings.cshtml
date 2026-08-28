@@ -5,12 +5,12 @@
 
 @{
     ViewData["Title"] = "الضريبة والضمان";
-    var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Select(p => new
+    var taxJson = JsonSerializer.Serialize(Model.TaxProfiles.Where(p => p.CompanyId is > 0).Select(p => new
     {
         p.Id, p.Name, p.ExemptionAmount, p.IsActive, p.ConditionsJson, p.SortOrder,
         Brackets = p.Brackets.Select(b => new { b.FromAmount, b.ToAmount, b.Rate })
     }));
-    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive, g.ConditionsJson, g.SortOrder }));
+    var gosiJson = JsonSerializer.Serialize(Model.GosiProfiles.Where(g => g.CompanyId is > 0).Select(g => new { g.Id, g.Name, g.EmployeeRate, g.CompanyRate, g.Ceiling, g.IsActive, g.ConditionsJson, g.SortOrder }));
 
     // كتالوج المكوّنات والعضوية المحفوظة والافتراضات — تبني لوحة الوعاء داخل السلايد
     var componentsJson = JsonSerializer.Serialize(
@@ -22,40 +22,11 @@
         [SalaryBaseComposer.GosiBaseKey] = SalaryBaseComposer.DefaultGosiMembers
     });
 }
+<link rel="stylesheet" href="~/css/pages/settings-2a25f3c0f6.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
-<style>
-    /* تخطيط خاصٌّ بالصفحة فقط (المكوّنات المرئية صارت zy-*). كلّه من التوكنز. */
-    .ps-page { display:flex; flex-direction:column; gap:14px; color:var(--zy-text,inherit); }
-    /* رأس الصفحة/الأقسام/الأزرار — ألوانها من التوكنز (لا ألوان علامة مباشرة). */
-    .ps-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid var(--zy-border,rgba(73,111,151,.22)); border-radius:20px; background:var(--zy-bg-elevated,var(--zy-bg,transparent)); }
-    .ps-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .ps-head p { margin:2px 0 0; font-size:12px; color:var(--zy-text-muted,var(--sa-muted,#8FA8BC)); font-weight:800; }
-    .ps-warn { padding:10px 14px; border-radius:12px; font-size:12px; font-weight:900; border-inline-start:3px solid var(--status-warning,#B77A14); background:var(--status-warning-soft,rgba(183,122,20,.12)); color:var(--zy-text,inherit); }
-    .ps-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border-inline-start:3px solid var(--status-success,#238C63); background:var(--status-success-soft,rgba(35,140,99,.12)); color:var(--zy-text,inherit); }
-    .ps-sec { border:1px solid var(--zy-border,rgba(73,111,151,.22)); border-radius:18px; background:var(--zy-bg-elevated,var(--sa-surface,rgba(8,25,43,.9))); padding:16px; display:flex; flex-direction:column; gap:10px; }
-    .ps-sec h2 { margin:0; font-size:15px; font-weight:1000; display:flex; justify-content:space-between; align-items:center; gap:8px; }
-    .ps-btn { min-height:34px; padding:6px 15px; border-radius:11px; font-size:12px; font-weight:900; cursor:pointer; }
-    .ps-btn.ghost { background:transparent; border:1px solid var(--zy-border,rgba(73,111,151,.3)); color:inherit; }
-    .ps-btn.danger { background:transparent; border:1px solid var(--status-danger,#D94F5C); color:var(--status-danger,#D94F5C); }
-    .ps-btn.sm { min-height:28px; padding:3px 10px; font-size:11px; }
-    .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    @@media (max-width:900px){ .ps-grid { grid-template-columns:1fr; } }
-    /* عنصر قائمة/بطاقة اختيار — تخطيط داخليّ، ألوانه من التوكنز، يعمل بالوضعين. */
-    .ps-item { border:1px solid var(--zy-border,rgba(73,111,151,.18)); border-radius:var(--zy-card-radius,12px); padding:10px 12px; font-size:var(--zy-body-font,13px); background:var(--zy-bg-elevated,transparent); }
-    .ps-item.active { border-color:var(--status-success,#238C63); }
-    .ps-item b { direction:ltr; }
-    .ps-tag { font-size:10px; font-weight:900; padding:2px 8px; border-radius:999px; background:var(--status-success-soft,rgba(35,140,99,.14)); color:var(--status-success,#238C63); }
-    /* نماذج السلايد — تخطيط عموديّ خاصّ؛ الحقول ترث نظام الإدخال العامّ. */
-    .ps-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
-    .ps-form input { min-height:var(--zy-control-h,36px); border-radius:var(--zy-control-radius,10px); border:1px solid var(--zy-border,rgba(73,111,151,.25)); background:var(--zy-bg,transparent); color:inherit; padding:6px 10px; }
-    .ps-brk { display:grid; grid-template-columns:1fr 1fr 80px 34px; gap:6px; align-items:center; }
-    .ps-brk input { min-height:32px; font-size:12px; }
-    .ps-muted { font-size:12px; color:var(--zy-text-muted,var(--sa-muted,#8FA8BC)); font-weight:800; }
-</style>
 
 <section class="ps-page" dir="rtl">
     <header class="ps-head">
@@ -63,6 +34,16 @@
             <h1>تهيئة الضريبة والضمان</h1>
             <p>الملف النشط من كل نوع يُستخدم بالمسير. الضريبة تصاعدية بشرائح؛ الضمان بنسبة موظف/شركة وسقف.</p>
         </div>
+        <form method="get" class="zyu-a4e017b7b0ef">
+            <label for="payroll-company" class="ps-muted">شركة ملفات الضريبة والضمان</label>
+            <select id="payroll-company" name="CompanyId" onchange="this.form.submit()" required>
+                <option value="">اختر الشركة</option>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
+                }
+            </select>
+        </form>
     </header>
 
     <div class="ps-warn">⚠️ القيم المبذورة عراقية <b>مبدئية</b> (ضمان 5%/12% + شرائح 3–15%) — راجعها مع محاسب قبل اعتماد أي مسير حقيقي.</div>
@@ -75,41 +56,41 @@
     @* ----- وعاء الضمان/الضريبة مقابل الحضور ----- *@
     <div class="ps-sec">
         <h2>وعاء الضمان والضريبة مقابل الحضور</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             هل يُحتسب الضمان والضريبة على الراتب الأساسي <b>الكامل</b> أم على المُنقَّص بأيام الحضور؟
             (لا يؤثّر على من له «راتب ضمان/ضريبة مُعرَّف بالموظف» — ذاك يبقى ثابتاً.)
         </p>
-        <form method="post" asp-page-handler="SaveGosiTaxBase" style="display:flex;flex-direction:column;gap:8px">
+        <form method="post" asp-page-handler="SaveGosiTaxBase" asp-route-company-id="@Model.CompanyId" class="zyu-0fbf9e859f82">
             @foreach (var opt in new[] { ("Prorated", "على الأساسي بعد الحضور", "السلوك الحالي — يُنقَّص الأساسي بالحضور أولاً ثم يُحتسب الضمان/الضريبة عليه (يقلّ الاستقطاع بالغياب)."), ("FullBasic", "على الأساسي الكامل", "الضمان/الضريبة على الأساسي الكامل قبل الحضور — لا يتأثران بالغياب، والحضور يُخصم من الصافي فقط. (القاعدة القانونية المعتادة.)") })
             {
-                <label class="ps-item @(Model.GosiTaxBaseMode == opt.Item1 ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
-                    <input type="radio" name="gosiTaxBase" value="@opt.Item1" checked="@(Model.GosiTaxBaseMode == opt.Item1)" style="margin-top:3px" />
+                <label class="ps-item @(Model.GosiTaxBaseMode == opt.Item1 ? "active" : "")" data-zy-style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
+                    <input type="radio" name="gosiTaxBase" value="@opt.Item1" checked="@(Model.GosiTaxBaseMode == opt.Item1)" class="zyu-3d494aad713f" />
                     <span>
                         <b>@opt.Item2</b>
-                        <span style="display:block;font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin-top:2px">@opt.Item3</span>
+                        <span class="zyu-192beac8e8a5">@opt.Item3</span>
                     </span>
                 </label>
             }
-            <button type="submit" style="align-self:flex-start;min-height:36px;padding:7px 24px;border:0;border-radius:10px;background:linear-gradient(135deg,#12D9E3,#0ea5b5);color:#04141d;font-weight:1000;cursor:pointer">حفظ</button>
+            <button type="submit" class="zyu-7eb569b2ce96">حفظ</button>
         </form>
     </div>
 
     @* ----- ربط الراتب بالحضور ----- *@
     <div class="ps-sec">
         <h2>ربط الراتب بالحضور</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             الأساسي يُنسَّب من الاعتماد الشهري (بصمات ← أيام محلَّلة ← اعتماد الشهر).
             هذه السياسة تحكم <b>ماذا يحدث لموظف بلا بيانات حضور</b> وكيف يُنسَّب من له بيانات.
             <b>الحالة تُعلَن بالقسيمة وبرسالة الاحتساب مهما كان النمط.</b>
         </p>
-        <form method="post" asp-page-handler="SaveAttendanceLink" style="display:flex;flex-direction:column;gap:8px">
+        <form method="post" asp-page-handler="SaveAttendanceLink" asp-route-company-id="@Model.CompanyId" class="zyu-0fbf9e859f82">
             @foreach (var m in new[] { AttendanceSalaryLink.Lenient, AttendanceSalaryLink.PresentDays, AttendanceSalaryLink.Strict, AttendanceSalaryLink.Hours })
             {
-                <label class="ps-item @(Model.AttendanceLinkMode == m ? "active" : "")" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
-                    <input type="radio" name="mode" value="@m" checked="@(Model.AttendanceLinkMode == m)" style="margin-top:3px" />
+                <label class="ps-item @(Model.AttendanceLinkMode == m ? "active" : "")" data-zy-style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0">
+                    <input type="radio" name="mode" value="@m" checked="@(Model.AttendanceLinkMode == m)" class="zyu-3d494aad713f" />
                     <span>
                         <b>@AttendanceSalaryLink.ModeLabel(m)</b>
-                        <span style="display:block;font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin-top:2px">
+                        <span class="zyu-192beac8e8a5">
                             @(m == AttendanceSalaryLink.Lenient
                                 ? "الافتراضي — لا يتوقّف المسير عند نقص بيانات الحضور، والحالة مُعلَنة بوضوح."
                                 : m == AttendanceSalaryLink.PresentDays
@@ -122,93 +103,93 @@
                 </label>
             }
 
-            <div class="ps-item" style="display:flex;flex-direction:column;gap:8px">
-                <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                    <b style="min-width:190px">خصم يوم الغياب يساوي</b>
+            <div class="ps-item zyu-0fbf9e859f82">
+                <label class="zyu-bbca822d7973">
+                    <b class="zyu-02f1ed8e11c7">خصم يوم الغياب يساوي</b>
                     <input type="number" name="absenceDays" step="0.25" min="0" max="10"
                            value="@Model.LinkPolicy.AbsenceDeductionDays.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                           style="width:110px" />
-                    <span style="font-size:12px;font-weight:900">يوم من الراتب</span>
+                           class="zyu-5a5f7abe4163" />
+                    <span class="zyu-234ef25e545e">يوم من الراتب</span>
                 </label>
-                <span style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                <span class="zyu-5040f64097e1">
                     1 = يوم بيوم (الافتراضي). 2 = يوم الغياب يُخصم بيومين نمط لوائح الجزاءات.
                     الخصم الزائد يُطبَّق فوق التنسيب مهما كان النمط.
                 </span>
-                <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
+                <label class="zyu-bbca822d7973">
                     <input type="checkbox" name="allowNegative" value="true" checked="@Model.LinkPolicy.AllowNegative" />
                     <b>اسمح بأن يكون الراتب سالباً</b>
                 </label>
-                <span style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+                <span class="zyu-5040f64097e1">
                     ⚠️ مع الخصم المضاعف قد يتجاوز الخصمُ الاستحقاقَ. بلا هذا الخيار يتوقّف التنسيب
                     عند صفر (لا راتب، ولا مديونية)؛ ومعه يظهر الصافي سالباً ويُرحَّل كما هو.
                 </span>
             </div>
 
-            <span style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800">
+            <span class="zyu-5040f64097e1">
                 مقام تنسيب الأساسي يتبع <b>سياسة الغلق من نوع «أيام العمل»</b> (إعداد الشركة ← سياسات الغلق)
                 لا إعداداً هنا — «ماكو شي ثابت، كلها سياسة».
             </span>
 
-            <button type="submit" class="zy-btn zy-btn--primary ps-btn" style="align-self:flex-start">حفظ السياسة</button>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn zyu-0fd943ffe4c5">حفظ السياسة</button>
         </form>
     </div>
 
     @* ----- أوعية الراتب والمقام ----- *@
     <div class="ps-sec">
         <h2>أوعية الراتب والمقام</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             وعاء الأوفرتايم/الإجازة غير المدفوعة يُركَّب من الأساسي وحده أو الأساسي + العلاوات
             <b>المؤهَّلة لكل وعاء</b> (تُعلَّم العلاوة من «عناصر الراتب»). المقام والساعات
             المعيارية بدل الثابتين المخفيّين ÷ 30 و÷ 8. <b>الافتراضات تُبقي أرقام اليوم حرفياً.</b>
         </p>
-        <form method="post" asp-page-handler="SaveBasePolicy" style="display:flex;flex-direction:column;gap:10px">
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">وعاء الأوفرتايم</b>
-                <select name="overtimeBaseMode" style="min-width:260px">
+        <form method="post" asp-page-handler="SaveBasePolicy" asp-route-company-id="@Model.CompanyId" class="zyu-89086d4ee3f5">
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">وعاء الأوفرتايم</b>
+                <select name="overtimeBaseMode" class="zyu-45435946eaf3">
                     <option value="@PayrollEarningBase.ModeBasic" selected="@(Model.OvertimeBaseMode == PayrollEarningBase.ModeBasic)">الأساسي وحده (الافتراضي)</option>
                     <option value="@PayrollEarningBase.ModeBasicPlusAllowances" selected="@(Model.OvertimeBaseMode == PayrollEarningBase.ModeBasicPlusAllowances)">الأساسي + العلاوات المؤهَّلة للأوفرتايم</option>
                 </select>
             </label>
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">وعاء الإجازة غير المدفوعة</b>
-                <select name="unpaidLeaveBaseMode" style="min-width:260px">
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">وعاء الإجازة غير المدفوعة</b>
+                <select name="unpaidLeaveBaseMode" class="zyu-45435946eaf3">
                     <option value="@PayrollEarningBase.ModeBasic" selected="@(Model.UnpaidLeaveBaseMode == PayrollEarningBase.ModeBasic)">الأساسي وحده (الافتراضي)</option>
                     <option value="@PayrollEarningBase.ModeBasicPlusAllowances" selected="@(Model.UnpaidLeaveBaseMode == PayrollEarningBase.ModeBasicPlusAllowances)">الأساسي + العلاوات المؤهَّلة للإجازة</option>
                 </select>
             </label>
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">مقام أيام الراتب</b>
-                <select name="salaryDaysBasis" style="min-width:260px">
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">مقام أيام الراتب</b>
+                <select name="salaryDaysBasis" class="zyu-45435946eaf3">
                     <option value="@PayrollDivisorPolicy.BasisFixed30" selected="@(Model.SalaryDaysBasis == PayrollDivisorPolicy.BasisFixed30)">ثابت 30 (الافتراضي)</option>
                     <option value="@PayrollDivisorPolicy.BasisPeriodDays" selected="@(Model.SalaryDaysBasis == PayrollDivisorPolicy.BasisPeriodDays)">أيام الفترة الفعلية (28/29/30/31)</option>
                 </select>
             </label>
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">الساعات المعيارية لليوم</b>
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">الساعات المعيارية لليوم</b>
                 <input type="number" name="standardDailyHours" step="0.25" min="1" max="24"
                        value="@Model.StandardDailyHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                       style="width:110px" />
-                <span style="font-size:12px;font-weight:900">ساعة (مقام الأجر الساعي)</span>
+                       class="zyu-5a5f7abe4163" />
+                <span class="zyu-234ef25e545e">ساعة (مقام الأجر الساعي)</span>
             </label>
-            <button type="submit" class="zy-btn zy-btn--primary ps-btn" style="align-self:flex-start">حفظ سياسات الأوعية</button>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn zyu-0fd943ffe4c5">حفظ سياسات الأوعية</button>
         </form>
     </div>
 
     @* ----- السنة المالية (نظير «السنة المالية» بكيان) ----- *@
     <div class="ps-sec">
         <h2>السنة المالية</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             بداية السنة المالية تحكم التجميعات السنوية بالتقارير. عدد الرواتب الإضافية توثيقيّ الآن —
             مسيرها الموازي يمسّ محرّك الاحتساب فيُبنى بطلب صريح. الساعات المعيارية أعلاه (أوعية الراتب والمقام).
         </p>
-        <form method="post" asp-page-handler="SaveFiscalYear" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
-            <label style="display:flex;align-items:center;gap:6px;margin:0">
+        <form method="post" asp-page-handler="SaveFiscalYear" asp-route-company-id="@Model.CompanyId" class="zyu-d8a13058d9f8">
+            <label class="zyu-1332d1129261">
                 <b>تبدأ السنة المالية من شهر</b>
-                <input type="number" name="fiscalYearStartMonth" min="1" max="12" value="@Model.FiscalYearStartMonth" style="width:80px" />
+                <input type="number" name="fiscalYearStartMonth" min="1" max="12" value="@Model.FiscalYearStartMonth" class="zyu-91269935bd91" />
             </label>
-            <label style="display:flex;align-items:center;gap:6px;margin:0">
+            <label class="zyu-1332d1129261">
                 <b>عدد الرواتب الإضافية بالسنة</b>
-                <input type="number" name="extraSalariesPerYear" min="0" max="12" value="@Model.ExtraSalariesPerYear" style="width:80px" />
+                <input type="number" name="extraSalariesPerYear" min="0" max="12" value="@Model.ExtraSalariesPerYear" class="zyu-91269935bd91" />
             </label>
             <a asp-page="./SalaryScale" class="zy-btn ps-btn">سلم الرواتب</a>
             <button type="submit" class="zy-btn zy-btn--primary ps-btn">حفظ</button>
@@ -218,19 +199,19 @@
     @* ----- الخيارات الأمنية: مراقبة تغيير إعدادات الرواتب (نظير كيان) ----- *@
     <div class="ps-sec">
         <h2>الخيارات الأمنية — مراقبة تغيير الإعدادات</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             كل تغيير بإعدادات الرواتب من هذه الشاشة <b>يُسجَّل دائماً</b> بسجل التدقيق (القيمة قبل/بعد،
             الفاعل، العنوان). عند التفعيل يُطلق أيضاً <b>إشعار جرس فوري</b> للدور المستهدف —
             خفض نسبة ضمان أو تغيير مقام الأيام قبل مسير واحد لا يمرّ بصمت.
         </p>
-        <form method="post" asp-page-handler="SaveMonitor" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
-            <select name="monitorEnabled" style="min-width:220px">
+        <form method="post" asp-page-handler="SaveMonitor" asp-route-company-id="@Model.CompanyId" class="zyu-d8a13058d9f8">
+            <select name="monitorEnabled" class="zyu-b7e63b9b8145">
                 <option value="false" selected="@(!Model.ConfigMonitorEnabled)">تسجيل بالتدقيق فقط (الافتراضي)</option>
                 <option value="true" selected="@(Model.ConfigMonitorEnabled)">تسجيل + إشعار فوري</option>
             </select>
-            <label style="display:flex;align-items:center;gap:6px;margin:0">
+            <label class="zyu-1332d1129261">
                 <b>أبلغ الدور</b>
-                <input type="text" name="monitorRole" value="@Model.ConfigMonitorRole" style="width:140px" placeholder="Admin" />
+                <input type="text" name="monitorRole" value="@Model.ConfigMonitorRole" class="zyu-cd2b97c43d05" placeholder="Admin" />
             </label>
             <button type="submit" class="zy-btn zy-btn--primary ps-btn">حفظ</button>
         </form>
@@ -239,12 +220,12 @@
     @* ----- موافقات اللجنة (نظير «خيارات الموافقات بين المشرفين» بتهيئة كيان) ----- *@
     <div class="ps-sec">
         <h2>موافقات اللجنة</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             عند التفعيل لا تُصدَر دفعة إلا بعد «اعتماد اللجنة» عليها وهي مقفلة — يُسجَّل المعتمِد
             والوقت والملاحظة على الدفعة، وإلغاء القفل يُسقط الاعتماد لأن الأرقام تتغيّر.
         </p>
-        <form method="post" asp-page-handler="SaveApproval" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
-            <select name="requireCommitteeApproval" style="min-width:260px">
+        <form method="post" asp-page-handler="SaveApproval" asp-route-company-id="@Model.CompanyId" class="zyu-d8a13058d9f8">
+            <select name="requireCommitteeApproval" class="zyu-45435946eaf3">
                 <option value="false" selected="@(!Model.RequireCommitteeApproval)">الإصدار مباشرة (الافتراضي)</option>
                 <option value="true" selected="@(Model.RequireCommitteeApproval)">يتطلب إصدار الرواتب اعتماد اللجنة</option>
             </select>
@@ -255,52 +236,56 @@
     @* ----- الحدود القصوى الشهرية (نظير «التحقق من المبالغ القصوى» بكيان) ----- *@
     <div class="ps-sec">
         <h2>الحدود القصوى الشهرية</h2>
-        <p style="font-size:12px;color:var(--sa-muted,#8FA8BC);font-weight:800;margin:0 0 8px">
+        <p class="zyu-ba951531a5ea">
             سقفٌ للاقتطاعات <b>الاختيارية</b> (جزاءات/حركات/أيام/إجازة بلا راتب/صيغ) وللعمل الإضافي بالشهر —
             الضريبة والضمان القانونيان لا يُسقَّفان. <b>صفر = بلا سقف (السلوك القائم).</b>
             المتجاوز لا يُبتلَع: يُعلَن بسطرٍ بالقسيمة (اقتطاع مُرحَّل · إضافي فوق الحد).
         </p>
-        <form method="post" asp-page-handler="SaveCaps" style="display:flex;flex-direction:column;gap:10px">
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">سقف الاقتطاع الشهري — مبلغ</b>
-                <input type="number" name="deductionCapAmount" step="0.01" min="0" style="width:140px"
+        <form method="post" asp-page-handler="SaveCaps" asp-route-company-id="@Model.CompanyId" class="zyu-89086d4ee3f5">
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">سقف الاقتطاع الشهري — مبلغ</b>
+                <input type="number" name="deductionCapAmount" step="0.01" min="0" class="zyu-cd2b97c43d05"
                        value="@(Model.Caps.DeductionCapAmount > 0 ? Model.Caps.DeductionCapAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
             </label>
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">سقف الاقتطاع الشهري — % من الإجمالي</b>
-                <input type="number" name="deductionCapPercent" step="0.5" min="0" max="100" style="width:140px"
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">سقف الاقتطاع الشهري — % من الإجمالي</b>
+                <input type="number" name="deductionCapPercent" step="0.5" min="0" max="100" class="zyu-cd2b97c43d05"
                        value="@(Model.Caps.DeductionCapPercentOfGross > 0 ? Model.Caps.DeductionCapPercentOfGross.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
-                <span style="font-size:12px;font-weight:900">الأضيق بين المبلغ والنسبة يفوز</span>
+                <span class="zyu-234ef25e545e">الأضيق بين المبلغ والنسبة يفوز</span>
             </label>
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">سقف الإضافي الشهري — ساعات</b>
-                <input type="number" name="overtimeCapHours" step="0.5" min="0" style="width:140px"
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">سقف الإضافي الشهري — ساعات</b>
+                <input type="number" name="overtimeCapHours" step="0.5" min="0" class="zyu-cd2b97c43d05"
                        value="@(Model.Caps.OvertimeCapHours > 0 ? Model.Caps.OvertimeCapHours.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
             </label>
-            <label style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0">
-                <b style="min-width:230px">سقف الإضافي الشهري — مبلغ</b>
-                <input type="number" name="overtimeCapAmount" step="0.01" min="0" style="width:140px"
+            <label class="zyu-bbca822d7973">
+                <b class="zyu-fe3847ad0a07">سقف الإضافي الشهري — مبلغ</b>
+                <input type="number" name="overtimeCapAmount" step="0.01" min="0" class="zyu-cd2b97c43d05"
                        value="@(Model.Caps.OvertimeCapAmount > 0 ? Model.Caps.OvertimeCapAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")" placeholder="0 = بلا" />
             </label>
-            <button type="submit" class="zy-btn zy-btn--primary ps-btn" style="align-self:flex-start">حفظ الحدود القصوى</button>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn zyu-0fd943ffe4c5">حفظ الحدود القصوى</button>
         </form>
     </div>
 
     <div class="ps-grid">
         @* ----- الضريبة ----- *@
         <div class="ps-sec">
-            <h2>ملفات الضريبة <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="taxOpen(0)">+ ملف</button></h2>
+            <h2>ملفات الضريبة <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="taxOpen(0)" disabled="@(!Model.CompanyId.HasValue)">+ ملف</button></h2>
             @foreach (var p in Model.TaxProfiles)
             {
                 <div class="ps-item @(p.IsActive ? "active" : "")">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div class="zyu-99ebfe3d8735">
                         <div><b>@p.Name</b> @(p.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
-                        <div style="white-space:nowrap">
-                            <button type="button" class="ps-btn ghost sm" onclick="taxOpen(@p.Id)">تعديل</button>
-                            <form method="post" asp-page-handler="DeleteTax" style="display:inline"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                        <div class="zyu-eb99a4c193ed">
+                            @if (p.CompanyId is > 0)
+                            {
+                                <button type="button" class="ps-btn ghost sm" onclick="taxOpen(@p.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="DeleteTax" asp-route-company-id="@Model.CompanyId" class="zyu-6b8b63d565c4"><input type="hidden" name="id" value="@p.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                            }
+                            else { <span class="ps-tag">افتراضي مشترك · للقراءة</span> }
                         </div>
                     </div>
-                    <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
+                    <div class="zyu-d473b3815758">
                         إعفاء <b>@p.ExemptionAmount.ToString("0.##")</b> · شرائح:
                         @string.Join(" · ", p.Brackets.OrderBy(b => b.FromAmount).Select(b => $"{b.FromAmount:0}–{(b.ToAmount?.ToString("0") ?? "∞")}: {b.Rate:0.##}%"))
                     </div>
@@ -310,18 +295,22 @@
 
         @* ----- الضمان ----- *@
         <div class="ps-sec">
-            <h2>ملفات الضمان الاجتماعي <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="gosiOpen(0)">+ ملف</button></h2>
+            <h2>ملفات الضمان الاجتماعي <button type="button" class="zy-btn zy-btn--primary ps-btn sm" onclick="gosiOpen(0)" disabled="@(!Model.CompanyId.HasValue)">+ ملف</button></h2>
             @foreach (var g in Model.GosiProfiles)
             {
                 <div class="ps-item @(g.IsActive ? "active" : "")">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div class="zyu-99ebfe3d8735">
                         <div><b>@g.Name</b> @(g.IsActive ? Html.Raw("<span class=\"ps-tag\">نشط</span>") : Html.Raw(""))</div>
-                        <div style="white-space:nowrap">
-                            <button type="button" class="ps-btn ghost sm" onclick="gosiOpen(@g.Id)">تعديل</button>
-                            <form method="post" asp-page-handler="DeleteGosi" style="display:inline"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                        <div class="zyu-eb99a4c193ed">
+                            @if (g.CompanyId is > 0)
+                            {
+                                <button type="button" class="ps-btn ghost sm" onclick="gosiOpen(@g.Id)">تعديل</button>
+                                <form method="post" asp-page-handler="DeleteGosi" asp-route-company-id="@Model.CompanyId" class="zyu-6b8b63d565c4"><input type="hidden" name="id" value="@g.Id" /><button class="ps-btn danger sm" data-zyconfirm="حذف؟">حذف</button></form>
+                            }
+                            else { <span class="ps-tag">افتراضي مشترك · للقراءة</span> }
                         </div>
                     </div>
-                    <div style="font-size:12px;color:var(--sa-muted,#8FA8BC);margin-top:4px">
+                    <div class="zyu-d473b3815758">
                         موظف <b>@g.EmployeeRate.ToString("0.##")%</b> · شركة <b>@g.CompanyRate.ToString("0.##")%</b> · سقف <b>@(g.Ceiling > 0 ? g.Ceiling.ToString("0.##") : "بلا")</b>
                     </div>
                 </div>
@@ -334,28 +323,28 @@
     <aside class="hrms-slideover wide" id="tax-slide" aria-hidden="true">
         <div class="hrms-slideover-head"><h2 id="tax-title">ملف ضريبة</h2><button type="button" class="hrms-slideover-close" onclick="taxClose()">×</button></div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="SaveTax" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="SaveTax" asp-route-company-id="@Model.CompanyId" class="ps-form zyu-f0de252a84a8">
                 <input type="hidden" name="Id" id="tax-Id" value="0" />
                 <label>اسم الملف *<input type="text" name="Name" id="tax-Name" required /></label>
                 <label>الإعفاء الشهري (يُطرح قبل الشرائح)<input type="number" name="ExemptionAmount" id="tax-Exemption" step="0.01" value="0" /></label>
-                <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="tax-Active" checked /> الملف النشط</label>
+                <label class="zyu-95e15889185d"><input type="checkbox" name="IsActive" value="true" id="tax-Active" checked /> الملف النشط</label>
 
                 @* شروط انطباق الملف تلقائياً — نفس محرّك الشروط العام بلا بنية جديدة *@
                 <div>
-                    <b style="font-size:13px">على من يُطبَّق هذا الملف تلقائياً؟</b>
+                    <b class="zyu-5e461f0709b6">على من يُطبَّق هذا الملف تلقائياً؟</b>
                     <p class="sb-hint">اتركه بلا شروط ليُطبَّق بالإسناد اليدوي أو بكونه الملف النشط. الإسناد على الموظف يعلو على الشرط دائماً.</p>
                     <label>أسبقية الفحص (الأصغر أولاً)<input type="number" name="SortOrder" id="tax-Sort" value="0" /></label>
                     <input type="hidden" name="Conditions" id="tax-Conditions" />
                     <div class="zyc" id="tax-cond" data-zy-conditions data-input="#tax-Conditions" data-criteria="@Model.CriteriaJson"></div>
                 </div>
 
-                <div><b style="font-size:13px">الشرائح التصاعدية</b> <button type="button" class="ps-btn ghost sm" onclick="brkAdd()">+ شريحة</button></div>
-                <div class="ps-brk" style="color:var(--sa-muted,#8FA8BC);font-size:11px;font-weight:900"><span>من</span><span>إلى (فارغ=∞)</span><span>نسبة%</span><span></span></div>
-                <div id="brk-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+                <div><b class="zyu-5e461f0709b6">الشرائح التصاعدية</b> <button type="button" class="ps-btn ghost sm" onclick="brkAdd()">+ شريحة</button></div>
+                <div class="ps-brk zyu-34f536270598"><span>من</span><span>إلى (فارغ=∞)</span><span>نسبة%</span><span></span></div>
+                <div id="brk-rows" class="zyu-67c6459975c9"></div>
 
                 @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
                 <div class="sb-board" data-base="TaxBase">
-                    <b style="font-size:13px">وعاء الاحتساب</b>
+                    <b class="zyu-5e461f0709b6">وعاء الاحتساب</b>
                     <p class="sb-hint">اسحب المكوّن داخل الوعاء ليدخل باحتساب الضريبة، أو أخرجه ليُستثنى.</p>
                     <div class="sb-cols">
                         <div class="sb-col">
@@ -379,20 +368,20 @@
     <aside class="hrms-slideover" id="gosi-slide" aria-hidden="true">
         <div class="hrms-slideover-head"><h2 id="gosi-title">ملف ضمان</h2><button type="button" class="hrms-slideover-close" onclick="gosiClose()">×</button></div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="SaveGosi" class="ps-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="SaveGosi" asp-route-company-id="@Model.CompanyId" class="ps-form zyu-f0de252a84a8">
                 <input type="hidden" name="Id" id="gosi-Id" value="0" />
                 <label>اسم الملف *<input type="text" name="Name" id="gosi-Name" required /></label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="zyu-71658681447f">
                     <label>نسبة الموظف %<input type="number" name="EmployeeRate" id="gosi-Emp" step="0.01" value="5" /></label>
                     <label>نسبة الشركة %<input type="number" name="CompanyRate" id="gosi-Co" step="0.01" value="12" /></label>
                 </div>
                 <label>السقف (0 = بلا سقف)<input type="number" name="Ceiling" id="gosi-Ceiling" step="0.01" value="0" /></label>
-                <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="IsActive" value="true" id="gosi-Active" checked /> الملف النشط</label>
+                <label class="zyu-95e15889185d"><input type="checkbox" name="IsActive" value="true" id="gosi-Active" checked /> الملف النشط</label>
 
                 @* شروط انطباق الملف تلقائياً — هنا يُحلّ «اقتطاع المواطن يخالف الوافد»:
                    معيار «مواطن» موجود بالكتالوج، فيكفي ملفٌّ شرطه «مواطن = نعم» *@
                 <div>
-                    <b style="font-size:13px">على من يُطبَّق هذا الملف تلقائياً؟</b>
+                    <b class="zyu-5e461f0709b6">على من يُطبَّق هذا الملف تلقائياً؟</b>
                     <p class="sb-hint">مثال: «مواطن يساوي نعم» ⟵ يأخذ كلُّ مواطنٍ هذا الملف بلا إسناد يدوي. الإسناد على الموظف يعلو على الشرط.</p>
                     <label>أسبقية الفحص (الأصغر أولاً)<input type="number" name="SortOrder" id="gosi-Sort" value="0" /></label>
                     <input type="hidden" name="Conditions" id="gosi-Conditions" />
@@ -401,7 +390,7 @@
 
                 @* وعاء الاحتساب لهذا الملف — يُبنى بجافاسكربت عند فتح السلايد *@
                 <div class="sb-board" data-base="GosiBase">
-                    <b style="font-size:13px">وعاء الاحتساب</b>
+                    <b class="zyu-5e461f0709b6">وعاء الاحتساب</b>
                     <p class="sb-hint">اسحب المكوّن داخل الوعاء ليدخل باحتساب الضمان، أو أخرجه ليُستثنى.</p>
                     <div class="sb-cols">
                         <div class="sb-col">
@@ -584,17 +573,4 @@
         }
     </script>
 
-    <style>
-        .sb-sec { margin-top: 18px; }
-        .sb-hint { color: var(--color-text-secondary); font-size: 13px; margin: 4px 0 14px; }
-        .sb-board { border: 1px solid var(--color-border); border-radius: 14px; padding: 14px; margin-bottom: 16px; background: var(--color-surface); }
-        .sb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
-        .sb-col h3 { font-size: 13px; margin: 0 0 8px; color: var(--color-text-secondary); }
-        .sb-drop { min-height: 96px; border: 1px dashed var(--color-border-strong); border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; background: var(--color-background); }
-        .sb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; cursor: grab; user-select: none; background: var(--color-primary-soft); color: var(--color-primary-text); border: 1px solid var(--color-border); font-size: 13px; }
-        .sb-out .sb-chip { background: var(--color-surface); color: var(--color-text-secondary); }
-        .sb-chip:active { cursor: grabbing; }
-
-        @@media (max-width: 860px) { .sb-cols { grid-template-columns: 1fr; } }
-    </style>
-}
+    }

@@ -44,10 +44,8 @@ public class DataChangeModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int? edit)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-
         await LoadAsync(employeeId);
 
         // وضع التعديل: عبّئ النموذج بقيم الطلب المعلّق (يُستبدَل عند الإرسال).
@@ -65,10 +63,9 @@ public class DataChangeModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-
+        if (employeeId <= 0) return Forbid();
         var ok = await DataChangeRequestStore.DeletePendingRequestAsync(_dbContext, id, employeeId);
         StatusMessage = ok ? "تم حذف طلب التعديل المعلّق." : "تعذّر الحذف (الطلب غير موجود أو تمّ البتّ فيه).";
         return RedirectToPage();
@@ -76,9 +73,8 @@ public class DataChangeModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
@@ -141,8 +137,8 @@ public class DataChangeModel : PageModel
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -162,7 +158,12 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage();
         }
 
-        await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        if(!start.Ok)
+        {
+            StatusMessage=start.Message;
+            return RedirectToPage();
+        }
         StatusMessage = $"تم إرسال طلب تعديل البيانات ({saved} حقل) وهو الآن قيد المراجعة.";
         return RedirectToPage();
     }

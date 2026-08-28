@@ -13,7 +13,8 @@ namespace SmartAttendance.Tests;
 /// </summary>
 public sealed class ThemeStoreIntegrationTests : IAsyncLifetime
 {
-    private const string ConnectionString =
+    private static string ConnectionString =>
+        Environment.GetEnvironmentVariable("SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION") ??
         "Server=localhost;Database=SmartAttendance;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True";
 
     private const int CompanyA = 900001;

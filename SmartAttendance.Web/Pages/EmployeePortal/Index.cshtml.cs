@@ -244,7 +244,7 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
     }
 
 
-    public async Task<IActionResult> OnPostCreateRequestAsync(string? returnTab)
+    public async Task<IActionResult> OnPostCreateRequestAsync(string? returnTab,IFormFile? requestAttachment)
     {
         await EmployeeEngagementSchema.EnsureAsync(_dbContext);
 
@@ -274,6 +274,10 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             StatusMessage = "يرجى اختيار نوع طلب صحيح.";
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
+
+        var actionCode = SelfServiceAccessPolicy.ActionForRequestType(type);
+        if (actionCode is null || !await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, actionCode))
+            return Forbid();
 
         if (!fromDate.HasValue)
         {
@@ -308,13 +312,24 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             }
         }
 
+        string? attachmentPath=null;
+        if(requestAttachment is { Length: >0 })
+        {
+            attachmentPath=await _protectedFiles.SaveAsync(requestAttachment,employeeId,"request",HttpContext.RequestAborted);
+            if(attachmentPath is null)
+            {
+                StatusMessage="المرفق غير صالح؛ استخدم PDF أو صورة ضمن الحجم المسموح.";
+                return RedirectToPage(new { tab = returnTab ?? "requests" });
+            }
+        }
+
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status)
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status,AttachmentPath,RequestSource)
 VALUES
-(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending');
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @Reason, 'Pending',@AttachmentPath,N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -324,16 +339,43 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                 HrmsDatabase.AddParameter(command, "@FromDate", fromDate.Value);
                 HrmsDatabase.AddParameter(command, "@ToDate", toDate);
                 HrmsDatabase.AddParameter(command, "@Reason", reason);
+                HrmsDatabase.AddParameter(command, "@AttachmentPath",(object?)attachmentPath??DBNull.Value);
             });
 
         // سريان الموافقات: حلّ القالب وتجميد خطوات اللجنة على الطلب.
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, type, employeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, type, employeeId);
+            if(!start.Ok)
+            {
+                StatusMessage=start.Message;
+                return RedirectToPage(new { tab = returnTab ?? "requests" });
+            }
         }
 
         StatusMessage = $"تم إرسال طلب {type} بنجاح وهو الآن قيد المراجعة.";
         return RedirectToPage(new { tab = returnTab ?? "requests" });
+    }
+
+    public async Task<IActionResult> OnPostResubmitReturnedAsync(
+        int id, string revisedReason, DateTime? revisedFrom, DateTime? revisedTo)
+    {
+        var employeeId=await ResolveEmployeeIdAsync();
+        if (employeeId<=0) return Forbid();
+        var result=await ApprovalWorkflowEngine.ResubmitReturnedAsync(
+            _dbContext,id,employeeId,revisedReason??string.Empty,revisedFrom,revisedTo);
+        StatusMessage=result.Message;
+        return RedirectToPage(new { tab="requests" });
+    }
+
+    public async Task<IActionResult> OnPostCancelRequestAsync(int id, string? cancelReason)
+    {
+        var employeeId=await ResolveEmployeeIdAsync();
+        if(employeeId<=0) return Forbid();
+        var result=await ApprovalWorkflowEngine.CancelByRequesterAsync(
+            _dbContext,id,employeeId,User.Identity?.Name ?? employeeId.ToString(),cancelReason);
+        StatusMessage=result.Message;
+        return RedirectToPage(new { tab="requests" });
     }
 
     /// <summary>
@@ -349,12 +391,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         string? reason,
         IFormFile? attachment)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "LeaveRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-        {
-            employeeId = await HrmsDatabase.ScalarAsync<int>(
-                _dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-        }
         if (employeeId <= 0)
         {
             StatusMessage = "تعذّر تحديد الموظف.";
@@ -460,9 +498,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath)
+(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath, RequestSource)
 VALUES
-(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath);
+(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath, N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -480,7 +518,12 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, typeLabel, employeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, typeLabel, employeeId);
+            if(!start.Ok)
+            {
+                StatusMessage=start.Message;
+                return RedirectToPage(new { tab = "requests" });
+            }
         }
 
         StatusMessage = $"تم إرسال {typeLabel} ({days:0.#} يوم) وهو الآن قيد المراجعة.";
@@ -494,12 +537,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     /// </summary>
     public async Task<IActionResult> OnPostSubmitMissingPunchAsync(string? returnTab)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "PunchCorrection")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-        {
-            // نفس fallback العرض: مستخدم غير مربوط بموظف (وضع تجريبي) ← أول موظف.
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-        }
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
@@ -523,14 +562,15 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             _dbContext, employeeId, DateOnly.FromDateTime(punchAt.Value));
         var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt.Value);
 
-        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_dbContext, new MissingPunchRequestStore.Request
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(
+            _dbContext, CompanyScope.Unrestricted(), new MissingPunchRequestStore.Request
         {
             EmployeeId = employeeId,
             PunchAt = punchAt.Value,
             PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(form["MpReason"]) ? null : form["MpReason"].ToString().Trim(),
             Source = "خدمة ذاتية"
-        }, User.Identity?.Name ?? "employee");
+        }, User.Identity?.Name ?? "employee", employeeId);
 
         StatusMessage = ok ? "تم إرسال طلب البصمة المفقودة وهو الآن قيد مراجعة الموارد البشرية." : message;
         return RedirectToPage(new { tab = returnTab ?? "requests" });
@@ -546,8 +586,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return new JsonResult(new { punches = Array.Empty<object>() });
 
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
             return new JsonResult(new { punches = Array.Empty<object>() });
 
@@ -617,9 +655,8 @@ ORDER BY AttendanceDate;
     /// </summary>
     public async Task<IActionResult> OnPostSubmitDataChangeAsync(string? returnTab)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
@@ -654,8 +691,8 @@ ORDER BY AttendanceDate;
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -675,7 +712,12 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
 
-        await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, DataChangeRequestStore.RequestTypeLabel, employeeId);
+        if(!start.Ok)
+        {
+            StatusMessage=start.Message;
+            return RedirectToPage(new { tab = returnTab ?? "requests" });
+        }
         StatusMessage = $"تم إرسال طلب تعديل البيانات ({saved} حقل) وهو الآن قيد المراجعة.";
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
@@ -688,8 +730,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         string? punchType, string? returnTab, double? geoLat, double? geoLng, string? bioToken)
     {
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         if (employeeId <= 0)
         {
             StatusMessage = "لا يمكن تسجيل البصمة لأن المستخدم غير مرتبط بموظف.";
@@ -781,7 +821,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         if (employeeId <= 0)
         {
             IsDemoMode = true;
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
         }
 
         if (employeeId <= 0)
@@ -886,9 +925,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     /// <summary>حذف طلب تعديل بيانات معلّق من تبويب الطلبات (لصاحبه فقط، قبل الاعتماد).</summary>
     public async Task<IActionResult> OnPostDeleteDataChangeAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "UpdateMyData")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+        if (employeeId <= 0) return Forbid();
         var ok = await DataChangeRequestStore.DeletePendingRequestAsync(_dbContext, id, employeeId);
         StatusMessage = ok ? "تم حذف طلب التعديل المعلّق." : "تعذّر الحذف (الطلب غير موجود أو تمّ البتّ فيه).";
         return RedirectToPage(new { tab = "requests" });
@@ -956,7 +995,7 @@ ORDER BY Id DESC;
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
+            return Forbid();
         }
 
         await EmployeeRecordsSchema.EnsureAsync(_dbContext);
@@ -1075,12 +1114,6 @@ ORDER BY EventDate DESC, Id DESC;
     public async Task<IActionResult> OnPostViolationReplyAsync(int id, string reply, string? returnTab)
     {
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId <= 0)
-        {
-            // نفس fallback الوضع التجريبي المستخدم بعرض البوابة (مستخدم غير مربوط بموظف).
-            employeeId = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT TOP 1 Id FROM Employees ORDER BY Id");
-        }
-
         if (employeeId <= 0 || string.IsNullOrWhiteSpace(reply))
         {
             StatusMessage = "يرجى كتابة نص الرد.";
@@ -1519,6 +1552,8 @@ ORDER BY CreatedAt DESC, Id DESC;
         if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)) return "مرفوض";
         if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase)) return "قيد الموافقة";
         if (status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "ملغي";
+        if (status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "معاد للتعديل";
+        if (status.Equals("Draft", StringComparison.OrdinalIgnoreCase)) return "مسودة تحتاج استكمالاً";
         return string.IsNullOrWhiteSpace(status) ? "-" : status;
     }
 
@@ -1534,8 +1569,8 @@ ORDER BY CreatedAt DESC, Id DESC;
     public string StatusClass(string status)
     {
         if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Answered", StringComparison.OrdinalIgnoreCase)) return "live";
-        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Open", StringComparison.OrdinalIgnoreCase)) return "pending";
-        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return "danger";
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase) || status.Equals("Open", StringComparison.OrdinalIgnoreCase) || status.Equals("Draft", StringComparison.OrdinalIgnoreCase)) return "pending";
+        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) || status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "danger";
         return string.Empty;
     }
 

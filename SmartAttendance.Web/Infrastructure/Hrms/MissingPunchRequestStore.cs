@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -125,29 +126,37 @@ LEFT JOIN Branches b ON b.Id = e.BranchId
 LEFT JOIN PunchSemantics ps ON ps.Id = r.PunchSemanticId
 WHERE ISNULL(r.IsDeleted, 0) = 0
   AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@EmployeeId IS NULL OR r.EmployeeId = @EmployeeId)
+  AND (@Status IS NULL OR r.Status = @Status)
+  AND (@PunchType IS NULL OR r.PunchType = @PunchType)
+  AND (@Department IS NULL OR d.Name = @Department)
+  AND (@Branch IS NULL OR b.Name = @Branch)
+  AND (@Position IS NULL OR e.Position = @Position)
+  AND (@From IS NULL OR r.PunchAt >= @From)
+  AND (@ToExclusive IS NULL OR r.PunchAt < @ToExclusive)
+  AND (@Search IS NULL OR e.EmployeeNo LIKE N'%' + @Search + N'%'
+       OR e.FullName LIKE N'%' + @Search + N'%'
+       OR r.RefNo LIKE N'%' + @Search + N'%')
 ORDER BY r.CreatedAt DESC;
 """,
-            command => { },
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", filter.EmployeeId is > 0 ? filter.EmployeeId.Value : DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Status", DbValue(filter.Status));
+                HrmsDatabase.AddParameter(command, "@PunchType", DbValue(filter.PunchType));
+                HrmsDatabase.AddParameter(command, "@Department", DbValue(filter.Department));
+                HrmsDatabase.AddParameter(command, "@Branch", DbValue(filter.Branch));
+                HrmsDatabase.AddParameter(command, "@Position", DbValue(filter.Position));
+                HrmsDatabase.AddParameter(command, "@From", filter.From?.ToDateTime(TimeOnly.MinValue) ?? (object)DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@ToExclusive", filter.To?.AddDays(1).ToDateTime(TimeOnly.MinValue) ?? (object)DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Search", DbValue(filter.Search));
+            },
             Read);
-
-        if (filter.EmployeeId is > 0) rows = rows.Where(r => r.EmployeeId == filter.EmployeeId).ToList();
-        if (!string.IsNullOrWhiteSpace(filter.Status)) rows = rows.Where(r => r.Status == filter.Status).ToList();
-        if (!string.IsNullOrWhiteSpace(filter.PunchType)) rows = rows.Where(r => r.PunchType == filter.PunchType).ToList();
-        if (!string.IsNullOrWhiteSpace(filter.Department)) rows = rows.Where(r => r.Department == filter.Department).ToList();
-        if (!string.IsNullOrWhiteSpace(filter.Branch)) rows = rows.Where(r => r.Branch == filter.Branch).ToList();
-        if (!string.IsNullOrWhiteSpace(filter.Position)) rows = rows.Where(r => r.Position == filter.Position).ToList();
-        if (filter.From is { } f) rows = rows.Where(r => DateOnly.FromDateTime(r.PunchAt) >= f).ToList();
-        if (filter.To is { } t) rows = rows.Where(r => DateOnly.FromDateTime(r.PunchAt) <= t).ToList();
-        if (!string.IsNullOrWhiteSpace(filter.Search))
-        {
-            var v = filter.Search.Trim();
-            rows = rows.Where(r =>
-                r.EmployeeNo.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.EmployeeName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.RefNo.Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
         return rows;
     }
+
+    private static object DbValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
 
     public static async Task<Request?> GetAsync(ApplicationDbContext db, int id)
     {
@@ -170,16 +179,27 @@ WHERE r.Id = @Id AND ISNULL(r.IsDeleted, 0) = 0;
     }
 
     /// <summary>حفظ طلب (إنشاء أو تحرير). التحرير مسموح فقط ما دام قيد الانتظار.</summary>
-    public static async Task<(bool Ok, string Message)> SaveAsync(ApplicationDbContext db, Request r, string userName)
+    public static async Task<(bool Ok, string Message)> SaveAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, Request r, string userName,
+        int? expectedEmployeeId = null)
     {
+        ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(db);
         if (r.EmployeeId <= 0) return (false, "اختر الموظف.");
+        if (expectedEmployeeId is > 0 && r.EmployeeId != expectedEmployeeId.Value)
+            return (false, "لا يمكنك إنشاء طلب لموظف آخر.");
+        if (!await Security.EmployeeCompanyGuard.CanAccessEmployeeAsync(db, r.EmployeeId, scope))
+            return (false, "الموظف خارج نطاقك.");
         if (r.PunchType is not ("In" or "Out")) return (false, "نوع البصمة غير صالح.");
 
         if (r.Id > 0)
         {
             var existing = await GetAsync(db, r.Id);
             if (existing == null) return (false, "الطلب غير موجود.");
+            if (expectedEmployeeId is > 0 && existing.EmployeeId != expectedEmployeeId.Value)
+                return (false, "الطلب لا يخص هذا الموظف.");
+            if (!await Security.EmployeeCompanyGuard.CanAccessEmployeeAsync(db, existing.EmployeeId, scope))
+                return (false, "الطلب خارج نطاقك.");
             if (!existing.IsPending) return (false, "لا يمكن تحرير طلب بعد البتّ فيه.");
 
             await HrmsDatabase.ExecuteAsync(
@@ -234,6 +254,22 @@ VALUES (@Ref, @Emp, @At, @Type, @Semantic, @Reason, N'Pending', @Source, @By);
         if (r == null) return (false, "الطلب غير موجود.");
         if (!r.IsPending) return (false, "الطلب ليس قيد الانتظار.");
 
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var claimed = await HrmsDatabase.ScalarAsync<int>(
+            db,
+            """
+UPDATE MissingPunchRequests
+SET Status=N'Processing'
+WHERE Id=@Id AND Status=N'Pending' AND ISNULL(IsDeleted, 0)=0;
+SELECT @@ROWCOUNT;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id));
+        if (claimed == 0)
+        {
+            await transaction.RollbackAsync();
+            return (false, "سبق البتّ في الطلب من مستخدم آخر.");
+        }
+
         var attendanceSemanticId = await PunchSemanticStore.AttendanceSemanticIdAsync(db);
         // دلالة الحضور تُخزَّن NULL (يقرأها المحلل)؛ غيرها كبصمة أخرى بمعرّف الدلالة.
         int? storedSemantic = (r.PunchSemanticId == null || r.PunchSemanticId == attendanceSemanticId)
@@ -264,7 +300,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             """
 UPDATE MissingPunchRequests
 SET Status=N'Approved', DecisionNote=@Note, CreatedRecordId=@Rec, DecidedAt=SYSUTCDATETIME(), DecidedBy=@By
-WHERE Id=@Id AND Status=N'Pending';
+WHERE Id=@Id AND Status=N'Processing';
 """,
             command =>
             {
@@ -273,6 +309,7 @@ WHERE Id=@Id AND Status=N'Pending';
                 HrmsDatabase.AddParameter(command, "@Rec", recordId);
                 HrmsDatabase.AddParameter(command, "@By", userName);
             });
+        await transaction.CommitAsync();
         // نمط كيان: الموافقة قد تعيد تحليل اليومية تلقائياً (محكوم بمفتاح + حارس).
         var reanalysis = await AttendanceReanalysisPolicy.AfterApprovalAsync(
             db, r.EmployeeId, DateOnly.FromDateTime(r.PunchAt));

@@ -213,6 +213,7 @@
 }
 
 @section Styles {
+<link rel="stylesheet" href="~/css/pages/profile-74aa691e2a.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/z360-profile.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 }
@@ -698,8 +699,10 @@
                         _ => finText(fin?.PaymentMethod)
                     };
                 }
-                @* الحقول الحساسة: بطاقة الرواتب تظهر فقط للأدوار المخوّلة (Sensitive.SalaryRoles) *@
-                <article class="z360-card" hidden="@(!Model.CanViewSalary)">
+                @* الحقول الحساسة لا تُصيَّر إطلاقاً لغير المخوّل؛ hidden وحدها تسرّبها في DOM. *@
+                @if (Model.CanViewSalary)
+                {
+                <article class="z360-card">
                     <div class="z360-card-head">
                         <h3>المعلومات المالية</h3>
                         <a class="z360-card-tool" asp-page="./FinancialInfo" asp-route-id="@Model.Id" title="تعديل المعلومات المالية">✎</a>
@@ -719,6 +722,7 @@
                         <div class="z360-field"><span>طريقة الدفع</span><strong>@payText</strong></div>
                     </div>
                 </article>
+                }
 
             </section>
 
@@ -838,11 +842,11 @@
 
             @if (!string.IsNullOrEmpty(Model.PanelSuccess))
             {
-                <div class="hrms-badge approved" style="padding:10px 14px;margin-bottom:10px">@Model.PanelSuccess</div>
+                <div class="hrms-badge approved zyu-339b1035f7f1">@Model.PanelSuccess</div>
             }
             @if (!string.IsNullOrEmpty(Model.PanelError))
             {
-                <div class="hrms-badge rejected" style="padding:10px 14px;margin-bottom:10px">@Model.PanelError</div>
+                <div class="hrms-badge rejected zyu-339b1035f7f1">@Model.PanelError</div>
             }
 
             <section class="z360-details">
@@ -1092,7 +1096,7 @@
                                                                 .ToList();
                                                             @if (cfParts.Count > 0)
                                                             {
-                                                                <span style="color:#67e8f9;font-size:11px;font-weight:800">@string.Join(" · ", cfParts)</span>
+                                                                <span class="zyu-e61b308947c7">@string.Join(" · ", cfParts)</span>
                                                             }
                                                         }
                                                     </div>
@@ -1151,7 +1155,7 @@
                                                             .ToList();
                                                         @if (depParts.Count > 0)
                                                         {
-                                                            <span style="color:#67e8f9;font-size:11px;font-weight:800">@string.Join(" · ", depParts)</span>
+                                                            <span class="zyu-e61b308947c7">@string.Join(" · ", depParts)</span>
                                                         }
                                                     }
                                                 </div>
@@ -1181,8 +1185,10 @@
                                 }
                             </section>
 
-                            @* ---------- العلاوات (نمط كيان) — حساسة: للأدوار المخوّلة فقط ---------- *@
-                            <section class="z360-file-card" hidden="@(!Model.CanViewSalary)">
+                            @* ---------- العلاوات: لا تُصيَّر في HTML لغير المخوّل ---------- *@
+                            @if (Model.CanViewSalary)
+                            {
+                            <section class="z360-file-card">
                                 <div class="z360-file-card-head">
                                     <h4>العلاوات</h4>
                                     <button type="button" class="z360-upload-label" title="إضافة علاوة"
@@ -1191,7 +1197,7 @@
                                 @if (Model.Allowances.Any())
                                 {
                                     var todayAllow = DateOnly.FromDateTime(DateTime.Today);
-                                    <div class="z360-fields" style="margin-bottom:8px">
+                                    <div class="z360-fields zyu-8e26c5f7a105">
                                         <div class="z360-field"><span>إجمالي العلاوات النشطة</span><strong>@Model.ActiveAllowancesTotal.ToString("#,0.##") @(Model.FinancialInfo?.Currency)</strong></div>
                                     </div>
                                     <div class="z360-table-wrap">
@@ -1206,10 +1212,10 @@
                                                         <td>@allowance.Amount.ToString("#,0.##")</td>
                                                         <td>@allowance.FromDate.ToString("yyyy-MM-dd") @(allowance.ToDate.HasValue ? "– " + allowance.ToDate.Value.ToString("yyyy-MM-dd") : "(مفتوحة)")</td>
                                                         <td><span class="z360-badge @(isActive ? "z360-badge-ok" : "z360-badge-warn")">@(isActive ? "نشطة" : "توقفت")</span></td>
-                                                        <td style="white-space:nowrap">
+                                                        <td class="zyu-eb99a4c193ed">
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="allowance-form"
                                                                     onclick="allowanceOpen(@allowance.Id,@allowance.SalaryItemId,@allowance.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),this,'@allowance.FromDate.ToString("yyyy-MM-dd")','@(allowance.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(allowance.EndAfterDate ? "true" : "false"),'@ScriptSafe.Js(allowance.Note)')">✎</button>
-                                                            <form method="post" asp-page-handler="DeleteAllowance" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العلاوة؟">
+                                                            <form method="post" asp-page-handler="DeleteAllowance" asp-route-id="@Model.Id" class="zyu-6b8b63d565c4" data-zyconfirm="حذف العلاوة؟">
                                                                 <input type="hidden" name="recordId" value="@allowance.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>
                                                             </form>
@@ -1225,6 +1231,7 @@
                                     <div class="z360-empty">لا توجد علاوات — أضف أول علاوة من زر +.</div>
                                 }
                             </section>
+                            }
 
                             @* ---------- العقود (نمط كيان: متعددة، التجديد صف جديد) ---------- *@
                             <section class="z360-file-card">
@@ -1249,14 +1256,14 @@
                                                         <td>@contract.FromDate.ToString("yyyy-MM-dd") @(contract.ToDate.HasValue ? "– " + contract.ToDate.Value.ToString("yyyy-MM-dd") : "– غير محدود")</td>
                                                         <td>@(remaining.HasValue ? $"{remaining} يوم" : "—")</td>
                                                         <td>@(contract.IsCurrent ? "✔" : "")</td>
-                                                        <td style="white-space:nowrap">
+                                                        <td class="zyu-eb99a4c193ed">
                                                             @if (!string.IsNullOrWhiteSpace(contract.AttachmentPath))
                                                             {
                                                                 <a class="z360-card-tool" href="@contract.AttachmentPath" target="_blank" title="العقد الموقع">📄</a>
                                                             }
                                                             <button type="button" class="z360-card-tool" title="تعديل" data-hrms-open="contract-form"
                                                                     onclick="contractOpen(@contract.Id,'@ScriptSafe.Js(contract.ContractNo)','@ScriptSafe.Js(contract.ContractType)','@contract.FromDate.ToString("yyyy-MM-dd")','@(contract.ToDate?.ToString("yyyy-MM-dd") ?? "")',@(contract.IsCurrent ? "true" : "false"),'@ScriptSafe.Js(contract.Note)')">✎</button>
-                                                            <form method="post" asp-page-handler="DeleteContract" asp-route-id="@Model.Id" style="display:inline" data-zyconfirm="حذف العقد؟">
+                                                            <form method="post" asp-page-handler="DeleteContract" asp-route-id="@Model.Id" class="zyu-6b8b63d565c4" data-zyconfirm="حذف العقد؟">
                                                                 <input type="hidden" name="recordId" value="@contract.Id" />
                                                                 <button type="submit" class="z360-card-tool" title="حذف">🗑</button>
                                                             </form>
@@ -1290,7 +1297,7 @@
                                                     <td>@ledger.CarriedOver.ToString("0.#") يوم</td>
                                                     <td>@ledger.Entitled.ToString("0.#") يوم</td>
                                                     <td>@ledger.Used.ToString("0.#") يوم</td>
-                                                    <td><strong style="@(ledger.Current < 0 ? "color:#f87171" : "")">@ledger.Current.ToString("0.#") يوم</strong></td>
+                                                    <td><strong data-zy-style="@(ledger.Current < 0 ? "color:#f87171" : "")">@ledger.Current.ToString("0.#") يوم</strong></td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -1342,21 +1349,21 @@
                         </div>
                         @if (Model.TimelineEvents.Count == 0)
                         {
-                            <p style="color:var(--sa-muted,#8FA8BC);font-weight:800;padding:12px">لا أحداث مسجلة بعد.</p>
+                            <p class="zyu-4bc56a2472c1">لا أحداث مسجلة بعد.</p>
                         }
                         else
                         {
-                            <div style="display:flex;flex-direction:column;gap:0;position:relative;padding-inline-start:6px">
+                            <div class="zyu-2de17a5255e2">
                                 @foreach (var ev in Model.TimelineEvents)
                                 {
-                                    <div style="display:grid;grid-template-columns:34px 110px 1fr;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid rgba(143,168,188,.08)">
-                                        <span style="font-size:16px;text-align:center">@ev.Icon</span>
-                                        <span style="font-size:11px;color:var(--sa-muted,#8FA8BC);font-weight:800;direction:ltr;text-align:end">@ev.EventDate.ToString("yyyy-MM-dd")</span>
-                                        <span style="font-size:13px">
-                                            <b style="font-weight:900">@ev.Title</b>
+                                    <div class="zyu-5cb87b4b2444">
+                                        <span class="zyu-4b60fdf84c20">@ev.Icon</span>
+                                        <span class="zyu-281711c8b88a">@ev.EventDate.ToString("yyyy-MM-dd")</span>
+                                        <span class="zyu-5e461f0709b6">
+                                            <b class="zyu-52ee95b95fbc">@ev.Title</b>
                                             @if (!string.IsNullOrWhiteSpace(ev.Detail))
                                             {
-                                                <small style="display:block;color:var(--sa-muted,#8FA8BC);font-weight:700">@ev.Detail</small>
+                                                <small class="zyu-1cf8b4172947">@ev.Detail</small>
                                             }
                                         </span>
                                     </div>
@@ -1437,7 +1444,7 @@
                 <div class="hrms-field"><label>هاتف محمول</label><input name="Dependent.MobilePhone" id="dep-MobilePhone" /></div>
                 <div class="hrms-field"><label>اسم الشركة</label><input name="Dependent.CompanyName" id="dep-CompanyName" /></div>
             </div>
-            <div class="hrms-inline-form" style="flex-wrap:wrap;gap:14px;margin:8px 0">
+            <div class="hrms-inline-form zyu-821468738d11">
                 <label><input type="checkbox" name="Dependent.IsDependent" id="dep-IsDependent" value="true" /> معال</label>
                 <label><input type="checkbox" name="Dependent.IsEmergencyContact" id="dep-IsEmergencyContact" value="true" /> جهة طوارئ</label>
                 <label><input type="checkbox" name="Dependent.IsSpecialNeeds" id="dep-IsSpecialNeeds" value="true" /> احتياجات خاصة</label>
@@ -1558,10 +1565,10 @@
                 <div class="hrms-field" id="rec-Gpa-field" hidden><label>المعدل التراكمي</label><input name="RecordInput.Gpa" id="rec-Gpa" /></div>
                 <div class="hrms-field" id="rec-ReturnDate-field" hidden><label>تاريخ الإرجاع</label><input type="date" name="RecordInput.ReturnDate" id="rec-ReturnDate" /></div>
             </div>
-            <label id="rec-Current-field" class="hrms-toggle" hidden style="margin-bottom:6px"><input type="checkbox" name="RecordInput.IsCurrent" id="rec-IsCurrent" value="true" /> <span id="rec-Current-label">الحالي</span></label>
-            <label id="rec-Returned-field" class="hrms-toggle" hidden style="margin-bottom:6px"><input type="checkbox" name="RecordInput.IsReturned" id="rec-IsReturned" value="true" /> تم إرجاع العهدة</label>
+            <label id="rec-Current-field" class="hrms-toggle zyu-f85c702c688c" hidden><input type="checkbox" name="RecordInput.IsCurrent" id="rec-IsCurrent" value="true" /> <span id="rec-Current-label">الحالي</span></label>
+            <label id="rec-Returned-field" class="hrms-toggle zyu-f85c702c688c" hidden><input type="checkbox" name="RecordInput.IsReturned" id="rec-IsReturned" value="true" /> تم إرجاع العهدة</label>
             <div id="rec-Reference-block" hidden>
-                <div class="hrms-tile-sub" style="margin:6px 0 4px">مرجع من جهة العمل السابقة (اختياري)</div>
+                <div class="hrms-tile-sub zyu-662bbe2d5b0b">مرجع من جهة العمل السابقة (اختياري)</div>
                 <div class="hrms-grid-2">
                     <div class="hrms-field"><label>اسم المرجع</label><input name="RecordInput.RefContactName" id="rec-RefContactName" /></div>
                     <div class="hrms-field"><label>الموقع الوظيفي للمرجع</label><input name="RecordInput.RefContactPosition" id="rec-RefContactPosition" /></div>

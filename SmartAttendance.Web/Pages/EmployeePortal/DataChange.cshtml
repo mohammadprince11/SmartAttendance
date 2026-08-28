@@ -20,6 +20,7 @@
     string Pref(string key) => Model.Prefill.TryGetValue(key, out var v) ? (v ?? "") : "";
     var editing = Model.EditId > 0;
 }
+<link rel="stylesheet" href="~/css/pages/datachange-985c80f543.css" asp-append-version="true" />
 
 <section class="nxex-subpage" dir="rtl" data-nxex-page data-active-tab="requests">
     <header class="nxex-subpage-head">
@@ -77,9 +78,9 @@
 
     @if (editing)
     {
-        <div class="nxex-flash" style="border-color:rgba(25,211,224,.4);background:rgba(25,211,224,.1);color:#bfeef3">
+        <div class="nxex-flash zyu-b9464f4a5c28">
             تعديل طلب معلّق — الإرسال يستبدل الطلب السابق.
-            <a href="/EmployeePortal/DataChange" style="color:#19d3e0;font-weight:900">إلغاء التعديل</a>
+            <a href="/EmployeePortal/DataChange" class="zyu-96b234341a62">إلغاء التعديل</a>
         </div>
     }
 

@@ -33,13 +33,11 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await LoadAsync();
     }
 
     public async Task<IActionResult> OnPostCreateAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         // لا نعتمد EmployeeId القادم من النموذج بلا فحص: لا يُنشأ طلبٌ إلا لموظفٍ ضمن
         // شركات المستخدم، وإلا كان حقنَ بياناتٍ (وسريان موافقات) على موظف شركةٍ أخرى.
@@ -54,9 +52,9 @@ public class IndexModel : PageModel
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason, Status, CurrentStep, CreatedBy)
+(EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason, Status, CurrentStep, CreatedBy, RequestSource)
 VALUES
-(@EmployeeId, @RequestType, @RequestDate, @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', 'Direct Manager', 'Employee');
+(@EmployeeId, @RequestType, @RequestDate, @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', 'Direct Manager', 'Employee', N'SelfService');
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 
@@ -83,10 +81,11 @@ SELECT @RequestId;
         // سريان الموافقات: حلّ القالب المناسب وتجميد خطوات اللجنة على الطلب.
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, Input.RequestType, Input.EmployeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, Input.RequestType, Input.EmployeeId);
+            if(!start.Ok) Message=start.Message;
         }
 
-        Message = "تم إرسال الطلب للموافقة.";
+        Message ??= "تم إرسال الطلب للموافقة.";
         await LoadAsync();
 
         return Page();

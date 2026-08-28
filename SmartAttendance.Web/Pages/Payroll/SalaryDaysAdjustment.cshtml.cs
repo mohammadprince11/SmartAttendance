@@ -70,7 +70,7 @@ public class SalaryDaysAdjustmentModel : PageModel
         Items = await PayrollTransactionStore.ListAsync(
             _db, scope, Year, Month, PayrollTransactionStore.SalaryDays, Search, locked: Lock == "Locked");
 
-        var all = await SalaryItemStore.ListAsync(_db);
+        var all = await SalaryItemStore.ListAsync(_db, scope);
         Catalog = all.Where(x => x.IsActive && x.ItemType == "SalaryDays").ToList();
 
         Employees = await HrmsDatabase.QueryAsync(_db,
@@ -151,7 +151,7 @@ public class SalaryDaysAdjustmentModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0)
         {
             await PayrollTransactionStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
@@ -255,7 +255,7 @@ public class SalaryDaysAdjustmentModel : PageModel
 
     public async Task<IActionResult> OnPostLockSelectedAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, true); TempData["PayrollMessage"] = $"أُقفلت {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Year, Month, Lock = "Locked" });
@@ -263,7 +263,7 @@ public class SalaryDaysAdjustmentModel : PageModel
 
     public async Task<IActionResult> OnPostUnlockSelectedAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, false); TempData["PayrollMessage"] = $"فُتح قفل {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Year, Month, Lock = "Open" });

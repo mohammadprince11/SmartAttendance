@@ -1,0 +1,14 @@
+/* Source: Pages/Employees/Edit.cshtml */
+/* ستايل قائمة البحث الذكية */
+    .nxr-searchable-wrapper { position: relative; width: 100%; }
+    .nxr-search-input { width: 100%; background-color: var(--zy-migrated-color-0e684e5160) !important; color: var(--zy-migrated-color-3b313dfb66) !important; border: 1px solid var(--zy-migrated-color-9f034e1f1a) !important; border-radius: 8px !important; padding: 10px 16px !important; transition: border-color 0.2s; cursor: pointer; }
+    .nxr-search-input:focus { outline: none; border-color: var(--zy-migrated-color-1d35b820cb) !important; box-shadow: 0 0 0 2px var(--zy-migrated-color-d964da206f) !important; }
+    .nxr-search-dropdown { display: none; position: absolute; top: 100%; inset-inline-start: 0; inset-inline-end: 0; background-color: var(--zy-migrated-color-dbd729b0a3); border: 1px solid var(--zy-migrated-color-9f034e1f1a); border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 25px var(--zy-migrated-color-4c85ca9b71); }
+    .nxr-option { padding: 10px 16px; cursor: pointer; color: var(--zy-migrated-color-e2442d83b3); border-bottom: 1px solid var(--zy-migrated-color-9f034e1f1a); font-size: 0.95rem; }
+    .nxr-option:last-child { border-bottom: none; }
+    .nxr-option:hover { background-color: var(--zy-migrated-color-9f034e1f1a); color: var(--zy-white); }
+    .nxr-option-code { font-size: 0.8rem; background: var(--zy-migrated-color-0e684e5160); padding: 2px 6px; border-radius: 4px; margin-inline-start: 8px; color: var(--zy-migrated-color-1d35b820cb); }
+
+/* Static inline utilities migrated from Pages/Employees/Edit.cshtml */
+
+.zyu-dbe95fd5b2ba { max-height:56px;max-width:180px;margin-top:6px;background:var(--zy-white);border-radius:6px;padding:4px; }

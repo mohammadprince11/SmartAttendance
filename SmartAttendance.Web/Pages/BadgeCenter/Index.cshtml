@@ -3,43 +3,8 @@
 @{
     ViewData["Title"] = "مركز بطاقات الموظفين";
 }
+<link rel="stylesheet" href="~/css/pages/index-79b0ffcc62.css" asp-append-version="true" />
 
-<style>
-    .bc { direction: rtl; display: grid; gap: 14px; max-width: 1100px; margin: 0 auto; padding: 8px 4px 40px; }
-    .bc h1 { margin: 0; font-size: 22px; font-weight: 1000; }
-    .bc-hint { color: #9fb3c7; font-size: 12.5px; font-weight: 800; margin: 4px 0 0; }
-    .bc-card { border: 1px solid var(--sa-border, rgba(148,163,184,.22)); border-radius: 14px;
-        background: var(--sa-surface, rgba(6,16,29,.55)); padding: 14px 16px; display: grid; gap: 12px; }
-    .bc-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-    .bc-field { display: grid; gap: 5px; min-width: 200px; }
-    .bc-field label { font-size: 12.5px; font-weight: 900; }
-    .bc-field select, .bc-field input { min-height: 40px; padding: 8px 10px; border-radius: 10px;
-        border: 1px solid var(--sa-border, rgba(148,163,184,.25)); background: var(--sa-input, rgba(6,16,29,.7));
-        color: var(--sa-text, #e6f0fa); font-family: inherit; font-size: 13px; }
-    .bc-emp-list { max-height: 260px; overflow: auto; display: grid; gap: 4px;
-        border: 1px solid var(--sa-border, rgba(148,163,184,.2)); border-radius: 10px; padding: 8px; }
-    .bc-emp-list label { display: flex; gap: 8px; align-items: center; font-weight: 800; font-size: 12.5px; }
-    .bc-btn { min-height: 42px; padding: 9px 18px; border-radius: 10px; font-weight: 1000; cursor: pointer;
-        border: 1px solid var(--sa-border, rgba(148,163,184,.25)); background: var(--sa-surface, rgba(15,23,42,.6));
-        color: var(--sa-text, #e2e8f0); }
-    .bc-empty { color: #9fb3c7; font-weight: 800; }
-
-    /* شبكة البطاقات بالمقاس القياسي — نفس مقاس بطاقة الهوية (ISO/IEC 7810 ID-1) */
-    .bc-sheet { display: flex; flex-wrap: wrap; gap: 6mm; }
-    .bc-badge { width: 85.6mm; height: 54mm; overflow: hidden; background: #fff; color: #111;
-        border: 1px solid #d9e2ec; border-radius: 3mm; padding: 4mm; box-sizing: border-box; }
-    .bc-badge * { max-width: 100%; }
-    .bc-badge-name { font-size: 11px; font-weight: 900; color: #6b7c8f; margin-bottom: 4px; }
-
-    @@media print {
-        /* لا يُطبع إلا ورقة البطاقات: القوائم والأزرار ضجيجٌ على الورق */
-        body * { visibility: hidden; }
-        .bc-sheet, .bc-sheet * { visibility: visible; }
-        .bc-sheet { position: absolute; inset: 0; gap: 4mm; }
-        .bc-badge { break-inside: avoid; border-color: #bbb; }
-        .bc-badge-name { display: none; }
-    }
-</style>
 
 <div class="bc">
     <div>
@@ -94,7 +59,7 @@
                 <button type="submit" class="bc-btn">تحديث</button>
             </div>
 
-            <div class="bc-field" style="min-width:100%">
+            <div class="bc-field zyu-496ec7fec0bb">
                 <label>الموظفون (@Model.Candidates.Count معروض · حدّ 300)</label>
                 <div class="bc-emp-list">
                     @foreach (var candidate in Model.Candidates)

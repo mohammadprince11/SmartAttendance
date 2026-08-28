@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Engagement;
 
@@ -36,16 +37,26 @@ public class FeedbackModel : EngagementPageModel
 
         var user = User.Identity?.Name ?? "HR";
         var status = string.IsNullOrWhiteSpace(FeedbackReply.Status) ? "Answered" : FeedbackReply.Status.Trim();
+        var scope = await GetCompanyScopeAsync();
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                DbContext, "EmployeeFeedbackItems", "Id", FeedbackReply.Id, scope,
+                HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
+        var companyFilter = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
 
         await HrmsDatabase.ExecuteAsync(
             DbContext,
-            """
-UPDATE EmployeeFeedbackItems
+            $"""
+UPDATE f
 SET AdminReply = @Reply,
     RepliedBy = @RepliedBy,
     RepliedAt = SYSUTCDATETIME(),
     Status = @Status
-WHERE Id = @Id;
+FROM EmployeeFeedbackItems f
+INNER JOIN Employees e ON e.Id=f.EmployeeId
+WHERE f.Id = @Id AND {companyFilter};
 
 INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
 VALUES ('EmployeeFeedbackItems', CAST(@Id AS nvarchar(80)), 'Reply Employee Feedback', @NewValues, @UserName, @IpAddress);
@@ -69,16 +80,26 @@ VALUES ('EmployeeFeedbackItems', CAST(@Id AS nvarchar(80)), 'Reply Employee Feed
     {
         await EmployeeEngagementSchema.EnsureAsync(DbContext);
         var user = User.Identity?.Name ?? "HR";
+        var scope = await GetCompanyScopeAsync();
+        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                DbContext, "EmployeeFeedbackItems", "Id", id, scope,
+                HttpContext.RequestAborted))
+        {
+            return NotFound();
+        }
+        var companyFilter = EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId");
 
         await HrmsDatabase.ExecuteAsync(
             DbContext,
-            """
-UPDATE EmployeeFeedbackItems
+            $"""
+UPDATE f
 SET Status = 'Closed',
     RepliedBy = COALESCE(NULLIF(RepliedBy, ''), @UserName),
     RepliedAt = COALESCE(RepliedAt, SYSUTCDATETIME()),
     AdminReply = COALESCE(NULLIF(AdminReply, ''), N'تم إغلاق الطلب من قبل مسؤول النظام.')
-WHERE Id = @Id;
+FROM EmployeeFeedbackItems f
+INNER JOIN Employees e ON e.Id=f.EmployeeId
+WHERE f.Id = @Id AND {companyFilter};
 """,
             command =>
             {

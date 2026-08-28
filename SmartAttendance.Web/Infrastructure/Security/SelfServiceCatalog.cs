@@ -13,9 +13,14 @@ public static class SelfServiceCatalog
     {
         new("LeaveRequest", "طلب إجازة"),
         new("ExitPermission", "طلب مغادرة"),
+        new("OvertimeRequest", "طلب عمل إضافي"),
         new("PunchCorrection", "تصحيح بصمة"),
         new("UpdateMyData", "تحديث بياناتي"),
         new("ViewPayslip", "عرض قسيمة الراتب"),
+        new("ShiftRequest", "طلب تغيير المناوبة"),
+        new("FinancialRequest", "طلب مالي"),
+        new("DocumentRequest", "طلب وثيقة"),
+        new("ViewPublishedReports", "عرض التقارير المنشورة"),
     };
 
     public static bool IsValid(string code) =>

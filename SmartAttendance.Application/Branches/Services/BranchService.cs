@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
@@ -10,9 +10,9 @@ namespace SmartAttendance.Infrastructure.Services;
 public class BranchService : IBranchService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
 
-    public BranchService(IUnitOfWork unitOfWork, IMapper mapper)
+    public BranchService(IUnitOfWork unitOfWork, IModelMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;

@@ -89,6 +89,34 @@ WHEN NOT MATCHED THEN
             });
     }
 
+    /// <summary>
+    /// إعداد شركة مع رجوعٍ صريح إلى القيمة العامة القديمة. مفاتيح الشركة منفصلة
+    /// داخل المفتاح المركّب كي لا يغيّر ترقيةٌ قائمةً كل الشركات دفعةً واحدة.
+    /// </summary>
+    public static async Task<string> GetCompanyAsync(
+        ApplicationDbContext db, int companyId, string key, string fallback = "")
+    {
+        if (companyId <= 0) return fallback;
+        await EnsureTablesAsync(db);
+        var value = await ScalarAsync<string?>(db,
+            "SELECT SettingValue FROM NexoraHrSettings WHERE SettingKey = @Key;",
+            command => Add(command, "@Key", CompanyKey(companyId, key)));
+        return value is null ? await GetAsync(db, key, fallback) : value;
+    }
+
+    public static Task SetCompanyAsync(ApplicationDbContext db, int companyId, string key, string? value)
+    {
+        if (companyId <= 0) throw new ArgumentOutOfRangeException(nameof(companyId));
+        return SetAsync(db, CompanyKey(companyId, key), value);
+    }
+
+    public static string CompanyKey(int companyId, string key)
+    {
+        if (companyId <= 0) throw new ArgumentOutOfRangeException(nameof(companyId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        return $"Company:{companyId}:{key}";
+    }
+
     public static async Task<List<TerminationReasonRow>> LoadTerminationReasonsAsync(ApplicationDbContext db)
     {
         await EnsureTablesAsync(db);

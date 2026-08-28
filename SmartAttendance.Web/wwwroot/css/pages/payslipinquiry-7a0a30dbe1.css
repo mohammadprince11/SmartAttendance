@@ -1,0 +1,160 @@
+/* Source: Pages/Payroll/PayslipInquiry.cshtml */
+.pq-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,var(--zy-text)); }
+
+    /* شريط الفلترة الأفقي — نمط كيان */
+    .pq-bar { display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; padding:16px 18px;
+        border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    /* توحيد المنتقي المشترك مع حقول الشهر/السنة: تسمية أعلى الحقل بنفس النمط والارتفاع */
+    .pq-bar .zyep { display:flex; flex-direction:column; gap:5px; min-width:300px; margin:0; }
+    .pq-bar .zyep .zyep-label { font-size:11px !important; font-weight:900 !important; color:var(--sa-muted,var(--zy-muted)) !important; margin:0 !important; padding:0 !important; }
+    .pq-bar .zyep .zyep-box { min-height:38px; margin:0; }
+    .pq-bar .zyep .zyep-box input { min-height:38px; box-sizing:border-box; }
+    .pq-field { display:flex; flex-direction:column; gap:5px; }
+    .pq-field > span { font-size:11px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); height:15px; line-height:15px; }
+    .pq-bar .zyep .zyep-label { height:15px; line-height:15px; }
+    .pq-bar select { min-height:38px; border-radius:10px; border:1px solid var(--zy-migrated-color-5658452bed);
+        background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:6px 12px; font-weight:900; font-size:13px; }
+    html[data-theme="light"] .pq-bar select { background:var(--zy-white); }
+    .pq-sm { max-width:150px; }
+    .pq-view { min-height:38px; align-self:flex-end; padding:8px 30px; border:0; border-radius:10px; cursor:pointer;
+        background:linear-gradient(135deg,var(--zy-success-strong),var(--zy-migrated-color-3c5c1ab6c5)); color:var(--zy-white); font-size:14px; font-weight:1000; }
+    .pq-view:hover:not(:disabled) { filter:brightness(1.06); }
+    .pq-view:disabled { opacity:.45; cursor:not-allowed; background:linear-gradient(135deg,var(--zy-migrated-color-0bcee38652),var(--zy-migrated-color-36c6cd21eb)); }
+    .pq-spacer { flex:1 1 auto; }
+
+    .pq-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; overflow:hidden; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    .pq-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:70px 20px; text-align:center; }
+    .pq-empty svg { width:78px; height:78px; opacity:.4; }
+    .pq-empty p { margin:0; font-size:16px; font-weight:1000; color:var(--sa-muted,var(--zy-muted)); }
+
+    .pq-sum { display:flex; gap:10px; flex-wrap:wrap; padding:14px 16px 0; }
+    .pq-sum .chip { font-size:12px; font-weight:900; padding:6px 12px; border-radius:999px; background:var(--zy-migrated-color-335feb4bcf); color:var(--zy-primary); }
+    .pq-wrap { overflow-x:auto; }
+    .pq-table { width:100%; border-collapse:collapse; font-size:13px; min-width:820px; }
+    .pq-table th { text-align:start; white-space:nowrap; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,var(--zy-muted)); border-bottom:1px solid var(--zy-migrated-color-b9678111e3); background:var(--zy-migrated-color-8e71d5d639); }
+    html[data-theme="light"] .pq-table th { background:var(--zy-migrated-color-c2da37727c); }
+    .pq-table td { padding:11px 14px; border-bottom:1px solid var(--zy-migrated-color-89acc81486); white-space:nowrap; }
+    .pq-table tbody tr:hover td { background:var(--zy-migrated-color-e174917010); }
+    .pq-num { direction:ltr; font-weight:900; text-align:start; unicode-bidi:plaintext; }
+    .pq-net { color:var(--zy-success); }
+    .pq-st { display:inline-block; font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; }
+    .st-Draft { background:var(--zy-migrated-color-d67c6fff40); color:var(--zy-muted); }
+    .st-Calculated { background:var(--zy-migrated-color-fa4c99c7a1); color:var(--zy-primary); }
+    .st-Locked { background:var(--zy-migrated-color-efbaf5eb47); color:var(--zy-warning); }
+    .st-Issued { background:var(--zy-migrated-color-f489b45438); color:var(--zy-success); }
+    .st-PayslipSent { background:var(--zy-migrated-color-4e193b6b66); color:var(--zy-accent); }
+    .pq-viewbtn { min-height:29px; padding:4px 14px; border-radius:9px; border:1px solid var(--zy-migrated-color-28565ef553); background:transparent; color:inherit; font-size:12px; font-weight:900; text-decoration:none; }
+    .pq-viewbtn:hover { background:var(--zy-migrated-color-add5638818); color:var(--zy-primary); }
+
+    /* القسيمة الكاملة (فورمة الراتب) — نظير كيان */
+    .ps { padding:20px; }
+    .ps-hdr { display:grid; grid-template-columns:repeat(3,1fr); gap:8px 22px; padding-bottom:16px; margin-bottom:16px; border-bottom:2px solid var(--zy-migrated-color-9d8f3bda04); }
+    .ps-hdr .f { font-size:12px; }
+    .ps-hdr .f span { color:var(--sa-muted,var(--zy-muted)); font-weight:800; display:block; margin-bottom:2px; }
+    .ps-hdr .f b { font-weight:1000; direction:ltr; unicode-bidi:plaintext; }
+    .ps-mon { margin-top:14px; }
+    .ps-mon > h3 { margin:0 0 8px; font-size:13px; font-weight:1000; color:var(--zy-primary); padding:8px 12px; background:var(--zy-migrated-color-b94a76fb44); border-radius:8px; }
+    .ps-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:760px){ .ps-cols { grid-template-columns:1fr; } .ps-hdr { grid-template-columns:1fr 1fr; } }
+    .ps-box { border:1px solid var(--zy-migrated-color-6a77190266); border-radius:10px; overflow:hidden; }
+    .ps-box table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; }
+    .ps-box th { text-align:start; padding:8px 12px; font-weight:1000; color:var(--zy-white); }
+    .ps-box.inc th { background:var(--zy-migrated-color-3c5c1ab6c5); } .ps-box.ded th { background:var(--zy-migrated-color-3871da3420); }
+    .ps-box td { padding:9px 12px; border-bottom:1px dashed var(--zy-migrated-color-c01c6cd0ab); vertical-align:middle; }
+    .ps-box td:first-child { white-space:normal; overflow-wrap:anywhere; line-height:1.5; }
+    .ps-box .amount-col { width:36%; }
+    .ps-box .amt { direction:ltr; unicode-bidi:plaintext; font-weight:900; text-align:start; white-space:nowrap; }
+    .ps-box tr.sum td { background:var(--zy-migrated-color-51785763a3); font-weight:1000; }
+    .ps-box tr.net td { background:var(--zy-migrated-color-d670465097); color:var(--zy-success); font-weight:1000; }
+    .ps-words { margin-top:14px; padding:12px 16px; border-radius:10px; background:var(--zy-migrated-color-0131c28a5e); font-size:13px; font-weight:900; }
+    .ps-prev { margin-top:16px; padding-top:12px; border-top:1px solid var(--zy-migrated-color-0aac1ba379); font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:900; display:flex; gap:16px; flex-wrap:wrap; }
+    .ps-prev b { color:var(--sa-text,var(--zy-text)); direction:ltr; unicode-bidi:plaintext; }
+    .ps-actions { display:flex; justify-content:center; padding:16px; border-top:1px solid var(--zy-migrated-color-cbebfcf5a2); }
+    .ps-print { min-height:38px; padding:8px 30px; border-radius:10px; border:0; cursor:pointer; background:linear-gradient(135deg,var(--zy-migrated-color-387ad27953),var(--zy-migrated-color-53cf9d6609)); color:var(--zy-white); font-size:14px; font-weight:1000; }
+    /* عناصر تظهر بالطباعة فقط — مخفيّة على الشاشة */
+    .ps-print-head, .ps-sign { display:none; }
+
+    @media print {
+        @page { size:A4 portrait; margin:12mm 14mm; }
+        /* إجبار المتصفّح على طباعة ألوان الخلفية (رؤوس الجداول الخضراء/الحمراء) */
+        * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+        /* اطبع القسيمة وحدها: أخفِ كل شيء ثم أظهر شجرة .ps فقط — مستقلّ تماماً عن
+           أسماء أصناف القوقعة (الشريط الجانبي/العلوي/الأزرار) مهما تغيّرت. */
+        /* 1) أخفِ كل شيء بصرياً ثم أظهر شجرة .ps فقط (مستقلّ عن أسماء القوقعة). */
+        body * { visibility:hidden !important; }
+        .ps, .ps * { visibility:visible !important; }
+        /* 2) اطوِ ارتفاع القوقعة فعلياً كي لا تدفع صفحة بيضاء ثانية. */
+        .nexora-sidebar, .nexora-topbar, .pq-bar, .ps-actions { display:none !important; }
+        html, body { height:auto !important; min-height:0 !important; overflow:visible !important;
+            margin:0 !important; background:var(--zy-white) !important; color:var(--zy-migrated-color-eeb78a41df) !important; }
+        /* أسبقية أعلى (html body …) لتجاوز خلفية ثيم الموقع الداكنة على .nexora-main
+           (radial-gradient + var(--zy-bg))؛ إلغاء صورة التدرّج صراحةً كي لا تُطبع سوداء. */
+        html body .nexora-shell, html body .nexora-main, html body .nexora-content,
+        html body .pq-page, html body .pq-card {
+            display:block !important; height:auto !important; min-height:0 !important;
+            overflow:visible !important; margin:0 !important; padding:0 !important;
+            border:none !important; box-shadow:none !important;
+            background:var(--zy-white) !important; background-image:none !important; }
+        /* القسيمة نفسها بلا إطار خارجي؛ مستند الطباعة المعزول يوفّر الورقة البيضاء.
+           ارتفاع 250mm آمن ضمن المساحة القابلة للطباعة، وflex يدفع التوقيعات للأسفل. */
+        .ps { margin:0 !important; font-size:11pt; background:var(--zy-white) !important; color:var(--zy-migrated-color-eeb78a41df) !important;
+            border:0 !important; border-radius:0 !important;
+            padding:16pt 18pt !important; min-height:250mm !important;
+            display:flex !important; flex-direction:column !important;
+            position:relative !important; z-index:0 !important; }
+
+        /* ترويسة الطباعة: العلامة + عنوان القسيمة + الفترة */
+        .ps-print-head { display:flex !important; align-items:flex-end; justify-content:space-between;
+            border-bottom:2.5pt solid var(--zy-migrated-color-0cd94d92d6); padding-bottom:8pt; margin-bottom:14pt; }
+        .pph-brand { font-size:20pt; font-weight:900; color:var(--zy-migrated-color-0cd94d92d6); letter-spacing:.3px; }
+        .pph-brand span { color:var(--zy-migrated-color-89de8edadb); }
+        .pph-mid { text-align:center; }
+        .pph-title { font-size:15pt; font-weight:900; color:var(--zy-migrated-color-0cd94d92d6); }
+        .pph-period { font-size:10.5pt; font-weight:800; color:var(--zy-migrated-color-e272e9335d); margin-top:2pt; }
+        .pph-net { text-align:end; font-size:10pt; color:var(--zy-migrated-color-e272e9335d); }
+        .pph-net b { display:block; font-size:14pt; color:var(--zy-migrated-color-7d4ff8ff7b); direction:ltr; unicode-bidi:plaintext; }
+
+        /* بطاقة معلومات الموظف */
+        .ps-hdr { grid-template-columns:repeat(3,1fr) !important; gap:7pt 20pt !important;
+            border:1pt solid var(--zy-migrated-color-fef883cef0) !important; border-radius:6pt; background:var(--zy-migrated-color-4491656a13) !important;
+            padding:11pt 13pt !important; margin-bottom:13pt !important; }
+        .ps-hdr .f { font-size:9.5pt !important; }
+        .ps-hdr .f span { color:var(--zy-migrated-color-8b933435ec) !important; margin-bottom:1pt !important; }
+        .ps-hdr .f b { color:var(--zy-migrated-color-eeb78a41df) !important; }
+
+        .ps-mon { margin-top:0 !important; }
+        .ps-mon > h3 { color:var(--zy-migrated-color-0cd94d92d6) !important; background:var(--zy-migrated-color-70c97bcbe3) !important; border:1pt solid var(--zy-migrated-color-a3e223a34b) !important;
+            font-size:11pt !important; padding:6pt 10pt !important; }
+        .ps-cols { grid-template-columns:1fr 1fr !important; gap:12pt !important; break-inside:avoid; }
+        .ps-box { border:1pt solid var(--zy-migrated-color-fef883cef0) !important; border-radius:6pt !important;
+            overflow:visible !important; break-inside:avoid; }
+        .ps-box table { font-size:10pt !important; }
+        .ps-box th { color:var(--zy-white) !important; padding:6pt 10pt !important; }
+        .ps-box.inc th { background:var(--zy-migrated-color-7d4ff8ff7b) !important; }
+        .ps-box.ded th { background:var(--zy-migrated-color-59dbd12595) !important; }
+        .ps-box td { padding:5pt 10pt !important; border-bottom:1pt solid var(--zy-migrated-color-ad659de6c9) !important; color:var(--zy-migrated-color-eeb78a41df) !important; }
+        .ps-box tr.sum td { background:var(--zy-migrated-color-424c2544f0) !important; font-weight:1000; }
+        .ps-box tr.net td { background:var(--zy-migrated-color-c0af918595) !important; color:var(--zy-migrated-color-7d4ff8ff7b) !important; }
+        .ps-words { background:var(--zy-migrated-color-f4c10afb98) !important; border:1pt solid var(--zy-migrated-color-a3e223a34b) !important; color:var(--zy-migrated-color-eeb78a41df) !important;
+            font-size:10.5pt !important; margin-top:12pt !important; break-inside:avoid; }
+        .ps-prev { color:var(--zy-migrated-color-9bc4f65939) !important; border-top:1pt solid var(--zy-migrated-color-fef883cef0) !important; margin-top:12pt !important; }
+        .ps-prev b { color:var(--zy-migrated-color-eeb78a41df) !important; }
+
+        /* تذييل التوقيعات */
+        /* margin-top:auto يدفع سطر التوقيعات إلى قاع الإطار (يملأ ارتفاع الصفحة). */
+        .ps-sign { display:flex !important; justify-content:space-between; gap:20pt; margin-top:auto !important; padding-top:36pt; }
+        .ps-sign div { flex:1; font-size:9.5pt; color:var(--zy-migrated-color-9bc4f65939); text-align:center;
+            border-top:1pt solid var(--zy-migrated-color-3c678cfb53); padding-top:5pt; }
+    }
+
+/* Source: Pages/Payroll/PayslipInquiry.cshtml */
+' +
+                    'html,body{margin:0!important;min-height:0!important;background:var(--zy-white)!important;color:var(--zy-migrated-color-eeb78a41df)!important;' +
+                    'font-family:"Tajawal","Segoe UI",Tahoma,Arial,sans-serif!important;}' +
+                    pageStyles.textContent + '
+
+/* Static inline utilities migrated from Pages/Payroll/PayslipInquiry.cshtml */
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-c8664f4c9a37 { color:var(--sa-muted,var(--zy-muted)); }

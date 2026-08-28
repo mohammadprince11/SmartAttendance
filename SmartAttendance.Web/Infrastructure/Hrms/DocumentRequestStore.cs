@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -35,9 +36,11 @@ public static class DocumentRequestStore
     }
 
     public static async Task<List<Request>> LoadAsync(
-        ApplicationDbContext db, int? employeeId = null, string? status = null)
+        ApplicationDbContext db, int? employeeId = null, string? status = null,
+        CompanyScope? scope = null)
     {
         var filters = new List<string>();
+        if (scope is not null) filters.Add(EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId"));
         if (employeeId is not null) filters.Add("r.EmployeeId = @EmployeeId");
         if (!string.IsNullOrWhiteSpace(status)) filters.Add("r.Status = @Status");
         var where = filters.Count == 0 ? string.Empty : " WHERE " + string.Join(" AND ", filters);
@@ -76,8 +79,9 @@ ORDER BY CASE WHEN r.Status = N'Pending' THEN 0 ELSE 1 END, r.Id DESC;
                 HrmsDatabase.GetNullableInt(reader, "GeneratedDocumentId")));
     }
 
-    public static async Task<Request?> FindAsync(ApplicationDbContext db, int id) =>
-        (await LoadAsync(db)).FirstOrDefault(row => row.Id == id);
+    public static async Task<Request?> FindAsync(
+        ApplicationDbContext db, int id, CompanyScope? scope = null) =>
+        (await LoadAsync(db, scope: scope)).FirstOrDefault(row => row.Id == id);
 
     /// <summary>
     /// القوالب التي يحقّ لهذا الموظف طلبها — تُرشَّح بشروط الجمهور نفسها.
@@ -141,9 +145,10 @@ VALUES (@EmployeeId, @TemplateId, @TemplateName, @Reason, @Key, @FileName, N'Pen
     /// المعاملة واحدة: اعتمادٌ سُجِّل ووثيقةٌ لم تُولَّد حالةٌ لا تُصلَّح إلا يدوياً.
     /// </summary>
     public static async Task<(bool Ok, int DocumentId, string Message)> ApproveAsync(
-        ApplicationDbContext db, int requestId, string? reviewer, DateOnly issuedOn)
+        ApplicationDbContext db, int requestId, string? reviewer, DateOnly issuedOn,
+        CompanyScope? scope = null)
     {
-        var request = await FindAsync(db, requestId);
+        var request = await FindAsync(db, requestId, scope);
 
         if (request is null || !request.IsPending)
         {
@@ -198,14 +203,15 @@ WHERE Id = @Id AND Status = N'Pending';
     }
 
     public static async Task<(bool Ok, string Message)> RejectAsync(
-        ApplicationDbContext db, int requestId, string? reviewer, string? note)
+        ApplicationDbContext db, int requestId, string? reviewer, string? note,
+        CompanyScope? scope = null)
     {
         if (DocumentRequestPolicy.ValidateRejection(note) is { } error)
         {
             return (false, error);
         }
 
-        var request = await FindAsync(db, requestId);
+        var request = await FindAsync(db, requestId, scope);
         if (request is null || !request.IsPending)
         {
             return (false, "الطلب غير موجود أو حُسم مسبقاً.");
@@ -250,7 +256,11 @@ WHERE Id = @Id AND Status = N'Pending';
         return true;
     }
 
-    public static async Task<int> PendingCountAsync(ApplicationDbContext db) =>
+    public static async Task<int> PendingCountAsync(
+        ApplicationDbContext db, CompanyScope? scope = null) =>
         await HrmsDatabase.ScalarAsync<int>(
-            db, "SELECT COUNT(*) FROM DocumentRequests WHERE Status = N'Pending';");
+            db,
+            scope is null
+                ? "SELECT COUNT(*) FROM DocumentRequests WHERE Status = N'Pending';"
+                : $"SELECT COUNT(*) FROM DocumentRequests r INNER JOIN Employees e ON e.Id=r.EmployeeId WHERE r.Status=N'Pending' AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};");
 }

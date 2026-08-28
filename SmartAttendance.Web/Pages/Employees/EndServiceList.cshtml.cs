@@ -43,7 +43,6 @@ public class EndServiceListModel : PageModel
         EndServiceType = endServiceType?.Trim();
         ClearanceStatus = clearanceStatus?.Trim();
 
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeLifecycleSchema.EnsureAsync(_dbContext);
         await LoadAccessibleEmployeeIdsAsync();
         await LoadKpisAsync();

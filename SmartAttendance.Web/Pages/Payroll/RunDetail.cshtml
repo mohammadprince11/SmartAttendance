@@ -1,99 +1,45 @@
 @page "/Payroll/RunDetail"
 @model SmartAttendance.Web.Pages.Payroll.RunDetailModel
 @using System.Text.Json
+@using SmartAttendance.Web.Infrastructure.Hrms
 
 @{
     ViewData["Title"] = "تفاصيل المسير";
+    var periodStart = new DateOnly(Model.Run?.Year ?? DateTime.Today.Year, Model.Run?.Month ?? DateTime.Today.Month, 1);
+    var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+    var periodRange = $"{periodStart:yyyy/MM/dd} - {periodEnd:yyyy/MM/dd}";
     var payslipJson = JsonSerializer.Serialize(Model.Lines.Select(l => new
     {
-        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.Department, l.Position,
+        l.EmployeeId, l.EmployeeNo, l.EmployeeName, l.NationalId, l.Department, l.Branch, l.Position,
+        HireDateText = l.HireDate?.ToString("yyyy/MM/dd") ?? "—",
+        l.BankName, l.UnitNo, l.SocialSecurityNo, l.PaymentMethod,
         l.BasicSalary, l.TotalAllowances, l.GrossSalary,
         l.TaxAmount, l.GosiEmployee, l.GosiCompany, l.OtherDeductions,
         l.TotalDeductions, l.NetSalary, l.EmployerCost, l.WorkDays, l.AbsentDays, l.DaysBasis,
         l.AttendanceBase, l.AttendanceFactor, l.TaxBase, l.TaxBaseSource, l.GosiBase, l.GosiBaseSource,
-        Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount }),
-        Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount })
+        l.SourceCurrency, l.PayrollCurrency, l.ExchangeRate, l.ExchangeRateDate,
+        NetInWords = TerminationSettlementPolicy.CurrencyAmountInWords(l.NetSalary, l.PayrollCurrency),
+        Earnings = l.Earnings.Select(c => new { c.ItemName, c.Amount, c.Kind }),
+        Deductions = l.Deductions.Select(c => new { c.ItemName, c.Amount, c.Kind })
     }));
 }
+<link rel="stylesheet" href="~/css/pages/rundetail-261651ce56.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    .pd-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
-    .pd-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 90% 10%,rgba(18,217,227,.1),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .pd-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .pd-head h1 { margin:0; font-size:19px; font-weight:1000; }
-    .pd-head p { margin:3px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .pd-btn { min-height:34px; padding:7px 15px; border-radius:11px; border:0; font-size:12px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,#12D9E3,#0ea5b5); color:#04141d; }
-    .pd-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .pd-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
-    .pd-stat { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
-    .pd-stat::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc,#12D9E3); }
-    .pd-stat b { display:block; font-size:19px; font-weight:1000; direction:ltr; }
-    .pd-stat span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .pd-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .pd-table { width:100%; border-collapse:collapse; font-size:13px; min-width:980px; }
-    .pd-table th { text-align:start; padding:11px 13px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
-    html[data-theme="light"] .pd-table th { background:#f2f7fb; }
-    .pd-table td { padding:10px 13px; border-bottom:1px solid rgba(143,168,188,.08); }
-    .pd-table tbody tr:hover td { background:rgba(18,217,227,.05); cursor:pointer; }
-    .pd-table tfoot td { padding:12px 13px; font-weight:1000; border-top:2px solid rgba(18,217,227,.35); background:rgba(0,0,0,.1); }
-    .pd-n { direction:ltr; text-align:start; font-weight:900; }
-    .pd-emp b { font-weight:900; } .pd-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
-    .pd-net { color:#4ade80; }
-
-    /* ---------- القسيمة الاحترافية ---------- */
-    .pd-slip-doc { background:#fff; color:#0b1d31; border-radius:14px; padding:22px; font-size:13px; box-shadow:0 10px 40px rgba(0,0,0,.4); }
-    .pd-slip-top { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #0ea5b5; padding-bottom:12px; margin-bottom:14px; }
-    .pd-slip-top .co { font-size:17px; font-weight:1000; color:#04141d; }
-    .pd-slip-top .co small { display:block; font-size:11px; font-weight:800; color:#5b7085; margin-top:2px; }
-    .pd-slip-top .lbl { text-align:end; }
-    .pd-slip-top .lbl b { font-size:15px; font-weight:1000; color:#0ea5b5; }
-    .pd-slip-top .lbl span { display:block; font-size:11px; color:#5b7085; font-weight:800; }
-    .pd-slip-emp { display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; background:#f2f7fb; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:12px; }
-    .pd-slip-emp div span { color:#5b7085; font-weight:800; } .pd-slip-emp div b { font-weight:1000; }
-    .pd-slip-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .pd-slip-box { border:1px solid #d8e2ec; border-radius:10px; overflow:hidden; }
-    .pd-slip-box h4 { margin:0; padding:8px 12px; font-size:12px; font-weight:1000; color:#fff; }
-    .pd-slip-box.earn h4 { background:#16a34a; } .pd-slip-box.ded h4 { background:#dc2626; }
-    .pd-slip-box .row { display:flex; justify-content:space-between; padding:7px 12px; border-bottom:1px dashed #e3ebf3; font-size:12px; }
-    .pd-slip-box .row b { direction:ltr; font-weight:900; }
-    .pd-slip-box .sum { display:flex; justify-content:space-between; padding:9px 12px; font-weight:1000; background:#f2f7fb; }
-    .pd-slip-box .sum b { direction:ltr; }
-    .pd-slip-net { display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:14px 18px; border-radius:12px; background:linear-gradient(135deg,#04141d,#0b2e40); color:#fff; }
-    .pd-slip-net span { font-size:13px; font-weight:900; } .pd-slip-net b { font-size:22px; font-weight:1000; direction:ltr; color:#12D9E3; }
-    .pd-slip-emp2 { display:flex; gap:18px; margin-top:12px; font-size:12px; color:#5b7085; font-weight:800; }
-    .pd-slip-emp2 b { color:#0b1d31; direction:ltr; }
-    .pd-slip-trace { margin-top:12px; border:1px solid #dbe6f0; border-radius:10px; overflow:hidden; }
-    .pd-slip-trace h4 { margin:0; padding:8px 12px; font-size:12px; background:#eef4fa; color:#0b1d31; }
-    .pd-slip-trace .row { display:flex; justify-content:space-between; padding:6px 12px; border-top:1px dashed #e3ebf3; font-size:12px; }
-    .pd-slip-trace .row b { direction:ltr; font-weight:900; } .pd-slip-trace small { color:#5b7085; font-weight:700; }
-    .pd-slip-sign { display:flex; justify-content:space-between; margin-top:26px; font-size:12px; color:#5b7085; }
-    .pd-slip-sign div { text-align:center; } .pd-slip-sign .line { border-top:1.5px solid #0b1d31; width:150px; margin-bottom:4px; }
-
-    @@media print {
-        body * { visibility:hidden !important; }
-        #pd-slide, #pd-slide * { visibility:visible !important; }
-        #pd-slide { position:fixed !important; inset:0 !important; width:100% !important; max-width:100% !important; transform:none !important; box-shadow:none !important; background:#fff !important; overflow:visible !important; }
-        .hrms-slideover-head, .pd-print-btn { display:none !important; }
-        .pd-slip-doc { box-shadow:none; border-radius:0; }
-    }
-</style>
 
 <section class="pd-page" dir="rtl">
     <header class="pd-head">
         <div>
-            <h1>مسير @Model.Run!.BatchNo — @Model.Run.PeriodText</h1>
+            <h1>مسير @Model.Run!.BatchNoText — @Model.Run.PeriodText</h1>
             <p>@Model.CompanyName · الحالة: @Model.Run.StatusLabelText · @Model.Run.EmployeeCount موظفاً · محتسب بواسطة @(Model.Run.CalculatedBy ?? "—") @(Model.Run.CalculatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "")</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-            @* ملف البنك: متاح بعد القفل — قبله الأرقام قابلة لإعادة الاحتساب *@
-            @if (Model.Run.Status is "Locked" or "Issued" or "PayslipSent")
+        <div class="zyu-39c68df36fcc">
+            @* ملف البنك بعد الإصدار فقط؛ القفل يثبت الأرقام لكنه ليس إذن صرف. *@
+            @if (Model.Run.Status is "Issued" or "PayslipSent")
             {
-                <span style="display:inline-flex;gap:6px;align-items:center">
-                    <select id="bankTemplate" class="pd-btn ghost" style="cursor:pointer">
+                <span class="zyu-7c98e3f28444">
+                    <select id="bankTemplate" class="pd-btn ghost zyu-9463ff4798ce">
                         @foreach (var t in Model.BankTemplates)
                         { <option value="@t.Id" selected="@t.IsDefault">@t.Name@(string.IsNullOrWhiteSpace(t.BankName) ? "" : $" — {t.BankName}")</option> }
                     </select>
@@ -102,22 +48,30 @@
                     <a class="pd-btn ghost" href="/Payroll/BankTemplates" title="إدارة قوالب البنوك">⚙</a>
                 </span>
             }
+            @if (Model.Run.Status is "Issued" or "PayslipSent")
+            {
+                <span class="zyu-f219d26e03dc">
+                    <a class="pd-btn" href="/Payroll/RunDetail?id=@Model.Id&handler=ExportAccountingJournal&format=csv">📒 قيد CSV</a>
+                    <a class="pd-btn ghost" href="/Payroll/RunDetail?id=@Model.Id&handler=ExportAccountingJournal&format=json">JSON</a>
+                    <a class="pd-btn ghost" href="/Integrations/Accounting?CompanyId=@Model.Run.CompanyId" title="خرائط الحسابات">⚙</a>
+                </span>
+            }
             else
             {
-                <span class="pd-btn ghost" style="opacity:.55;cursor:not-allowed"
-                      title="اقفل الدفعة أولاً — قبل القفل الأرقام قابلة لإعادة الاحتساب">🏦 ملف البنك</span>
+                <span class="pd-btn ghost zyu-d48f9c56ca36"
+                      title="أصدر الدفعة للصرف أولاً">🏦 ملف البنك</span>
             }
             <a class="pd-btn ghost" href="/Payroll/Runs">← عودة للمسيرات</a>
         </div>
     </header>
 
     <div class="pd-totals">
-        <div class="pd-stat" style="--acc:#12D9E3"><b>@Model.Run.TotalGross.ToString("#,0.##")</b><span>إجمالي الرواتب</span></div>
-        <div class="pd-stat" style="--acc:#f87171"><b>@Model.TotalDeductions.ToString("#,0.##")</b><span>إجمالي الاستقطاعات</span></div>
-        <div class="pd-stat" style="--acc:#4ade80"><b class="pd-net">@Model.Run.TotalNet.ToString("#,0.##")</b><span>صافي المدفوع</span></div>
-        <div class="pd-stat" style="--acc:#facc15"><b>@Model.Run.TotalTax.ToString("#,0.##")</b><span>ضريبة الدخل</span></div>
-        <div class="pd-stat" style="--acc:#a78bfa"><b>@Model.TotalGosiEmployee.ToString("#,0.##")</b><span>ضمان (موظفون)</span></div>
-        <div class="pd-stat" style="--acc:#60a5fa"><b>@Model.TotalEmployerCost.ToString("#,0.##")</b><span>تكلفة صاحب العمل</span></div>
+        <div class="pd-stat zyu-7198287e0e8a"><b>@Model.Run.TotalGross.ToString("#,0.##")</b><span>إجمالي الرواتب</span></div>
+        <div class="pd-stat zyu-26ddd0fbdc9d"><b>@Model.TotalDeductions.ToString("#,0.##")</b><span>إجمالي الاستقطاعات</span></div>
+        <div class="pd-stat zyu-2b7d3f92b385"><b class="pd-net">@Model.Run.TotalNet.ToString("#,0.##")</b><span>صافي المدفوع</span></div>
+        <div class="pd-stat zyu-1107ff14a820"><b>@Model.Run.TotalTax.ToString("#,0.##")</b><span>ضريبة الدخل</span></div>
+        <div class="pd-stat zyu-8b6a7c0b3c73"><b>@Model.TotalGosiEmployee.ToString("#,0.##")</b><span>ضمان (موظفون)</span></div>
+        <div class="pd-stat zyu-0089fb1aa1e1"><b>@Model.TotalEmployerCost.ToString("#,0.##")</b><span>تكلفة صاحب العمل</span></div>
     </div>
 
     <div class="pd-card">
@@ -133,7 +87,7 @@
                 {
                     <tr onclick="pdSlip(@l.EmployeeId)">
                         <td class="pd-emp"><b>@l.EmployeeName</b><span>@l.EmployeeNo@(string.IsNullOrWhiteSpace(l.Position) ? "" : $" · {l.Position}")</span></td>
-                        <td style="font-size:12px">@(string.IsNullOrWhiteSpace(l.Department) ? "—" : l.Department)</td>
+                        <td class="zyu-a49cca52becd">@(string.IsNullOrWhiteSpace(l.Department) ? "—" : l.Department)</td>
                         <td class="pd-n">@l.BasicSalary.ToString("#,0.##")</td>
                         <td class="pd-n">@l.TotalAllowances.ToString("#,0.##")</td>
                         <td class="pd-n">@l.GrossSalary.ToString("#,0.##")</td>
@@ -170,10 +124,10 @@
     *@
     @if (Model.Exclusions.Count > 0)
     {
-        <div class="pd-card" style="margin-top:16px">
-            <div style="padding:14px 16px 0">
-                <b style="font-size:15px">الرواتب المستثناة (@Model.Exclusions.Count)</b>
-                <div style="font-size:12px;opacity:.7;margin-top:4px">
+        <div class="pd-card zyu-92c18f6bdac1">
+            <div class="zyu-9ff0dc70c8af">
+                <b class="zyu-a3970b9f8a9d">الرواتب المستثناة (@Model.Exclusions.Count)</b>
+                <div class="zyu-c1212ea2dbff">
                     موظفون ضمن نطاق الدفعة ولم تُحتسب رواتبهم — عالِج السبب ثم أعد الاحتساب.
                 </div>
             </div>
@@ -186,8 +140,8 @@
                     {
                         <tr>
                             <td class="pd-emp"><b>@x.EmployeeName</b><span>@x.EmployeeNo</span></td>
-                            <td style="font-size:12px;white-space:nowrap">@x.ReasonLabel</td>
-                            <td style="font-size:12px">@x.Reason</td>
+                            <td class="zyu-be1cb027d677">@x.ReasonLabel</td>
+                            <td class="zyu-a49cca52becd">@x.Reason</td>
                         </tr>
                     }
                 </tbody>
@@ -200,8 +154,8 @@
     <aside class="hrms-slideover wide" id="pd-slide" aria-hidden="true">
         <div class="hrms-slideover-head">
             <h2>قسيمة راتب</h2>
-            <div style="display:flex;gap:8px">
-                <button type="button" class="pd-btn pd-print-btn" onclick="window.print()">🖨 طباعة</button>
+            <div class="zyu-9c40389b4ad8">
+                <a id="pd-print-link" class="pd-btn pd-print-btn" target="_blank" rel="noopener">🖨 طباعة</a>
                 <button type="button" class="hrms-slideover-close" onclick="pdClose()">×</button>
             </div>
         </div>
@@ -213,71 +167,149 @@
     <script>
         var PD_DATA = @Html.Raw(payslipJson);
         var PD_PERIOD = "@Model.Run.PeriodText";
-        var PD_BATCH = "@Model.Run.BatchNo";
+        var PD_BATCH = "@Model.Run.BatchNoText";
         var PD_CO = @Html.Raw(JsonSerializer.Serialize(Model.CompanyName));
+        var PD_PERIOD_RANGE = @Html.Raw(JsonSerializer.Serialize(periodRange));
+        var PD_RUN_ID = @Model.Id;
 
         function fmt(n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function esc(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function valueOrDash(v) { return v == null || String(v).trim() === '' ? '—' : esc(v); }
+        function money(n, currency) { return fmt(n) + (currency ? ' ' + esc(currency) : ''); }
+        function slipInfo(label, value) {
+            return '<div class="pd-slip-info"><b>' + esc(label) + '</b><span>' + valueOrDash(value) + '</span></div>';
+        }
+        function paymentLabel(value) {
+            var key = String(value || '').toLowerCase();
+            if (key.indexOf('bank') >= 0) return 'تحويل بنكي';
+            if (key.indexOf('cash') >= 0) return 'نقدي';
+            if (key.indexOf('cheque') >= 0 || key.indexOf('check') >= 0) return 'شيك';
+            return value || '—';
+        }
+
+        function payslipPrintUrl(employeeId) {
+            return '/Payroll/PayslipPrint?runId=' + encodeURIComponent(PD_RUN_ID) +
+                '&employeeId=' + encodeURIComponent(employeeId);
+        }
         function traceSrc(s) {
             if (s === 'Employee') return 'راتب مُدخَل بالملف المالي';
             if (s === 'EmployeeMissing') return '⚠ مُعرَّف بلا قيمة — من المكوّنات مؤقتاً';
             return 'مُركَّب من المكوّنات';
         }
 
+        function hasKind(rows, kind) {
+            return rows.some(function (row) { return String(row.Kind || '').toLowerCase() === kind.toLowerCase(); });
+        }
+
+        function sumRows(rows) {
+            return rows.reduce(function (total, row) { return total + Number(row.Amount || 0); }, 0);
+        }
+
+        function normalizedLedger(l) {
+            var earnings = (l.Earnings || []).map(function (row) {
+                return { ItemName: row.ItemName, Amount: Number(row.Amount || 0), Kind: row.Kind || '' };
+            });
+            var deductions = (l.Deductions || []).map(function (row) {
+                return { ItemName: row.ItemName, Amount: Number(row.Amount || 0), Kind: row.Kind || '' };
+            });
+
+            if (Number(l.BasicSalary || 0) !== 0 && !hasKind(earnings, 'Basic'))
+                earnings.unshift({ ItemName: 'الراتب المستحق', Amount: Number(l.BasicSalary), Kind: 'Basic' });
+
+            var earningsGap = Number(l.GrossSalary || 0) - sumRows(earnings);
+            if (Math.abs(earningsGap) >= 0.01)
+                earnings.push({ ItemName: 'تسوية الاستحقاقات', Amount: earningsGap, Kind: 'Adjustment' });
+
+            if (Number(l.TaxAmount || 0) !== 0 && !hasKind(deductions, 'Tax'))
+                deductions.push({ ItemName: 'ضريبة الدخل', Amount: Number(l.TaxAmount), Kind: 'Tax' });
+            if (Number(l.GosiEmployee || 0) !== 0 && !hasKind(deductions, 'Gosi'))
+                deductions.push({ ItemName: 'الضمان الاجتماعي', Amount: Number(l.GosiEmployee), Kind: 'Gosi' });
+
+            var deductionsGap = Number(l.TotalDeductions || 0) - sumRows(deductions);
+            if (Math.abs(deductionsGap) >= 0.01)
+                deductions.push({ ItemName: 'خصومات أخرى', Amount: deductionsGap, Kind: 'Other' });
+
+            return { earnings: earnings, deductions: deductions };
+        }
+
+        function ledgerRows(l, ledger, paidDays) {
+            var count = Math.max(ledger.earnings.length, ledger.deductions.length, 1);
+            var html = '';
+            for (var i = 0; i < count; i++) {
+                var earn = ledger.earnings[i];
+                var deduction = ledger.deductions[i];
+                var earnName = earn ? (String(earn.Kind).toLowerCase() === 'basic' ? 'الراتب المستحق' : earn.ItemName) : '';
+                var earnDays = earn && String(earn.Kind).toLowerCase() === 'basic' ? paidDays : '';
+                html += '<tr>' +
+                    '<td>' + (earn ? valueOrDash(earnName) : '') + '</td>' +
+                    '<td class="days">' + (earnDays === '' ? '' : esc(earnDays)) + '</td>' +
+                    '<td class="amount">' + (earn ? money(earn.Amount, l.PayrollCurrency) : '') + '</td>' +
+                    '<td>' + (deduction ? valueOrDash(deduction.ItemName) : '') + '</td>' +
+                    '<td class="days"></td>' +
+                    '<td class="amount">' + (deduction ? money(deduction.Amount, l.PayrollCurrency) : '') + '</td>' +
+                '</tr>';
+            }
+            return html;
+        }
+
         function pdSlip(empId) {
             var l = PD_DATA.find(function (x) { return x.EmployeeId === empId; });
             if (!l) return;
-            var earnRows = (l.Earnings || []).map(function (c) {
-                return '<div class="row"><span>' + c.ItemName + '</span><b>' + fmt(c.Amount) + '</b></div>';
-            }).join('');
-            var dedRows = (l.Deductions || []).map(function (c) {
-                return '<div class="row"><span>' + c.ItemName + '</span><b>' + fmt(c.Amount) + '</b></div>';
-            }).join('');
-            if (!dedRows) dedRows = '<div class="row"><span>لا استقطاعات</span><b>0.00</b></div>';
+            var basis = Number(l.DaysBasis || 0) > 0 ? Number(l.DaysBasis) : Number(l.WorkDays || 0);
+            var paidDays = basis > 0 ? Math.round(basis * (Number(l.AttendanceFactor) || 1)) : 0;
+            var ledger = normalizedLedger(l);
 
             var html =
-              '<div class="pd-slip-doc">' +
-                '<div class="pd-slip-top">' +
-                  '<div class="co">' + PD_CO + '<small>قسيمة راتب رسمية</small></div>' +
-                  '<div class="lbl"><b>' + PD_PERIOD + '</b><span>دفعة ' + PD_BATCH + '</span></div>' +
+              '<div class="pd-slip-doc pd-slip-kayan" data-zy-preserve>' +
+                '<div class="pd-slip-kayan-head">' +
+                  '<div><span>استعلام قسائم الراتب</span><h3>' + valueOrDash(PD_CO) + '</h3></div>' +
+                  '<div class="period"><b>' + esc(PD_PERIOD) + '</b><span>دفعة ' + esc(PD_BATCH) + '</span></div>' +
                 '</div>' +
-                '<div class="pd-slip-emp">' +
-                  '<div><span>الموظف</span> <b>' + l.EmployeeName + '</b></div>' +
-                  '<div><span>الرقم الوظيفي</span> <b>' + l.EmployeeNo + '</b></div>' +
-                  '<div><span>القسم</span> <b>' + (l.Department || '—') + '</b></div>' +
-                  '<div><span>المنصب</span> <b>' + (l.Position || '—') + '</b></div>' +
-                  // «0 / 0» كانت تعني «لا بيانات حضور» وتُدفع كاملاً بلا تمييز عن الدوام
-                  // الكامل. الحالة تُعلَن الآن نصّاً بالقسيمة نفسها لا تُترك للتخمين.
-                  (l.WorkDays > 0
-                    ? (function(){ var basis = l.DaysBasis > 0 ? l.DaysBasis : l.WorkDays;
-                        return '<div><span>أيام مدفوعة (مكافئة)</span> <b>' + Math.round(basis * (Number(l.AttendanceFactor) || 1)) + ' / ' + basis + '</b></div>' +
-                      '<div><span>أيام الغياب</span> <b>' + l.AbsentDays + '</b></div>'; })()
-                    : '<div style="grid-column:1/-1"><span>الحضور</span> <b style="color:#f59e0b">بلا بيانات حضور لهذا الشهر — دُفع الأساسي كاملاً</b></div>') +
+                '<div class="pd-slip-info-grid">' +
+                  slipInfo('رمز الموظف', l.EmployeeNo) +
+                  slipInfo('الاسم الكامل', l.EmployeeName) +
+                  slipInfo('رقم الهوية', l.NationalId) +
+                  slipInfo('المسمى الوظيفي', l.Position) +
+                  slipInfo('وحدة العمل', PD_CO) +
+                  slipInfo('الوحدة الهرمية', l.Department) +
+                  slipInfo('تاريخ التعيين', l.HireDateText) +
+                  slipInfo('الراتب الأساسي', money(l.BasicSalary, l.PayrollCurrency)) +
+                  slipInfo('فترة الراتب', PD_PERIOD_RANGE) +
+                  slipInfo('البنك', l.BankName) +
+                  slipInfo('رقم الوحدة', l.UnitNo) +
+                  slipInfo('رقم الضمان الاجتماعي', l.SocialSecurityNo) +
+                  slipInfo('طريقة الدفع', paymentLabel(l.PaymentMethod)) +
+                  slipInfo('إجمالي العلاوات', money(l.TotalAllowances, l.PayrollCurrency)) +
+                  slipInfo('الراتب الكلي', money(l.GrossSalary, l.PayrollCurrency)) +
+                  slipInfo('الفرع', l.Branch) +
+                  slipInfo('العملة', l.PayrollCurrency) +
+                  slipInfo('الأيام المدفوعة', basis > 0 ? paidDays + ' / ' + basis : 'بلا بيانات حضور') +
                 '</div>' +
-                '<div class="pd-slip-cols">' +
-                  '<div class="pd-slip-box earn"><h4>الاستحقاقات</h4>' + earnRows +
-                    '<div class="sum"><span>إجمالي الاستحقاقات</span><b>' + fmt(l.GrossSalary) + '</b></div></div>' +
-                  '<div class="pd-slip-box ded"><h4>الاستقطاعات</h4>' + dedRows +
-                    '<div class="sum"><span>إجمالي الاستقطاعات</span><b>' + fmt(l.TotalDeductions) + '</b></div></div>' +
+                '<div class="pd-slip-ledger-wrap"><table class="pd-slip-ledger">' +
+                  '<thead><tr><th>الدخل</th><th>أيام</th><th>المبلغ</th><th>الاستقطاعات</th><th>أيام</th><th>المبلغ</th></tr></thead>' +
+                  '<tbody>' + ledgerRows(l, ledger, paidDays) +
+                    '<tr class="total"><td colspan="2">مجموع الدخل</td><td class="amount">' + money(l.GrossSalary, l.PayrollCurrency) + '</td>' +
+                    '<td colspan="2">مجموع الاستقطاعات</td><td class="amount">' + money(l.TotalDeductions, l.PayrollCurrency) + '</td></tr>' +
+                    '<tr class="net"><td colspan="2">صافي الراتب</td><td class="amount">' + money(l.NetSalary, l.PayrollCurrency) + '</td><td colspan="3"></td></tr>' +
+                    '<tr class="words"><td colspan="6">' + valueOrDash(l.NetInWords) + ' فقط لا غير</td></tr>' +
+                  '</tbody></table>' +
                 '</div>' +
-                '<div class="pd-slip-net"><span>صافي الراتب المستحق</span><b>' + fmt(l.NetSalary) + ' د.ع</b></div>' +
-                // أثر الاحتساب (Phase 15): من أين جاء كل وعاء ولماذا — للموارد البشرية.
-                '<div class="pd-slip-trace">' +
-                  '<h4>أثر الاحتساب</h4>' +
-                  '<div class="row"><span>وعاء الحضور</span><b>' + fmt(l.AttendanceBase) + ' × معامل ' + Number(l.AttendanceFactor || 1).toFixed(4) + '</b></div>' +
-                  '<div class="row"><span>وعاء الضريبة</span><b>' + fmt(l.TaxBase) + ' <small>(' + traceSrc(l.TaxBaseSource) + ')</small></b></div>' +
-                  '<div class="row"><span>وعاء الضمان</span><b>' + fmt(l.GosiBase) + ' <small>(' + traceSrc(l.GosiBaseSource) + ')</small></b></div>' +
-                '</div>' +
-                '<div class="pd-slip-emp2">' +
-                  '<div>مساهمة الشركة (ضمان): <b>' + fmt(l.GosiCompany) + '</b></div>' +
-                  '<div>التكلفة الكلية على صاحب العمل: <b>' + fmt(l.EmployerCost) + '</b></div>' +
-                '</div>' +
-                '<div class="pd-slip-sign">' +
-                  '<div><div class="line"></div>توقيع الموظف</div>' +
-                  '<div><div class="line"></div>الموارد البشرية / المالية</div>' +
-                '</div>' +
+                '<details class="pd-slip-audit"><summary>تفاصيل أثر الاحتساب</summary>' +
+                  '<div><span>وعاء الحضور</span><b>' + money(l.AttendanceBase, l.PayrollCurrency) + ' × ' + Number(l.AttendanceFactor || 1).toFixed(4) + '</b></div>' +
+                  '<div><span>وعاء الضريبة</span><b>' + money(l.TaxBase, l.PayrollCurrency) + ' · ' + esc(traceSrc(l.TaxBaseSource)) + '</b></div>' +
+                  '<div><span>وعاء الضمان</span><b>' + money(l.GosiBase, l.PayrollCurrency) + ' · ' + esc(traceSrc(l.GosiBaseSource)) + '</b></div>' +
+                  '<div><span>مساهمة الشركة</span><b>' + money(l.GosiCompany, l.PayrollCurrency) + '</b></div>' +
+                  '<div><span>تكلفة صاحب العمل</span><b>' + money(l.EmployerCost, l.PayrollCurrency) + '</b></div>' +
+                '</details>' +
+                '<div class="pd-slip-kayan-actions"><a href="' + payslipPrintUrl(l.EmployeeId) + '" target="_blank" rel="noopener">طباعة</a></div>' +
               '</div>';
 
             document.getElementById('pd-slip').innerHTML = html;
+            document.getElementById('pd-print-link').href = payslipPrintUrl(l.EmployeeId);
             document.getElementById('pd-slide').classList.add('open');
             document.getElementById('pd-backdrop').classList.add('open');
         }

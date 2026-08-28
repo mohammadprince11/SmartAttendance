@@ -1,0 +1,33 @@
+/* Source: Pages/EmployeePortal/DocumentRequest.cshtml */
+.edr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,var(--zy-text)); }
+    .edr-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px;
+        background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); padding:18px; }
+    .edr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .edr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .edr-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,var(--zy-migrated-color-b035e56d5f) 12%,transparent); }
+    .edr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900;
+        color:var(--sa-muted,var(--zy-muted)); margin-bottom:12px; }
+    .edr-field select, .edr-field input, .edr-field textarea {
+        border:1px solid var(--zy-migrated-color-28565ef553); border-radius:12px; background:transparent;
+        color:var(--sa-text,var(--zy-text)); padding:10px 12px; font-size:14px; font-weight:800; }
+    .edr-btn { width:100%; border:0; border-radius:14px; padding:12px; font-size:14px;
+        font-weight:1000; cursor:pointer; background:var(--zy-migrated-color-fa48ddcd46); color:var(--zy-white); }
+    .edr-item { display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:12px 0; border-bottom:1px solid var(--zy-migrated-color-cbebfcf5a2); }
+    .edr-item:last-child { border-bottom:0; }
+    .edr-chip { border-radius:999px; padding:3px 11px; font-size:11px; font-weight:900; white-space:nowrap; }
+    .edr-chip.Pending { color:var(--zy-migrated-color-f8e175950d); background:var(--zy-migrated-color-af5096d51b); }
+    .edr-chip.Approved { color:var(--zy-migrated-color-0f176030df); background:var(--zy-migrated-color-7304d11da4); }
+    .edr-chip.Rejected { color:var(--zy-danger); background:var(--zy-migrated-color-e92da98547); }
+    .edr-mini { border:1px solid var(--zy-migrated-color-28565ef553); background:transparent; color:var(--zy-danger);
+        border-radius:10px; padding:5px 10px; font-size:11px; font-weight:900; cursor:pointer; }
+    .edr-note { font-size:11px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+
+/* Static inline utilities migrated from Pages/EmployeePortal/DocumentRequest.cshtml */
+
+.zyu-226444d36645 { font-size:14px; }
+
+.zyu-a4e017b7b0ef { display:flex;align-items:center;gap:8px; }
+
+.zyu-6b8b63d565c4 { display:inline; }

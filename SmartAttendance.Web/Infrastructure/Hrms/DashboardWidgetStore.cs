@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -14,6 +15,7 @@ public static class DashboardWidgetStore
     public sealed class Widget
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
         public string Title { get; set; } = string.Empty;   // فارغ = تسمية المقياس
         public string Metric { get; set; } = string.Empty;
         public string ChartKind { get; set; } = "Number";   // Number | HBars | Donut | Columns | Table
@@ -31,33 +33,37 @@ public static class DashboardWidgetStore
     }
 
     /// <summary>كتالوج المقاييس: (المفتاح ← التسمية، هل هو عدّاد رقم واحد).</summary>
-    public static readonly (string Key, string Label, bool IsCounter)[] Metrics =
+    public sealed record MetricDefinition(
+        string Key, string Label, bool IsCounter, string Unit,
+        string Source, string DrillPath);
+
+    public static readonly MetricDefinition[] Metrics =
     {
-        ("ActiveEmployees", "الموظفون النشطون", true),
-        ("InactiveEmployees", "موقوفون / غير فعالين", true),
-        ("NewHiresMonth", "موظف جديد هذا الشهر", true),
-        ("TodayPresent", "حاضرون اليوم", true),
-        ("TodayLate", "متأخرون اليوم", true),
-        ("TodayAbsent", "غائبون اليوم", true),
-        ("PendingRequests", "طلبات معلقة", true),
-        ("ExpiringContracts60", "عقود تنتهي خلال 60 يوماً", true),
-        ("ByBranch", "الموظفون حسب الفرع", false),
-        ("ByDepartment", "الموظفون حسب القسم", false),
-        ("ByGender", "حسب الجنس", false),
-        ("ByNationality", "حسب الجنسية", false),
-        ("ByMaritalStatus", "الحالة الزوجية", false),
-        ("ByContractType", "حسب نوع العقد", false),
-        ("ByAge", "إحصائيات الأعمار", false),
-        ("ByServiceYears", "إحصائيات مدة الخدمة", false),
-        ("TodayStatus", "حالة الحضور اليوم", false),
-        ("RequestsByStatus", "الطلبات حسب الحالة", false)
+        new("ActiveEmployees", "الموظفون النشطون", true, "موظف", "Employees.IsActive", "/Employees?activeOnly=true"),
+        new("InactiveEmployees", "موقوفون / غير فعالين", true, "موظف", "Employees.IsActive", "/Employees?activeOnly=false"),
+        new("NewHiresMonth", "موظف جديد هذا الشهر", true, "موظف", "Employees.HireDate", "/PeopleReports?ReportId=1"),
+        new("TodayPresent", "حاضرون اليوم", true, "موظف", "DayAttendances.Status=Present", "/DayAttendance?status=Present"),
+        new("TodayLate", "متأخرون اليوم", true, "موظف", "DayAttendances.Status=Late", "/DayAttendance?status=Late"),
+        new("TodayAbsent", "غائبون اليوم", true, "موظف", "DayAttendances.Status=Absent", "/DayAttendance?status=Absent"),
+        new("PendingRequests", "طلبات معلقة", true, "طلب", "SelfServiceRequests.Status=Pending", "/Requests?status=Pending"),
+        new("ExpiringContracts60", "عقود تنتهي خلال 60 يوماً", true, "عقد", "Employees.ContractEndDate", "/Employees/Contracts"),
+        new("ByBranch", "الموظفون حسب الفرع", false, "موظف", "Employees.BranchId", "/Dashboard/EmployeesDistribution?groupBy=branch"),
+        new("ByDepartment", "الموظفون حسب القسم", false, "موظف", "Employees.DepartmentId", "/Dashboard/EmployeesDistribution?groupBy=department"),
+        new("ByGender", "حسب الجنس", false, "موظف", "Employees.Gender", "/Dashboard/EmployeesDistribution?groupBy=gender"),
+        new("ByNationality", "حسب الجنسية", false, "موظف", "Employees.Nationality", "/Dashboard/EmployeesDistribution?groupBy=nationality"),
+        new("ByMaritalStatus", "الحالة الزوجية", false, "موظف", "Employees.MaritalStatus", "/Dashboard/EmployeesDistribution?groupBy=marital"),
+        new("ByContractType", "حسب نوع العقد", false, "موظف", "Employees.ContractType", "/Dashboard/EmployeesDistribution?groupBy=contract"),
+        new("ByAge", "إحصائيات الأعمار", false, "موظف", "Employees.BirthDate", "/Dashboard/EmployeesDistribution?groupBy=age"),
+        new("ByServiceYears", "إحصائيات مدة الخدمة", false, "موظف", "Employees.HireDate", "/Dashboard/EmployeesDistribution?groupBy=service"),
+        new("TodayStatus", "حالة الحضور اليوم", false, "موظف", "DayAttendances.Status", "/DayAttendance"),
+        new("RequestsByStatus", "الطلبات حسب الحالة", false, "طلب", "SelfServiceRequests.Status", "/Requests")
     };
 
     public static string MetricLabel(string key) =>
-        Metrics.FirstOrDefault(m => m.Key == key).Label ?? key;
+        Metrics.FirstOrDefault(m => m.Key == key)?.Label ?? key;
 
     public static bool IsCounterMetric(string key) =>
-        Metrics.FirstOrDefault(m => m.Key == key).IsCounter;
+        Metrics.FirstOrDefault(m => m.Key == key)?.IsCounter == true;
 
     public static readonly (string Key, string Label)[] ChartKinds =
     {
@@ -78,6 +84,7 @@ BEGIN
     CREATE TABLE DashboardWidgets
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NULL,
         Title nvarchar(150) NOT NULL DEFAULT(N''),
         Metric nvarchar(40) NOT NULL,
         ChartKind nvarchar(20) NOT NULL DEFAULT(N'Number'),
@@ -107,16 +114,20 @@ END;
 """);
     }
 
-    public static async Task<List<Widget>> ListAsync(ApplicationDbContext dbContext)
+    public static async Task<List<Widget>> ListAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int companyId)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
+        await EnsureCompanyRowsAsync(dbContext, companyId);
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM DashboardWidgets ORDER BY SortOrder, Id;",
-            command => { },
+            "SELECT * FROM DashboardWidgets WHERE CompanyId=@CompanyId ORDER BY SortOrder, Id;",
+            command => HrmsDatabase.AddParameter(command, "@CompanyId", companyId),
             reader => new Widget
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 Title = HrmsDatabase.GetString(reader, "Title"),
                 Metric = HrmsDatabase.GetString(reader, "Metric"),
                 ChartKind = HrmsDatabase.GetString(reader, "ChartKind") is { Length: > 0 } k ? k : "Number",
@@ -125,36 +136,41 @@ END;
             });
     }
 
-    public static async Task AddAsync(ApplicationDbContext dbContext, Widget widget)
+    public static async Task AddAsync(ApplicationDbContext dbContext, CompanyScope scope, Widget widget)
     {
+        if (!scope.Allows(widget.CompanyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             """
-INSERT INTO DashboardWidgets (Title, Metric, ChartKind, SortOrder, IsVisible)
-SELECT @Title, @Metric, @Kind, ISNULL(MAX(SortOrder), 0) + 1, 1 FROM DashboardWidgets;
+INSERT INTO DashboardWidgets (CompanyId,Title,Metric,ChartKind,SortOrder,IsVisible)
+SELECT @CompanyId,@Title,@Metric,@Kind,ISNULL(MAX(SortOrder),0)+1,1 FROM DashboardWidgets WHERE CompanyId=@CompanyId;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Title", widget.Title);
+                HrmsDatabase.AddParameter(command, "@CompanyId", widget.CompanyId);
                 HrmsDatabase.AddParameter(command, "@Metric", widget.Metric);
                 HrmsDatabase.AddParameter(command, "@Kind", widget.ChartKind);
             });
     }
 
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int companyId, int id)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "DELETE FROM DashboardWidgets WHERE Id = @Id;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+            "DELETE FROM DashboardWidgets WHERE Id=@Id AND CompanyId=@CompanyId;",
+            command => { HrmsDatabase.AddParameter(command,"@Id",id); HrmsDatabase.AddParameter(command,"@CompanyId",companyId); });
     }
 
     /// <summary>حفظ التخطيط: الترتيب حسب تسلسل المعرفات الممررة + حالة الإظهار.</summary>
     public static async Task SaveLayoutAsync(
-        ApplicationDbContext dbContext, IReadOnlyList<int> orderedIds, IReadOnlySet<int> visibleIds)
+        ApplicationDbContext dbContext, CompanyScope scope, int companyId,
+        IReadOnlyList<int> orderedIds, IReadOnlySet<int> visibleIds)
     {
+        if (!scope.Allows(companyId)) throw new UnauthorizedAccessException();
         await EnsureAsync(dbContext);
         for (var index = 0; index < orderedIds.Count; index++)
         {
@@ -162,15 +178,26 @@ SELECT @Title, @Metric, @Kind, ISNULL(MAX(SortOrder), 0) + 1, 1 FROM DashboardWi
             var order = index + 1;
             await HrmsDatabase.ExecuteAsync(
                 dbContext,
-                "UPDATE DashboardWidgets SET SortOrder = @Order, IsVisible = @Visible WHERE Id = @Id;",
+                "UPDATE DashboardWidgets SET SortOrder=@Order,IsVisible=@Visible WHERE Id=@Id AND CompanyId=@CompanyId;",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", id);
+                    HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
                     HrmsDatabase.AddParameter(command, "@Order", order);
                     HrmsDatabase.AddParameter(command, "@Visible", visibleIds.Contains(id) ? 1 : 0);
                 });
         }
     }
+
+    private static Task EnsureCompanyRowsAsync(ApplicationDbContext dbContext, int companyId) =>
+        HrmsDatabase.ExecuteAsync(dbContext, """
+IF NOT EXISTS(SELECT 1 FROM DashboardWidgets WITH (UPDLOCK,HOLDLOCK) WHERE CompanyId=@CompanyId)
+BEGIN
+ INSERT INTO DashboardWidgets(CompanyId,Title,Metric,ChartKind,SortOrder,IsVisible,CreatedAt)
+ SELECT @CompanyId,Title,Metric,ChartKind,SortOrder,IsVisible,SYSUTCDATETIME()
+ FROM DashboardWidgets WHERE CompanyId IS NULL;
+END;
+""", command => HrmsDatabase.AddParameter(command,"@CompanyId",companyId));
 
     /// <summary>تنفيذ مقياس ويدجت مقيداً بشركة (فروعها) — يعيد رقماً أو صفوف توزيع.</summary>
     public static async Task<WidgetData> ExecuteAsync(

@@ -12,6 +12,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 /// صاحب التوكن. تعيد استخدام مخازن HRMS نفسها المستخدمة بالبوابة.
 /// </summary>
 [ApiController]
+[Route("api/v1/me")]
 [Route("api/me")]
 [Authorize(AuthenticationSchemes = ApiTokenAuthHandler.SchemeName)]
 public sealed class MeController : ControllerBase
@@ -170,14 +171,15 @@ WHERE e.Id = @Id;
         var existingTimes = await PunchTypingEngine.DayPunchTimesAsync(_db, EmployeeId, d);
         var derivedType = PunchTypingEngine.DeriveTypeFor(existingTimes, punchAt);
 
-        var (ok, message) = await MissingPunchRequestStore.SaveAsync(_db, new MissingPunchRequestStore.Request
+        var (ok, message) = await MissingPunchRequestStore.SaveAsync(
+            _db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(), new MissingPunchRequestStore.Request
         {
             EmployeeId = EmployeeId,
             PunchAt = punchAt,
             PunchType = derivedType,
             Reason = string.IsNullOrWhiteSpace(body.Reason) ? null : body.Reason.Trim(),
             Source = "خدمة ذاتية"
-        }, User.Identity?.Name ?? "employee");
+        }, User.Identity?.Name ?? "employee", EmployeeId);
 
         return ok ? Ok(new { message, derivedType }) : BadRequest(new { message });
     }
@@ -190,12 +192,13 @@ WHERE e.Id = @Id;
         var rows = await HrmsDatabase.QueryAsync(
             _db,
             """
-SELECT TOP 100 RequestType, FromDate, ToDate, Reason, Status, CreatedAt
+SELECT TOP 100 Id,RequestType, FromDate, ToDate, Reason, Status, CreatedAt
 FROM SelfServiceRequests WHERE EmployeeId = @Id ORDER BY CreatedAt DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", EmployeeId),
             reader => new
             {
+                id = HrmsDatabase.GetInt(reader,"Id"),
                 type = HrmsDatabase.GetString(reader, "RequestType"),
                 fromDate = HrmsDatabase.GetDateTime(reader, "FromDate")?.ToString("yyyy-MM-dd"),
                 toDate = HrmsDatabase.GetDateTime(reader, "ToDate")?.ToString("yyyy-MM-dd"),
@@ -231,8 +234,8 @@ FROM SelfServiceRequests WHERE EmployeeId = @Id ORDER BY CreatedAt DESC;
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _db,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @From, @To, @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @From, @To, @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -245,9 +248,24 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             });
 
         if (requestId > 0)
-            await ApprovalWorkflowEngine.StartAsync(_db, requestId, body.RequestType.Trim(), EmployeeId);
+        {
+            var start=await ApprovalWorkflowEngine.StartAsync(_db, requestId, body.RequestType.Trim(), EmployeeId);
+            if(!start.Ok) return BadRequest(new { message=start.Message, requestId });
+        }
 
         return Ok(new { message = $"تم إرسال طلب {body.RequestType.Trim()} وهو قيد المراجعة.", requestId });
+    }
+
+    public sealed record CancelRequestBody(string? Reason);
+
+    /// <summary>إلغاء طلب الموظف نفسه ضمن مهلة القالب المجمدة وقت تقديمه.</summary>
+    [HttpPost("requests/{requestId:int}/cancel")]
+    public async Task<IActionResult> CancelRequest(int requestId,[FromBody] CancelRequestBody? body)
+    {
+        if(RequireEmployee() is { } bad) return bad;
+        var result=await ApprovalWorkflowEngine.CancelByRequesterAsync(
+            _db,requestId,EmployeeId,User.Identity?.Name ?? EmployeeId.ToString(),body?.Reason);
+        return result.Ok ? Ok(new { message=result.Message }) : BadRequest(new { message=result.Message });
     }
 
     /// <summary>الحقول القابلة لطلب تعديلها + قيمتها الحالية (لبناء نموذج «تعديل بياناتي»).</summary>
@@ -293,8 +311,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _db,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending');
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending', N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
@@ -315,7 +333,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return BadRequest(new { message = "لم تُدخِل أي قيمة مختلفة عن الحالية." });
         }
 
-        await ApprovalWorkflowEngine.StartAsync(_db, requestId, DataChangeRequestStore.RequestTypeLabel, EmployeeId);
+        var start=await ApprovalWorkflowEngine.StartAsync(_db, requestId, DataChangeRequestStore.RequestTypeLabel, EmployeeId);
+        if(!start.Ok) return BadRequest(new { message=start.Message, requestId });
         return Ok(new { message = $"تم إرسال طلب تعديل البيانات ({savedCount} حقل) وهو قيد المراجعة.", requestId });
     }
 }

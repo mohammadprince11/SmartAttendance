@@ -238,7 +238,6 @@ public sealed class EmployeeBootstrapImportEngine
     {
         ArgumentNullException.ThrowIfNull(scope);
 
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         await EmployeeProfileDynamicFields.EnsureSchemaAsync(_dbContext);
 
         var plan = await BuildPlanAsync(filePath, scope);

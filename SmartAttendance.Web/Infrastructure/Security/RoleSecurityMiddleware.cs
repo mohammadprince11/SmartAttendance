@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
-using SmartAttendance.Web.Infrastructure.Hrms;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
@@ -13,8 +12,6 @@ namespace SmartAttendance.Web.Infrastructure.Security;
 public class RoleSecurityMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly SemaphoreSlim LoginDatabaseEnsureLock = new(1, 1);
-    private static volatile bool LoginDatabaseIsReady;
 
     public RoleSecurityMiddleware(RequestDelegate next)
     {
@@ -26,10 +23,9 @@ public class RoleSecurityMiddleware
         ApplicationDbContext dbContext,
         ILoginIdentityService loginIdentityService,
         IPermissionAuthorizationService permissionAuthorizationService,
+        IAccessRoleService accessRoleService,
         Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
-        await EnsureLoginDatabaseCreatedAsync(dbContext);
-
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "/";
         var accessClass = PublicPathPolicy.Classify(path);
 
@@ -112,6 +108,7 @@ public class RoleSecurityMiddleware
             context,
             dbContext,
             permissionAuthorizationService,
+            accessRoleService,
             path,
             role,
             employeeId,
@@ -126,32 +123,6 @@ public class RoleSecurityMiddleware
         await _next(context);
     }
 
-    private static async Task EnsureLoginDatabaseCreatedAsync(
-        ApplicationDbContext dbContext)
-    {
-        if (LoginDatabaseIsReady)
-        {
-            return;
-        }
-
-        await LoginDatabaseEnsureLock.WaitAsync();
-
-        try
-        {
-            if (LoginDatabaseIsReady)
-            {
-                return;
-            }
-
-            await LoginDatabase.EnsureCreatedAsync(dbContext);
-            LoginDatabaseIsReady = true;
-        }
-        finally
-        {
-            LoginDatabaseEnsureLock.Release();
-        }
-    }
-
     private static void RedirectToLogin(HttpContext context)
     {
         var returnUrl = Uri.EscapeDataString(
@@ -163,6 +134,7 @@ public class RoleSecurityMiddleware
         HttpContext context,
         ApplicationDbContext dbContext,
         IPermissionAuthorizationService permissionAuthorizationService,
+        IAccessRoleService accessRoleService,
         string path,
         string role,
         string? employeeId,
@@ -176,6 +148,32 @@ public class RoleSecurityMiddleware
             path,
             role,
             employeeId);
+
+        // أدوار الصفحات اختيارية: بلا دور يبقى التوافق القديم؛ عند إسناد دور تصبح
+        // أفعاله قائمة بيضاء مركزية لكل GET/POST، لا مجرد إخفاء أزرار في الواجهة.
+        var handler = context.Request.RouteValues.TryGetValue("handler", out var routeHandler)
+            ? Convert.ToString(routeHandler)
+            : context.Request.Query["handler"].ToString();
+        var pageCode = PageAccessRouteCatalog.ResolvePageCode(path, handler);
+        if (pageCode is not null && !RoleRouteCatalog.IsAdmin(role))
+        {
+            if (!systemUserId.HasValue || systemUserId.Value <= 0) return false;
+            var profile = await accessRoleService.ResolveAsync(systemUserId.Value, context.RequestAborted);
+            if (profile.HasPagesRole)
+            {
+                int? postedId = null;
+                if (context.Request.HasFormContentType)
+                {
+                    var form = await context.Request.ReadFormAsync(context.RequestAborted);
+                    var rawId = form["Id"].FirstOrDefault() ?? form["id"].FirstOrDefault();
+                    if (int.TryParse(rawId, out var parsedId)) postedId = parsedId;
+                }
+                var action = PageAccessRouteCatalog.ResolveAction(
+                    context.Request.Method, path, handler, postedId);
+                if (!profile.Can(pageCode, action)) return false;
+                compatibilityAllowed = true;
+            }
+        }
 
         var requirement = PeopleRoutePermissionResolver.Resolve(context, path);
 

@@ -5,83 +5,16 @@
 @{
     ViewData["Title"] = "العمل الإضافي";
     var months = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
-    var acc = "#f59e0b";
     var catalogJson = JsonSerializer.Serialize(Model.Catalog.Select(i => new { i.Id, i.Name, i.Taxable, i.DefaultValue }));
     var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name }));
     string J(object o) => JsonSerializer.Serialize(o);
     string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
 }
+<link rel="stylesheet" href="~/css/pages/overtime-7f2ddfad25.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
 
-<style>
-    .ot-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
-    .ot-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .ot-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .ot-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .ot-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .ot-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
-    .ot-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .ot-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
-    .ot-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
-    .ot-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
-    .ot-btn.danger:hover { background:rgba(248,113,113,.26); }
-    .ot-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
-    .ot-btn.warn:hover { background:rgba(250,204,21,.24); }
-    .ot-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
-        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
-        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
-        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
-    html[data-theme="light"] .ot-bulkbar { background:#fff; }
-    .ot-bulkbar.show { display:flex; }
-    .ot-bulkbar b { font-size:13px; font-weight:900; color:inherit; margin-inline-end:6px; }
-    .ot-bulkbar b span { color:var(--acc); }
-    .ot-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
-    .ot-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; }
-    .ot-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
-    .ot-lockbanner { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
-
-    .ot-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
-    .ot-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
-    .ot-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
-    .ot-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
-    .ot-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-
-    .ot-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-    .ot-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
-    .ot-filter select, .ot-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
-    html[data-theme="light"] .ot-filter select, html[data-theme="light"] .ot-filter input { background:#fff; }
-    .ot-filter .nxcs-select { width:auto !important; min-width:112px; flex:0 0 auto; }
-
-    .ot-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .ot-table { width:100%; border-collapse:collapse; font-size:13px; min-width:900px; }
-    .ot-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
-    html[data-theme="light"] .ot-table th { background:#f2f7fb; }
-    .ot-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
-    .ot-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
-    .ot-table tfoot td { padding:12px 14px; font-weight:1000; border-top:2px solid color-mix(in srgb,var(--acc) 40%,transparent); background:rgba(0,0,0,.1); }
-    .ot-ref { direction:ltr; font-weight:900; font-size:12px; }
-    .ot-emp b { font-weight:900; } .ot-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
-    .ot-num { direction:ltr; font-weight:900; color:var(--acc); text-align:start; }
-    .ot-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
-    .ot-chip.ap { background:rgba(74,222,128,.14); color:#4ade80; }
-    .ot-chip.dr { background:rgba(143,168,188,.16); color:#8FA8BC; }
-    .ot-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .ot-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
-    .ot-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
-    .ot-actions { display:flex; gap:6px; justify-content:flex-end; } .ot-actions form { display:inline; }
-
-    .ot-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
-    .ot-form select, .ot-form input, .ot-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
-    html[data-theme="light"] .ot-form select, html[data-theme="light"] .ot-form input, html[data-theme="light"] .ot-form textarea { background:#fff; }
-    .ot-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .ot-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
-    .ot-preview { padding:10px 12px; border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:10px; font-size:13px; font-weight:900; background:color-mix(in srgb,var(--acc) 8%,transparent); }
-    .ot-preview b { color:var(--acc); direction:ltr; }
-</style>
 
 <section class="ot-page" dir="rtl">
     <header class="ot-head">
@@ -89,7 +22,7 @@
             <h1>⏱ العمل الإضافي</h1>
             <p>ساعات × معامل بدل — القيمة الفعلية تُحتسب بالمسير من الأجر الساعي للموظف (الأساسي ÷ 30 ÷ 8).</p>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="zyu-d0cb022ba49e">
             @if (!Model.IsReadOnly)
             {
                 <button type="button" class="ot-btn ghost icon" title="إدخال جماعي — بند واحد لعدة موظفين" aria-label="إدخال جماعي" onclick="massOpen()">
@@ -134,7 +67,7 @@
             </select>
         </div>
         <div class="ot-filter">
-            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" class="zyu-0eddd0ab78c0" />
             <button type="submit" class="ot-btn ghost sm">بحث</button>
         </div>
     </form>
@@ -163,11 +96,11 @@
             <table class="ot-table">
                 <thead>
                     <tr>
-                        <th style="width:34px"><input type="checkbox" onclick="otAll(this)" /></th>
+                        <th class="zyu-d12729b3d536"><input type="checkbox" onclick="otAll(this)" /></th>
                         <th>الرقم المرجعي</th><th>الموظف</th><th>البند</th>
                         <th>الساعات</th><th>المعامل</th><th>تاريخ الحركة</th><th>الحالة</th>
                         @if (!Model.IsReadOnly)
-                        { <th style="text-align:end">إجراءات</th> }
+                        { <th class="zyu-814fec806937">إجراءات</th> }
                     </tr>
                 </thead>
                 <tbody>
@@ -227,7 +160,7 @@
             <button type="button" class="hrms-slideover-close" onclick="otClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Save" class="ot-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="Save" class="ot-form zyu-f0de252a84a8">
                 <input type="hidden" name="Id" id="ot-Id" value="0" />
                 <input type="hidden" name="ItemName" id="ot-ItemName" />
                 <input type="hidden" name="SalaryItemId" id="ot-SalaryItemId" value="0" />
@@ -272,7 +205,7 @@
 
                 <div class="ot-grid2">
                     <label>تاريخ الحركة<input type="date" name="TransactionDate" id="ot-TransactionDate" /></label>
-                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="Taxable" value="true" id="ot-Taxable" checked /> خاضع للضريبة</label>
+                    <label class="zyu-b920ea9de2e2"><input type="checkbox" name="Taxable" value="true" id="ot-Taxable" checked /> خاضع للضريبة</label>
                 </div>
 
                 <label>الحالة
@@ -297,7 +230,7 @@
             <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="ot-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="ot-form zyu-f0de252a84a8">
                 <input type="hidden" name="MassItemName" id="mass-ItemName" />
                 <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
                 <input type="hidden" name="ScopeMode" id="mass-ScopeMode" value="Manual" />
@@ -320,14 +253,14 @@
                     <label>معامل البدل *<input type="number" name="MassRateFactor" step="0.05" min="0" value="1.5" /></label>
                 </div>
                 <div class="ot-grid2">
-                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="MassTaxable" value="true" id="mass-Taxable" checked /> خاضع للضريبة</label>
+                    <label class="zyu-b920ea9de2e2"><input type="checkbox" name="MassTaxable" value="true" id="mass-Taxable" checked /> خاضع للضريبة</label>
                     <label>الفترة
-                        <span style="display:flex;gap:6px">
+                        <span class="zyu-69374f356aba">
                             <select name="MassMonth">
                                 @for (var m = 1; m <= 12; m++)
                                 { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
                             </select>
-                            <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" style="width:88px" />
+                            <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" class="zyu-2b524186b864" />
                         </span>
                     </label>
                 </div>
@@ -343,10 +276,10 @@
                 </div>
 
                 <div class="mass-pane" id="mass-pane-Manual">
-                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
-                    <div style="display:flex;gap:6px">
+                    <label>الموظفون <span id="mass-count" class="zyu-07fa33e9aa03">(0 محدد)</span></label>
+                    <div class="zyu-69374f356aba">
                         <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
-                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                               class="zyu-e038610b695a" />
                         <button type="button" class="ot-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
                         <button type="button" class="ot-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
                     </div>
@@ -364,8 +297,8 @@
                 </div>
 
                 <div class="mass-pane" id="mass-pane-File" hidden>
-                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
-                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                    <div class="mass-file-hint"><b class="zyu-07fa33e9aa03">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b>.</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" class="zyu-b87a8c000a7e" /></label>
                 </div>
 
                 <div class="mass-pane" id="mass-pane-Criteria" hidden>
@@ -390,9 +323,9 @@
             <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="ot-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="ot-form zyu-f0de252a84a8">
                 <div class="mass-file-hint">
-                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                    <b class="zyu-07fa33e9aa03">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
                     A: رمز الموظف · B: عدد الساعات · C: البند (اختياري) · D: المعامل (اختياري، افتراضي 1.5)
                 </div>
                 <div class="ot-grid2">
@@ -404,7 +337,7 @@
                     </label>
                     <label>السنة<input type="number" name="ImportYear" value="@Model.Year" min="2000" max="2100" /></label>
                 </div>
-                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required class="zyu-b87a8c000a7e" /></label>
                 <button type="submit" class="ot-btn">استيراد</button>
             </form>
         </div>

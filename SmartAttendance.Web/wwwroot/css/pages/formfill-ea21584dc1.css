@@ -1,0 +1,41 @@
+/* Source: Pages/EmployeePortal/FormFill.cshtml */
+.ef { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,var(--zy-text)); }
+    .ef-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px;
+        background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); padding:18px; }
+    .ef-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .ef-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .ef-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,var(--zy-migrated-color-b035e56d5f) 12%,transparent); }
+    .ef-err { border-radius:12px; padding:12px 14px; font-size:12px; font-weight:800;
+        background:var(--zy-migrated-color-e92da98547); color:var(--zy-danger); line-height:1.9; }
+    .ef-group { border:1px solid var(--zy-migrated-color-cbebfcf5a2); border-radius:14px; padding:14px; margin-bottom:14px; }
+    .ef-group h3 { margin:0 0 12px; font-size:13px; font-weight:1000; }
+    .ef-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900;
+        color:var(--sa-muted,var(--zy-muted)); margin-bottom:14px; }
+    .ef-field input, .ef-field select, .ef-field textarea {
+        border:1px solid var(--zy-migrated-color-28565ef553); border-radius:12px; background:transparent;
+        color:var(--sa-text,var(--zy-text)); padding:10px 12px; font-size:14px; font-weight:800; }
+    .ef-rate { display:flex; gap:8px; flex-wrap:wrap; }
+    .ef-rate label { display:inline-flex; flex-direction:column; align-items:center; gap:4px;
+        border:1px solid var(--zy-migrated-color-28565ef553); border-radius:12px; padding:8px 12px; cursor:pointer; }
+    .ef-rate input { appearance:auto; }
+    .ef-btn { width:100%; border:0; border-radius:14px; padding:12px; font-size:14px;
+        font-weight:1000; cursor:pointer; background:var(--zy-migrated-color-fa48ddcd46); color:var(--zy-white); }
+    .ef-item { display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:12px 0; border-bottom:1px solid var(--zy-migrated-color-cbebfcf5a2); }
+    .ef-item:last-child { border-bottom:0; }
+    .ef-open { border:0; border-radius:12px; padding:8px 14px; font-size:12px; font-weight:1000;
+        background:var(--zy-migrated-color-fa48ddcd46); color:var(--zy-white); text-decoration:none; display:inline-block; }
+    .ef-chip { border-radius:999px; padding:3px 11px; font-size:11px; font-weight:900; }
+    .ef-chip.Submitted { color:var(--zy-migrated-color-f8e175950d); background:var(--zy-migrated-color-af5096d51b); }
+    .ef-chip.Approved { color:var(--zy-migrated-color-0f176030df); background:var(--zy-migrated-color-7304d11da4); }
+    .ef-chip.Rejected { color:var(--zy-danger); background:var(--zy-migrated-color-e92da98547); }
+    .ef-req { color:var(--zy-danger); }
+
+/* Static inline utilities migrated from Pages/EmployeePortal/FormFill.cshtml */
+
+.zyu-0ee7f66ad9c0 { margin-top:12px; }
+
+.zyu-226444d36645 { font-size:14px; }
+
+.zyu-ab79ea2b8573 { margin:0; }

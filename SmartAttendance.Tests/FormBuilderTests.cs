@@ -155,7 +155,7 @@ public class FormBuilderTests
     [Fact]
     public void ValidateSubmission_ReturnsAllErrors_NotJustTheFirst()
     {
-        var errors = FormBuilder.ValidateSubmission(new[]
+        var errors = FormBuilder.ValidateSubmission(new (string Label, string? ControlType, bool IsRequired, string? Options, string? Answer)[]
         {
             ("السبب", FormBuilder.ControlText, true, (string?)null, (string?)null),
             ("المبلغ", FormBuilder.ControlNumber, false, null, "abc"),
@@ -168,7 +168,7 @@ public class FormBuilderTests
     [Fact]
     public void ValidSubmission_HasNoErrors()
     {
-        var errors = FormBuilder.ValidateSubmission(new[]
+        var errors = FormBuilder.ValidateSubmission(new (string Label, string? ControlType, bool IsRequired, string? Options, string? Answer)[]
         {
             ("السبب", FormBuilder.ControlText, true, (string?)null, (string?)"لغرض البنك"),
             ("المبلغ", FormBuilder.ControlNumber, false, null, (string?)"250")

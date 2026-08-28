@@ -1,0 +1,47 @@
+/* Source: Pages/DesignPreview/Index.cshtml */
+/* تخطيط خاص بصفحة المعاينة فقط — كل الستايل الفعلي من zynora-design-system.css */
+    .dp-wrap { border-radius: 18px; padding: 26px; min-height: 80vh; }
+    .dp-cols { display: grid; grid-template-columns: 1.7fr 1fr; gap: 16px; align-items: start; }
+    .dp-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .dp-sec { margin-bottom: 16px; }
+    @media (max-width: 900px) { .dp-cols { grid-template-columns: 1fr; } }
+
+/* Static inline utilities migrated from Pages/DesignPreview/Index.cshtml */
+
+.zyu-3da2f0045d50 { background:var(--color-background); }
+
+.zyu-a3d4b1c97186 { margin-inline-start:auto; }
+
+.zyu-4c6700dff8c7 { padding:10px 0;border-bottom:1px dashed var(--color-border); }
+
+.zyu-83725d2c6e00 { flex:1; }
+
+.zyu-74f604f83eb1 { padding:10px 0; }
+
+.zyu-641778be2caa { width:14px;height:14px; }
+
+.zyu-a3cfc429c123 { border:0;box-shadow:none; }
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-022625b12b0b { display:flex;flex-direction:column;gap:14px; }
+
+.zyu-b6b0473669da { font-size:var(--fs-small); }
+
+.zyu-157f4b30d935 { color:var(--color-primary); }
+
+.zyu-e91715e2db88 { width:15px;height:15px; }
+
+.zyu-d26477489746 { padding:18px; }
+
+.zyu-aa2c680e1efc { width:24px;height:24px; }
+
+.zyu-90d801726190 { display:flex;flex-direction:column;gap:8px;margin-top:10px; }
+
+.zyu-2f0a1848853b { width:70%; }
+
+.zyu-fc9c1b211263 { width:90%; }
+
+.zyu-7eaecc77d074 { width:50%; }
+
+.zyu-03600f2501f2 { position:static;margin-top:6px;max-width:340px; }

@@ -1,0 +1,157 @@
+/* Source: Pages/AttendanceViewer/Index.cshtml */
+.avw-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, var(--zy-text)); }
+    .avw-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, var(--zy-migrated-color-add5638818), transparent 36%), linear-gradient(135deg, var(--zy-migrated-color-2d2722bfd0), var(--zy-migrated-color-d38141ec79)); }
+    html[data-theme="light"] .avw-head { background: linear-gradient(135deg, var(--zy-white), var(--zy-migrated-color-c2da37727c)); }
+    .avw-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .avw-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .avw-btn { min-height: 38px; padding: 8px 16px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, var(--zy-primary), var(--zy-primary-strong)); color: var(--zy-on-primary); }
+    .avw-btn.ghost { background: transparent; border: 1px solid var(--zy-migrated-color-28565ef553); color: inherit; }
+    .avw-icon { min-height: 38px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid var(--zy-migrated-color-28565ef553); background: transparent; color: inherit; cursor: pointer; font-size: 16px; position: relative; }
+    .avw-icon.on { background: var(--zy-migrated-color-fa4c99c7a1); border-color: var(--zy-migrated-color-1d95d5b248); color: var(--zy-primary); }
+
+    .avw-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 16px; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+    .avw-bar input, .avw-bar select { min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266); background: var(--zy-migrated-color-819b024f9d); color: var(--sa-text, var(--zy-text)); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .avw-bar input, html[data-theme="light"] .avw-bar select { background: var(--zy-white); color: inherit; }
+
+    .avw-panel { border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 16px; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); padding: 14px; }
+    .avw-grid3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .avw-grid3 label { font-size: 11px; font-weight: 900; color: var(--sa-muted, var(--zy-muted)); display: flex; flex-direction: column; gap: 4px; }
+    .avw-grid3 select { min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266); background: var(--zy-migrated-color-819b024f9d); color: inherit; padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .avw-grid3 select { background: var(--zy-white); }
+
+    /* منتقي الشهر يجاور حقل البحث بنفس السطر: غلاف الكلاندر يفرض
+       `width: 100% !important` فيبتلع السطر ويدفع البحث و«عرض» لسطرٍ ثانٍ.
+       التخصصية هنا (0,2,0) تغلب (0,1,0) فيصحّ التجاوز. */
+    .avw-bar .nxcal { width: auto !important; flex: 0 0 auto; min-width: 190px; }
+    .avw-bar input[name="Search"] { min-width: 220px; }
+
+    .avw-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .avw-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 900; cursor: pointer; border: 1px solid transparent; user-select: none; }
+    .avw-chip i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .avw-chip.off { opacity: .38; filter: grayscale(.6); }
+    /* الشريحة المختارة: الحالة المعروضة وحدها */
+    .avw-chip.on { border-color: currentColor; box-shadow: 0 0 0 2px var(--zy-migrated-color-81b711da45); }
+    .avw-chip .cnt { direction: ltr; font-size: 11px; opacity: .85; }
+
+    /* احتواء **أفقيّ فقط**: الجدول أعرض من الشاشة فيمرّر داخل بطاقته (وإلا جرّ
+       المستند والقوقعة معه). أما رأسياً فالمستند هو المُمرِّر — لا مُمرِّر متداخل:
+       `max-height: 66vh` كان يقصّ صفحة الـ20 موظفاً إلى 6 صفوف مرئية. */
+    .avw-matrix-card { border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 18px; overflow-x: auto; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); cursor: grab; }
+    .avw-matrix-card.is-grabbing { cursor: grabbing; user-select: none; }
+    .avw-matrix { border-collapse: separate; border-spacing: 0; font-size: 11px; }
+    .avw-matrix th { padding: 6px 6px; font-size: 10px; font-weight: 1000; color: var(--sa-muted, var(--zy-muted)); border-bottom: 1px solid var(--zy-migrated-color-b9678111e3); background: var(--zy-migrated-color-dc09966fd6); text-align: center; position: sticky; top: 0; z-index: 3; }
+    html[data-theme="light"] .avw-matrix th { background: var(--zy-migrated-color-3528f91fc8); }
+    .avw-matrix th.dcol .dn { font-size: 9px; opacity: .75; font-weight: 800; }
+    .avw-matrix th.dcol.fri, .avw-matrix td.fri { color: var(--zy-danger); background: var(--zy-migrated-color-55001ec372); }
+    .avw-matrix th.emp, .avw-matrix td.emp { text-align: start; min-width: 210px; position: sticky; inset-inline-start: 0; background: var(--sa-surface, var(--zy-migrated-color-f6e701f6d8)); z-index: 2; padding: 5px 10px; }
+    .avw-matrix thead th.emp { z-index: 4; }
+    html[data-theme="light"] .avw-matrix th.emp, html[data-theme="light"] .avw-matrix td.emp { background: var(--zy-white); }
+    .avw-matrix td { padding: 3px; border-bottom: 1px solid var(--zy-migrated-color-6aac8b85c4); border-inline-start: 1px solid var(--zy-migrated-color-7ee439d0e3); text-align: center; }
+    .avw-emp { display: flex; align-items: center; gap: 8px; }
+    .avw-badge { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-weight: 1000; font-size: 11px; color: var(--zy-on-primary); flex: none; }
+    .avw-emp .nm { font-weight: 900; line-height: 1.15; }
+    .avw-emp .sub { font-size: 10px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .avw-cell { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; opacity: .95; cursor: pointer; font-size: 9px; font-weight: 1000; color: var(--zy-on-primary); }
+    .avw-cell.empty { background: var(--zy-migrated-color-2b5f66f19e); cursor: default; }
+    .avw-cell.dim { opacity: .08; }
+    .avw-matrix.text-mode .avw-cell { width: auto; min-width: 22px; height: 18px; border-radius: 5px; padding: 0 4px; }
+    .avw-total { font-weight: 1000; color: var(--zy-primary); direction: ltr; white-space: nowrap; }
+    .avw-empty { padding: 28px; text-align: center; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .avw-pager { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; font-weight: 900; }
+
+    /* منبثقات */
+    .avw-modal-bg { position: fixed; inset: 0; background: var(--zy-migrated-color-fd9af3c8e7); z-index: 80; display: none; }
+    .avw-modal-bg.show { display: block; }
+    .avw-modal { position: fixed; z-index: 81; inset-inline: 0; top: 6vh; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        max-height: 88vh; overscroll-behavior: contain;
+        background: var(--sa-surface, var(--zy-migrated-color-f6e701f6d8)); border: 1px solid var(--zy-migrated-color-b21b0ddc91); border-radius: 16px; box-shadow: 0 20px 60px var(--zy-migrated-color-33a0843b78); padding: 18px; display: none; }
+    html[data-theme="light"] .avw-modal { background: var(--zy-white); }
+    /* أخصّ من قاعدة nxcal (overflow:visible !important) على حاويات حقول التاريخ — يعيد التمرير */
+    .avw-modal.show { display: block; overflow: hidden auto !important; }
+    .avw-modal h3 { margin: 0 0 12px; font-size: 15px; font-weight: 1000; }
+    .avw-modal label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .avw-modal input[type=time] { min-height: 38px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-28565ef553); background: var(--zy-migrated-color-819b024f9d); color: inherit; padding: 6px 10px; }
+    html[data-theme="light"] .avw-modal input[type=time] { background: var(--zy-migrated-color-c2da37727c); }
+    .avw-notif-opts { display: flex; gap: 10px; flex-wrap: wrap; }
+    .avw-notif-opt { border: 1px solid var(--zy-migrated-color-28565ef553); border-radius: 12px; padding: 14px 18px; font-weight: 900; font-size: 13px; cursor: pointer; text-align: center; min-width: 120px; }
+    .avw-notif-opt.on { background: var(--zy-migrated-color-fa4c99c7a1); border-color: var(--zy-primary); color: var(--zy-primary); }
+
+/* Static inline utilities migrated from Pages/AttendanceViewer/Index.cshtml */
+
+.zyu-39c68df36fcc { display:flex;gap:8px;align-items:center; }
+
+.zyu-5e88c7bada37 { display:flex;gap:8px;margin-top:12px; }
+
+.zyu-6aa34d7432e7 { display:none; }
+
+.zyu-234ef25e545e { font-size:12px;font-weight:900; }
+
+.zyu-6b8f09b6f3ad { display:flex;gap:14px;margin-top:8px;font-size:13px;font-weight:900; }
+
+.zyu-76a69fe803c7 { flex-direction:row;align-items:center;gap:6px; }
+
+.zyu-6908935e45bf { font-size:12px;font-weight:800;opacity:.75; }
+
+.zyu-6e4c67e3c0a2 { direction:ltr; }
+
+.zyu-78b078c061e1 { display:flex;flex-direction:column;gap:10px;min-width:260px; }
+
+.zyu-71658681447f { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+
+.zyu-53e12b512bb1 { padding:0;text-align:start;font-size:11px; }
+
+.zyu-9c40389b4ad8 { display:flex;gap:8px; }
+
+.zyu-00d6c127b552 { width:min(560px, calc(100% - 32px)); }
+
+.zyu-022625b12b0b { display:flex;flex-direction:column;gap:14px; }
+
+.zyu-0fd943ffe4c5 { align-self:flex-start; }
+
+.zyu-19db9ef8f814 { display:none;flex-direction:column;gap:12px; }
+
+.zyu-214b919d7313 { font-size:12px;font-weight:900;display:flex;flex-direction:column;gap:4px; }
+
+.zyu-921ce646b3ab { display:none;grid-template-columns:1fr 1fr 1fr;gap:10px; }
+
+.zyu-5d11d64d1cd7 { display:flex;gap:14px;margin-top:6px;font-size:13px;font-weight:900;flex-wrap:wrap; }
+
+.zyu-63149c7fffcf { border-radius:10px;border:1px solid var(--zy-migrated-color-28565ef553);background:var(--zy-migrated-color-819b024f9d);color:inherit;padding:8px 10px;font-size:13px;font-weight:700;resize:vertical; }
+
+.zyu-1bb384f3c10f { font-size:11px;color:var(--sa-muted,var(--zy-muted));font-weight:800;line-height:1.7; }
+
+.zyu-7b7c856ba971 { border:1px solid var(--zy-migrated-color-0aac1ba379);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px; }
+
+.zyu-43e173a02e91 { flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:900; }
+
+.zyu-f47dd2f9802f { display:none;flex-direction:column;gap:8px; }
+
+.zyu-c97959575c9e { display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:900; }
+
+.zyu-b85be101efc0 { flex-direction:row;align-items:center;gap:5px; }
+
+.zyu-67c6459975c9 { display:flex;flex-direction:column;gap:6px; }
+
+.zyu-69374f356aba { display:flex;gap:6px; }
+
+.zyu-f9edd043570e { flex:1;min-height:34px;border-radius:8px;border:1px solid var(--zy-migrated-color-6a77190266);background:var(--zy-migrated-color-819b024f9d);color:inherit;padding:4px 10px;font-size:12px; }
+
+.zyu-7fe9dda4f68b { font-size:11px;font-weight:900;color:var(--zy-primary);align-self:center; }
+
+.zyu-b8345514b426 { max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:2px; }
+
+.zyu-3ff594c60deb { border:1px solid var(--zy-migrated-color-0aac1ba379);border-radius:12px;padding:12px; }
+
+.zyu-43a97fe4943c { margin-top:8px; }
+
+.zyu-cd74554a706a { font-size:11px;color:var(--sa-muted,var(--zy-muted));font-weight:800;margin-top:6px; }
+
+.zyu-e1b8214f14c7 { display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;text-align:start; }
+
+.zyu-f87fcd11f8b4 { flex:none; }
+
+.zyu-a9fec83e63ca { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+
+.zyu-474799ee2243 { color:var(--zy-primary); }

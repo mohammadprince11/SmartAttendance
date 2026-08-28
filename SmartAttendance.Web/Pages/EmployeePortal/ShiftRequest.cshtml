@@ -5,30 +5,8 @@
     Layout = "_EmployeePortalLayout";
     ViewData["Title"] = "طلب مناوبة";
 }
+<link rel="stylesheet" href="~/css/pages/shiftrequest-4658954639.css" asp-append-version="true" />
 
-<style>
-    .esr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,#DCEAF4); }
-    .esr-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:18px; }
-    .esr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
-    .esr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .esr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .esr-grid .full { grid-column:1/-1; }
-    .esr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .esr-field select, .esr-field input, .esr-field textarea {
-        border:1px solid rgba(73,111,151,.3); border-radius:12px; background:transparent;
-        color:var(--sa-text,#DCEAF4); padding:10px 12px; font-size:14px; font-weight:800; }
-    .esr-btn { margin-top:14px; width:100%; border:0; border-radius:14px; padding:12px;
-        font-size:14px; font-weight:1000; cursor:pointer; background:#0d9488; color:#fff; }
-    .esr-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
-        background:color-mix(in srgb,#38bdf8 12%,transparent); }
-    .esr-table { width:100%; border-collapse:collapse; font-size:12px; }
-    .esr-table th, .esr-table td { padding:8px 6px; border-bottom:1px solid rgba(73,111,151,.18); text-align:right; }
-    .esr-table th { color:var(--sa-muted,#8FA8BC); font-weight:900; }
-    .esr-chip { border-radius:999px; padding:2px 10px; font-size:11px; font-weight:900; }
-    .esr-chip.Pending { color:#fbbf24; background:rgba(251,191,36,.12); }
-    .esr-chip.Approved { color:#34d399; background:rgba(52,211,153,.12); }
-    .esr-chip.Rejected { color:#f87171; background:rgba(248,113,113,.12); }
-</style>
 
 <div class="esr">
     @if (Model.StatusMessage is { } statusMessage)

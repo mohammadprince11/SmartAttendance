@@ -11,107 +11,11 @@
     string J(object o) => JsonSerializer.Serialize(o);
     string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
 }
+<link rel="stylesheet" href="~/css/pages/transactions-c1bdd7a67c.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/mass-scope.css" asp-append-version="true" />
 
-<style>
-    .tx-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); --acc:@acc; }
-    .tx-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .tx-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .tx-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .tx-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .tx-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:#04141d; }
-    .tx-btn.ghost { background:transparent; border:1px solid rgba(73,111,151,.3); color:inherit; }
-    .tx-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
-    .tx-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
-    .tx-btn.icon:hover { background:color-mix(in srgb,var(--acc) 18%,transparent); border-color:color-mix(in srgb,var(--acc) 45%,transparent); }
-    .tx-btn.danger { background:rgba(248,113,113,.16); border:1px solid rgba(248,113,113,.45); color:#f87171; }
-    .tx-btn.danger:hover { background:rgba(248,113,113,.26); }
-    .tx-btn.warn { background:rgba(250,204,21,.14); border:1px solid rgba(250,204,21,.45); color:#facc15; }
-    .tx-btn.warn:hover { background:rgba(250,204,21,.24); }
-    .tx-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
-        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
-        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
-        background:var(--sa-surface,rgba(8,25,43,.98)); box-shadow:0 14px 44px rgba(0,0,0,.55); }
-    html[data-theme="light"] .tx-bulkbar { background:#fff; }
-    .tx-bulkbar.show { display:flex; }
-    .tx-bulkbar b { font-size:13px; font-weight:900; color:inherit; margin-inline-end:6px; }
-    .tx-bulkbar b span { color:var(--acc); }
-    .tx-seg { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:12px; overflow:hidden; }
-    .tx-seg a { padding:7px 16px; font-size:13px; font-weight:900; color:inherit; text-decoration:none; }
-    .tx-seg a.on { background:var(--acc); color:#04141d; }
-    .tx-tabs { display:flex; gap:2px; border-bottom:1px solid rgba(73,111,151,.22); }
-    .tx-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,#8FA8BC); text-decoration:none; border-bottom:3px solid transparent; display:flex; align-items:center; gap:6px; }
-    .tx-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
-    .tx-lockbanner { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:900; border:1px solid rgba(250,204,21,.4); background:rgba(250,204,21,.08); color:#facc15; }
-
-    .tx-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
-    .tx-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
-    .tx-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
-    .tx-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
-    .tx-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-
-    .tx-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-    .tx-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); flex-wrap:wrap; }
-    .tx-filter select, .tx-filter input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; }
-    html[data-theme="light"] .tx-filter select, html[data-theme="light"] .tx-filter input { background:#fff; }
-    /* السيليكت المخصص nxcs يُصيَّر بعرض كامل — نقيّده في صف الفترة ليكون متجاوراً مدمجاً */
-    .tx-filter .nxcs-select { width:auto !important; min-width:112px; flex:0 0 auto; }
-    .tx-adv-panel { flex-basis:100%; display:flex; flex-direction:column; gap:14px; padding:14px 16px; border:1px dashed rgba(73,111,151,.35); border-radius:14px; }
-    .tx-adv-panel select, .tx-adv-panel input { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:800; width:100%; }
-    html[data-theme="light"] .tx-adv-panel select, html[data-theme="light"] .tx-adv-panel input { background:#fff; }
-    .tx-adv-sec { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:1000; color:var(--acc); margin-bottom:-4px; }
-    .tx-adv-sec::after { content:""; flex:1; height:1px; background:color-mix(in srgb,var(--acc) 30%,transparent); }
-    .tx-adv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; }
-    .tx-fld { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .tx-fld > span { display:flex; align-items:center; gap:6px; }
-    .tx-fld.soon { opacity:.6; }
-    .tx-fld.soon select, .tx-fld.soon input { cursor:not-allowed; background:rgba(0,0,0,.28); }
-    html[data-theme="light"] .tx-fld.soon select, html[data-theme="light"] .tx-fld.soon input { background:#eef2f6; }
-    .tx-soon { font-size:9px; font-weight:900; padding:1px 6px; border-radius:999px; background:rgba(250,204,21,.16); color:#facc15; }
-    .tx-adv-actions { display:flex; gap:8px; align-items:center; }
-    .tx-fld-range { display:flex; gap:6px; } .tx-fld-range input { width:100%; }
-
-    .tx-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; overflow-x:auto; background:var(--sa-surface,rgba(8,25,43,.9)); }
-    .tx-table { width:100%; border-collapse:collapse; font-size:13px; min-width:960px; }
-    .tx-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,#8FA8BC); border-bottom:1px solid rgba(73,111,151,.22); background:rgba(0,0,0,.14); }
-    html[data-theme="light"] .tx-table th { background:#f2f7fb; }
-    .tx-table td { padding:11px 14px; border-bottom:1px solid rgba(143,168,188,.08); vertical-align:middle; }
-    .tx-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
-    .tx-table tfoot td { padding:12px 14px; font-weight:1000; border-top:2px solid color-mix(in srgb,var(--acc) 40%,transparent); background:rgba(0,0,0,.1); }
-    .tx-ref { direction:ltr; font-weight:900; font-size:12px; }
-    .tx-emp b { font-weight:900; } .tx-emp span { display:block; font-size:11px; color:var(--sa-muted,#8FA8BC); }
-    .tx-amt { direction:ltr; font-weight:900; color:var(--acc); text-align:start; }
-    .tx-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
-    .tx-chip.in { background:rgba(18,217,227,.1); color:#12D9E3; }
-    .tx-chip.out { background:rgba(250,204,21,.14); color:#facc15; }
-    .tx-chip.ap { background:rgba(74,222,128,.14); color:#4ade80; }
-    .tx-chip.dr { background:rgba(143,168,188,.16); color:#8FA8BC; }
-    .tx-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .tx-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid rgba(74,222,128,.35); background:rgba(74,222,128,.08); }
-    .tx-alert.err { border-color:rgba(248,113,113,.4); background:rgba(248,113,113,.08); color:#f87171; }
-    .tx-actions { display:flex; gap:6px; justify-content:flex-end; } .tx-actions form { display:inline; }
-
-    /* النموذج */
-    .tx-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
-    .tx-form select, .tx-form input, .tx-form textarea { min-height:38px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:6px 10px; font-family:inherit; }
-    html[data-theme="light"] .tx-form select, html[data-theme="light"] .tx-form input, html[data-theme="light"] .tx-form textarea { background:#fff; }
-    .tx-toggle { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid rgba(73,111,151,.2); border-radius:10px; font-size:13px; font-weight:900; }
-    .tx-toggle input { width:auto; min-height:auto; }
-    .tx-seg2 { display:inline-flex; border:1px solid rgba(73,111,151,.3); border-radius:10px; overflow:hidden; }
-    .tx-seg2 label { flex-direction:row; padding:8px 14px; cursor:pointer; margin:0; }
-    .tx-seg2 label.on { background:var(--acc); color:#04141d; }
-    .tx-seg2 input { display:none; }
-    .tx-sub { display:none; flex-direction:column; gap:10px; padding:10px 12px; border:1px dashed rgba(73,111,151,.3); border-radius:10px; background:rgba(0,0,0,.08); }
-    .tx-sub.show { display:flex; }
-    .tx-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .tx-adv-toggle { align-self:flex-start; background:transparent; border:1px dashed rgba(73,111,151,.4); color:var(--sa-muted,#8FA8BC); border-radius:10px; padding:8px 14px; font-size:12px; font-weight:900; cursor:pointer; }
-    .tx-adv-toggle.open { color:var(--acc); border-color:var(--acc); }
-    .tx-hint { font-size:12px; font-weight:800; color:var(--sa-muted,#8FA8BC); padding:2px 2px 6px; }
-</style>
 
 <section class="tx-page" dir="rtl">
     <header class="tx-head">
@@ -119,7 +23,7 @@
             <h1>@Model.TypeTitle</h1>
             <p>حركات مالية فردية لكل موظف×فترة تُغذّي المسير — نوع الدفعة، أثر رجعي، جدولة أقساط، مركز تكلفة.</p>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="zyu-d0cb022ba49e">
             <span class="tx-seg">
                 <a href="/Payroll/Transactions?type=Income" class="@(Model.IsDeduction ? "" : "on")">دخل</a>
                 <a href="/Payroll/Transactions?type=Deduction" class="@(Model.IsDeduction ? "on" : "")">اقتطاع</a>
@@ -179,14 +83,14 @@
             </select>
         </div>
         <div class="tx-filter">
-            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" style="min-width:200px" />
+            <input type="text" name="Search" value="@Model.Search" placeholder="بحث: موظف/بند/رقم مرجعي" class="zyu-0eddd0ab78c0" />
             <button type="submit" class="tx-btn ghost sm">بحث</button>
-            <button type="button" class="tx-btn @(Model.HasAdvanced ? "" : "ghost") sm" id="adv-toggle-btn" title="فلاتر البحث المتقدم" onclick="advToggle()" style="display:inline-flex;align-items:center;gap:6px">
+            <button type="button" class="tx-btn @(Model.HasAdvanced ? "" : "ghost") sm" id="adv-toggle-btn" title="فلاتر البحث المتقدم" onclick="advToggle()" data-zy-style="display:inline-flex;align-items:center;gap:6px">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                 <span>الفلاتر@(Model.HasAdvanced ? " (مفعّلة)" : "")</span>
             </button>
         </div>
-        <div id="adv-panel" class="tx-adv-panel" style="@(Model.HasAdvanced ? "" : "display:none")">
+        <div id="adv-panel" class="tx-adv-panel" data-zy-style="@(Model.HasAdvanced ? "" : "display:none")">
 
             @* ===== تصفية الموظف (هيكل مطابق لكيان) ===== *@
             <div class="tx-adv-sec">تصفية الموظف</div>
@@ -219,32 +123,6 @@
                         { <option value="@s" selected="@(Model.Branch == s)">@s</option> }
                     </select>
                 </label>
-                @* فلاتر غير منفَّذة بعد — مخفية خلف ShowUpcomingFilters حتى تُبنى،
-                   فلا يرى العميل خانات معطّلة بشارة «قريباً» في نسخة الإطلاق. *@
-                @if (Model.ShowUpcomingFilters)
-                {
-                    <label class="tx-fld soon"><span>وحدة عمل <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                    <label class="tx-fld soon"><span>الهيكلية <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                    <label class="tx-fld soon"><span>كفيل <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                    <label class="tx-fld soon"><span>نوع العقد <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                    <label class="tx-fld soon"><span>مجموعة الموظفين <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                    <label class="tx-fld soon"><span>تاريخ التعيين <span class="tx-soon">قريباً</span></span>
-                        <input type="date" disabled />
-                    </label>
-                    <label class="tx-fld soon"><span>حالة الموظف <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>نشط</option></select>
-                    </label>
-                }
             </div>
 
             @* ===== تصفية الحركة ===== *@
@@ -279,17 +157,6 @@
                         <input type="number" name="MaxAmount" placeholder="إلى" value="@(Model.MaxAmount)" step="0.01" />
                     </span>
                 </label>
-                @* فلاتر غير منفَّذة بعد — مخفية خلف ShowUpcomingFilters حتى تُبنى،
-                   فلا يرى العميل خانات معطّلة بشارة «قريباً» في نسخة الإطلاق. *@
-                @if (Model.ShowUpcomingFilters)
-                {
-                    <label class="tx-fld soon"><span>رقم الدفعة (المسير) <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                    <label class="tx-fld soon"><span>حالة الطلب (الموافقات) <span class="tx-soon">قريباً</span></span>
-                        <select disabled><option>الكل</option></select>
-                    </label>
-                }
             </div>
 
             <div class="tx-adv-actions">
@@ -324,11 +191,11 @@
             <table class="tx-table">
                 <thead>
                     <tr>
-                        <th style="width:34px"><input type="checkbox" onclick="txAll(this)" /></th>
+                        <th class="zyu-d12729b3d536"><input type="checkbox" onclick="txAll(this)" /></th>
                         <th>الرقم المرجعي</th><th>الموظف</th><th>@Model.ItemLabel</th><th>المصدر</th>
                         <th>نوع الدفعة</th><th>تاريخ الحركة</th><th>المبلغ</th><th>الحالة</th>
                         @if (!Model.IsReadOnly)
-                        { <th style="text-align:end">إجراءات</th> }
+                        { <th class="zyu-814fec806937">إجراءات</th> }
                     </tr>
                 </thead>
                 <tbody>
@@ -339,7 +206,7 @@
                             <td class="tx-ref">@t.ReferenceNo</td>
                             <td class="tx-emp"><b>@t.EmployeeName</b><span>@t.EmployeeNo</span></td>
                             <td><b>@t.ItemName</b></td>
-                            <td style="font-size:12px">@t.Source</td>
+                            <td class="zyu-a49cca52becd">@t.Source</td>
                             <td><span class="tx-chip @(t.PaymentType == "OutSalary" ? "out" : "in")">@t.PaymentTypeLabel</span></td>
                             <td class="tx-ref">@(t.TransactionDate?.ToString("yyyy-MM-dd") ?? "—")</td>
                             <td class="tx-amt">@t.Amount.ToString("#,0.##")</td>
@@ -394,7 +261,7 @@
             <button type="button" class="hrms-slideover-close" onclick="txClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Save" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="Save" class="tx-form zyu-f0de252a84a8">
                 <input type="hidden" name="Type" value="@Model.Type" />
                 <input type="hidden" name="Id" id="tx-Id" value="0" />
                 <input type="hidden" name="ItemName" id="tx-ItemName" />
@@ -432,7 +299,7 @@
 
                 <div class="tx-grid2">
                     <label>المبلغ / القيمة *<input type="number" name="Amount" id="tx-Amount" step="0.01" min="0" required /></label>
-                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="Taxable" value="true" id="tx-Taxable" checked /> خاضع للضريبة</label>
+                    <label class="zyu-b920ea9de2e2"><input type="checkbox" name="Taxable" value="true" id="tx-Taxable" checked /> خاضع للضريبة</label>
                 </div>
 
                 <div class="tx-grid2">
@@ -449,7 +316,7 @@
 
                 @* ===== خيارات متقدمة (مطويّة — تُظهَر عند الحاجة فقط) ===== *@
                 <button type="button" class="tx-adv-toggle" id="tx-adv-btn" onclick="txAdv()">▾ خيارات متقدمة (اختيارية)</button>
-                <div id="tx-adv" style="display:none;flex-direction:column;gap:12px">
+                <div id="tx-adv" class="zyu-19db9ef8f814">
                     <label>تاريخ التنفيذ<input type="date" name="EffectiveDate" id="tx-EffectiveDate" /></label>
 
                     @* غير محدود *@
@@ -519,7 +386,7 @@
             <button type="button" class="hrms-slideover-close" onclick="massClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="MassEntry" enctype="multipart/form-data" class="tx-form zyu-f0de252a84a8">
                 <input type="hidden" name="Type" value="@Model.Type" />
                 <input type="hidden" name="MassItemName" id="mass-ItemName" />
                 <input type="hidden" name="MassSalaryItemId" id="mass-SalaryItemId" value="0" />
@@ -542,7 +409,7 @@
 
                 <div class="tx-grid2">
                     <label>المبلغ / القيمة *<input type="number" name="MassAmount" id="mass-Amount" step="0.01" min="0" required /></label>
-                    <label style="flex-direction:row;align-items:center;gap:6px;min-height:38px"><input type="checkbox" name="MassTaxable" value="true" id="mass-Taxable" checked /> خاضع للضريبة</label>
+                    <label class="zyu-b920ea9de2e2"><input type="checkbox" name="MassTaxable" value="true" id="mass-Taxable" checked /> خاضع للضريبة</label>
                 </div>
                 <div class="tx-grid2">
                     <label>نوع الدفعة
@@ -552,12 +419,12 @@
                         </select>
                     </label>
                     <label>الفترة
-                        <span style="display:flex;gap:6px">
+                        <span class="zyu-69374f356aba">
                             <select name="MassMonth">
                                 @for (var m = 1; m <= 12; m++)
                                 { <option value="@m" selected="@(m == Model.Month)">@months[m-1]</option> }
                             </select>
-                            <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" style="width:88px" />
+                            <input type="number" name="MassYear" value="@Model.Year" min="2000" max="2100" class="zyu-2b524186b864" />
                         </span>
                     </label>
                 </div>
@@ -574,10 +441,10 @@
 
                 @* طريقة 1: اختيار يدوي *@
                 <div class="mass-pane" id="mass-pane-Manual">
-                    <label>الموظفون <span id="mass-count" style="color:var(--acc)">(0 محدد)</span></label>
-                    <div style="display:flex;gap:6px">
+                    <label>الموظفون <span id="mass-count" class="zyu-07fa33e9aa03">(0 محدد)</span></label>
+                    <div class="zyu-69374f356aba">
                         <input type="text" id="mass-empsearch" placeholder="بحث بالاسم أو الرمز" oninput="massRenderEmps()"
-                               style="flex:1;min-height:34px;border-radius:8px;border:1px solid rgba(73,111,151,.25);background:rgba(0,0,0,.16);color:inherit;padding:4px 10px;font-weight:800" />
+                               class="zyu-e038610b695a" />
                         <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(true)">تحديد الظاهر</button>
                         <button type="button" class="tx-btn ghost sm" onclick="massSelectAll(false)">مسح الكل</button>
                     </div>
@@ -597,8 +464,8 @@
 
                 @* طريقة 3: رفع ملف إكسل/CSV *@
                 <div class="mass-pane" id="mass-pane-File" hidden>
-                    <div class="mass-file-hint"><b style="color:var(--acc)">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b> (صف الترويسة يُتخطّى تلقائياً إن لم يكن كوداً).</div>
-                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" style="min-height:auto;padding:8px" /></label>
+                    <div class="mass-file-hint"><b class="zyu-07fa33e9aa03">تنسيق الملف:</b> عمود واحد يحوي <b>رمز الموظف</b> (صف الترويسة يُتخطّى تلقائياً إن لم يكن كوداً).</div>
+                    <label>الملف (.xlsx أو .csv)<input type="file" name="massFile" accept=".xlsx,.csv" class="zyu-b87a8c000a7e" /></label>
                 </div>
 
                 @* طريقة 4: حسب معايير *@
@@ -642,10 +509,10 @@
             <button type="button" class="hrms-slideover-close" onclick="impClose()">×</button>
         </div>
         <div class="hrms-slideover-body">
-            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="tx-form" style="display:flex;flex-direction:column;gap:12px">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="tx-form zyu-f0de252a84a8">
                 <input type="hidden" name="Type" value="@Model.Type" />
-                <div style="font-size:12px;font-weight:800;color:var(--sa-muted,#8FA8BC);border:1px dashed rgba(73,111,151,.3);border-radius:10px;padding:10px 12px;line-height:2">
-                    <b style="color:var(--acc)">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
+                <div class="zyu-b1950258cba4">
+                    <b class="zyu-07fa33e9aa03">أعمدة الملف (الصف الأول ترويسة تُتجاهل):</b><br />
                     A: رمز الموظف · B: البند · C: المبلغ · D: نوع الدفعة (داخل/خارج — اختياري) · E: ملاحظة (اختياري)
                 </div>
                 <div class="tx-grid2">
@@ -657,7 +524,7 @@
                     </label>
                     <label>السنة<input type="number" name="ImportYear" value="@Model.Year" min="2000" max="2100" /></label>
                 </div>
-                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required style="min-height:auto;padding:8px" /></label>
+                <label>الملف (.xlsx أو .csv) *<input type="file" name="importFile" accept=".xlsx,.csv" required class="zyu-b87a8c000a7e" /></label>
                 <button type="submit" class="tx-btn">استيراد الحركات</button>
             </form>
         </div>

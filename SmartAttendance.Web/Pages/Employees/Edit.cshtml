@@ -8,22 +8,12 @@
         ? employeePhotoFallback
         : Model.CurrentPhotoPath;
 }
+<link rel="stylesheet" href="~/css/pages/edit-8ddd20e994.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 
-<style>
-    /* ستايل قائمة البحث الذكية */
-    .nxr-searchable-wrapper { position: relative; width: 100%; }
-    .nxr-search-input { width: 100%; background-color: #0f172a !important; color: #e2e8f0 !important; border: 1px solid #334155 !important; border-radius: 8px !important; padding: 10px 16px !important; transition: border-color 0.2s; cursor: pointer; }
-    .nxr-search-input:focus { outline: none; border-color: #0ea5e9 !important; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important; }
-    .nxr-search-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .nxr-option { padding: 10px 16px; cursor: pointer; color: #cbd5e1; border-bottom: 1px solid #334155; font-size: 0.95rem; }
-    .nxr-option:last-child { border-bottom: none; }
-    .nxr-option:hover { background-color: #334155; color: #fff; }
-    .nxr-option-code { font-size: 0.8rem; background: #0f172a; padding: 2px 6px; border-radius: 4px; margin-left: 8px; color: #0ea5e9; }
-</style>
 
 <div class="nxr-edit-final-page" dir="rtl">
     <section class="nxr-edit-final-hero">
@@ -85,7 +75,7 @@
                     <small>يُستعمل بالوثائق المولَّدة · Max 2MB</small>
                     @if (!string.IsNullOrWhiteSpace(Model.CurrentSignatureUrl))
                     {
-                        <img src="@Model.CurrentSignatureUrl" alt="توقيع الموظف" style="max-height:56px;max-width:180px;margin-top:6px;background:#fff;border-radius:6px;padding:4px" />
+                        <img src="@Model.CurrentSignatureUrl" alt="توقيع الموظف" class="zyu-dbe95fd5b2ba" />
                     }
                 </div>
                 @* منسدلة بسيطة بدل مربّع اختيار بتسمية طويلة: «فعال داخل النظام»

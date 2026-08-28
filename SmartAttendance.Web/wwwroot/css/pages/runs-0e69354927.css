@@ -1,0 +1,146 @@
+/* Source: Pages/Payroll/Runs.cshtml */
+.pr-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,var(--zy-text)); --acc:var(--zy-primary); }
+    .pr-scope { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px;
+        background:var(--zy-migrated-color-d67c6fff40); color:var(--sa-muted,var(--zy-muted)); }
+    .pr-scope.narrow { background:var(--zy-migrated-color-1333fa9962); color:var(--zy-info); }
+    .pr-prev { border:1px solid var(--zy-migrated-color-6a77190266); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; background:var(--zy-migrated-color-733a2ff5ad); }
+    .pr-prev[hidden] { display:none; }
+    .pr-prev h4 { margin:0; font-size:12px; font-weight:1000; }
+    .pr-chips { display:flex; flex-wrap:wrap; gap:5px; max-height:132px; overflow-y:auto; }
+    .pr-chip { font-size:11px; font-weight:900; padding:3px 9px; border-radius:999px; background:var(--zy-migrated-color-f489b45438); color:var(--zy-success); direction:ltr; }
+    .pr-chip.bad { background:var(--zy-migrated-color-23869fd5c6); color:var(--zy-danger); }
+    .pr-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,var(--zy-migrated-color-add5638818),transparent 38%),linear-gradient(135deg,var(--zy-migrated-color-2d2722bfd0),var(--zy-migrated-color-d38141ec79)); }
+    html[data-theme="light"] .pr-head { background:linear-gradient(135deg,var(--zy-white),var(--zy-migrated-color-c2da37727c)); }
+    .pr-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .pr-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .pr-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:linear-gradient(135deg,var(--zy-primary),var(--zy-primary-strong)); color:var(--zy-on-primary); }
+    .pr-btn.ghost { background:transparent; border:1px solid var(--zy-migrated-color-28565ef553); color:inherit; }
+    .pr-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+
+    .pr-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .pr-kpi { padding:14px 16px; border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); position:relative; overflow:hidden; }
+    .pr-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc,var(--zy-primary)); }
+    .pr-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .pr-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); }
+    .pr-kpi small { font-size:11px; font-weight:900; color:var(--zy-primary); }
+
+    .pr-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .pr-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); }
+    .pr-filter select { min-height:34px; border-radius:10px; border:1px solid var(--zy-migrated-color-6a77190266); background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .pr-filter select { background:var(--zy-white); }
+
+    .pr-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px; overflow-x:auto; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    .pr-table { width:100%; border-collapse:collapse; font-size:13px; min-width:1040px; }
+    .pr-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,var(--zy-muted)); border-bottom:1px solid var(--zy-migrated-color-b9678111e3); background:var(--zy-migrated-color-8e71d5d639); }
+    html[data-theme="light"] .pr-table th { background:var(--zy-migrated-color-c2da37727c); }
+    .pr-table td { padding:11px 14px; border-bottom:1px solid var(--zy-migrated-color-89acc81486); vertical-align:middle; }
+    .pr-table tbody tr:hover td { background:var(--zy-migrated-color-e174917010); }
+    /* الأرقام والرؤوس تُحاذى معاً لبداية الخليّة (يمين RTL) لتصطفّ الأعمدة مع بياناتها */
+    .pr-table th, .pr-table td { text-align:start; white-space:nowrap; }
+    .pr-num { font-weight:900; text-align:start; unicode-bidi:plaintext; }
+    .pr-net { color:var(--zy-success); }
+    /* أعمدة حالة نعم/لا (نموذج كيان) */
+    .pr-yn { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:900; padding:3px 11px; border-radius:999px; white-space:nowrap; }
+    .pr-yn::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .pr-yn.yes { color:var(--zy-migrated-color-3c5c1ab6c5); background:var(--zy-migrated-color-f4882923f2); }
+    .pr-yn.no { color:var(--zy-migrated-color-1dbe17ebbd); background:var(--zy-migrated-color-552d9230a1); }
+
+    .pr-steps { display:flex; align-items:center; gap:3px; }
+    .pr-steps i { width:16px; height:5px; border-radius:3px; background:var(--zy-migrated-color-0a9f0f3478); }
+    .pr-steps i.on { background:var(--zy-primary); }
+    .pr-steps i.on.done { background:var(--zy-success); }
+    .pr-steps b { font-size:10px; font-weight:900; margin-inline-start:6px; padding:2px 8px; border-radius:999px; }
+    .st-Draft { background:var(--zy-migrated-color-d67c6fff40); color:var(--zy-muted); }
+    .st-Calculated { background:var(--zy-migrated-color-fa4c99c7a1); color:var(--zy-primary); }
+    .st-Locked { background:var(--zy-migrated-color-efbaf5eb47); color:var(--zy-warning); }
+    .st-Issued { background:var(--zy-migrated-color-f489b45438); color:var(--zy-success); }
+    .st-PayslipSent { background:var(--zy-migrated-color-4e193b6b66); color:var(--zy-accent); }
+
+    .pr-empty { padding:34px; text-align:center; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .pr-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid var(--zy-migrated-color-ab4e1fef3b); background:var(--zy-migrated-color-39bb173a0d); }
+    .pr-alert.err { border-color:var(--zy-migrated-color-348f8741cc); background:var(--zy-migrated-color-daec69ae56); color:var(--zy-danger); }
+    .pr-actions { display:flex; gap:6px; flex-wrap:nowrap; justify-content:flex-end; white-space:nowrap; }
+    .pr-actions .pr-btn { white-space:nowrap; flex:0 0 auto; }
+    td.pr-actions-cell { white-space:nowrap; text-align:end; }
+    /* قائمة الإجراءات (⋯) بنمط كيان */
+    .pr-menu { position:relative; display:inline-block; }
+    .pr-kebab { width:34px; height:34px; border-radius:10px; border:1px solid var(--zy-migrated-color-28565ef553);
+        background:transparent; color:inherit; font-size:20px; line-height:1; font-weight:900; cursor:pointer;
+        display:inline-flex; align-items:center; justify-content:center; }
+    .pr-kebab:hover { background:var(--zy-migrated-color-d6c802d4dc); }
+    .pr-menu.open .pr-kebab { background:var(--zy-migrated-color-492687ac62); border-color:var(--zy-migrated-color-1d95d5b248); color:var(--zy-primary); }
+    .pr-menu-panel { position:fixed; z-index:1000; display:none; min-width:190px; padding:6px;
+        background:var(--zy-migrated-color-4db48015f0); border:1px solid var(--zy-migrated-color-be03a00597); border-radius:14px;
+        box-shadow:0 16px 40px var(--zy-migrated-color-fd9af3c8e7); animation:prMenuIn .12s ease; }
+    html[data-theme="light"] .pr-menu-panel { background:var(--zy-white); border-color:var(--zy-migrated-color-b9678111e3); box-shadow:0 16px 40px var(--zy-migrated-color-dd12139c09); }
+    @keyframes prMenuIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    .pr-menu.open .pr-menu-panel { display:block; }
+    .pr-menu-panel form { display:block; margin:0; }
+    .pr-menu-panel > *:not(:first-child) { border-top:1px solid var(--zy-migrated-color-5704ef9ed3); }
+    html[data-theme="light"] .pr-menu-panel > *:not(:first-child) { border-top-color:var(--zy-migrated-color-bae00db0cd); }
+    /* عناصر القائمة: نصّ فقط بلا شكل أزرار (نموذج كيان). صنف مستقلّ لا يصادم .pr-btn */
+    .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi { display:flex; align-items:center; width:100%; justify-content:flex-start;
+        text-align:start; padding:11px 16px; border:0 !important; border-radius:6px; background:transparent !important;
+        box-shadow:none !important;
+        color:var(--zy-migrated-color-1ba460141b); font-family:inherit; font-weight:600; font-size:13.5px; cursor:pointer;
+        text-decoration:none; box-sizing:border-box; }
+    .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi:hover { background:var(--zy-migrated-color-c201d2dab2) !important; color:var(--zy-white) !important; }
+    .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi.danger:hover { background:var(--zy-migrated-color-23869fd5c6) !important; color:var(--zy-danger) !important; }
+    html[data-theme="light"] .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi { color:var(--zy-migrated-color-9caea77c4c); }
+    html[data-theme="light"] .zy-scope.zy-ui-contract .pr-menu-panel .pr-mi:hover { background:var(--zy-migrated-color-556c31e7bb) !important; color:var(--zy-black) !important; }
+    .pr-actions form { display:inline; }
+    .pr-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .pr-form select, .pr-form input { min-height:38px; border-radius:10px; border:1px solid var(--zy-migrated-color-6a77190266); background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:6px 10px; }
+    html[data-theme="light"] .pr-form select, html[data-theme="light"] .pr-form input { background:var(--zy-white); }
+
+/* Static inline utilities migrated from Pages/Payroll/Runs.cshtml */
+
+.zyu-c9dc9b564810 { display:flex;gap:8px;flex-wrap:wrap; }
+
+.zyu-7198287e0e8a { --acc:var(--zy-primary); }
+
+.zyu-8b6a7c0b3c73 { --acc:var(--zy-accent); }
+
+.zyu-1107ff14a820 { --acc:var(--zy-warning); }
+
+.zyu-0089fb1aa1e1 { --acc:var(--zy-info); }
+
+.zyu-2b7d3f92b385 { --acc:var(--zy-success); }
+
+.zyu-101bfa174da6 { max-width:220px; }
+
+.zyu-1dc9c358bf0b { border-inline-start:4px solid var(--zy-warning,var(--zy-migrated-color-4a08e4d0db)); }
+
+.zyu-a0925a28f0a3 { margin-top:0; }
+
+.zyu-87f7de7b6dc8 { display:flex;gap:8px;flex-wrap:wrap;margin-top:10px; }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-a49cca52becd { font-size:12px; }
+
+.zyu-c8664f4c9a37 { color:var(--sa-muted,var(--zy-muted)); }
+
+.zyu-ff78d7a09cfd { display:inline-flex;gap:4px;align-items:center; }
+
+.zyu-745a1bacedc5 { width:150px;font-size:11px; }
+
+.zyu-f0de252a84a8 { display:flex;flex-direction:column;gap:12px; }
+
+.zyu-07fa33e9aa03 { color:var(--acc); }
+
+.zyu-69374f356aba { display:flex;gap:6px; }
+
+.zyu-e038610b695a { flex:1;min-height:34px;border-radius:8px;border:1px solid var(--zy-migrated-color-6a77190266);background:var(--zy-migrated-color-819b024f9d);color:inherit;padding:4px 10px;font-weight:800; }
+
+.zyu-22d70a2892cd { color:var(--zy-success); }
+
+.zyu-94c76e9c8583 { color:var(--zy-danger); }
+
+.zyu-b87a8c000a7e { min-height:auto;padding:8px; }
+
+.zyu-5040f64097e1 { font-size:12px;color:var(--sa-muted,var(--zy-muted));font-weight:800; }

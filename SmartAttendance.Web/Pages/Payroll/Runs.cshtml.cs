@@ -38,6 +38,7 @@ public class RunsModel : PageModel
     }
 
     public List<PayrollRunStore.PayrollRun> Runs { get; set; } = new();
+    public List<PayrollRunStore.PayrollRun> ReversibleRuns { get; set; } = new();
     public List<int> AvailableYears { get; set; } = new();
     public List<CompanyOption> Companies { get; set; } = new();
 
@@ -68,6 +69,10 @@ public class RunsModel : PageModel
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var all = await PayrollRunStore.ListRunsAsync(_db, scope);
+        ReversibleRuns = all.Where(run => run.RunType != PayrollRunStore.RunTypeReversal
+                && run.Status is "Locked" or "Issued" or "PayslipSent")
+            .OrderByDescending(run => run.Year).ThenByDescending(run => run.Month).ThenByDescending(run => run.Id)
+            .ToList();
 
         RequireCommitteeApproval = bool.TryParse(
             await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
@@ -148,7 +153,8 @@ public class RunsModel : PageModel
     }
 
     public async Task<IActionResult> OnPostCreateAsync(
-        int companyId, int year, int month, IFormFile? massFile)
+        int companyId, int year, int month, IFormFile? massFile,
+        string? runType, string? adjustmentReason, int? originalRunId)
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         if (companyId <= 0 || !scope.Allows(companyId)) return Forbid();
@@ -163,8 +169,10 @@ public class RunsModel : PageModel
 
         // قاعدة (١) منع الازدواج: دفعة غير مقفلة بنفس (الشركة+الفترة) ونفس الأشخاص ⟹ هذه
         // إعادة احتساب لا دفعة جديدة. نمنع الإنشاء المكرّر ونوجّه لإعادة احتساب القائمة.
-        var duplicateBatch = await PayrollRunStore.FindDuplicateUnlockedBatchAsync(
-            _db, companyId, year, month, ids);
+        var normalizedRunType = PayrollRunStore.NormalizeRunType(runType);
+        var duplicateBatch = normalizedRunType == PayrollRunStore.RunTypeRegular
+            ? await PayrollRunStore.FindDuplicateUnlockedBatchAsync(_db, companyId, year, month, ids)
+            : null;
         if (duplicateBatch != null)
         {
             TempData["PayrollMessage"] =
@@ -177,7 +185,8 @@ public class RunsModel : PageModel
         // بشركةٍ لا يستطيع إنشاء دفعة لغيرها، وغير المقيَّد تبقى دفعته بلا نسبة حتى
         // الاحتساب فتُشتقّ من أعضاء نطاقها.
         var (ok, message, newId) = await PayrollRunStore.CreateRunAsync(
-            _db, scope, companyId, year, month, scopeMode, ids, HttpContext.RequestAborted);
+            _db, scope, companyId, year, month, scopeMode, ids, HttpContext.RequestAborted,
+            normalizedRunType, adjustmentReason, originalRunId);
         if (ok && newId > 0)
         {
             // احتساب فوري عند الإنشاء حتى تظهر بيانات الدفعة مباشرةً بدل أصفار — عبر الحارس

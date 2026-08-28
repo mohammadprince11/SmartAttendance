@@ -11,6 +11,16 @@ public sealed class AnnouncementActorContext
     public string? IpAddress { get; init; }
 }
 
+/// <summary>Company boundary used by the announcement management surface.</summary>
+public sealed class AnnouncementManagementScope
+{
+    public bool IsUnrestricted { get; init; }
+
+    public IReadOnlyCollection<int> AllowedCompanyIds { get; init; } = Array.Empty<int>();
+
+    public static AnnouncementManagementScope Unrestricted() => new() { IsUnrestricted = true };
+}
+
 public sealed class AnnouncementCreateRequest
 {
     public string LanguageCode { get; init; } = "ar";

@@ -1,0 +1,17 @@
+/* Static inline utilities migrated from Pages/Forms/Submissions.cshtml */
+
+.zyu-2d1bdd415249 { justify-content:flex-start;flex-wrap:wrap; }
+
+.zyu-410cf9349439 { border:0;padding:0; }
+
+.zyu-110c1427da8c { justify-content:flex-end; }
+
+.zyu-8ede280590c3 { align-self:stretch; }
+
+.zyu-ad426e41547d { width:260px; }
+
+.zyu-f85c702c688c { margin-bottom:6px; }
+
+.zyu-69374f356aba { display:flex;gap:6px; }
+
+.zyu-76918384ee38 { flex:1;padding:5px 8px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.75rem; }

@@ -187,7 +187,6 @@ END",
 
     private async Task LoadAsync(int employeeId)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         // نافذة الحضور الافتراضية تتبع سياسة فترة الحضور (نفس اعتماد الحضور واليوميات
         // والمسير) بدل «آخر 30 يوماً». التواريخ الصريحة تُحترَم.
@@ -397,6 +396,9 @@ BEGIN SET @columns += N', Stage'; SET @values += N', ''Manager'''; END
 IF COL_LENGTH('SelfServiceRequests','CreatedAt') IS NOT NULL
 BEGIN SET @columns += N', CreatedAt'; SET @values += N', SYSUTCDATETIME()'; END
 
+IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NOT NULL
+BEGIN SET @columns += N', RequestSource'; SET @values += N', ''SelfService'''; END
+
 DECLARE @sql nvarchar(max) = N'INSERT INTO SelfServiceRequests (' + @columns + N') VALUES (' + @values + N'); SELECT CAST(SCOPE_IDENTITY() AS int);';
 
 EXEC sp_executesql @sql,
@@ -422,7 +424,8 @@ EXEC sp_executesql @sql,
         // سريان الموافقات: حلّ القالب وتجميد خطوات اللجنة على الطلب.
         if (requestId > 0)
         {
-            await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, RequestInput.RequestType ?? string.Empty, employeeId);
+            var start=await ApprovalWorkflowEngine.StartAsync(_dbContext, requestId, RequestInput.RequestType ?? string.Empty, employeeId);
+            if(!start.Ok) return false;
         }
 
         return true;

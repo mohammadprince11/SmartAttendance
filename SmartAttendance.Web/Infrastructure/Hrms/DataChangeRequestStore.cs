@@ -254,7 +254,9 @@ ORDER BY Id DESC;
         await HrmsDatabase.ExecuteAsync(db,
             """
 DELETE FROM DataChangeRequestFields WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestStepMembers','U') IS NOT NULL DELETE m FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId=@r;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL DELETE FROM ApprovalRequestSteps WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestWatchers','U') IS NOT NULL DELETE FROM ApprovalRequestWatchers WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL DELETE FROM ApprovalRequestFlows WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalHistories','U') IS NOT NULL DELETE FROM ApprovalHistories WHERE RequestId=@r;
 DELETE FROM SelfServiceRequests WHERE Id=@r;

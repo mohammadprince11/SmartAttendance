@@ -1,4 +1,4 @@
-using AutoMapper;
+using SmartAttendance.Application.Common.Mapping;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceRecords.ViewModels;
@@ -14,12 +14,12 @@ namespace SmartAttendance.Infrastructure.Services;
 public class AttendanceRecordService : IAttendanceRecordService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
     private readonly ApplicationDbContext _dbContext;
 
     public AttendanceRecordService(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
+        IModelMapper mapper,
         ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;

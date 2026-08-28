@@ -1,4 +1,5 @@
 using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -134,18 +135,20 @@ ORDER BY e.FullName;
     /// وصف التفاصيل المالية، ثم يبدأ سريان الموافقة عبر <see cref="ApprovalWorkflowEngine.StartAsync"/>
     /// (قالب النوع من كتالوج القوالب). يرجع رقم الطلب. المُقدِّم قد يكون HR (نيابةً) أو الموظف نفسه.
     /// </summary>
-    public static async Task<int> SubmitAsync(ApplicationDbContext db, Detail detail, int employeeId, string createdBy)
+    public static async Task<int> SubmitAsync(
+        ApplicationDbContext db, Detail detail, int employeeId, string createdBy, string requestSource)
     {
         await EnsureAsync(db);
         var kind = KindOf(detail.Kind) ?? Catalog[0];
         detail.Kind = kind.Key;
         if (detail.InstallmentCount < 1) detail.InstallmentCount = 1;
 
+        requestSource = requestSource is "Admin" or "SelfService" ? requestSource : "Legacy";
         var requestId = await HrmsDatabase.ScalarAsync<int>(db, """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, RequestDate, Reason, Status, CurrentStep, CreatedBy)
+(EmployeeId, RequestType, RequestDate, Reason, Status, CurrentStep, CreatedBy, RequestSource)
 VALUES
-(@Emp, @Type, CAST(SYSUTCDATETIME() AS date), @Reason, 'Pending', 'Direct Manager', @By);
+(@Emp, @Type, CAST(SYSUTCDATETIME() AS date), @Reason, 'Pending', 'Direct Manager', @By, @Source);
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 
@@ -163,6 +166,7 @@ SELECT @RequestId;
                 HrmsDatabase.AddParameter(cmd, "@Type", kind.Label);
                 HrmsDatabase.AddParameter(cmd, "@Reason", (object?)detail.Reason ?? DBNull.Value);
                 HrmsDatabase.AddParameter(cmd, "@By", createdBy);
+                HrmsDatabase.AddParameter(cmd, "@Source", requestSource);
             });
 
         if (requestId <= 0) return 0;
@@ -189,8 +193,8 @@ VALUES
             });
 
         // سريان الموافقة: قالب النوع المالي (Loan/FinancialClaim/SalaryIncrease) يُحلّ من التسمية.
-        await ApprovalWorkflowEngine.StartAsync(db, requestId, kind.Label, employeeId);
-        return requestId;
+        var start=await ApprovalWorkflowEngine.StartAsync(db, requestId, kind.Label, employeeId);
+        return start.Ok ? requestId : 0;
     }
 
     public static async Task<Detail?> GetDetailAsync(ApplicationDbContext db, int requestId)
@@ -243,7 +247,7 @@ VALUES
     /// <summary>قائمة الطلبات المالية للمركز، مع فلاتر النوع/الحالة/البحث.</summary>
     public static async Task<List<Row>> ListAsync(
         ApplicationDbContext db, Security.CompanyScope scope,
-        string? kind = null, string? status = null, string? search = null)
+        string? kind = null, string? status = null, string? search = null, int? employeeId = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<Row>();
@@ -260,9 +264,21 @@ INNER JOIN SelfServiceRequests r ON r.Id = f.RequestId
 INNER JOIN Employees e ON e.Id = r.EmployeeId
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 WHERE {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND (@EmployeeId IS NULL OR r.EmployeeId = @EmployeeId)
+  AND (@Kind IS NULL OR f.Kind = @Kind)
+  AND (@Status IS NULL OR r.Status = @Status)
+  AND (@Search IS NULL OR e.EmployeeNo LIKE N'%' + @Search + N'%'
+       OR e.FullName LIKE N'%' + @Search + N'%'
+       OR f.Reason LIKE N'%' + @Search + N'%')
 ORDER BY r.CreatedAt DESC;
 """,
-            null,
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId is > 0 ? employeeId.Value : DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Kind", string.IsNullOrWhiteSpace(kind) ? DBNull.Value : kind.Trim());
+                HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(status) ? DBNull.Value : status.Trim());
+                HrmsDatabase.AddParameter(command, "@Search", string.IsNullOrWhiteSpace(search) ? DBNull.Value : search.Trim());
+            },
             r => new Row
             {
                 RequestId = HrmsDatabase.GetInt(r, "RequestId"),
@@ -277,36 +293,37 @@ ORDER BY r.CreatedAt DESC;
                 Detail = Map(r)
             });
 
-        if (!string.IsNullOrWhiteSpace(kind)) rows = rows.Where(r => r.Detail.Kind == kind).ToList();
-        if (!string.IsNullOrWhiteSpace(status)) rows = rows.Where(r => r.Status == status).ToList();
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var v = search.Trim();
-            rows = rows.Where(r =>
-                r.EmployeeNo.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                r.EmployeeName.Contains(v, StringComparison.OrdinalIgnoreCase) ||
-                (r.Detail.Reason ?? "").Contains(v, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
         return rows;
     }
 
     /// <summary>حذف طلب مالي معلّق (قبل الاعتماد) — يزيل التفاصيل والسريان وصف الطلب.</summary>
-    public static async Task<bool> DeletePendingAsync(ApplicationDbContext db, int requestId)
+    public static async Task<bool> DeletePendingAsync(
+        ApplicationDbContext db, int requestId, int? expectedEmployeeId = null)
     {
         await EnsureAsync(db);
         var pending = await HrmsDatabase.ScalarAsync<int>(db,
-            "SELECT COUNT(1) FROM SelfServiceRequests WHERE Id=@r AND Status='Pending'",
-            cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+            "SELECT COUNT(1) FROM SelfServiceRequests WHERE Id=@r AND Status='Pending' AND (@e IS NULL OR EmployeeId=@e)",
+            cmd =>
+            {
+                HrmsDatabase.AddParameter(cmd, "@r", requestId);
+                HrmsDatabase.AddParameter(cmd, "@e", expectedEmployeeId is > 0 ? expectedEmployeeId.Value : DBNull.Value);
+            });
         if (pending == 0) return false;
 
         await HrmsDatabase.ExecuteAsync(db, """
 DELETE FROM FinancialRequestDetails WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestStepMembers','U') IS NOT NULL DELETE m FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId=@r;
 IF OBJECT_ID('ApprovalRequestSteps','U') IS NOT NULL DELETE FROM ApprovalRequestSteps WHERE RequestId=@r;
+IF OBJECT_ID('ApprovalRequestWatchers','U') IS NOT NULL DELETE FROM ApprovalRequestWatchers WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalRequestFlows','U') IS NOT NULL DELETE FROM ApprovalRequestFlows WHERE RequestId=@r;
 IF OBJECT_ID('ApprovalHistories','U') IS NOT NULL DELETE FROM ApprovalHistories WHERE RequestId=@r;
-DELETE FROM SelfServiceRequests WHERE Id=@r;
+DELETE FROM SelfServiceRequests WHERE Id=@r AND (@e IS NULL OR EmployeeId=@e);
 """,
-            cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+            cmd =>
+            {
+                HrmsDatabase.AddParameter(cmd, "@r", requestId);
+                HrmsDatabase.AddParameter(cmd, "@e", expectedEmployeeId is > 0 ? expectedEmployeeId.Value : DBNull.Value);
+            });
         return true;
     }
 
@@ -321,12 +338,33 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
     /// <item>زيادة راتب → إنشاء وتطبيق <see cref="SalaryRaiseStore"/> (يحدّث الأساسي).</item>
     /// </list>
     /// </summary>
-    public static async Task<bool> ApplyIfFinancialAsync(ApplicationDbContext db, int requestId, string actor, string? ip)
+    public static async Task<bool> ApplyIfFinancialAsync(
+        ApplicationDbContext db, Security.CompanyScope scope, int requestId, string actor, string? ip)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
+                db, Security.EmployeeCompanyGuard.Tables.SelfServiceRequests, "Id", requestId, scope))
+            return false;
         await EnsureAsync(db);
 
         var detail = await GetDetailAsync(db, requestId);
         if (detail == null || detail.Applied) return false;
+        if (detail.Kind is not (Loan or Advance or Allowance or Reimbursement or Raise)) return false;
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        // مطالبة ذرية: لا أثر إلا لطلب معتمد، ولا منفّذان يطبّقان الطلب نفسه.
+        // Applied=1 هنا داخل المعاملة؛ أي استثناء لاحق يعيدها إلى صفر مع كل الأثر.
+        var claimed = await HrmsDatabase.ScalarAsync<int>(db,
+            """
+UPDATE d
+SET Applied = 1
+FROM FinancialRequestDetails d
+INNER JOIN SelfServiceRequests r ON r.Id = d.RequestId
+WHERE d.RequestId = @r AND d.Applied = 0 AND r.Status = N'Approved';
+SELECT @@ROWCOUNT;
+""",
+            cmd => HrmsDatabase.AddParameter(cmd, "@r", requestId));
+        if (claimed != 1) return false;
 
         var employeeId = await HrmsDatabase.ScalarAsync<int>(db,
             "SELECT ISNULL((SELECT EmployeeId FROM SelfServiceRequests WHERE Id=@r), 0)",
@@ -341,10 +379,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
             case Loan:
             case Advance:
             {
-                // مسارٌ داخليّ بعد اعتماد الطلب: التخويل حُسم بمسار الاعتماد (يُفحَص
-                // بالنطاق)، والموظف هنا من صفّ الطلب المعتمَد لا من مدخل مستخدم —
-                // فالنطاق غير مقيَّد عمداً كي لا يُرفَض تطبيقُ طلبٍ اعتُمد بحقّه.
-                var loanId = await LoanStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new LoanStore.Loan_
+                var loanId = await LoanStore.SaveAsync(db, scope, new LoanStore.Loan_
                 {
                     EmployeeId = employeeId,
                     LoanType = detail.Kind == Advance ? LoanStore.Advance : LoanStore.Loan,
@@ -365,7 +400,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
             case Reimbursement:
             {
                 var outSalary = detail.Kind == Reimbursement;
-                var txId = await PayrollTransactionStore.SaveAsync(db, Security.CompanyScope.Unrestricted(), new PayrollTransactionStore.Transaction
+                var txId = await PayrollTransactionStore.SaveAsync(db, scope, new PayrollTransactionStore.Transaction
                 {
                     EmployeeId = employeeId,
                     Year = detail.StartYear,
@@ -393,11 +428,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
                     ? Math.Round(oldBasic * (1 + detail.Amount / 100m), 2)
                     : oldBasic + detail.Amount;
 
-                // تطبيق داخلي بعد اعتماد الطلب المالي: معرّف الموظف من صفّ الطلب المُعتمَد
-                // (لا من المتصفح) وقد مرّ بعزل الطلبات المالية عند السرد/الاعتماد، فالنطاق
-                // هنا غير مقيَّد عمداً (نمط المسارات الداخلية الموثوقة).
-                var internalScope = Security.CompanyScope.Unrestricted();
-                var raiseId = await SalaryRaiseStore.SaveAsync(db, internalScope, new SalaryRaiseStore.Raise
+                var raiseId = await SalaryRaiseStore.SaveAsync(db, scope, new SalaryRaiseStore.Raise
                 {
                     EmployeeId = employeeId,
                     OldBasic = oldBasic,
@@ -409,7 +440,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
                     Note = $"من طلب مالي #{requestId}",
                     Status = "Approved"
                 }, actor);
-                await SalaryRaiseStore.ApplyAsync(db, internalScope, raiseId, actor);
+                await SalaryRaiseStore.ApplyAsync(db, scope, raiseId, actor);
                 refId = raiseId;
                 effect = $"زيادة راتب معتمدة (#{raiseId}) — الأساسي {oldBasic:0.##} ← {newBasic:0.##}";
                 break;
@@ -420,7 +451,7 @@ DELETE FROM SelfServiceRequests WHERE Id=@r;
         }
 
         await HrmsDatabase.ExecuteAsync(db, """
-UPDATE FinancialRequestDetails SET Applied=1, AppliedRefId=@ref, AppliedAt=SYSUTCDATETIME() WHERE RequestId=@r;
+UPDATE FinancialRequestDetails SET AppliedRefId=@ref, AppliedAt=SYSUTCDATETIME() WHERE RequestId=@r AND Applied=1;
 
 IF OBJECT_ID('AuditLogs','U') IS NOT NULL
     INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
@@ -434,6 +465,7 @@ IF OBJECT_ID('AuditLogs','U') IS NOT NULL
                 HrmsDatabase.AddParameter(cmd, "@actor", actor);
                 HrmsDatabase.AddParameter(cmd, "@ip", (object?)ip ?? DBNull.Value);
             });
+        await transaction.CommitAsync();
         return true;
     }
 

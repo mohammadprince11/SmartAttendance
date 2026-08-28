@@ -1,9 +1,10 @@
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Reports;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.PeopleReports;
 
@@ -72,7 +73,7 @@ public class IndexModel : PageModel
 
     public string PageTitle => IsAttendance ? "تقارير الحضور" : IsPayroll ? "تقارير الرواتب" : "التقارير";
 
-    public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets => PeopleReportCatalog.DatasetsFor(Module);
+    public IReadOnlyList<PeopleReportCatalog.ReportDataset> Datasets { get; private set; } = Array.Empty<PeopleReportCatalog.ReportDataset>();
 
     public List<CompanyOption> Companies { get; set; } = new();
 
@@ -83,6 +84,8 @@ public class IndexModel : PageModel
     public PeopleReportsStore.SavedReport? Current { get; set; }
     public List<PeopleReportCatalog.ReportColumn> RunColumns { get; set; } = new();
     public List<Dictionary<string, string>> RunRows { get; set; } = new();
+    public string? RunGroupColumnKey { get; set; }
+    public List<ReportScheduleStore.Schedule> ReportSchedules { get; set; } = new();
 
     // مرشحات التقرير (المختارة بالباني) + قيمها الحالية من الـ query string.
     // المفاتيح بـ RunFilterValues: <key> للنص/القائمة، و<key>_from / <key>_to لنطاق التاريخ.
@@ -97,12 +100,16 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
         await LoadListsAsync();
+        ReportSchedules = await ReportScheduleStore.ListAsync(_dbContext, scope, CurrentUser);
 
         if (ReportId > 0)
         {
-            Current = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
-            if (Current == null)
+            Current = await PeopleReportsStore.GetAsync(_dbContext, scope, ReportId);
+            if (Current == null || !IsDatasetAllowed(Current.DatasetKey))
             {
                 return Redirect(SelfPath);
             }
@@ -111,6 +118,49 @@ public class IndexModel : PageModel
         }
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostCreateScheduleAsync(
+        int reportId, int companyId, string recipients, string frequency, int hourUtc, int? dayOfWeek)
+    {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
+        var userId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        if (userId <= 0) return Forbid();
+        var validRecipients = (recipients ?? string.Empty)
+            .Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(address => MailAddress.TryCreate(address, out _))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+        if (validRecipients.Count == 0)
+        {
+            Message = "أدخل بريداً صحيحاً واحداً على الأقل.";
+            return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
+        }
+        var allowedRecipients = (await _dbContext.SystemUsers.AsNoTracking()
+                .Where(user => !user.IsDeleted && user.IsActive && user.EmployeeId != null &&
+                               user.Employee != null && user.Employee.CompanyId == companyId && user.Email != null)
+                .Select(user => user.Email!).ToListAsync())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (validRecipients.Any(address => !allowedRecipients.Contains(address)))
+        {
+            Message = "الإرسال مسموح فقط إلى مستخدمين نشطين تابعين للشركة نفسها.";
+            return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
+        }
+        await ReportScheduleStore.CreateAsync(_dbContext, scope, companyId, reportId, userId,
+            CurrentUser, string.Join(',', validRecipients), frequency, hourUtc, dayOfWeek);
+        Message = "تمت جدولة التقرير، وستعاد صلاحياتك عند كل تنفيذ.";
+        return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
+    }
+
+    public async Task<IActionResult> OnPostDisableScheduleAsync(int id, int reportId, int companyId)
+    {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
+        await ReportScheduleStore.DisableAsync(_dbContext, scope, id, CurrentUser);
+        Message = "تم إيقاف الجدولة.";
+        return Redirect($"{SelfPath}?ReportId={reportId}&CompanyId={companyId}");
     }
 
     private static DateOnly? ParseDate(string? value) =>
@@ -127,29 +177,32 @@ public class IndexModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnGetCountsAsync()
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
         await LoadListsAsync();
 
         var reports = SystemReports.Concat(MyReports).Concat(SharedReports).ToList();
-        var filters = new PeopleReportCatalog.ReportFilters
-        {
-            Scope = await _companyScope.GetAsync(),
-            CompanyId = CompanyId,
-            ActiveOnly = ActiveOnly,
-            From = ParseDate(From),
-            To = ParseDate(To)
-        };
-
         var bySource = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var counts = new Dictionary<string, int>();
 
         foreach (var report in reports)
         {
-            var sourceKey = report.DatasetKey + "|" + (report.FilterKey ?? "");
+            var reportCompanyId = report.CompanyId ?? CompanyId;
+            var sourceKey = report.DatasetKey + "|" + (report.FilterKey ?? "") + "|" + reportCompanyId;
 
             if (!bySource.TryGetValue(sourceKey, out var count))
             {
                 var rows = await PeopleReportCatalog.LoadAsync(
-                    _dbContext, report.DatasetKey, report.FilterKey, filters);
+                    _dbContext, report.DatasetKey, report.FilterKey,
+                    new PeopleReportCatalog.ReportFilters
+                    {
+                        Scope = scope,
+                        CompanyId = reportCompanyId,
+                        ActiveOnly = ActiveOnly,
+                        From = ParseDate(From),
+                        To = ParseDate(To)
+                    });
                 count = rows.Count;
                 bySource[sourceKey] = count;
             }
@@ -160,40 +213,40 @@ public class IndexModel : PageModel
         return new JsonResult(counts);
     }
 
-    public async Task<IActionResult> OnGetExportAsync()
+    public async Task<IActionResult> OnGetExportAsync(string format = "xlsx")
     {
-        var report = await PeopleReportsStore.GetAsync(_dbContext, ReportId);
-        if (report == null)
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value)) return Forbid();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, scope, ReportId);
+        if (report == null || !IsDatasetAllowed(report.DatasetKey))
         {
             return Redirect(SelfPath);
         }
 
         await RunAsync(report);
 
-        var sb = new StringBuilder();
-        sb.AppendLine(string.Join(",", RunColumns.Select(c => Csv(c.Label))));
-        foreach (var row in RunRows)
-        {
-            sb.AppendLine(string.Join(",", RunColumns.Select(c => Csv(row.GetValueOrDefault(c.Key, "")))));
-        }
-
-        var bytes = Encoding.UTF8.GetPreamble()
-            .Concat(Encoding.UTF8.GetBytes(sb.ToString()))
-            .ToArray();
-
-        return File(bytes, "text/csv", $"report-{report.Id}.csv");
+        var export = ReportExportService.Build(
+            format, report.Name,
+            RunColumns.Select(column => new ReportExportService.Column(column.Key, column.Label)).ToList(),
+            RunRows);
+        return File(export.Bytes, export.ContentType, $"report-{report.Id}.{export.Extension}");
     }
 
     public async Task<IActionResult> OnPostCreateReportAsync(
         string name, string? description, string datasetKey, string columnsCsv, string visibility,
-        int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false)
+        int companyId, int id = 0, string? filterColumnsCsv = null, List<string>? sharedWith = null, bool shareWithEmployees = false,
+        string? groupColumnKey = null, string? sortColumnKey = null, bool sortDescending = false)
     {
+        if (!await LoadReportAccessAsync()) return Forbid();
         await PeopleReportsStore.EnsureSchemaAsync(_dbContext);
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
 
         var dataset = PeopleReportCatalog.GetDataset(datasetKey ?? "");
         name = (name ?? "").Trim();
 
-        if (dataset == null || string.IsNullOrWhiteSpace(name))
+        if (dataset == null || !IsDatasetAllowed(dataset.Key) || string.IsNullOrWhiteSpace(name))
         {
             Message = "اسم التقرير ومصدر البيانات مطلوبان.";
             return Redirect(SelfPath);
@@ -209,25 +262,31 @@ public class IndexModel : PageModel
         }
 
         var validFilters = ValidKeys(filterColumnsCsv, dataset);
+        var validGroup = ValidKey(groupColumnKey, dataset);
+        var validSort = ValidKey(sortColumnKey, dataset);
 
         var isShared = string.Equals(visibility, "everyone", StringComparison.OrdinalIgnoreCase);
         var isSpecific = string.Equals(visibility, "specific", StringComparison.OrdinalIgnoreCase);
+        var allowedShareUsers = await AllowedShareUsersAsync(scope, companyId);
         var sharedWithCsv = isSpecific && sharedWith is { Count: > 0 }
-            ? string.Join(",", sharedWith.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
+            ? string.Join(",", sharedWith.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim())
+                .Where(allowedShareUsers.Contains).Distinct(StringComparer.OrdinalIgnoreCase))
             : null;
 
         if (id > 0)
         {
             await PeopleReportsStore.UpdateOwnAsync(
-                _dbContext, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
-                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
+                _dbContext, scope, companyId, id, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees,
+                validGroup, validSort, sortDescending);
             Message = "تم تحديث التقرير.";
         }
         else
         {
             await PeopleReportsStore.CreateAsync(
-                _dbContext, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
-                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees);
+                _dbContext, scope, companyId, name, description, dataset.Key, string.Join(",", validColumns), CurrentUser, isShared,
+                sharedWithCsv, validFilters.Count > 0 ? string.Join(",", validFilters) : null, shareWithEmployees,
+                validGroup, validSort, sortDescending);
             Message = "تم حفظ التقرير.";
         }
 
@@ -241,6 +300,11 @@ public class IndexModel : PageModel
             .Distinct()
             .ToList();
 
+    private static string? ValidKey(string? key, PeopleReportCatalog.ReportDataset dataset) =>
+        dataset.Columns.Any(column => column.Key.Equals(key?.Trim(), StringComparison.OrdinalIgnoreCase))
+            ? key!.Trim()
+            : null;
+
     /// <summary>
     /// «أنشئ نسخة» — نمط كيان المتكرّر بكل شاشاته: الاستنساخ بديلٌ عن البناء من
     /// الصفر. ويعمل على **تقارير النظام أيضاً** وهو أهمّ استعمالاته: تأخذ تقريراً
@@ -249,12 +313,21 @@ public class IndexModel : PageModel
     /// النسخة تُولَد **مملوكةً لك وغير مشاركة** مهما كان الأصل — مشاركةُ الأصل
     /// قرارُ صاحبه لا يُورَّث بالنسخ.
     /// </summary>
-    public async Task<IActionResult> OnPostDuplicateReportAsync(int id)
+    public async Task<IActionResult> OnPostDuplicateReportAsync(int id, int? companyId)
     {
-        var source = await PeopleReportsStore.GetAsync(_dbContext, id);
-        if (source == null)
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        var source = await PeopleReportsStore.GetAsync(_dbContext, scope, id);
+        if (source == null || !IsDatasetAllowed(source.DatasetKey))
         {
             Message = "التقرير غير موجود.";
+            return Redirect(SelfPath);
+        }
+
+        var targetCompanyId = companyId ?? source.CompanyId;
+        if (targetCompanyId is not > 0 || !scope.Allows(targetCompanyId))
+        {
+            Message = "اختر شركة من مرشح الصفحة قبل إنشاء نسخة.";
             return Redirect(SelfPath);
         }
 
@@ -264,6 +337,8 @@ public class IndexModel : PageModel
 
         await PeopleReportsStore.CreateAsync(
             _dbContext,
+            scope,
+            targetCompanyId.Value,
             NextCopyName(source.Name),
             source.Description,
             source.DatasetKey,
@@ -271,7 +346,10 @@ public class IndexModel : PageModel
             CurrentUser,
             isShared: false,
             sharedWithCsv: null,
-            filterColumnsCsv: source.FilterColumnsCsv);
+            filterColumnsCsv: source.FilterColumnsCsv,
+            groupColumnKey: source.GroupColumnKey,
+            sortColumnKey: source.SortColumnKey,
+            sortDescending: source.SortDescending);
 
         Message = "تم إنشاء نسخة بتبويب «تقاريري».";
         return Redirect(SelfPath + "#mine");
@@ -308,21 +386,30 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteReportAsync(int id)
     {
-        await PeopleReportsStore.DeleteOwnAsync(_dbContext, id, CurrentUser);
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, scope, id);
+        if (report == null || !IsDatasetAllowed(report.DatasetKey)) return Forbid();
+        await PeopleReportsStore.DeleteOwnAsync(_dbContext, scope, id, CurrentUser);
         Message = "تم حذف التقرير.";
         return Redirect(SelfPath + "#mine");
     }
 
     public async Task<IActionResult> OnPostToggleShareAsync(int id)
     {
-        await PeopleReportsStore.ToggleShareOwnAsync(_dbContext, id, CurrentUser);
+        if (!await LoadReportAccessAsync()) return Forbid();
+        var scope = await _companyScope.GetAsync();
+        var report = await PeopleReportsStore.GetAsync(_dbContext, scope, id);
+        if (report == null || !IsDatasetAllowed(report.DatasetKey)) return Forbid();
+        await PeopleReportsStore.ToggleShareOwnAsync(_dbContext, scope, id, CurrentUser);
         Message = "تم تحديث المشاركة.";
         return Redirect(SelfPath + "#mine");
     }
 
     private async Task LoadListsAsync()
     {
-        var all = await PeopleReportsStore.LoadAllAsync(_dbContext);
+        var scope = await _companyScope.GetAsync();
+        var all = await PeopleReportsStore.LoadAllAsync(_dbContext, scope);
 
         // اقصر القوائم على مصادر هذا الموديول فقط (أشخاص مقابل حضور).
         var moduleKeys = new HashSet<string>(
@@ -338,20 +425,77 @@ public class IndexModel : PageModel
             !string.Equals(r.OwnerUser, CurrentUser, StringComparison.OrdinalIgnoreCase) &&
             (r.IsShared || r.SharedWith.Contains(CurrentUser, StringComparer.OrdinalIgnoreCase))).ToList();
 
-        Companies = await _dbContext.Companies
+        var companyQuery = _dbContext.Companies
             .AsNoTracking()
-            .Where(c => !c.IsDeleted && c.IsActive)
+            .Where(c => !c.IsDeleted && c.IsActive);
+        if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+            companyQuery = companyQuery.Where(c => allowedCompanyIds.Contains(c.Id));
+        }
+        Companies = await companyQuery
             .OrderBy(c => c.Name)
             .Select(c => new CompanyOption { Id = c.Id, Name = c.Name })
             .ToListAsync();
 
-        ShareUserOptions = await _dbContext.SystemUsers
-            .AsNoTracking()
-            .Where(u => !u.IsDeleted && u.IsActive && u.UserName != CurrentUser)
-            .OrderBy(u => u.UserName)
-            .Select(u => u.UserName)
-            .ToListAsync();
+        ShareUserOptions = (await AllowedShareUsersAsync(scope, CompanyId)).OrderBy(u => u).ToList();
     }
+
+    private async Task<HashSet<string>> AllowedShareUsersAsync(CompanyScope scope, int? companyId)
+    {
+        var query = _dbContext.SystemUsers.AsNoTracking()
+            .Where(u => !u.IsDeleted && u.IsActive && u.UserName != CurrentUser &&
+                        u.EmployeeId != null && u.Employee != null && u.Employee.CompanyId != null);
+
+        if (companyId is > 0)
+        {
+            if (!scope.Allows(companyId)) return new(StringComparer.OrdinalIgnoreCase);
+            query = query.Where(u => u.Employee!.CompanyId == companyId);
+        }
+        else if (!scope.IsUnrestricted)
+        {
+            var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(u => u.Employee!.CompanyId != null && allowedCompanyIds.Contains(u.Employee.CompanyId.Value));
+        }
+
+        return (await query.Select(u => u.UserName).ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task<bool> LoadReportAccessAsync()
+    {
+        var moduleDatasets = PeopleReportCatalog.DatasetsFor(Module);
+        if (RoleRouteCatalog.IsAdmin(PeopleAccessContext.GetRole(HttpContext)))
+        {
+            Datasets = moduleDatasets;
+            return true;
+        }
+
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        if (systemUserId <= 0) return false;
+        var roleCount = await AccessRoleStore.CountUserRolesAsync(
+            _dbContext, systemUserId, AccessRoleStore.TypeReports);
+        if (roleCount == 0)
+        {
+            Datasets = moduleDatasets;
+            return true;
+        }
+
+        var grants = (await AccessRoleStore.GetUserGrantsAsync(
+                _dbContext, systemUserId, AccessRoleStore.TypeReports))
+            .Select(grant => grant.GrantKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Datasets = moduleDatasets.Where(dataset => grants.Contains(ReportGroupFor(dataset))).ToList();
+        return Datasets.Count > 0;
+    }
+
+    private bool IsDatasetAllowed(string datasetKey) =>
+        Datasets.Any(dataset => dataset.Key.Equals(datasetKey, StringComparison.OrdinalIgnoreCase));
+
+    private static string ReportGroupFor(PeopleReportCatalog.ReportDataset dataset) =>
+        dataset.Module.Equals("attendance", StringComparison.OrdinalIgnoreCase) ? "Attendance" :
+        dataset.Module.Equals("payroll", StringComparison.OrdinalIgnoreCase) ? "Payroll" :
+        dataset.Key.Equals("leaves", StringComparison.OrdinalIgnoreCase) ? "Leaves" :
+        "Employees";
 
     private async Task RunAsync(PeopleReportsStore.SavedReport report)
     {
@@ -379,7 +523,7 @@ public class IndexModel : PageModel
             new PeopleReportCatalog.ReportFilters
             {
                 Scope = await _companyScope.GetAsync(),
-                CompanyId = CompanyId,
+                CompanyId = report.CompanyId ?? CompanyId,
                 Search = Search,
                 ActiveOnly = ActiveOnly,
                 From = ParseDate(From),
@@ -454,16 +598,29 @@ public class IndexModel : PageModel
                     break;
             }
         }
-    }
 
-    private static string Csv(string value)
-    {
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+        RunGroupColumnKey = ValidKey(report.GroupColumnKey, dataset);
+        var sortKey = ValidKey(report.SortColumnKey, dataset);
+        if (!string.IsNullOrEmpty(RunGroupColumnKey) || !string.IsNullOrEmpty(sortKey))
         {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
+            var indexed = RunRows.Select((row, index) => (Row: row, Index: index));
+            IOrderedEnumerable<(Dictionary<string, string> Row, int Index)>? ordered = null;
+            if (!string.IsNullOrEmpty(RunGroupColumnKey))
+            {
+                ordered = indexed.OrderBy(item => item.Row.GetValueOrDefault(RunGroupColumnKey, ""), StringComparer.CurrentCultureIgnoreCase);
+            }
+            if (!string.IsNullOrEmpty(sortKey))
+            {
+                ordered = ordered == null
+                    ? (report.SortDescending
+                        ? indexed.OrderByDescending(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase)
+                        : indexed.OrderBy(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase))
+                    : (report.SortDescending
+                        ? ordered.ThenByDescending(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase)
+                        : ordered.ThenBy(item => item.Row.GetValueOrDefault(sortKey, ""), StringComparer.CurrentCultureIgnoreCase));
+            }
+            RunRows = (ordered ?? indexed.OrderBy(item => item.Index)).ThenBy(item => item.Index).Select(item => item.Row).ToList();
         }
-
-        return value;
     }
 
     public class CompanyOption

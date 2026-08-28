@@ -1,0 +1,18 @@
+/* Source: Pages/Documents/Generate.cshtml */
+.zydoc-preview { border:1px solid var(--zy-border); border-radius:var(--zy-radius-md);
+        background:var(--zy-white); color:var(--zy-migrated-color-eeb78a41df); padding:32px; line-height:2; font-size:.9375rem;
+        max-height:60vh; overflow:auto; }
+    .zydoc-preview table { border-collapse:collapse; }
+    .zydoc-preview td, .zydoc-preview th { border:1px solid var(--zy-migrated-color-a99a3936e2); padding:6px 10px; }
+
+/* Static inline utilities migrated from Pages/Documents/Generate.cshtml */
+
+.zyu-b67765f127f8 { width:100%;padding:10px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:ui-monospace,monospace;font-size:.8125rem; }
+
+.zyu-43a97fe4943c { margin-top:8px; }
+
+.zyu-bc6a54692fba { border-inline-start-color:var(--zy-warning); }
+
+.zyu-662c8e43345e { width:150px; }
+
+.zyu-6b8b63d565c4 { display:inline; }

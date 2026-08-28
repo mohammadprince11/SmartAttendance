@@ -1,0 +1,51 @@
+@page "/Integrations/Accounting"
+@model SmartAttendance.Web.Pages.Integrations.AccountingModel
+@{
+    ViewData["Title"] = "التكامل المحاسبي";
+}
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<main class="hrms-page" dir="rtl">
+    <header class="hrms-page-head">
+        <div>
+            <h1>خرائط القيود المحاسبية</h1>
+            <p>ربط أدوار المسير بدليل حسابات ERP. لا يُنشأ قيد قبل اكتمال الأدوار وتوازنه.</p>
+            <nav><a href="/Integrations/Webhooks">Webhooks</a> · <a href="/Integrations/DeviceConnectors">أجهزة الحضور</a> · <strong>المحاسبة</strong></nav>
+        </div>
+        <form method="get">
+            <select name="CompanyId" onchange="this.form.submit()">
+                <option value="">اختر الشركة</option>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
+                }
+            </select>
+        </form>
+    </header>
+    @if (TempData["SuccessMessage"] is string success) { <div class="hrms-alert success">@success</div> }
+    @if (TempData["ErrorMessage"] is string error) { <div class="hrms-alert danger">@error</div> }
+    @if (Model.CompanyId is > 0)
+    {
+        <section class="hrms-card">
+            <div class="hrms-table-wrap"><table class="hrms-table">
+                <thead><tr><th>دور الحساب</th><th>رمز الحساب</th><th>اسم الحساب</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var role in Model.Roles)
+                {
+                    var mapping = Model.Mappings.FirstOrDefault(item => item.AccountRole == role);
+                    var formId = "mapping-" + role;
+                    <tr>
+                        <td><strong>@Model.Label(role)</strong><br /><code dir="ltr">@role</code></td>
+                        <td><input form="@formId" name="accountCode" value="@mapping?.AccountCode" required maxlength="100" dir="ltr" /></td>
+                        <td><input form="@formId" name="accountName" value="@mapping?.AccountName" required maxlength="200" /></td>
+                        <td><form id="@formId" method="post" asp-page-handler="Save">
+                            <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                            <input type="hidden" name="role" value="@role" />
+                            <button class="hrms-btn-primary" type="submit">حفظ</button>
+                        </form></td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+        </section>
+    }
+</main>

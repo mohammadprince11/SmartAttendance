@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "طلبات الوثائق";
 }
+<link rel="stylesheet" href="~/css/pages/requests-3c73605948.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -34,13 +35,13 @@
             </p>
         </header>
 
-        <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
-            <span class="zyp-count" data-zero="@((Model.PendingCount > 0).ToString().ToLowerInvariant())" style="padding:4px 10px">
+        <div class="zyp-actions zyu-2d1bdd415249">
+            <span class="zyp-count" data-zero="@((Model.PendingCount > 0).ToString().ToLowerInvariant())" data-zy-style="padding:4px 10px">
                 قيد المراجعة: @Model.PendingCount
             </span>
         </div>
 
-        <form method="get" class="zyp-editor-grid" style="border:0;padding:0">
+        <form method="get" class="zyp-editor-grid zyu-410cf9349439">
             <label>
                 الحالة
                 <select asp-for="StatusFilter">
@@ -50,9 +51,9 @@
                     <option value="All">الكل</option>
                 </select>
             </label>
-            <label style="justify-content:flex-end">
+            <label class="zyu-110c1427da8c">
                 &nbsp;
-                <button type="submit" class="zyc-add-rule" style="align-self:stretch">تطبيق</button>
+                <button type="submit" class="zyc-add-rule zyu-8ede280590c3">تطبيق</button>
             </label>
         </form>
 
@@ -71,7 +72,7 @@
                         <th>المرفق</th>
                         <th>تاريخ الطلب</th>
                         <th>الحالة</th>
-                        <th style="width:300px"></th>
+                        <th class="zyu-782fa35ef6d5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -109,15 +110,15 @@
                             <td>
                                 @if (request.IsPending)
                                 {
-                                    <form method="post" asp-page-handler="Reject" style="display:flex;gap:6px;margin-bottom:6px">
+                                    <form method="post" asp-page-handler="Reject" class="zyu-91e318c3cb56">
                                         <input type="hidden" name="id" value="@request.Id" />
                                         <input name="note" placeholder="سبب الرفض (إلزامي)"
-                                               style="flex:1;padding:5px 8px;border:1px solid var(--zy-border);border-radius:var(--zy-radius-sm);background:var(--zy-input,var(--zy-surface));color:var(--zy-text);font-family:inherit;font-size:.75rem" />
-                                        <button type="submit" class="zyp-move" style="padding:5px 10px">رفض</button>
+                                               class="zyu-76918384ee38" />
+                                        <button type="submit" class="zyp-move zyu-8bd3da59843e">رفض</button>
                                     </form>
                                     <form method="post" asp-page-handler="Approve">
                                         <input type="hidden" name="id" value="@request.Id" />
-                                        <button type="submit" class="zyc-add-rule" style="width:100%">اعتمد وأصدر الوثيقة</button>
+                                        <button type="submit" class="zyc-add-rule zyu-b7aa1ec0049d">اعتمد وأصدر الوثيقة</button>
                                     </form>
                                 }
                                 else if (request.GeneratedDocumentId is > 0)

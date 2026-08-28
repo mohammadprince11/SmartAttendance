@@ -1,0 +1,21 @@
+/* Source: Pages/EmployeePortal/Reports.cshtml */
+.epr { direction: rtl; display: grid; gap: 14px; max-width: 1000px; margin: 0 auto; padding: 8px 4px 40px; }
+    .epr h1 { margin: 0; font-size: 22px; font-weight: 1000; }
+    .epr-hint { color: var(--zy-migrated-color-e09805bacb); font-size: 12.5px; font-weight: 800; margin: 4px 0 0; }
+    .epr-card { border: 1px solid var(--sa-border, var(--zy-migrated-color-67f8b39c02)); border-radius: 14px;
+        background: var(--sa-surface, var(--zy-migrated-color-00649ed51c)); padding: 14px 16px; }
+    .epr-list { display: grid; gap: 10px; }
+    .epr-item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        border: 1px solid var(--sa-border, var(--zy-migrated-color-67f8b39c02)); border-radius: 12px; padding: 12px 14px;
+        text-decoration: none; color: inherit; font-weight: 900; }
+    .epr-table-wrap { overflow-x: auto; }
+    .epr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .epr-table th, .epr-table td { padding: 9px 10px; text-align:end; border-bottom: 1px solid var(--sa-border, var(--zy-migrated-color-6f9d54259b)); }
+    .epr-table th { font-weight: 1000; }
+    .epr-empty { color: var(--zy-migrated-color-e09805bacb); font-weight: 800; }
+
+/* Static inline utilities migrated from Pages/EmployeePortal/Reports.cshtml */
+
+.zyu-625f4867b2e4 { display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px; }
+
+.zyu-52ee95b95fbc { font-weight:900; }

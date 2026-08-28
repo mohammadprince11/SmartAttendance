@@ -4,6 +4,7 @@
     Layout = "_EmployeePortalLayout";
     ViewData["Title"] = "البصمة والوجه";
 }
+<link rel="stylesheet" href="~/css/pages/biometric-7f3eb4e282.css" asp-append-version="true" />
 
 <section class="nxex-subpage" dir="rtl" data-nxex-page data-active-tab="home">
     <header class="nxex-subpage-head">
@@ -18,7 +19,7 @@
 
     @if (!Model.IsLinkedToEmployee)
     {
-        <div class="nxex-flash" style="border-color:rgba(240,84,84,.4);background:rgba(240,84,84,.12);color:#ffb4b4">
+        <div class="nxex-flash zyu-02e74f792350">
             الحساب غير مرتبط بموظف — لا يمكن تسجيل مفتاح.
         </div>
     }
@@ -26,16 +27,16 @@
     {
         <div id="bio-flash" class="nxex-flash" hidden></div>
 
-        <section class="nxex-card" style="margin-bottom:16px">
+        <section class="nxex-card zyu-bf4a218e05ab">
             @if (Model.HasActive)
             {
-                <div class="nxex-flash" style="border-color:rgba(70,220,150,.4);background:rgba(70,220,150,.12);color:#b8f5d6">
+                <div class="nxex-flash zyu-7d65e6bb77de">
                     ✅ لديك مفتاح بصمة/وجه <strong>معتمد ونشط</strong>. يمكنك استخدامه للتأكيد عند البصم وللدخول للبوابة.
                 </div>
             }
             else if (Model.HasPending)
             {
-                <div class="nxex-flash" style="border-color:rgba(255,193,7,.4);background:rgba(255,193,7,.10);color:#ffe08a">
+                <div class="nxex-flash zyu-ebbfe547bba9">
                     ⏳ مفتاحك مسجَّل و<strong>بانتظار اعتماد الموارد البشرية</strong> — لن يعمل قبل الاعتماد.
                 </div>
             }
@@ -51,7 +52,7 @@
             <button type="button" id="bio-register-btn" class="nxex-leave-submit">
                 @(Model.Credentials.Count > 0 ? "تسجيل مفتاح جديد (يستبدل القديم)" : "تفعيل البصمة/الوجه")
             </button>
-            <p class="nxex-dc-hint" style="margin-top:8px">
+            <p class="nxex-dc-hint zyu-43a97fe4943c">
                 تسجيل مفتاح جديد يلغي أي مفتاح سابق ويحتاج اعتماداً جديداً — مفتاح واحد نشط لكل موظف.
             </p>
         </section>
@@ -62,7 +63,7 @@
                 <header class="nxex-card-head"><div><h2>مفاتيحي</h2></div></header>
                 @foreach (var c in Model.Credentials)
                 {
-                    <div class="nxex-punch-row" style="justify-content:space-between">
+                    <div class="nxex-punch-row zyu-55db2416bec8">
                         <span>@(string.IsNullOrWhiteSpace(c.DeviceLabel) ? "جهاز غير مسمّى" : c.DeviceLabel)</span>
                         <span class="nxex-punch-time">@c.CreatedAt.ToString("yyyy-MM-dd")</span>
                         <span class="nxex-chip">@c.StatusText</span>

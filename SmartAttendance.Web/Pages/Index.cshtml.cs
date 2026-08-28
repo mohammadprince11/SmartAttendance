@@ -101,14 +101,14 @@ public class IndexModel : PageModel
             CompanyId,
             CompanyOptions.Select(x => x.Id).ToArray());
 
-        AllWidgets = await DashboardWidgetStore.ListAsync(_dbContext);
-
         // حارس دفاعيّ صريح: لا يُنفَّذ أي مقياس إلا لشركةٍ يسمح بها النطاق.
         if (!CompanyId.HasValue || !scope.Allows(CompanyId.Value))
         {
             CompanyId = null;
             return;
         }
+
+        AllWidgets = await DashboardWidgetStore.ListAsync(_dbContext, scope, CompanyId.Value);
 
         await LoadTaskFirstLayerAsync(CompanyId.Value);
 
@@ -185,6 +185,8 @@ ELSE
 
     public async Task<IActionResult> OnPostAddWidgetAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
         var form = Request.Form;
         var metric = form["Metric"].ToString();
 
@@ -192,8 +194,9 @@ ELSE
         {
             var isCounter = DashboardWidgetStore.IsCounterMetric(metric);
             var kind = form["ChartKind"].ToString() is { Length: > 0 } chartKind ? chartKind : "Number";
-            await DashboardWidgetStore.AddAsync(_dbContext, new DashboardWidgetStore.Widget
+            await DashboardWidgetStore.AddAsync(_dbContext, scope, new DashboardWidgetStore.Widget
             {
+                CompanyId = CompanyId.Value,
                 Title = form["Title"].ToString().Trim(),
                 Metric = metric,
                 ChartKind = isCounter ? "Number" : kind == "Number" ? "HBars" : kind
@@ -205,13 +208,17 @@ ELSE
 
     public async Task<IActionResult> OnPostDeleteWidgetAsync(int id)
     {
-        await DashboardWidgetStore.DeleteAsync(_dbContext, id);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
+        await DashboardWidgetStore.DeleteAsync(_dbContext, scope, CompanyId.Value, id);
         TempData["SuccessMessage"] = "حُذف الويدجت.";
         return RedirectToPage(new { CompanyId });
     }
 
     public async Task<IActionResult> OnPostSaveLayoutAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
         var orderedIds = Request.Form["OrderedIds"]
             .SelectMany(v => (v ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))
             .Select(v => int.TryParse(v, out var id) ? id : 0)
@@ -223,7 +230,7 @@ ELSE
             .Where(id => id > 0)
             .ToHashSet();
 
-        await DashboardWidgetStore.SaveLayoutAsync(_dbContext, orderedIds, visibleIds);
+        await DashboardWidgetStore.SaveLayoutAsync(_dbContext, scope, CompanyId.Value, orderedIds, visibleIds);
         TempData["SuccessMessage"] = "حُفظ تخطيط اللوحة.";
         return RedirectToPage(new { CompanyId });
     }

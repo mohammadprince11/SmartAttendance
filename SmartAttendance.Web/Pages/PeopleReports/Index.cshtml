@@ -17,78 +17,24 @@
         Model.MyReports.Select(r => new
         {
             id = r.Id,
+            companyId = r.CompanyId,
             name = r.Name,
             description = r.Description ?? "",
             datasetKey = r.DatasetKey,
             columns = r.Columns,
             filterColumns = r.FilterColumns,
+            groupColumnKey = r.GroupColumnKey ?? "",
+            sortColumnKey = r.SortColumnKey ?? "",
+            sortDescending = r.SortDescending,
             isShared = r.IsShared,
             shareWithEmployees = r.ShareWithEmployees,
             sharedWith = r.SharedWith
         }));
 }
+<link rel="stylesheet" href="~/css/pages/index-8dc6e13ff2.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
-<style>
-    /* Kayan-style report cards */
-    .rep-card { display:flex; align-items:center; gap:12px; background:var(--sa-surface); border:1px solid var(--sa-border); border-radius:14px; padding:14px 16px; cursor:pointer; transition:border-color .15s ease, transform .12s ease; }
-    .rep-card:hover { border-color:var(--sa-primary); transform:translateY(-1px); }
-    .rep-card-icon { width:38px; height:38px; flex:none; display:grid; place-items:center; border-radius:10px; background:var(--sa-primary-soft); color:var(--sa-primary); font-size:17px; }
-    .rep-card-text { flex:1; font-weight:900; color:var(--sa-text); }
-    .rep-pin { appearance:none; border:0; background:transparent; color:var(--sa-muted); font-size:16px; cursor:pointer; padding:4px; border-radius:8px; }
-    .rep-pin:hover { color:var(--sa-primary); background:var(--sa-surface-3); }
-    .rep-pin.pinned { color:var(--sa-primary); }
-    .rep-empty { text-align:center; padding:48px 16px; color:var(--sa-muted); font-weight:800; }
-    .rep-empty .icon { font-size:44px; margin-bottom:10px; }
-    /* Kayan-style field picker (builder): model select + search + row list, drag & drop */
-    .rep-dnd { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:stretch; }
-    .rep-dnd-panel { display:flex; flex-direction:column; gap:0; min-width:0; border:1px solid var(--sa-border); border-radius:12px; background:var(--sa-surface); overflow:hidden; }
-    .rep-dnd-panel > .rep-panel-title { padding:10px 12px; font-weight:900; font-size:12.5px; color:var(--sa-muted); border-bottom:1px solid var(--sa-border); background:var(--sa-surface-3); }
-    .rep-model-select { margin:10px 12px 0; padding:9px 12px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); font-weight:800; }
-    .rep-field-search { display:flex; align-items:center; gap:8px; margin:8px 12px 10px; padding:0 12px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); }
-    .rep-field-search span { color:var(--sa-muted); font-size:14px; }
-    .rep-field-search input { flex:1; border:0; background:transparent; color:var(--sa-text); font-weight:800; padding:9px 0; outline:none; min-width:0; }
-    .rep-pool, .rep-drop { flex:1; min-height:220px; max-height:300px; overflow-y:auto; border-top:1px solid var(--sa-border); }
-    .rep-row { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; border-bottom:1px solid var(--sa-border); color:var(--sa-text); font-weight:800; font-size:13px; cursor:grab; user-select:none; background:transparent; transition:background .12s ease, opacity .12s ease; }
-    .rep-row:hover { background:var(--sa-primary-soft); }
-    .rep-row.rep-dragging { opacity:.35; }
-    .rep-row .rep-row-grip { color:var(--sa-muted); font-size:12px; letter-spacing:-1px; }
-    .rep-row .rep-row-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .rep-row .rep-row-num { color:var(--sa-primary); font-size:11.5px; min-width:18px; text-align:center; }
-    .rep-row .rep-row-x { display:none; border:0; background:transparent; color:var(--sa-muted); font-weight:900; cursor:pointer; padding:0 2px; font-size:14px; line-height:1; }
-    .rep-row .rep-row-x:hover { color:#e11d48; }
-    .rep-drop .rep-row .rep-row-x { display:inline; }
-    .rep-drop.rep-over, .rep-pool.rep-over { background:var(--sa-primary-soft); }
-    .rep-dnd-hint { color:var(--sa-muted); font-size:12px; font-weight:800; margin:0 0 8px; }
-    .rep-drop-empty { display:block; text-align:center; color:var(--sa-muted); font-weight:800; font-size:12.5px; padding:34px 10px; pointer-events:none; }
-    .rep-no-match { display:block; text-align:center; color:var(--sa-muted); font-weight:800; font-size:12.5px; padding:20px 10px; }
-    @@media (max-width:760px){ .rep-dnd{ grid-template-columns:1fr; } }
-    /* ag-Grid run table (Kayan-style) */
-    .rep-run-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; }
-    .rep-collist { display:flex; flex-direction:column; gap:6px; }
-    .rep-colrow { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--sa-border); border-radius:10px; background:var(--sa-surface); font-weight:800; }
-    .rep-colrow button { padding:2px 9px; line-height:1.5; }
-    .rep-colrow button[disabled] { opacity:.35; cursor:default; }
-    .rep-run-toolbar input { flex:0 1 320px; min-width:180px; border-radius:10px; border:1px solid var(--sa-border); background:var(--sa-input); color:var(--sa-text); padding:9px 12px; font-weight:800; }
-    #run-grid { height:calc(100vh - 350px); min-height:440px; width:100%; }
-    #run-grid.ag-theme-quartz, #run-grid.ag-theme-quartz-dark { --ag-font-family:inherit; border-radius:12px; overflow:hidden; }
-    @@media print {
-        .rep-run-toolbar { display:none !important; }
-        #run-grid { height:auto !important; min-height:0 !important; }
-    }
-
-    /* Print header + settings */
-    .rep-print-head { display:none; }
-    @@media print {
-        .nexora-sidebar, .nexora-topbar, .page-header .hrms-inline-form, .hrms-pager, form, .hrms-slideover { display:none !important; }
-        .rep-print-head.on { display:flex !important; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #0f172a; }
-        .rep-print-head img { height:36px; }
-        .rep-print-head-text { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
-        .rep-print-head-text strong { font-size:16px; color:#0f172a; }
-        .rep-print-head-text span { font-size:12px; color:#475569; }
-    }
-</style>
 
 <div class="hrms-page" data-hrms-tabs-group>
 
@@ -105,7 +51,7 @@
 
         @if (!string.IsNullOrEmpty(Model.Message))
         {
-            <div class="hrms-badge approved" style="padding:10px 14px">@Model.Message</div>
+            <div class="hrms-badge approved zyu-961915113e90">@Model.Message</div>
         }
 
         <div class="hrms-tabs" role="tablist">
@@ -116,7 +62,7 @@
 
         @* ---------------- Tab 1: System reports (Kayan card grid + pin) ---------------- *@
         <div class="hrms-tabpanel active" data-hrms-tabpanel="system">
-            <div class="hrms-inline-form" style="margin-bottom:14px">
+            <div class="hrms-inline-form zyu-42a6ced8b67e">
                 <label for="rep-search">بحث</label>
                 <input id="rep-search" type="search" placeholder="بحث باسم التقرير..." autocomplete="off" />
             </div>
@@ -131,8 +77,9 @@
                             <div class="hrms-tile-sub rep-count" data-rep-count="@report.Id"></div>
                         </div>
                         @* الاستنساخ من تقرير النظام أهمّ استعمالاته: تعدّل جاهزاً بدل البناء من الصفر *@
-                        <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
+                        <form method="post" action="@Model.SelfPath?handler=DuplicateReport" class="zyu-6b8b63d565c4">
                             <input type="hidden" name="id" value="@report.Id" />
+                            <input type="hidden" name="companyId" value="@Model.CompanyId" />
                             <button type="submit" class="rep-pin" title="أنشئ نسخة">⧉</button>
                         </form>
                         <button type="button" class="rep-pin" data-pin="@report.Id" title="تثبيت">📌</button>
@@ -148,13 +95,13 @@
                 <div class="hrms-card rep-empty">
                     <div class="icon">🗂️</div>
                     <div>لم تقم بإنشاء أي تقرير حتى الآن</div>
-                    <p class="hrms-muted" style="margin:6px 0 14px">أنشئ تقريرك الخاص باختيار مصدر البيانات والأعمدة التي تحتاجها.</p>
+                    <p class="hrms-muted zyu-c54046d061f4">أنشئ تقريرك الخاص باختيار مصدر البيانات والأعمدة التي تحتاجها.</p>
                     <button type="button" class="hrms-btn-primary" data-hrms-open="report-builder">تقرير جديد</button>
                 </div>
             }
             else
             {
-                <div style="display:flex; justify-content:flex-end; margin-bottom:12px">
+                <div class="zyu-77ce9cdcd48c">
                     <button type="button" class="hrms-btn-primary" data-hrms-open="report-builder">+ تقرير جديد</button>
                 </div>
                 <div class="hrms-grid">
@@ -164,22 +111,23 @@
                             <div class="rep-card-icon">📄</div>
                             <div class="rep-card-text">
                                 @report.Name
-                                <div class="hrms-tile-sub" style="font-weight:800">
+                                <div class="hrms-tile-sub zyu-cde9131bb144">
                                     @(Model.Datasets.FirstOrDefault(d => d.Key == report.DatasetKey)?.Label ?? report.DatasetKey) · @report.Columns.Count أعمدة
                                     <span class="rep-count" data-rep-count="@report.Id"></span>
                                     @if (report.IsShared) { <span class="hrms-badge approved">مشارك</span> }
                                 </div>
                             </div>
                             <button type="button" class="rep-pin" title="تعديل" onclick="repEdit(@report.Id)">✏️</button>
-                            <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
+                            <form method="post" action="@Model.SelfPath?handler=DuplicateReport" class="zyu-6b8b63d565c4">
                                 <input type="hidden" name="id" value="@report.Id" />
+                                <input type="hidden" name="companyId" value="@(report.CompanyId ?? Model.CompanyId)" />
                                 <button type="submit" class="rep-pin" title="أنشئ نسخة">⧉</button>
                             </form>
-                            <form method="post" action="@Model.SelfPath?handler=ToggleShare" style="display:inline">
+                            <form method="post" action="@Model.SelfPath?handler=ToggleShare" class="zyu-6b8b63d565c4">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="@(report.IsShared ? "إلغاء المشاركة" : "مشاركة")">@(report.IsShared ? "🔓" : "🔒")</button>
                             </form>
-                            <form method="post" action="@Model.SelfPath?handler=DeleteReport" style="display:inline" data-zyconfirm="حذف التقرير؟">
+                            <form method="post" action="@Model.SelfPath?handler=DeleteReport" class="zyu-6b8b63d565c4" data-zyconfirm="حذف التقرير؟">
                                 <input type="hidden" name="id" value="@report.Id" />
                                 <button type="submit" class="rep-pin" title="حذف">🗑️</button>
                             </form>
@@ -207,11 +155,12 @@
                             <div class="rep-card-icon">📄</div>
                             <div class="rep-card-text">
                                 @report.Name
-                                <div class="hrms-tile-sub" style="font-weight:800">بواسطة @report.OwnerUser</div>
+                                <div class="hrms-tile-sub zyu-cde9131bb144">بواسطة @report.OwnerUser</div>
                             </div>
                             @* النسخ يمنحك ملكيةَ تعديلٍ لا تملكها على تقرير غيرك *@
-                            <form method="post" action="@Model.SelfPath?handler=DuplicateReport" style="display:inline">
+                            <form method="post" action="@Model.SelfPath?handler=DuplicateReport" class="zyu-6b8b63d565c4">
                                 <input type="hidden" name="id" value="@report.Id" />
+                                <input type="hidden" name="companyId" value="@(report.CompanyId ?? Model.CompanyId)" />
                                 <button type="submit" class="rep-pin" title="أنشئ نسخة">⧉</button>
                             </form>
                         </div>
@@ -251,11 +200,52 @@
                 {
                     <button type="button" class="hrms-btn-secondary" data-hrms-open="run-filter">🔎 بحث متقدم</button>
                 }
-                <a href="@Model.SelfPath?handler=Export&@exportQs" class="hrms-btn-secondary">⬇ تصدير إكسل</a>
+                <a href="@Model.SelfPath?handler=Export&format=xlsx&@exportQs" class="hrms-btn-secondary">⬇ Excel</a>
+                <a href="@Model.SelfPath?handler=Export&format=csv&@exportQs" class="hrms-btn-secondary">⬇ CSV</a>
+                @if (!Model.Current.IsSystem && string.Equals(Model.Current.OwnerUser, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    <button type="button" class="hrms-btn-secondary" data-hrms-open="report-schedule">⏱ جدولة</button>
+                }
                 <button type="button" class="hrms-btn-secondary" data-hrms-open="print-settings">🖨 طباعة</button>
                 <a href="@Model.SelfPath" class="hrms-btn-secondary">→ رجوع</a>
             </div>
         </div>
+
+        @if (!Model.Current.IsSystem && string.Equals(Model.Current.OwnerUser, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            <aside class="hrms-slideover" data-hrms-panel="report-schedule" aria-hidden="true">
+                <div class="hrms-slideover-backdrop" data-hrms-close></div>
+                <div class="hrms-slideover-panel">
+                    <div class="hrms-slideover-head"><h2>جدولة التقرير</h2><button type="button" data-hrms-close>×</button></div>
+                    <div class="hrms-slideover-body">
+                        <form method="post" action="@Model.SelfPath?handler=CreateSchedule" class="hrms-page">
+                            <input type="hidden" name="reportId" value="@Model.Current.Id" />
+                            <input type="hidden" name="companyId" value="@Model.Current.CompanyId" />
+                            <div class="hrms-field"><label>البريد الإلكتروني (افصل المتعدد بفاصلة)</label><textarea name="recipients" required></textarea></div>
+                            <div class="hrms-field"><label>التكرار</label><select name="frequency"><option value="Daily">يومي</option><option value="Weekly">أسبوعي</option></select></div>
+                            <div class="hrms-field"><label>ساعة التنفيذ UTC</label><input type="number" name="hourUtc" min="0" max="23" value="6" required /></div>
+                            <div class="hrms-field"><label>يوم الأسبوع (للأسبوعي: 0 الأحد — 6 السبت)</label><input type="number" name="dayOfWeek" min="0" max="6" value="0" /></div>
+                            <button type="submit" class="hrms-btn-primary">حفظ الجدولة</button>
+                        </form>
+                        @foreach (var schedule in Model.ReportSchedules.Where(item => item.ReportId == Model.Current.Id))
+                        {
+                            <div class="hrms-card zyu-df928149c547">
+                                <strong>@(schedule.Frequency == "Weekly" ? "أسبوعي" : "يومي") · @schedule.HourUtc:00 UTC</strong>
+                                <p>@schedule.RecipientsCsv · التنفيذ التالي @schedule.NextRunAt.ToString("yyyy-MM-dd HH:mm")</p>
+                                @if (!string.IsNullOrWhiteSpace(schedule.LastError)) { <p class="text-danger">@schedule.LastError</p> }
+                                @if (schedule.IsActive)
+                                {
+                                    <form method="post" action="@Model.SelfPath?handler=DisableSchedule">
+                                        <input type="hidden" name="id" value="@schedule.Id" /><input type="hidden" name="reportId" value="@Model.Current.Id" /><input type="hidden" name="companyId" value="@Model.Current.CompanyId" />
+                                        <button class="hrms-btn-danger" type="submit">إيقاف</button>
+                                    </form>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </aside>
+        }
 
         @* ترويسة الطباعة — تظهر فقط عند الطباعة وحسب اختيار المستخدم *@
         <div class="rep-print-head" id="rep-print-head">
@@ -293,9 +283,9 @@
                         <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
                     </div>
                     <div class="hrms-slideover-body">
-                        <p class="hrms-muted" style="margin:0 0 10px">أزل علامة العمود لإخفائه، أو حرّكه بالسهمين. الترتيب يُحفظ لهذا التقرير بهذا المتصفح.</p>
+                        <p class="hrms-muted zyu-536fa527ebad">أزل علامة العمود لإخفائه، أو حرّكه بالسهمين. الترتيب يُحفظ لهذا التقرير بهذا المتصفح.</p>
                         <div id="run-columns-list" class="rep-collist"></div>
-                        <div style="display:flex; gap:8px; margin-top:14px">
+                        <div class="zyu-232fd7f1c4b4">
                             <button type="button" class="hrms-btn-ghost" id="run-columns-reset">إعادة الافتراضي</button>
                         </div>
                     </div>
@@ -315,10 +305,10 @@
                     <input type="hidden" name="ReportId" value="@Model.ReportId" />
                     @if (Model.UsesDateRange)
                     {
-                        <div class="hrms-tile-sub" style="margin-top:4px">@(Model.IsPayroll ? "مدى فترة الرواتب" : "مدى تاريخ الحضور")</div>
+                        <div class="hrms-tile-sub zyu-eb2cdaa55e9f">@(Model.IsPayroll ? "مدى فترة الرواتب" : "مدى تاريخ الحضور")</div>
                         <div class="hrms-field">
                             <label>من / إلى (افتراضياً الشهر الحالي)</label>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                            <div class="zyu-d607856cac6b">
                                 <input type="date" name="From" value="@Model.From" title="من" />
                                 <input type="date" name="To" value="@Model.To" title="إلى" />
                             </div>
@@ -343,7 +333,7 @@
                     </div>
                     @if (Model.RunFilterColumns.Any())
                     {
-                        <div class="hrms-tile-sub" style="margin-top:4px">بحث متقدم</div>
+                        <div class="hrms-tile-sub zyu-eb2cdaa55e9f">بحث متقدم</div>
                         foreach (var filterColumn in Model.RunFilterColumns)
                         {
                             <div class="hrms-field">
@@ -361,7 +351,7 @@
                                 }
                                 else if (filterColumn.Filter == SmartAttendance.Web.Infrastructure.Reports.PeopleReportCatalog.FilterKind.DateRange)
                                 {
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                                    <div class="zyu-d607856cac6b">
                                         <input type="date" name="cf_@(filterColumn.Key)_from" value="@Model.RunFilterValues.GetValueOrDefault(filterColumn.Key + "_from", "")" title="من" />
                                         <input type="date" name="cf_@(filterColumn.Key)_to" value="@Model.RunFilterValues.GetValueOrDefault(filterColumn.Key + "_to", "")" title="إلى" />
                                     </div>
@@ -372,7 +362,7 @@
                                 }
                             </div>
                         }
-                        <a href="?ReportId=@Model.ReportId" class="hrms-btn-secondary" style="text-align:center">إزالة الفلتر</a>
+                        <a href="?ReportId=@Model.ReportId" class="hrms-btn-secondary zyu-905008530ca9">إزالة الفلتر</a>
                     }
                     @if (!Model.IsAttendance)
                     {
@@ -417,6 +407,16 @@
         <form method="post" action="@Model.SelfPath?handler=CreateReport" class="hrms-page" onsubmit="return repCollectColumns();">
             <input type="hidden" name="id" id="rep-edit-id" value="0" />
             <div class="hrms-field">
+                <label>الشركة</label>
+                <select name="companyId" id="rep-company" required>
+                    <option value="">اختر الشركة</option>
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="hrms-field">
                 <label>اسم التقرير</label>
                 <input name="name" id="rep-name" required placeholder="مثال: هواتف موظفي الفروع" />
             </div>
@@ -432,7 +432,7 @@
                     <option value="specific">أشخاص محددون</option>
                 </select>
             </div>
-            <div class="hrms-field" id="rep-shared-with-field" style="display:none">
+            <div class="hrms-field zyu-6aa34d7432e7" id="rep-shared-with-field">
                 <label>اختر الأشخاص (Ctrl لتحديد أكثر من شخص)</label>
                 <select name="sharedWith" id="rep-shared-with" multiple size="5">
                     @foreach (var shareUser in Model.ShareUserOptions)
@@ -443,7 +443,7 @@
             </div>
             @* نشر التقرير ببوابة الموظف — الموظف يرى صفوفه هو فقط لا صفوف زملائه *@
             <div class="hrms-field">
-                <label style="display:flex;align-items:center;gap:8px">
+                <label class="zyu-a4e017b7b0ef">
                     <input type="checkbox" name="shareWithEmployees" value="true" id="rep-share-ess" />
                     نشره ببوابة الموظف
                 </label>
@@ -488,6 +488,23 @@
                         <span class="rep-panel-title">مرشحات التقرير</span>
                         <div id="rep-filter-selected" class="rep-drop"></div>
                     </div>
+                </div>
+            </div>
+
+            <div class="hrms-form-grid">
+                <div class="hrms-field">
+                    <label>تجميع النتائج حسب (اختياري)</label>
+                    <select name="groupColumnKey" id="rep-group-column"><option value="">بدون تجميع</option></select>
+                </div>
+                <div class="hrms-field">
+                    <label>ترتيب النتائج حسب (اختياري)</label>
+                    <select name="sortColumnKey" id="rep-sort-column"><option value="">الترتيب الأصلي</option></select>
+                </div>
+                <div class="hrms-field">
+                    <label class="zyu-a4e017b7b0ef">
+                        <input type="checkbox" name="sortDescending" value="true" id="rep-sort-desc" />
+                        ترتيب تنازلي
+                    </label>
                 </div>
             </div>
 
@@ -693,6 +710,21 @@
             var ds = REP_DATASETS.find(function (d) { return d.key === key; });
             repColumnsPicker.fill(key, ds);
             repFiltersPicker.fill(key, ds);
+            repFillOrderOptions(ds);
+        }
+
+        function repFillOrderOptions(ds) {
+            ['rep-group-column', 'rep-sort-column'].forEach(function (id) {
+                var select = document.getElementById(id);
+                var previous = select.value;
+                select.innerHTML = '<option value="">' + (id === 'rep-group-column' ? 'بدون تجميع' : 'الترتيب الأصلي') + '</option>';
+                (ds ? ds.columns : []).forEach(function (column) {
+                    var option = document.createElement('option');
+                    option.value = column.key; option.textContent = column.label;
+                    select.appendChild(option);
+                });
+                if ([...select.options].some(function (option) { return option.value === previous; })) select.value = previous;
+            });
         }
 
         function repCollectColumns() {
@@ -713,14 +745,21 @@
 
         function repResetBuilder() {
             document.getElementById('rep-edit-id').value = '0';
+            document.getElementById('rep-company').value = '@(Model.CompanyId?.ToString() ?? "")';
             document.getElementById('builder-title').textContent = 'تقرير جديد';
             document.getElementById('rep-name').value = '';
             document.getElementById('rep-description').value = '';
             repVisibility.value = 'me';
+            document.getElementById('rep-group-column').value = '';
+            document.getElementById('rep-sort-column').value = '';
+            document.getElementById('rep-sort-desc').checked = false;
             [...repSharedWith.options].forEach(function (o) { o.selected = false; });
             repColumnsPicker.clearMemory();
             repFiltersPicker.clearMemory();
             repFill();
+            document.getElementById('rep-group-column').value = r.groupColumnKey || '';
+            document.getElementById('rep-sort-column').value = r.sortColumnKey || '';
+            document.getElementById('rep-sort-desc').checked = !!r.sortDescending;
             repSyncVisibility();
         }
 
@@ -731,6 +770,7 @@
             var opener = document.querySelector('[data-hrms-open="report-builder"]');
             if (opener) opener.click(); // يفتح السلايد ويصفّر النموذج أولاً
             document.getElementById('rep-edit-id').value = r.id;
+            document.getElementById('rep-company').value = r.companyId || '';
             document.getElementById('builder-title').textContent = 'تعديل التقرير';
             document.getElementById('rep-name').value = r.name;
             document.getElementById('rep-description').value = r.description;
@@ -806,6 +846,7 @@
         var runColumnsJson = JsonSerializer.Serialize(
             Model.RunColumns.Select(c => new { key = c.Key, label = c.Label, kind = c.Filter.ToString() }));
         var runRowsJson = JsonSerializer.Serialize(Model.RunRows);
+        var runGroupKeyJson = JsonSerializer.Serialize(Model.RunGroupColumnKey ?? "");
 
         <script src="~/lib/ag-grid/ag-grid-community.min.js"></script>
         <script>
@@ -816,6 +857,7 @@
 
                 var RUN_COLUMNS = @Html.Raw(runColumnsJson);
                 var RUN_ROWS = @Html.Raw(runRowsJson);
+                var RUN_GROUP_KEY = @Html.Raw(runGroupKeyJson);
 
                 if ((document.documentElement.getAttribute('data-theme') || 'dark') !== 'light') {
                     el.className = 'ag-theme-quartz-dark';
@@ -843,6 +885,20 @@
                     }
                     return def;
                 });
+
+                if (RUN_GROUP_KEY) {
+                    var groupColumn = RUN_COLUMNS.find(function (column) { return column.key === RUN_GROUP_KEY; });
+                    columnDefs.unshift({
+                        headerName: 'المجموعة', minWidth: 180, pinned: 'right', sortable: false, filter: false,
+                        valueGetter: function (p) {
+                            if (!p.data) return '';
+                            var current = p.data[RUN_GROUP_KEY] || 'غير محدد';
+                            var previous = p.node.rowIndex > 0 ? RUN_ROWS[p.node.rowIndex - 1] : null;
+                            return !previous || (previous[RUN_GROUP_KEY] || 'غير محدد') !== current ? current : '';
+                        },
+                        cellClass: 'rep-group-cell'
+                    });
+                }
 
                 window.repRunGridApi = agGrid.createGrid(el, {
                     rowData: RUN_ROWS,

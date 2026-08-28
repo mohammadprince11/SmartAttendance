@@ -1,6 +1,7 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Domain.Entities;
@@ -8,6 +9,8 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Integrations;
+using SmartAttendance.Web.Infrastructure.Reports;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Tests;
@@ -73,6 +76,7 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
             await EmployeeAllowanceSchema.EnsureAsync(db);
             await PayrollTransactionStore.EnsureAsync(db);
             await PayrollRunStore.EnsureAsync(db);
+            await HrmsDatabase.EnsureCreatedAsync(db);
             await SqlSchemaMigrator.ApplyAsync(db);
             await SeedCompaniesAsync(db);
             _available = true;
@@ -243,13 +247,478 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Salary_items_reject_cross_company_reads_writes_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+
+        var itemA = new SalaryItemStore.SalaryItem
+        {
+            CompanyId = _companyA, Name = "Company A allowance", ItemType = "Income",
+            ValueKind = "Fixed", DefaultValue = 100, IsActive = true
+        };
+        var itemB = new SalaryItemStore.SalaryItem
+        {
+            CompanyId = _companyB, Name = "Company B allowance", ItemType = "Income",
+            ValueKind = "Fixed", DefaultValue = 200, IsActive = true
+        };
+        Assert.True(await SalaryItemStore.SaveAsync(db, scopeA, itemA));
+        Assert.True(await SalaryItemStore.SaveAsync(db, scopeB, itemB));
+
+        var aRows = await SalaryItemStore.ListAsync(db, scopeA, _companyA);
+        Assert.Contains(aRows, row => row.Name == itemA.Name);
+        Assert.DoesNotContain(aRows, row => row.Name == itemB.Name);
+
+        var bId = await ScalarAsync(db,
+            $"SELECT Id FROM SalaryItems WHERE CompanyId={_companyB} AND Name=N'Company B allowance';");
+        itemB.Id = bId;
+        itemB.Name = "Malicious rename";
+        Assert.False(await SalaryItemStore.SaveAsync(db, scopeA, itemB));
+        Assert.False(await SalaryItemStore.DeleteAsync(db, scopeA, bId));
+        Assert.Equal("Company B allowance", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Name FROM SalaryItems WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
+    public async Task Ten_thousand_employee_directory_meets_release_query_baseline()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var anchor = await db.Employees.AsNoTracking().SingleAsync(employee => employee.Id == _employeeA);
+        var prefix = "PERF-" + Guid.NewGuid().ToString("N")[..8] + "-";
+
+        var employees = Enumerable.Range(1, 10_000).Select(index => new Employee
+        {
+            EmployeeNo = prefix + index.ToString("00000"),
+            FullName = "Synthetic performance employee " + index,
+            CompanyId = _companyA,
+            BranchId = anchor.BranchId,
+            DepartmentId = anchor.DepartmentId,
+            HireDate = new DateOnly(2020, 1, 1),
+            IsActive = true
+        }).ToArray();
+        db.Employees.AddRange(employees);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        _ = await db.Employees.AsNoTracking()
+            .Where(employee => employee.CompanyId == _companyA && employee.EmployeeNo.StartsWith(prefix))
+            .Take(1)
+            .CountAsync();
+
+        var stopwatch = Stopwatch.StartNew();
+        var directory = await db.Employees.AsNoTracking()
+            .Where(employee => employee.CompanyId == _companyA &&
+                               employee.EmployeeNo.StartsWith(prefix) &&
+                               employee.IsActive && !employee.IsDeleted)
+            .OrderBy(employee => employee.EmployeeNo)
+            .Select(employee => new { employee.Id, employee.EmployeeNo, employee.FullName })
+            .ToListAsync();
+        stopwatch.Stop();
+
+        Assert.Equal(10_000, directory.Count);
+        Assert.All(directory, row => Assert.StartsWith(prefix, row.EmployeeNo));
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+            $"10k employee directory baseline exceeded 5 seconds: {stopwatch.Elapsed}.");
+
+        await transaction.RollbackAsync();
+    }
+
+    [SkippableFact]
+    public async Task Backup_can_be_verified_restored_and_migrated()
+    {
+        RequireSql();
+        var suffix = Guid.NewGuid().ToString("N");
+        var restoredDatabase = "SmartAttendance_CodexRestore_" + suffix;
+        var backupPath = Path.Combine(Path.GetTempPath(), restoredDatabase + ".bak");
+        var dataPath = Path.Combine(Path.GetTempPath(), restoredDatabase + ".mdf");
+        var logPath = Path.Combine(Path.GetTempPath(), restoredDatabase + "_log.ldf");
+
+        static string SqlLiteral(string value) => "N'" + value.Replace("'", "''") + "'";
+        static string SqlIdentifier(string value) => "[" + value.Replace("]", "]]" ) + "]";
+
+        try
+        {
+            SqlConnection.ClearAllPools();
+            await using var admin = new SqlConnection(_adminConnection!);
+            await admin.OpenAsync();
+
+            await using (var backup = admin.CreateCommand())
+            {
+                backup.CommandTimeout = 120;
+                backup.CommandText = $"BACKUP DATABASE {SqlIdentifier(_databaseName!)} TO DISK={SqlLiteral(backupPath)} WITH COPY_ONLY, INIT, CHECKSUM; RESTORE VERIFYONLY FROM DISK={SqlLiteral(backupPath)} WITH CHECKSUM;";
+                await backup.ExecuteNonQueryAsync();
+            }
+
+            string? dataLogical = null;
+            string? logLogical = null;
+            await using (var files = admin.CreateCommand())
+            {
+                files.CommandText = $"RESTORE FILELISTONLY FROM DISK={SqlLiteral(backupPath)};";
+                await using var reader = await files.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var logical = reader.GetString(reader.GetOrdinal("LogicalName"));
+                    var type = reader.GetString(reader.GetOrdinal("Type"));
+                    if (type == "D") dataLogical ??= logical;
+                    if (type == "L") logLogical ??= logical;
+                }
+            }
+            Assert.False(string.IsNullOrWhiteSpace(dataLogical));
+            Assert.False(string.IsNullOrWhiteSpace(logLogical));
+
+            await using (var restore = admin.CreateCommand())
+            {
+                restore.CommandTimeout = 120;
+                restore.CommandText = $"RESTORE DATABASE {SqlIdentifier(restoredDatabase)} FROM DISK={SqlLiteral(backupPath)} WITH MOVE {SqlLiteral(dataLogical!)} TO {SqlLiteral(dataPath)}, MOVE {SqlLiteral(logLogical!)} TO {SqlLiteral(logPath)}, RECOVERY, CHECKSUM;";
+                await restore.ExecuteNonQueryAsync();
+            }
+
+            var restoredBuilder = new SqlConnectionStringBuilder(_connectionString!)
+            {
+                InitialCatalog = restoredDatabase
+            };
+            await using var restored = new ApplicationDbContext(
+                new DbContextOptionsBuilder<ApplicationDbContext>()
+                    .UseSqlServer(restoredBuilder.ConnectionString)
+                    .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
+                    .Options);
+            Assert.True(await restored.Employees.AnyAsync(employee => employee.Id == _employeeA));
+            await SqlSchemaMigrator.ApplyAsync(restored);
+            Assert.True(await RawIntAsync(restored, "SELECT COUNT(*) FROM __SchemaMigrations;") > 0);
+        }
+        finally
+        {
+            SqlConnection.ClearAllPools();
+            try
+            {
+                await using var admin = new SqlConnection(_adminConnection!);
+                await admin.OpenAsync();
+                await using var drop = admin.CreateCommand();
+                drop.CommandText = $"IF DB_ID({SqlLiteral(restoredDatabase)}) IS NOT NULL BEGIN ALTER DATABASE {SqlIdentifier(restoredDatabase)} SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE {SqlIdentifier(restoredDatabase)}; END";
+                await drop.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                foreach (var path in new[] { backupPath, dataPath, logPath })
+                    if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    [SkippableFact]
+    public async Task Saved_reports_reject_cross_company_reads_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+
+        await PeopleReportsStore.EnsureSchemaAsync(db);
+        await PeopleReportsStore.CreateAsync(
+            db, scopeA, _companyA, "Company A custom report", null, "employees", "no,name", "owner-a", false,
+            groupColumnKey: "department", sortColumnKey: "name", sortDescending: true);
+        await PeopleReportsStore.CreateAsync(
+            db, scopeB, _companyB, "Company B custom report", null, "employees", "no,name", "owner-b", false);
+
+        var aRows = await PeopleReportsStore.LoadAllAsync(db, scopeA);
+        Assert.Contains(aRows, report => report.Name == "Company A custom report");
+        var configured = Assert.Single(aRows, report => report.Name == "Company A custom report");
+        Assert.Equal("department", configured.GroupColumnKey);
+        Assert.Equal("name", configured.SortColumnKey);
+        Assert.True(configured.SortDescending);
+        Assert.DoesNotContain(aRows, report => report.Name == "Company B custom report");
+
+        var bId = await ScalarAsync(db,
+            $"SELECT Id FROM PeopleReports WHERE CompanyId={_companyB} AND Name=N'Company B custom report';");
+        Assert.Null(await PeopleReportsStore.GetAsync(db, scopeA, bId));
+        await PeopleReportsStore.DeleteOwnAsync(db, scopeA, bId, "owner-b");
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PeopleReports WHERE Id={bId} AND IsDeleted=0;"));
+    }
+
+    [SkippableFact]
+    public async Task Report_schedules_are_tenant_scoped_and_keep_delivery_idempotency()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await PeopleReportsStore.EnsureSchemaAsync(db);
+        await PeopleReportsStore.CreateAsync(db, scopeA, _companyA, "Scheduled A", null,
+            "employees", "no,name", "schedule-owner", false);
+        var reportId = await ScalarAsync(db,
+            $"SELECT Id FROM PeopleReports WHERE CompanyId={_companyA} AND Name=N'Scheduled A';");
+        var user = new SystemUser
+        {
+            FullName = "Schedule Owner", UserName = "schedule-owner", Email = "owner-a@example.com",
+            EmployeeId = _employeeA, Role = SmartAttendance.Domain.Enums.SystemUserRole.HR, IsActive = true
+        };
+        db.SystemUsers.Add(user);
+        await db.SaveChangesAsync();
+
+        await ReportScheduleStore.CreateAsync(db, scopeA, _companyA, reportId, user.Id,
+            user.UserName, user.Email!, "Daily", 6, null);
+        var schedule = Assert.Single(await ReportScheduleStore.ListAsync(db, scopeA, user.UserName));
+        Assert.Empty(await ReportScheduleStore.ListAsync(db, scopeB, user.UserName));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => ReportScheduleStore.CreateAsync(
+            db, scopeB, _companyA, reportId, user.Id, user.UserName, user.Email!, "Daily", 6, null));
+
+        var occurrence = new DateTime(2026, 8, 27, 6, 0, 0, DateTimeKind.Utc);
+        await ReportScheduleStore.RecordDeliveryAsync(db, schedule.Id, occurrence, user.Email!);
+        await ReportScheduleStore.RecordDeliveryAsync(db, schedule.Id, occurrence, user.Email!);
+        Assert.Equal(1, await ReportScheduleStore.DeliveryExistsAsync(db, schedule.Id, occurrence, user.Email!));
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM ReportScheduleDeliveries WHERE ScheduleId={schedule.Id};"));
+    }
+
+    [SkippableFact]
+    public async Task Dashboard_layouts_and_mutations_are_company_isolated()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        var aRows = await DashboardWidgetStore.ListAsync(db, scopeA, _companyA);
+        var bRows = await DashboardWidgetStore.ListAsync(db, scopeB, _companyB);
+        Assert.NotEmpty(aRows); Assert.NotEmpty(bRows);
+        Assert.All(aRows, row => Assert.Equal(_companyA, row.CompanyId));
+        Assert.All(bRows, row => Assert.Equal(_companyB, row.CompanyId));
+
+        await DashboardWidgetStore.AddAsync(db, scopeA, new DashboardWidgetStore.Widget
+        { CompanyId = _companyA, Title = "Only A", Metric = "ActiveEmployees", ChartKind = "Number" });
+        var customA = Assert.Single(await DashboardWidgetStore.ListAsync(db, scopeA, _companyA), row => row.Title == "Only A");
+        await DashboardWidgetStore.DeleteAsync(db, scopeB, _companyB, customA.Id);
+        Assert.Contains(await DashboardWidgetStore.ListAsync(db, scopeA, _companyA), row => row.Id == customA.Id);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            DashboardWidgetStore.DeleteAsync(db, scopeB, _companyA, customA.Id));
+    }
+
+    [SkippableFact]
+    public async Task Approval_templates_reject_cross_company_read_update_delete()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        var template = new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="LeaveRequest",Name="Company A leave",IsActive=true,
+            Steps=new() { new() { ApproverType="Role",RoleName="HR Manager",DisplayName="HR Manager" } }
+        };
+        var id = await ApprovalTemplateStore.SaveAsync(db,scopeA,template);
+        Assert.Single(await ApprovalTemplateStore.ListAsync(db,_companyA,"LeaveRequest"), item=>item.Id==id);
+        Assert.Empty(await ApprovalTemplateStore.ListAsync(db,_companyB,"LeaveRequest"));
+        Assert.Null(await ApprovalTemplateStore.GetAsync(db,scopeB,_companyB,id));
+        template.Id=id; template.Name="Cross-company overwrite";
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(()=>ApprovalTemplateStore.SaveAsync(db,scopeB,template));
+        await ApprovalTemplateStore.DeleteAsync(db,scopeB,_companyB,id);
+        Assert.NotNull(await ApprovalTemplateStore.GetAsync(db,scopeA,_companyA,id));
+    }
+
+    [SkippableFact]
+    public async Task Payroll_profiles_reject_cross_company_reads_updates_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await PayrollConfigStore.EnsureAsync(db);
+
+        var aId = await PayrollConfigStore.SaveTaxProfileAsync(db, scopeA, new PayrollConfigStore.TaxProfile
+        {
+            CompanyId = _companyA, Name = "Company A tax", ExemptionAmount = 10, IsActive = true,
+            Brackets = new() { new() { FromAmount = 0, Rate = 5 } }
+        });
+        var bProfile = new PayrollConfigStore.TaxProfile
+        {
+            CompanyId = _companyB, Name = "Company B tax", ExemptionAmount = 20, IsActive = true,
+            Brackets = new() { new() { FromAmount = 0, Rate = 7 } }
+        };
+        var bId = await PayrollConfigStore.SaveTaxProfileAsync(db, scopeB, bProfile);
+
+        var aRows = await PayrollConfigStore.ListTaxProfilesAsync(db, scopeA, _companyA);
+        Assert.Contains(aRows, profile => profile.Id == aId);
+        Assert.DoesNotContain(aRows, profile => profile.Id == bId);
+
+        bProfile.Id = bId;
+        bProfile.CompanyId = _companyA;
+        bProfile.Name = "Malicious rename";
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            PayrollConfigStore.SaveTaxProfileAsync(db, scopeA, bProfile));
+        Assert.Equal("Company B tax", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Name FROM PayrollTaxProfiles WHERE Id={bId};")));
+
+        await PayrollConfigStore.DeleteTaxProfileAsync(db, scopeA, bId);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PayrollTaxProfiles WHERE Id={bId};"));
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PayrollTaxBrackets WHERE ProfileId={bId};"));
+    }
+
+    [SkippableFact]
+    public async Task Attendance_sources_reject_cross_company_reads_updates_and_deletes()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await AttendanceSourceStore.EnsureAsync(db);
+
+        var sourceA = new AttendanceSourceStore.AttendanceSource
+        {
+            CompanyId = _companyA, Name = "Company A import", ReadType = "Excel", IsActive = true
+        };
+        var sourceB = new AttendanceSourceStore.AttendanceSource
+        {
+            CompanyId = _companyB, Name = "Company B import", ReadType = "Excel", IsActive = true
+        };
+        await AttendanceSourceStore.SaveAsync(db, scopeA, sourceA);
+        await AttendanceSourceStore.SaveAsync(db, scopeB, sourceB);
+
+        var aRows = await AttendanceSourceStore.ListAsync(db, scopeA, _companyA);
+        Assert.Contains(aRows, source => source.Name == "Company A import");
+        Assert.DoesNotContain(aRows, source => source.Name == "Company B import");
+
+        var bId = await ScalarAsync(db,
+            $"SELECT Id FROM AttendanceSources WHERE CompanyId={_companyB} AND Name=N'Company B import';");
+        sourceB.Id = bId;
+        sourceB.CompanyId = _companyA;
+        sourceB.Name = "Malicious rename";
+        await AttendanceSourceStore.SaveAsync(db, scopeA, sourceB);
+        await AttendanceSourceStore.DeleteAsync(db, scopeA, _companyA, bId);
+        Assert.Equal("Company B import", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Name FROM AttendanceSources WHERE Id={bId};")));
+    }
+
+    [SkippableFact]
+    public async Task Webhook_outbox_is_company_scoped_and_idempotent()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+
+        await WebhookStore.SaveSubscriptionAsync(db, scopeA, _companyA, 0, "A ERP",
+            new Uri("https://events-a.example.com/zynora"), "protected-a", "employee.updated", true);
+        await WebhookStore.SaveSubscriptionAsync(db, scopeB, _companyB, 0, "B ERP",
+            new Uri("https://events-b.example.com/zynora"), "protected-b", "employee.updated", true);
+
+        var aRows = await WebhookStore.ListSubscriptionsAsync(db, scopeA, _companyA);
+        Assert.Single(aRows, subscription => subscription.Name == "A ERP");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            WebhookStore.ListSubscriptionsAsync(db, scopeA, _companyB));
+
+        await WebhookStore.EnqueueAsync(db, _companyA, "employee.updated",
+            new { employeeId = _employeeA }, "employee.updated:test-1");
+        await WebhookStore.EnqueueAsync(db, _companyA, "employee.updated",
+            new { employeeId = _employeeA }, "employee.updated:test-1");
+        Assert.Equal(1, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM WebhookDeliveries WHERE CompanyId={_companyA} AND IdempotencyKey=N'employee.updated:test-1';"));
+        Assert.Equal(0, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM WebhookDeliveries WHERE CompanyId={_companyB} AND IdempotencyKey=N'employee.updated:test-1';"));
+
+        var claimed = await WebhookStore.ClaimAsync(db, 10, 8, CancellationToken.None);
+        var delivery = Assert.Single(claimed, item => item.CompanyId == _companyA);
+        Assert.Equal(1, delivery.AttemptCount);
+        await WebhookStore.MarkSentAsync(db, delivery.Id, 204);
+        Assert.Equal("Sent", Assert.Single(await RawStringsAsync(
+            db, $"SELECT Status FROM WebhookDeliveries WHERE Id={delivery.Id};")));
+    }
+
+    [SkippableFact]
+    public async Task Device_connector_key_inbox_processor_and_dead_letter_are_tenant_safe()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        var token = await IntegrationApiKeyStore.IssueAsync(
+            db, scopeA, _companyA, "SQL device A", "attendance.write");
+        var identity = await IntegrationApiKeyStore.ValidateAsync(db, token, "attendance.write");
+        Assert.NotNull(identity);
+        Assert.Equal(_companyA, identity!.CompanyId);
+        Assert.Null(await IntegrationApiKeyStore.ValidateAsync(db, token, "payroll.write"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            IntegrationApiKeyStore.ListAsync(db, scopeB, _companyA));
+
+        var employeeNo = Assert.Single(await RawStringsAsync(
+            db, $"SELECT EmployeeNo FROM Employees WHERE Id={_employeeA};"));
+        var punchAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var batch = new[]
+        {
+            new DevicePunchInboxStore.Punch("sql-device-a-1", employeeNo, punchAt, "In", "gate-a")
+        };
+        var first = await DevicePunchInboxStore.IngestAsync(db, identity, "sql-gateway-a", batch);
+        var duplicate = await DevicePunchInboxStore.IngestAsync(db, identity, "sql-gateway-a", batch);
+        Assert.Equal(1, first.Accepted);
+        Assert.Equal(1, duplicate.Duplicate);
+        Assert.Equal(1, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM DevicePunchInbox WHERE CompanyId={_companyA} AND ExternalId=N'sql-device-a-1';"));
+
+        var processed = await DevicePunchProcessorService.ProcessBatchAsync(db, CancellationToken.None);
+        Assert.Equal(1, processed.Processed);
+        Assert.Equal(1, await RawIntAsync(db, $"""
+SELECT COUNT(*) FROM AttendanceRecords r
+INNER JOIN Employees e ON e.Id=r.EmployeeId
+WHERE e.CompanyId={_companyA} AND r.Notes LIKE N'%sql-device-a-1%';
+"""));
+
+        await DevicePunchInboxStore.IngestAsync(db, identity, "sql-gateway-a",
+            new[] { new DevicePunchInboxStore.Punch("sql-device-missing", "NO-SUCH-EMPLOYEE", punchAt, "Out", "gate-a") });
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await ExecuteAsync(db, """
+UPDATE DevicePunchInbox SET NextAttemptAt=DATEADD(minute,-1,SYSUTCDATETIME())
+WHERE ExternalId=N'sql-device-missing';
+""");
+            await DevicePunchProcessorService.ProcessBatchAsync(db, CancellationToken.None);
+        }
+        Assert.Equal("DeadLetter", Assert.Single(await RawStringsAsync(db,
+            "SELECT Status FROM DevicePunchInbox WHERE ExternalId=N'sql-device-missing';")));
+    }
+
+    [SkippableFact]
+    public async Task Accounting_mappings_are_isolated_by_company()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await AccountingMappingStore.SaveAsync(
+            db, scopeA, _companyA, AccountingJournalAdapter.PayrollExpense, "A-5100", "A payroll");
+        await AccountingMappingStore.SaveAsync(
+            db, scopeB, _companyB, AccountingJournalAdapter.PayrollExpense, "B-5100", "B payroll");
+
+        var aRows = await AccountingMappingStore.ListAsync(db, scopeA, _companyA);
+        Assert.Single(aRows, mapping => mapping.AccountCode == "A-5100");
+        Assert.DoesNotContain(aRows, mapping => mapping.AccountCode == "B-5100");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            AccountingMappingStore.ListAsync(db, scopeA, _companyB));
+    }
+
+    [SkippableFact]
+    public async Task Payroll_settings_are_company_specific_with_legacy_fallback()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        const string key = "Payroll.Acceptance.Isolation";
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetAsync(db, key, "legacy");
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetCompanyAsync(db, _companyA, key, "A");
+        await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.SetCompanyAsync(db, _companyB, key, "B");
+
+        Assert.Equal("A", await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetCompanyAsync(db, _companyA, key));
+        Assert.Equal("B", await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetCompanyAsync(db, _companyB, key));
+        Assert.Equal("legacy", await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.GetCompanyAsync(db, 999_999, key));
+    }
+
+    [SkippableFact]
     public async Task Allowance_identity_audit_is_unambiguous_and_fk_backed()
     {
         RequireSql();
         await using var db = NewContext();
-        var salaryItemId = await ScalarAsync(db, """
-INSERT INTO SalaryItems (Name, ItemType, ValueKind, DefaultValue, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, CreatedAt)
-VALUES (N'Housing', N'Income', N'PerEmployee', 0, 0, 1, 1, 1, 1, 0, 0, 1, 10, SYSUTCDATETIME());
+        var salaryItemId = await ScalarAsync(db, $"""
+INSERT INTO SalaryItems (CompanyId, Name, ItemType, ValueKind, DefaultValue, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, CreatedAt)
+VALUES ({_companyA}, N'Housing', N'Income', N'PerEmployee', 0, 0, 1, 1, 1, 1, 0, 0, 1, 10, SYSUTCDATETIME());
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """);
         await ExecuteAsync(db, $"""
@@ -264,10 +733,665 @@ VALUES ({_employeeA}, {salaryItemId}, N'Housing', 1600000, '2095-01-01', 0, SYSU
         Assert.Equal(1, await RawIntAsync(db, "SELECT COUNT(*) FROM sys.foreign_keys WHERE name='FK_EmployeeAllowances_SalaryItems_SalaryItemId';"));
     }
 
+    [SkippableFact]
+    public async Task Approval_return_and_resubmit_are_tenant_safe_and_keep_the_original_snapshot()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var requestId = await ScalarAsync(db, $"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,FromDate,ToDate,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'إجازة','2099-05-01','2099-05-02',N'السبب الأصلي','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db, requestId, "إجازة", _employeeA);
+        var original = Assert.IsType<ApprovalWorkflowEngine.FlowState>(
+            await ApprovalWorkflowEngine.GetFlowAsync(db, requestId));
+        var originalTemplate = original.TemplateName;
+        var originalSteps = original.Steps.Select(x => (x.StepOrder, x.ApproverType, x.RoleName, x.UserName, x.DisplayName)).ToArray();
+
+        var missingNote = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyA }), requestId, "hr-a", " ", new[] { "HR Manager" }, null);
+        Assert.False(missingNote.Ok);
+        var wrongTenant = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyB }), requestId, "hr-b", "fix", new[] { "HR Manager" }, null);
+        Assert.False(wrongTenant.Ok);
+        var selfReturn = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyA }), requestId, "employee-a", "fix", new[] { "Admin" }, _employeeA);
+        Assert.False(selfReturn.Ok);
+
+        var returned = await ApprovalWorkflowEngine.ReturnForRevisionAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyA }), requestId, "hr-a", "أكمل التفاصيل", new[] { "HR Manager" }, null);
+        Assert.True(returned.Ok, returned.Message);
+        Assert.Equal("Returned", await ScalarObjectAsync(db, $"SELECT Status FROM SelfServiceRequests WHERE Id={requestId};"));
+
+        var wrongOwner = await ApprovalWorkflowEngine.ResubmitReturnedAsync(
+            db, requestId, _employeeB, "تعديل غير مصرح", new DateTime(2099, 5, 3), new DateTime(2099, 5, 4));
+        Assert.False(wrongOwner.Ok);
+        var resubmitted = await ApprovalWorkflowEngine.ResubmitReturnedAsync(
+            db, requestId, _employeeA, "السبب المعدل", new DateTime(2099, 5, 3), new DateTime(2099, 5, 4));
+        Assert.True(resubmitted.Ok, resubmitted.Message);
+
+        var current = Assert.IsType<ApprovalWorkflowEngine.FlowState>(
+            await ApprovalWorkflowEngine.GetFlowAsync(db, requestId));
+        Assert.Equal(originalTemplate, current.TemplateName);
+        Assert.Equal(originalSteps, current.Steps.Select(x => (x.StepOrder, x.ApproverType, x.RoleName, x.UserName, x.DisplayName)).ToArray());
+        Assert.NotNull(current.Current);
+        Assert.Equal("Pending", await ScalarObjectAsync(db, $"SELECT Status FROM SelfServiceRequests WHERE Id={requestId};"));
+        Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalHistories WHERE RequestId={requestId} AND Action IN ('Returned','Resubmitted');"));
+    }
+
+    [SkippableFact]
+    public async Task Approval_temporary_delegation_is_time_tenant_and_revocation_safe()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.SingleAsync(x=>x.Id==_employeeA);
+        var manager=new Employee{EmployeeNo="DG-M-"+Guid.NewGuid().ToString("N")[..8],FullName="Delegating Manager",CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,HireDate=new DateOnly(2090,1,1),IsActive=true};
+        var substitute=new Employee{EmployeeNo="DG-S-"+Guid.NewGuid().ToString("N")[..8],FullName="Temporary Delegate",CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,HireDate=new DateOnly(2090,1,1),IsActive=true};
+        db.AddRange(manager,substitute); await db.SaveChangesAsync();
+        employee.DirectManagerId=manager.Id;
+        db.SystemUsers.AddRange(
+            new SystemUser{FullName=manager.FullName,UserName="manager-a-"+manager.Id,Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,IsActive=true,EmployeeId=manager.Id},
+            new SystemUser{FullName=substitute.FullName,UserName="delegate-a-"+substitute.Id,Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,IsActive=true,EmployeeId=substitute.Id});
+        await db.SaveChangesAsync();
+        var managerUser="manager-a-"+manager.Id; var delegateUser="delegate-a-"+substitute.Id;
+        var scopeA=CompanyScope.ForCompanies(new[]{_companyA});
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(()=>ApprovalDelegationStore.CreateAsync(
+            db,CompanyScope.ForCompanies(new[]{_companyB}),_companyA,managerUser,delegateUser,DateTime.UtcNow.AddMinutes(-1),DateTime.UtcNow.AddDays(2),"sql-test"));
+        var delegation=await ApprovalDelegationStore.CreateAsync(db,scopeA,_companyA,managerUser,delegateUser,
+            DateTime.UtcNow.AddMinutes(-1),DateTime.UtcNow.AddDays(2),"sql-test");
+        Assert.True(delegation.Ok,delegation.Message);
+
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'إجازة',N'اختبار التفويض','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,requestId,"إجازة",_employeeA);
+        var approved=await ApprovalWorkflowEngine.ApproveAsync(db,scopeA,requestId,delegateUser,"delegated",Array.Empty<string>(),substitute.Id);
+        Assert.True(approved.Ok,approved.Message);
+        Assert.Equal(delegateUser,await ScalarObjectAsync(db,$"SELECT ActionBy FROM ApprovalRequestSteps WHERE RequestId={requestId} AND StepOrder=1;"));
+        Assert.Equal(managerUser,await ScalarObjectAsync(db,$"SELECT DelegatedFrom FROM ApprovalRequestSteps WHERE RequestId={requestId} AND StepOrder=1;"));
+        Assert.Equal(managerUser,await ScalarObjectAsync(db,$"SELECT TOP(1) DelegatedFrom FROM ApprovalHistories WHERE RequestId={requestId} ORDER BY Id DESC;"));
+
+        Assert.True(await ApprovalDelegationStore.RevokeAsync(db,scopeA,_companyA,delegation.Id,"sql-test"));
+        var secondId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'إجازة',N'بعد الإلغاء','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,secondId,"إجازة",_employeeA);
+        var denied=await ApprovalWorkflowEngine.ApproveAsync(db,scopeA,secondId,delegateUser,null,Array.Empty<string>(),substitute.Id);
+        Assert.False(denied.Ok);
+    }
+
+    [SkippableFact]
+    public async Task Approval_parallel_stage_waits_for_every_actor_then_advances_once()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.AsNoTracking().SingleAsync(x=>x.Id==_employeeA);
+        var actors=Enumerable.Range(1,3).Select(index=>new Employee
+        {
+            EmployeeNo=$"PAR-{index}-"+Guid.NewGuid().ToString("N")[..6],FullName=$"Parallel Actor {index}",
+            CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,
+            HireDate=new DateOnly(2090,1,1),IsActive=true
+        }).ToArray();
+        db.AddRange(actors); await db.SaveChangesAsync();
+        var users=actors.Select((actor,index)=>new SystemUser
+        {
+            FullName=actor.FullName,UserName=$"parallel-{index+1}-{actor.Id}",Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,
+            IsActive=true,EmployeeId=actor.Id
+        }).ToArray();
+        db.SystemUsers.AddRange(users); await db.SaveChangesAsync();
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="CustomRequest",Name="SQL parallel "+Guid.NewGuid().ToString("N"),IsActive=true,
+            Steps=
+            {
+                new(){StageOrder=1,ApproverType="User",UserName=users[0].UserName,DisplayName="Parallel A"},
+                new(){StageOrder=1,ApproverType="User",UserName=users[1].UserName,DisplayName="Parallel B"},
+                new(){StageOrder=2,ApproverType="User",UserName=users[2].UserName,DisplayName="Final C"}
+            }
+        });
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'CustomRequest',N'مرحلة متوازية','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,requestId,"CustomRequest",_employeeA);
+        var initial=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        Assert.Equal(2,initial.CurrentSteps.Count);
+        Assert.All(initial.CurrentSteps,step=>Assert.Equal(1,step.StageOrder));
+
+        var first=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[0].UserName,null,Array.Empty<string>(),actors[0].Id);
+        Assert.True(first.Ok,first.Message); Assert.False(first.FinalApproved);
+        var earlyFinal=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[2].UserName,null,Array.Empty<string>(),actors[2].Id);
+        Assert.False(earlyFinal.Ok);
+        var second=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[1].UserName,null,Array.Empty<string>(),actors[1].Id);
+        Assert.True(second.Ok,second.Message); Assert.False(second.FinalApproved);
+        var advanced=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        Assert.Single(advanced.CurrentSteps); Assert.Equal(2,advanced.CurrentSteps[0].StageOrder);
+        var final=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[2].UserName,null,Array.Empty<string>(),actors[2].Id);
+        Assert.True(final.Ok,final.Message); Assert.True(final.FinalApproved);
+        Assert.Equal("Approved",await ScalarObjectAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={requestId};"));
+
+        var raceId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'CustomRequest',N'اختبار التزامن','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,raceId,"CustomRequest",_employeeA);
+        var decisions=await Task.WhenAll(Enumerable.Range(0,2).Select(async index=>
+        {
+            await using var concurrentDb=NewContext();
+            return await ApprovalWorkflowEngine.ApproveAsync(concurrentDb,CompanyScope.ForCompanies(new[]{_companyA}),
+                raceId,users[index].UserName,null,Array.Empty<string>(),actors[index].Id);
+        }));
+        Assert.All(decisions,decision=>Assert.True(decision.Ok,decision.Message));
+        await using var verificationDb=NewContext();
+        var raceFlow=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(verificationDb,raceId));
+        Assert.Single(raceFlow.CurrentSteps); Assert.Equal(2,raceFlow.CurrentSteps[0].StageOrder);
+        Assert.Equal(2,await RawIntAsync(verificationDb,$"SELECT COUNT(*) FROM ApprovalRequestSteps WHERE RequestId={raceId} AND StageOrder=1 AND Status='Approved';"));
+    }
+
+    [SkippableFact]
+    public async Task Approval_committee_members_are_tenant_scoped_and_frozen_on_the_request()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var requester = await db.Employees.AsNoTracking().SingleAsync(employee => employee.Id == _employeeA);
+        var actors = Enumerable.Range(1, 2).Select(index => new Employee
+        {
+            EmployeeNo = $"COM-{index}-" + Guid.NewGuid().ToString("N")[..6],
+            FullName = $"Committee Actor {index}", CompanyId = _companyA,
+            BranchId = requester.BranchId, DepartmentId = requester.DepartmentId,
+            HireDate = new DateOnly(2090, 1, 1), IsActive = true
+        }).ToArray();
+        db.AddRange(actors);
+        await db.SaveChangesAsync();
+        var users = actors.Select((actor, index) => new SystemUser
+        {
+            FullName = actor.FullName, UserName = $"committee-{index + 1}-{actor.Id}",
+            Role = SmartAttendance.Domain.Enums.SystemUserRole.Viewer,
+            IsActive = true, EmployeeId = actor.Id
+        }).ToArray();
+        db.SystemUsers.AddRange(users);
+        await db.SaveChangesAsync();
+
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var scopeB = CompanyScope.ForCompanies(new[] { _companyB });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => ApprovalCommitteeStore.SaveGroupAsync(
+            db, scopeB, _companyA, 0, "Cross tenant", null, new[] { users[0].UserName }, "admin-b"));
+
+        var groupId = await ApprovalCommitteeStore.SaveGroupAsync(db, scopeA, _companyA, 0,
+            "SQL committee " + Guid.NewGuid().ToString("N"), "Frozen membership",
+            users.Select(user => user.UserName).ToArray(), "admin-a");
+        await ApprovalTemplateStore.SaveAsync(db, scopeA, new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId = _companyA, RequestType = "CustomRequest", Name = "Committee template",
+            IsActive = true,
+            Steps = { new() { StageOrder = 1, ApproverType = "CommitteeGroup", CommitteeGroupId = groupId, DisplayName = "Internal committee" } }
+        });
+        var requestId = await ScalarAsync(db, $"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy,RequestSource)
+VALUES({_employeeA},N'CustomRequest',N'اختبار لجنة','Pending',N'employee-a',N'SelfService');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var started = await ApprovalWorkflowEngine.StartAsync(db, requestId, "CustomRequest", _employeeA);
+        Assert.True(started.Ok, started.Message);
+        Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId={requestId};"));
+
+        await ApprovalCommitteeStore.SaveGroupAsync(db, scopeA, _companyA, groupId,
+            "SQL committee edited " + Guid.NewGuid().ToString("N"), "Only second member remains",
+            new[] { users[1].UserName }, "admin-a");
+        Assert.Equal(2, await RawIntAsync(db, $"SELECT COUNT(*) FROM ApprovalRequestStepMembers m INNER JOIN ApprovalRequestSteps s ON s.Id=m.StepId WHERE s.RequestId={requestId};"));
+
+        var approved = await ApprovalWorkflowEngine.ApproveAsync(db, scopeA, requestId,
+            users[0].UserName, "frozen member decision", Array.Empty<string>(), actors[0].Id);
+        Assert.True(approved.Ok, approved.Message);
+        Assert.True(approved.FinalApproved);
+        Assert.Equal("SelfService", await ScalarStringAsync(db, $"SELECT RequestSource FROM SelfServiceRequests WHERE Id={requestId};"));
+    }
+
+    [SkippableFact]
+    public async Task Approval_sla_reminds_once_then_grants_the_configured_alternate()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.AsNoTracking().SingleAsync(x=>x.Id==_employeeA);
+        var approvers=Enumerable.Range(1,2).Select(index=>new Employee
+        {
+            EmployeeNo=$"SLA-{index}-"+Guid.NewGuid().ToString("N")[..6],FullName=$"SLA User {index}",
+            CompanyId=_companyA,BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,
+            HireDate=new DateOnly(2090,1,1),IsActive=true
+        }).ToArray();
+        db.AddRange(approvers); await db.SaveChangesAsync();
+        var users=approvers.Select((approver,index)=>new SystemUser
+        {
+            FullName=approver.FullName,UserName=$"sla-{index+1}-{approver.Id}",Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,
+            IsActive=true,EmployeeId=approver.Id
+        }).ToArray();
+        db.SystemUsers.AddRange(users); await db.SaveChangesAsync();
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="DocumentRequest",Name="SQL SLA "+Guid.NewGuid().ToString("N"),IsActive=true,
+            ReminderHours=1,EscalationDays=1,EscalationTo="HR Manager",EscalationAlternateUser=users[1].UserName,
+            Steps={new(){StageOrder=1,ApproverType="User",UserName=users[0].UserName,DisplayName="Document owner"}}
+        });
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'DocumentRequest',N'اختبار SLA','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await ApprovalWorkflowEngine.StartAsync(db,requestId,"DocumentRequest",_employeeA);
+        await ExecuteAsync(db,$"UPDATE ApprovalRequestSteps SET CurrentSince=DATEADD(day,-2,SYSUTCDATETIME()) WHERE RequestId={requestId};");
+        var processed=await ApprovalWorkflowEngine.ProcessSlaAsync(db);
+        Assert.True(processed.Reminded>=1); Assert.True(processed.Escalated>=1);
+        var secondPass=await ApprovalWorkflowEngine.ProcessSlaAsync(db);
+        Assert.Equal(0,secondPass.Reminded); Assert.Equal(0,secondPass.Escalated);
+        var flow=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        var step=Assert.Single(flow.CurrentSteps);
+        Assert.NotNull(step.ReminderSentAt); Assert.NotNull(step.EscalatedAt); Assert.Equal(users[1].UserName,step.EscalatedToUser);
+        var alternateDecision=await ApprovalWorkflowEngine.ApproveAsync(db,scope,requestId,users[1].UserName,"alternate",Array.Empty<string>(),approvers[1].Id);
+        Assert.True(alternateDecision.Ok,alternateDecision.Message); Assert.True(alternateDecision.FinalApproved);
+    }
+
+    [SkippableFact]
+    public async Task Approval_template_conditions_resolve_by_amount_and_changed_field()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        var amountName="High amount "+Guid.NewGuid().ToString("N");
+        var fallbackName="Amount fallback "+Guid.NewGuid().ToString("N");
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Loan",Name=amountName,IsActive=true,HasConditions=true,CondMinAmount=1000,
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="High value committee"}}
+        });
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Loan",Name=fallbackName,IsActive=true,
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Normal committee"}}
+        });
+        var highRequest=await FinancialRequestStore.SubmitAsync(db,new FinancialRequestStore.Detail
+        {Kind=FinancialRequestStore.Loan,Amount=1500,InstallmentCount=3,StartYear=2099,StartMonth=7,Reason="high"},_employeeA,"employee-a","SelfService");
+        var lowRequest=await FinancialRequestStore.SubmitAsync(db,new FinancialRequestStore.Detail
+        {Kind=FinancialRequestStore.Loan,Amount=500,InstallmentCount=1,StartYear=2099,StartMonth=7,Reason="low"},_employeeA,"employee-a","SelfService");
+        Assert.Equal(amountName,(await ApprovalWorkflowEngine.GetFlowAsync(db,highRequest))!.TemplateName);
+        Assert.Equal(fallbackName,(await ApprovalWorkflowEngine.GetFlowAsync(db,lowRequest))!.TemplateName);
+
+        var fieldName="Email field "+Guid.NewGuid().ToString("N");
+        var fieldFallback="Field fallback "+Guid.NewGuid().ToString("N");
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="InfoChange",Name=fieldName,IsActive=true,HasConditions=true,CondChangedFieldKey="Email",
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Sensitive field committee"}}
+        });
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="InfoChange",Name=fieldFallback,IsActive=true,
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="Normal field committee"}}
+        });
+        var fieldRequest=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'تعديل البيانات',N'بريد جديد','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        await DataChangeRequestStore.SaveFieldsAsync(db,fieldRequest,new[]{new DataChangeRequestStore.ProposedField{Key="Email",OldValue="old@example.test",NewValue="new@example.test"}});
+        await ApprovalWorkflowEngine.StartAsync(db,fieldRequest,DataChangeRequestStore.RequestTypeLabel,_employeeA);
+        Assert.Equal(fieldName,(await ApprovalWorkflowEngine.GetFlowAsync(db,fieldRequest))!.TemplateName);
+    }
+
+    [SkippableFact]
+    public async Task Approval_visible_policies_enforce_attachment_cancellation_watchers_and_unknown_committee()
+    {
+        RequireSql();
+        await using var db=NewContext();
+        await HrmsDatabase.EnsureCreatedAsync(db);
+        var employee=await db.Employees.AsNoTracking().SingleAsync(x=>x.Id==_employeeA);
+        var watcherEmployee=new Employee
+        {
+            EmployeeNo="WATCH-"+Guid.NewGuid().ToString("N")[..8],FullName="Approval Watcher",CompanyId=_companyA,
+            BranchId=employee.BranchId,DepartmentId=employee.DepartmentId,HireDate=new DateOnly(2090,1,1),IsActive=true
+        };
+        db.Employees.Add(watcherEmployee); await db.SaveChangesAsync();
+        var watcher=new SystemUser
+        {
+            FullName=watcherEmployee.FullName,UserName="watch-"+watcherEmployee.Id,
+            Role=SmartAttendance.Domain.Enums.SystemUserRole.Viewer,IsActive=true,EmployeeId=watcherEmployee.Id
+        };
+        db.SystemUsers.Add(watcher); await db.SaveChangesAsync();
+        var scope=CompanyScope.ForCompanies(new[]{_companyA});
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Resignation",Name="Policy SQL "+Guid.NewGuid().ToString("N"),IsActive=true,
+            AttachmentRequiredOnRequest=true,CancelLimitDays=1,NotifyJson="{\"Employee\":[\"Submit\",\"Cancel\"],\"Committee\":[\"Submit\"]}",
+            Watchers={new(){UserName=watcher.UserName}},
+            Steps={new(){StageOrder=1,ApproverType="Role",RoleName="HR Manager",DisplayName="HR committee"}}
+        });
+        var requestId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'Resignation',N'policy check','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var missing=await ApprovalWorkflowEngine.StartAsync(db,requestId,"Resignation",_employeeA);
+        Assert.False(missing.Ok); Assert.Contains("مرفق",missing.Message);
+        Assert.Equal("Draft",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={requestId}"));
+
+        await ExecuteAsync(db,$"UPDATE SelfServiceRequests SET AttachmentPath=N'protected/request/{requestId}',Status='Pending' WHERE Id={requestId};");
+        var started=await ApprovalWorkflowEngine.StartAsync(db,requestId,"Resignation",_employeeA);
+        Assert.True(started.Ok,started.Message);
+        var flow=Assert.IsType<ApprovalWorkflowEngine.FlowState>(await ApprovalWorkflowEngine.GetFlowAsync(db,requestId));
+        Assert.True(flow.AttachmentRequiredOnRequest); Assert.Equal(1,flow.CancelLimitDays);
+        Assert.Equal(1,await ScalarAsync(db,$"SELECT COUNT(1) FROM ApprovalRequestWatchers WHERE RequestId={requestId} AND UserName=N'{watcher.UserName}'"));
+        var wrongOwner=await ApprovalWorkflowEngine.CancelByRequesterAsync(db,requestId,_employeeB,"employee-b");
+        Assert.False(wrongOwner.Ok);
+        var cancelled=await ApprovalWorkflowEngine.CancelByRequesterAsync(db,requestId,_employeeA,"employee-a","changed mind");
+        Assert.True(cancelled.Ok,cancelled.Message);
+        Assert.Equal("Cancelled",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={requestId}"));
+        Assert.True(await ScalarAsync(db,$"SELECT COUNT(1) FROM SystemNotifications WHERE TargetUser=N'{watcher.UserName}' AND Message LIKE N'%{requestId}%'")>=2);
+
+        var expiredId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy,CreatedAt,AttachmentPath)
+VALUES({_employeeA},N'Resignation',N'expired cancel','Pending',N'employee-a',DATEADD(day,-2,SYSUTCDATETIME()),N'protected/request/expired');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        Assert.True((await ApprovalWorkflowEngine.StartAsync(db,expiredId,"Resignation",_employeeA)).Ok);
+        Assert.False((await ApprovalWorkflowEngine.CancelByRequesterAsync(db,expiredId,_employeeA,"employee-a")).Ok);
+
+        await ApprovalTemplateStore.SaveAsync(db,scope,new ApprovalTemplateStore.TemplateRow
+        {
+            CompanyId=_companyA,RequestType="Transfer",Name="Unknown committee "+Guid.NewGuid().ToString("N"),IsActive=true,
+            AutoRejectUnknownCommittee=true,
+            Steps={new(){StageOrder=1,ApproverType="DirectManager",DisplayName="Missing direct manager"}}
+        });
+        await ExecuteAsync(db,$"UPDATE Employees SET DirectManagerId=NULL WHERE Id={_employeeA};");
+        var unknownId=await ScalarAsync(db,$"""
+INSERT INTO SelfServiceRequests(EmployeeId,RequestType,Reason,Status,CreatedBy)
+VALUES({_employeeA},N'Transfer',N'unknown committee','Pending',N'employee-a');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var autoRejected=await ApprovalWorkflowEngine.StartAsync(db,unknownId,"Transfer",_employeeA);
+        Assert.False(autoRejected.Ok); Assert.True(autoRejected.Rejected);
+        Assert.Equal("Rejected",await ScalarStringAsync(db,$"SELECT Status FROM SelfServiceRequests WHERE Id={unknownId}"));
+    }
+
+    [SkippableFact]
+    public async Task Offcycle_and_reversal_runs_are_separate_scoped_settlements_without_base_salary()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
+        await PayrollTransactionStore.EnsureAsync(db);
+
+        var txA = await ScalarAsync(db, $"""
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,Status,IsLocked)
+VALUES({_employeeA},2089,2,N'Off-cycle bonus',125,N'Income',N'OutSalary',0,N'Approved',0);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var txB = await ScalarAsync(db, $"""
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,Status,IsLocked)
+VALUES({_employeeB},2089,2,N'Other tenant bonus',900,N'Income',N'OutSalary',0,N'Approved',0);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+
+        var created = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 2, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeOffCycle, "Approved exceptional payment", null);
+        Assert.True(created.Ok, created.Message);
+        var calculated = await PayrollRunStore.CalculateAsync(db, created.RunId, "payroll-a");
+        Assert.True(calculated.Ok, calculated.Message);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT COUNT(*) FROM PayrollRunLines WHERE RunId={created.RunId};"));
+        Assert.Equal(0m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT BasicSalary FROM PayrollRunLines WHERE RunId={created.RunId};")));
+        Assert.Equal(125m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={created.RunId};")));
+
+        var locked = await PayrollRunStore.LockAsync(db, created.RunId);
+        Assert.True(locked.Item1, locked.Item2);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={txA};"));
+        Assert.Equal(0, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={txB};"));
+
+        var retroTx = await ScalarAsync(db, $"""
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,RetroactiveDate,Status,IsLocked)
+VALUES({_employeeA},2089,2,N'Retroactive correction',75,N'Income',N'InSalary',1,'2089-01-01',N'Approved',0);
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var retro = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 2, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeRetroactive, "Approved prior-period correction", null);
+        Assert.True(retro.Ok, retro.Message);
+        Assert.True((await PayrollRunStore.CalculateAsync(db, retro.RunId, "payroll-a")).Ok);
+        Assert.Equal(75m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={retro.RunId};")));
+        Assert.True((await PayrollRunStore.LockAsync(db, retro.RunId)).Item1);
+        Assert.Equal(1, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={retroTx};"));
+
+        var reversal = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 3, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeReversal, "Reverse duplicate exceptional payment", created.RunId);
+        Assert.True(reversal.Ok, reversal.Message);
+        var reversed = await PayrollRunStore.CalculateAsync(db, reversal.RunId, "payroll-a");
+        Assert.True(reversed.Ok, reversed.Message);
+        Assert.Equal(-125m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={reversal.RunId};")));
+        Assert.Equal(PayrollRunStore.RunTypeReversal, await ScalarStringAsync(db,
+            $"SELECT RunType FROM PayrollRuns WHERE Id={reversal.RunId};"));
+    }
+
+    [SkippableFact]
+    public async Task Locked_attendance_unlock_is_tenant_scoped_reasoned_and_audited()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
+        await MonthAttendanceStore.EnsureAsync(db);
+        await WeekAttendanceStore.EnsureAsync(db);
+
+        var monthA = await ScalarAsync(db, $"""
+INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],Status,LockedAt)
+VALUES({_employeeA},2088,1,N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var monthB = await ScalarAsync(db, $"""
+INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],Status,LockedAt)
+VALUES({_employeeB},2088,1,N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var weekA = await ScalarAsync(db, $"""
+INSERT INTO EmployeeWeekAttendance(EmployeeId,IsoYear,WeekNumber,WeekStart,WeekEnd,Status,LockedAt)
+VALUES({_employeeA},2088,1,'2088-01-05','2088-01-11',N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var weekB = await ScalarAsync(db, $"""
+INSERT INTO EmployeeWeekAttendance(EmployeeId,IsoYear,WeekNumber,WeekStart,WeekEnd,Status,LockedAt)
+VALUES({_employeeB},2088,1,'2088-01-05','2088-01-11',N'Locked',SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+
+        Assert.Equal(0, await MonthAttendanceStore.UnlockAsync(
+            db, scope, new[] { monthA }, "auditor-a", "127.0.0.1", " "));
+        Assert.Equal(1, await MonthAttendanceStore.UnlockAsync(
+            db, scope, new[] { monthA, monthB }, "auditor-a", "127.0.0.1", "Correction approved"));
+        Assert.Equal(1, await WeekAttendanceStore.UnlockAsync(
+            db, scope, new[] { weekA, weekB }, "auditor-a", "127.0.0.1", "Correction approved"));
+
+        Assert.Equal("Approved", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeMonthAttendance WHERE Id={monthA};"));
+        Assert.Equal("Locked", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeMonthAttendance WHERE Id={monthB};"));
+        Assert.Equal("Approved", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeWeekAttendance WHERE Id={weekA};"));
+        Assert.Equal("Locked", await ScalarStringAsync(db, $"SELECT Status FROM EmployeeWeekAttendance WHERE Id={weekB};"));
+        Assert.Equal(2, await RawIntAsync(db, $"""
+SELECT COUNT(*) FROM AuditLogs
+WHERE Action=N'Unlock' AND UserName=N'auditor-a'
+  AND ((EntityName=N'EmployeeMonthAttendance' AND EntityId=N'{monthA}')
+    OR (EntityName=N'EmployeeWeekAttendance' AND EntityId=N'{weekA}'));
+"""));
+        Assert.Equal(0, await RawIntAsync(db, $"""
+SELECT COUNT(*) FROM AuditLogs
+WHERE Action=N'Unlock'
+  AND ((EntityName=N'EmployeeMonthAttendance' AND EntityId=N'{monthB}')
+    OR (EntityName=N'EmployeeWeekAttendance' AND EntityId=N'{weekB}'));
+"""));
+    }
+
+    [SkippableFact]
+    public async Task Payroll_calculation_refuses_unapproved_month_attendance_before_writing_lines()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var scope = CompanyScope.ForCompanies(new[] { _companyA });
+
+        var (created, _, runId) = await PayrollRunStore.CreateRunAsync(
+            db,
+            scope,
+            _companyA,
+            2026,
+            7,
+            PayrollRunScope.ModeAll,
+            Array.Empty<int>());
+        Assert.True(created);
+        Assert.True(runId > 0);
+
+        var (calculated, message) = await PayrollRunStore.CalculateAsync(
+            db, runId, "payroll-operator-a");
+
+        Assert.False(calculated);
+        Assert.Contains("اعتماد حضور شهري", message);
+        Assert.Equal(0, await RawIntAsync(
+            db, $"SELECT COUNT(*) FROM PayrollRunLines WHERE RunId={runId};"));
+        Assert.Equal("Draft", await ScalarStringAsync(
+            db, $"SELECT Status FROM PayrollRuns WHERE Id={runId};"));
+    }
+
+    [SkippableFact]
+    public async Task Custom_form_submission_creates_a_scoped_approval_request_and_freezes_answers()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var template = new FormTemplateStore.Template(
+            900001, "طلب تجهيزات", null, "حاسوب أو هاتف للعمل", FormBuilder.FormTypeRequest,
+            string.Empty, true, false, true);
+        var submissionToken = Guid.NewGuid();
+        var submitted = await FormSubmissionStore.SubmitAsync(
+            db, template, _employeeA,
+            new (int FieldId, string Label, string ControlType, string? Value, int SortOrder)[]
+            {
+                (11, "نوع الجهاز", FormBuilder.ControlSelect, "حاسوب", 1),
+                (12, "المبرر", FormBuilder.ControlTextArea, "متطلبات المشروع", 2)
+            }, "employee-a", submissionToken);
+
+        Assert.True(submitted.RequestId is > 0);
+        Assert.True(submitted.Workflow?.Ok, submitted.Workflow?.Message);
+        Assert.Equal("SelfService", await ScalarStringAsync(db,
+            $"SELECT RequestSource FROM SelfServiceRequests WHERE Id={submitted.RequestId};"));
+        Assert.Equal(submitted.RequestId, Convert.ToInt32(await ScalarObjectAsync(db,
+            $"SELECT RequestId FROM FormSubmissions WHERE Id={submitted.SubmissionId};")));
+
+        var answers = await FormSubmissionStore.LoadAnswersForRequestsAsync(
+            db, new[] { submitted.RequestId!.Value }, CompanyScope.ForCompanies(new[] { _companyA }));
+        Assert.Equal(new[] { "نوع الجهاز", "المبرر" }, answers[submitted.RequestId.Value].Select(answer => answer.FieldLabel));
+        Assert.Empty(await FormSubmissionStore.LoadAnswersForRequestsAsync(
+            db, new[] { submitted.RequestId.Value }, CompanyScope.ForCompanies(new[] { _companyB })));
+        Assert.False(await FormSubmissionStore.ReviewAsync(
+            db, submitted.SubmissionId, true, "bypass", null, CompanyScope.ForCompanies(new[] { _companyA })));
+
+        var retried = await FormSubmissionStore.SubmitAsync(
+            db, template, _employeeA,
+            new (int FieldId, string Label, string ControlType, string? Value, int SortOrder)[]
+            {
+                (11, "نوع الجهاز", FormBuilder.ControlSelect, "حاسوب", 1),
+                (12, "المبرر", FormBuilder.ControlTextArea, "متطلبات المشروع", 2)
+            }, "employee-a", submissionToken);
+        Assert.True(retried.IsDuplicate);
+        Assert.Equal(submitted.SubmissionId, retried.SubmissionId);
+        Assert.Equal(submitted.RequestId, retried.RequestId);
+        Assert.Equal(1, await RawIntAsync(db,
+            $"SELECT COUNT(*) FROM FormSubmissions WHERE ClientRequestToken='{submissionToken}';"));
+    }
+
+    [SkippableFact]
+    public async Task Exchange_rates_are_effective_dated_tenant_scoped_and_resolved_for_payroll()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        await ExecuteAsync(db, $"UPDATE Companies SET CurrencyCode=N'IQD' WHERE Id={_companyA};");
+        var financial = await db.EmployeeFinancialInfos.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(info => info.EmployeeId == _employeeA);
+        if (financial is null)
+        {
+            financial = new EmployeeFinancialInfo { EmployeeId = _employeeA };
+            db.EmployeeFinancialInfos.Add(financial);
+        }
+        financial.Currency = "USD"; financial.BasicSalary = 1000m; financial.IsDeleted = false;
+        await db.SaveChangesAsync();
+        var scopeA = CompanyScope.ForCompanies(new[] { _companyA });
+        var wrong = await CurrencyExchangeRateStore.SaveAsync(db, CompanyScope.ForCompanies(new[] { _companyB }),
+            new CurrencyExchangeRateStore.RateRow
+            {
+                CompanyId = _companyA, FromCurrency = "USD", ToCurrency = "IQD",
+                EffectiveDate = new DateOnly(2099, 1, 1), Rate = 1300m
+            }, "admin-b", null);
+        Assert.False(wrong.Ok);
+
+        var saved = await CurrencyExchangeRateStore.SaveAsync(db, scopeA,
+            new CurrencyExchangeRateStore.RateRow
+            {
+                CompanyId = _companyA, FromCurrency = "USD", ToCurrency = "IQD",
+                EffectiveDate = new DateOnly(2099, 1, 1), Rate = 1300m, Note = "SQL acceptance"
+            }, "admin-a", "127.0.0.1");
+        Assert.True(saved.Ok, saved.Message);
+
+        var runId = await ScalarAsync(db, $"""
+INSERT INTO PayrollRuns(BatchNo,[Year],[Month],Status,CompanyId,CreatedAt)
+VALUES(N'FX-{Guid.NewGuid().ToString("N")[..12]}',2099,2,N'Draft',{_companyA},SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""");
+        var context = await CurrencyExchangeRateStore.BuildPayrollContextAsync(
+            db, _companyA, runId, new DateOnly(2099, 2, 28));
+        Assert.True(context.Ok, context.Message);
+        var rate = context.ByEmployee[_employeeA];
+        Assert.Equal("USD", rate.SourceCurrency);
+        Assert.Equal("IQD", rate.TargetCurrency);
+        Assert.Equal(1_300_000m, rate.Convert(1000m));
+        Assert.Empty(await CurrencyExchangeRateStore.ListAsync(
+            db, CompanyScope.ForCompanies(new[] { _companyB }), _companyA));
+
+        await MonthAttendanceStore.EnsureAsync(db);
+        await ExecuteAsync(db, $"""
+IF EXISTS(SELECT 1 FROM EmployeeMonthAttendance WHERE EmployeeId={_employeeA} AND [Year]=2099 AND [Month]=2)
+ UPDATE EmployeeMonthAttendance SET WorkDays=28,PresentDays=28,AbsentDays=0,Status=N'Approved',ApprovedAt=SYSUTCDATETIME()
+ WHERE EmployeeId={_employeeA} AND [Year]=2099 AND [Month]=2;
+ELSE
+ INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],WorkDays,PresentDays,AbsentDays,Status,ApprovedAt)
+ VALUES({_employeeA},2099,2,28,28,0,N'Approved',SYSUTCDATETIME());
+""");
+        var calculated = await PayrollRunStore.CalculateAsync(db, runId, "fx-payroll-test");
+        Assert.True(calculated.Ok, calculated.Message);
+        Assert.Equal(1_300_000m, Convert.ToDecimal(await ScalarObjectAsync(db,
+            $"SELECT BasicSalary FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};")));
+        Assert.Equal("USD", await ScalarStringAsync(db,
+            $"SELECT SourceCurrency FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};"));
+        Assert.Equal("IQD", await ScalarStringAsync(db,
+            $"SELECT PayrollCurrency FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};"));
+        Assert.Equal(new DateTime(2099, 1, 1), Convert.ToDateTime(await ScalarObjectAsync(db,
+            $"SELECT ExchangeRateDate FROM PayrollRunLines WHERE RunId={runId} AND EmployeeId={_employeeA};")));
+    }
+
     private async Task SeedCompaniesAsync(ApplicationDbContext db)
     {
-        var a = new Company { Name = "SQL Company A", Code = "SQL-A" };
-        var b = new Company { Name = "SQL Company B", Code = "SQL-B" };
+        var a = new Company { Name = "SQL Company A", Code = "SQL-A", CurrencyCode = "IQD" };
+        var b = new Company { Name = "SQL Company B", Code = "SQL-B", CurrencyCode = "IQD" };
         var branchA = new Branch { Name = "A Branch", Code = "SQL-BA", Company = a };
         var branchB = new Branch { Name = "B Branch", Code = "SQL-BB", Company = b };
         var deptA = new Department { Name = "A Department", Code = "SQL-DA", Company = a, Branch = branchA };
@@ -371,6 +1495,9 @@ CREATE TABLE dbo.HrJobPositions
 
     private static async Task<int> ScalarAsync(ApplicationDbContext db, string sql) =>
         Convert.ToInt32(await ScalarObjectAsync(db, sql));
+
+    private static async Task<string> ScalarStringAsync(ApplicationDbContext db, string sql) =>
+        Convert.ToString(await ScalarObjectAsync(db, sql)) ?? string.Empty;
 
     private static async Task<object?> ScalarObjectAsync(ApplicationDbContext db, string sql)
     {

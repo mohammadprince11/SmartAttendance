@@ -1,0 +1,33 @@
+/* Source: Pages/Employees/FinancialInfo.cshtml */
+.fin-page { direction: rtl; display: grid; gap: 16px; max-width: 1200px; margin: 0 auto; }
+    .fin-hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+        padding: 18px 22px; border-radius: 20px; border: 1px solid var(--zy-border);
+        background: var(--zy-surface-raised); color: var(--zy-text); }
+    .fin-hero h1 { margin: 0 0 4px; color: var(--zy-text); font-size: 26px; font-weight: 1000; }
+    .fin-hero p { margin: 0; color: var(--zy-text-muted); font-weight: 800; }
+    .fin-card { padding: 18px 20px; border-radius: 18px; border: 1px solid var(--zy-border);
+        background: var(--zy-surface); color: var(--zy-text); display: grid; gap: 14px; }
+    .fin-card > h2 { margin: 0; color: var(--zy-text); font-size: 16px; font-weight: 1000;
+        padding-bottom: 10px; border-bottom: 1px solid var(--zy-border); }
+    .fin-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .fin-field { display: grid; gap: 6px; min-width: 0; }
+    .fin-field label { color: var(--zy-text); font-size: 12.5px; font-weight: 900; }
+    .fin-field input, .fin-field select { min-height: 42px; border-radius: 12px; padding: 8px 12px;
+        border: 1px solid var(--zy-border); background: var(--zy-surface-raised); color: var(--zy-text); font-weight: 800; }
+    .fin-note { color: var(--zy-text-muted); font-size: 11.5px; font-weight: 800; line-height: 1.5; }
+    .fin-check { display: flex; align-items: center; gap: 8px; color: var(--zy-text); font-weight: 800; min-height: 42px; }
+    .fin-actions { display: flex; gap: 10px; justify-content: flex-start; }
+    .fin-btn { min-height: 44px; padding: 10px 20px; border-radius: 12px; font-weight: 1000; cursor: pointer;
+        border: 1px solid var(--zy-border); background: var(--zy-surface-raised); color: var(--zy-text); text-decoration: none;
+        display: inline-flex; align-items: center; }
+    .fin-btn.primary { background: linear-gradient(135deg,var(--zy-migrated-color-24dade9512),var(--zy-migrated-color-03b91d26b5)); color: var(--zy-migrated-color-417a6f4ce5); border-color: var(--zy-migrated-color-7064714968); }
+    @media (max-width: 900px) { .fin-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .fin-grid { grid-template-columns: 1fr; } }
+
+/* Static inline utilities migrated from Pages/Employees/FinancialInfo.cshtml */
+
+.zyu-ae3282379ff6 { border-color:var(--zy-danger);color:var(--zy-danger); }
+
+.zyu-7d0dd64c6e8e { display:block;color:var(--zy-migrated-color-6b3d6d843d);margin-top:2px; }
+
+.zyu-6e1c99ec6809 { background:var(--zy-migrated-color-ffc6811ee4);border-color:var(--zy-migrated-color-2d7b3c780f);font-weight:1000; }

@@ -1,0 +1,95 @@
+/* Source: Pages/Payroll/LeaveEncashment.cshtml */
+.sd-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,var(--zy-text)); --acc:var(--zy-migrated-color-0f176030df); }
+    .sd-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+        padding:16px 20px; border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:20px;
+        background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 40%),linear-gradient(135deg,var(--zy-migrated-color-2d2722bfd0),var(--zy-migrated-color-d38141ec79)); }
+    html[data-theme="light"] .sd-head { background:linear-gradient(135deg,var(--zy-white),var(--zy-migrated-color-c2da37727c)); }
+    .sd-head h1 { margin:0; font-size:20px; font-weight:1000; }
+    .sd-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .sd-btn { min-height:36px; padding:7px 16px; border-radius:12px; border:0; font-size:13px; font-weight:900; cursor:pointer; background:var(--acc); color:var(--zy-on-primary); }
+    .sd-btn.ghost { background:transparent; border:1px solid var(--zy-migrated-color-28565ef553); color:inherit; }
+    .sd-btn.sm { min-height:29px; padding:4px 10px; font-size:11px; }
+    .sd-btn.icon { width:38px; padding:0; font-size:17px; display:inline-flex; align-items:center; justify-content:center; }
+    .sd-btn.danger { background:var(--zy-migrated-color-c3488fce6c); border:1px solid var(--zy-migrated-color-1e1e5b6088); color:var(--zy-danger); }
+    .sd-btn.danger:hover { background:var(--zy-migrated-color-0026de0097); }
+    .sd-btn.warn { background:var(--zy-migrated-color-efbaf5eb47); border:1px solid var(--zy-migrated-color-c757959423); color:var(--zy-warning); }
+    .sd-btn.warn:hover { background:var(--zy-migrated-color-c4887138ae); }
+    .sd-bulkbar { position:fixed; bottom:18px; inset-inline:0; margin-inline:auto; width:max-content; max-width:calc(100% - 32px);
+        z-index:60; display:none; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px;
+        border:1px solid color-mix(in srgb,var(--acc) 45%,transparent); border-radius:16px;
+        background:var(--sa-surface,var(--zy-migrated-color-02e74ab91e)); box-shadow:0 14px 44px var(--zy-migrated-color-e1d0b86279); }
+    html[data-theme="light"] .sd-bulkbar { background:var(--zy-white); }
+    .sd-bulkbar.show { display:flex; }
+    .sd-bulkbar b { font-size:13px; font-weight:900; color:inherit; margin-inline-end:6px; }
+    .sd-bulkbar b span { color:var(--acc); }
+    .sd-tabs { display:flex; gap:2px; border-bottom:1px solid var(--zy-migrated-color-b9678111e3); }
+    .sd-tabs a { padding:11px 22px; font-size:13px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); text-decoration:none; border-bottom:3px solid transparent; }
+    .sd-tabs a.on { color:var(--acc); border-bottom-color:var(--acc); }
+    .sd-lockbanner { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:900; border:1px solid var(--zy-migrated-color-e73df561f6); background:var(--zy-migrated-color-0aca174049); color:var(--zy-warning); }
+
+    .sd-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+    .sd-kpi { padding:14px 16px; border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:16px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); position:relative; overflow:hidden; }
+    .sd-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc); }
+    .sd-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; }
+    .sd-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); }
+
+    .sd-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .sd-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); flex-wrap:wrap; }
+    .sd-filter select, .sd-filter input { min-height:34px; border-radius:10px; border:1px solid var(--zy-migrated-color-6a77190266); background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:4px 10px; font-weight:900; }
+    html[data-theme="light"] .sd-filter select, html[data-theme="light"] .sd-filter input { background:var(--zy-white); }
+    .sd-filter .nxcs-select { width:auto !important; min-width:112px; flex:0 0 auto; }
+
+    .sd-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px; overflow-x:auto; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); }
+    .sd-table { width:100%; border-collapse:collapse; font-size:13px; min-width:840px; }
+    .sd-table th { text-align:start; padding:12px 14px; font-size:11px; font-weight:1000; color:var(--sa-muted,var(--zy-muted)); border-bottom:1px solid var(--zy-migrated-color-b9678111e3); background:var(--zy-migrated-color-8e71d5d639); }
+    html[data-theme="light"] .sd-table th { background:var(--zy-migrated-color-c2da37727c); }
+    .sd-table td { padding:11px 14px; border-bottom:1px solid var(--zy-migrated-color-89acc81486); vertical-align:middle; }
+    .sd-table tbody tr:hover td { background:color-mix(in srgb,var(--acc) 6%,transparent); }
+    .sd-table tfoot td { padding:12px 14px; font-weight:1000; border-top:2px solid color-mix(in srgb,var(--acc) 40%,transparent); background:var(--zy-migrated-color-bee9f73d54); }
+    .sd-ref { direction:ltr; font-weight:900; font-size:12px; }
+    .sd-emp b { font-weight:900; } .sd-emp span { display:block; font-size:11px; color:var(--sa-muted,var(--zy-muted)); }
+    .sd-num { direction:ltr; font-weight:900; text-align:start; }
+    .sd-chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:900; }
+    .sd-chip.ap { background:var(--zy-migrated-color-f489b45438); color:var(--zy-success); }
+    .sd-chip.dr { background:var(--zy-migrated-color-d67c6fff40); color:var(--zy-muted); }
+    .sd-empty { padding:34px; text-align:center; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .sd-alert { padding:10px 14px; border-radius:12px; font-size:13px; font-weight:800; border:1px solid var(--zy-migrated-color-ab4e1fef3b); background:var(--zy-migrated-color-39bb173a0d); }
+    .sd-alert.err { border-color:var(--zy-migrated-color-348f8741cc); background:var(--zy-migrated-color-daec69ae56); color:var(--zy-danger); }
+    .sd-actions { display:flex; gap:6px; justify-content:flex-end; } .sd-actions form { display:inline; }
+
+    .sd-form label { font-size:12px; font-weight:900; display:flex; flex-direction:column; gap:4px; }
+    .sd-form select, .sd-form input, .sd-form textarea { min-height:38px; border-radius:10px; border:1px solid var(--zy-migrated-color-6a77190266); background:var(--zy-migrated-color-819b024f9d); color:inherit; padding:6px 10px; font-family:inherit; }
+    html[data-theme="light"] .sd-form select, html[data-theme="light"] .sd-form input, html[data-theme="light"] .sd-form textarea { background:var(--zy-white); }
+    .sd-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sd-hint { font-size:12px; font-weight:800; color:var(--sa-muted,var(--zy-muted)); padding:2px 2px 6px; }
+    .sd-preview { padding:10px 12px; border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent); border-radius:10px; font-size:13px; font-weight:900; background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .sd-preview b { color:var(--acc); direction:ltr; }
+    .sd-bal { display:flex; gap:8px; flex-wrap:wrap; padding:2px 0 0; }
+    .sd-bal-chip { display:inline-flex; align-items:baseline; gap:5px; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:900;
+        border:1px solid color-mix(in srgb,var(--acc) 35%,transparent); background:color-mix(in srgb,var(--acc) 8%,transparent); }
+    .sd-bal-chip b { color:var(--acc); direction:ltr; font-size:14px; }
+    .sd-bal-empty { font-size:12px; font-weight:800; color:var(--sa-muted,var(--zy-muted)); }
+
+/* Static inline utilities migrated from Pages/Payroll/LeaveEncashment.cshtml */
+
+.zyu-d0cb022ba49e { display:flex;gap:8px;flex-wrap:wrap;align-items:center; }
+
+.zyu-0eddd0ab78c0 { min-width:200px; }
+
+.zyu-d12729b3d536 { width:34px; }
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-f0de252a84a8 { display:flex;flex-direction:column;gap:12px; }
+
+.zyu-69374f356aba { display:flex;gap:6px; }
+
+.zyu-2b524186b864 { width:88px; }
+
+.zyu-07fa33e9aa03 { color:var(--acc); }
+
+.zyu-e038610b695a { flex:1;min-height:34px;border-radius:8px;border:1px solid var(--zy-migrated-color-6a77190266);background:var(--zy-migrated-color-819b024f9d);color:inherit;padding:4px 10px;font-weight:800; }
+
+.zyu-b87a8c000a7e { min-height:auto;padding:8px; }
+
+.zyu-b7aa1ec0049d { width:100%; }

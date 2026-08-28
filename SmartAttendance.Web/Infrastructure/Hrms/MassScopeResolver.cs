@@ -99,7 +99,11 @@ public static class MassScopeResolver
         }
         else
         {
-            ids = f["MassEmployeeIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+            ids = f["MassEmployeeIds"]
+                .Select(v => int.TryParse(v, out var id) ? id : (int?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToList();
             label = "اختيار يدوي";
         }
 

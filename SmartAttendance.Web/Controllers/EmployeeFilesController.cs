@@ -61,6 +61,16 @@ public sealed class EmployeeFilesController : ControllerBase
             return Forbid();
         }
 
+        // صلاحية عرض ملف الموظف لا تكشف تلقائياً مرفقاته المالية. الرمز الموقّع
+        // قد يُنسخ من جلسة مخوّلة، لذلك نفحص التصنيف عند كل تنزيل من الخادم.
+        if (ProtectedFileStore.TryGetCategory(storageKey, employeeId, out var category) &&
+            category.Equals("financial", StringComparison.OrdinalIgnoreCase) &&
+            !await CanViewCompensationAsync(employeeId))
+        {
+            await WriteAuditAsync("Employee Financial File Download Denied", employeeId, 0);
+            return Forbid();
+        }
+
         if (!ProtectedFileStore.TryResolvePhysicalPath(
                 _protectedFiles.ResolveRoot(), storageKey, out var physicalPath) ||
             !System.IO.File.Exists(physicalPath))
@@ -227,6 +237,22 @@ WHERE Id = @Id;
         return location is not null &&
                accessRoleScope.AllowsEmployee(
                    employeeId, location.CompanyId, location.BranchId, location.DepartmentId);
+    }
+
+    private async Task<bool> CanViewCompensationAsync(int employeeId)
+    {
+        var role = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+        if (!int.TryParse(User.FindFirstValue("SystemUserId"), out var systemUserId) || systemUserId <= 0)
+            return RoleRouteCatalog.IsAdmin(role);
+
+        return await _permissions.CanAccessEmployeeAsync(
+                   systemUserId,
+                   PeoplePermissionCodes.ViewCompensation,
+                   employeeId,
+                   PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.ViewCompensation),
+                   HttpContext.RequestAborted) ||
+               await AccessRoleStore.HasSensitiveFieldAsync(
+                   _db, systemUserId, SensitiveFieldCatalog.Salary);
     }
 
     /// <summary>موقع الموظف التنظيميّ (شركة عبر الفرع/فرع/قسم) لتقييم نطاق أدوار الوصول.</summary>

@@ -26,14 +26,6 @@ public class TransactionsModel : PageModel
     private Task<Infrastructure.Security.CompanyScope> ScopeAsync() =>
         _companyScope.GetAsync(HttpContext.RequestAborted);
 
-    /// <summary>
-    /// إظهار الفلاتر غير المنفَّذة (وحدة عمل · الهيكلية · كفيل · نوع العقد ·
-    /// مجموعة الموظفين · تاريخ التعيين · حالة الموظف · رقم الدفعة · حالة الطلب).
-    /// مطفأة بنسخة الإطلاق: خانة معطّلة بشارة «قريباً» تُقرأ كمنتج غير مكتمل.
-    /// تُرفع لـtrue عند تنفيذ الفلاتر فعلياً — الماركب محفوظ كما هو.
-    /// </summary>
-    public bool ShowUpcomingFilters => false;
-
     [BindProperty(SupportsGet = true)]
     public string Type { get; set; } = PayrollTransactionStore.Income;   // Income | Deduction
 
@@ -135,7 +127,11 @@ public class TransactionsModel : PageModel
         if (Lock != "Locked") Lock = "Open";
         // القفل لكل حركة: التبويب يفلتر بحالة قفل الحركة نفسها
         var scope = await ScopeAsync();
-        Items = await PayrollTransactionStore.ListAsync(_db, scope, Year, Month, Type, Search, Item, Status, locked: Lock == "Locked");
+        Items = await PayrollTransactionStore.ListAsync(
+            _db, scope, Year, Month, Type, Search, Item, Status, Src, locked: Lock == "Locked",
+            employeeId: Emp, paymentType: PayType, department: Dept, branch: Branch,
+            position: JobTitle, dateFrom: DateFrom, dateTo: DateTo, referenceNo: RefNo,
+            minAmount: MinAmount, maxAmount: MaxAmount);
 
         // قوائم الفلاتر (من حركات الفترة قبل تطبيق الفلاتر المتقدمة)
         Sources = Items.Select(x => x.Source).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
@@ -143,19 +139,7 @@ public class TransactionsModel : PageModel
         Branches = Items.Select(x => x.Branch).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
         JobTitles = Items.Select(x => x.Position).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
 
-        if (Emp is > 0) Items = Items.Where(x => x.EmployeeId == Emp).ToList();
-        if (!string.IsNullOrWhiteSpace(PayType)) Items = Items.Where(x => x.PaymentType == PayType).ToList();
-        if (!string.IsNullOrWhiteSpace(Src)) Items = Items.Where(x => x.Source == Src).ToList();
-        if (!string.IsNullOrWhiteSpace(Dept)) Items = Items.Where(x => x.Department == Dept).ToList();
-        if (!string.IsNullOrWhiteSpace(Branch)) Items = Items.Where(x => x.Branch == Branch).ToList();
-        if (!string.IsNullOrWhiteSpace(JobTitle)) Items = Items.Where(x => x.Position == JobTitle).ToList();
-        if (DateFrom.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value >= DateFrom.Value).ToList();
-        if (DateTo.HasValue) Items = Items.Where(x => x.TransactionDate.HasValue && x.TransactionDate.Value <= DateTo.Value).ToList();
-        if (!string.IsNullOrWhiteSpace(RefNo)) Items = Items.Where(x => x.ReferenceNo.Contains(RefNo.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
-        if (MinAmount.HasValue) Items = Items.Where(x => x.Amount >= MinAmount.Value).ToList();
-        if (MaxAmount.HasValue) Items = Items.Where(x => x.Amount <= MaxAmount.Value).ToList();
-
-        var all = await SalaryItemStore.ListAsync(_db);
+        var all = await SalaryItemStore.ListAsync(_db, scope);
         Catalog = IsDeduction
             ? all.Where(x => x.IsActive && x.ItemType == "Deduction").ToList()
             : all.Where(x => x.IsActive && (x.ItemType == "Income" || x.ItemType == "Overtime")).ToList();
@@ -253,7 +237,7 @@ public class TransactionsModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0)
         {
             await PayrollTransactionStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
@@ -362,7 +346,7 @@ public class TransactionsModel : PageModel
 
     public async Task<IActionResult> OnPostLockSelectedAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, true); TempData["PayrollMessage"] = $"أُقفلت {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Type, Year, Month, Lock = "Locked" });
@@ -370,7 +354,7 @@ public class TransactionsModel : PageModel
 
     public async Task<IActionResult> OnPostUnlockSelectedAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count > 0) { await PayrollTransactionStore.SetLockedAsync(_db, await ScopeAsync(), ids, false); TempData["PayrollMessage"] = $"فُتح قفل {ids.Count} حركة."; }
         else TempData["PayrollMessage"] = "حدد حركات أولاً.";
         return RedirectToPage(new { Type, Year, Month, Lock = "Open" });

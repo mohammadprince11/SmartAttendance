@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -42,6 +43,7 @@ public static class SalaryItemStore
     public sealed class SalaryItem
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? NameEn { get; set; }
         public string ItemType { get; set; } = "Income";        // Income | Deduction | Overtime | Statutory
@@ -102,6 +104,7 @@ BEGIN
     CREATE TABLE SalaryItems
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        CompanyId int NULL,
         Name nvarchar(150) NOT NULL,
         NameEn nvarchar(150) NULL,
         ItemType nvarchar(20) NOT NULL DEFAULT(N'Income'),
@@ -142,30 +145,45 @@ IF COL_LENGTH('SalaryItems','EligibilityJson') IS NULL ALTER TABLE SalaryItems A
 """);
     }
 
-    public static async Task<List<SalaryItem>> ListAsync(ApplicationDbContext dbContext)
+    public static async Task<List<SalaryItem>> ListAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId = null)
     {
         await EnsureAsync(dbContext);
+        if (scope.IsDeniedAll || companyId is > 0 && !scope.Allows(companyId)) return new();
+
+        var companyPredicate = companyId is > 0
+            ? "CompanyId = @CompanyId"
+            : scope.ToSqlPredicate("CompanyId");
         return await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT * FROM SalaryItems ORDER BY SortOrder, Name;",
-            command => { },
+            $"""
+SELECT * FROM SalaryItems
+WHERE (IsSystem = 1 AND CompanyId IS NULL)
+   OR (IsSystem = 0 AND {companyPredicate})
+ORDER BY SortOrder, Name;
+""",
+            command => HrmsDatabase.AddParameter(
+                command, "@CompanyId", (object?)companyId ?? DBNull.Value),
             Read);
     }
 
     /// <summary>عناصر «الدخل/البدل» النشطة القابلة للإسناد لعلاوات الموظف.</summary>
-    public static async Task<List<SalaryItem>> ActiveIncomeItemsAsync(ApplicationDbContext dbContext)
+    public static async Task<List<SalaryItem>> ActiveIncomeItemsAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int? companyId = null)
     {
-        var all = await ListAsync(dbContext);
+        var all = await ListAsync(dbContext, scope, companyId);
         return all.Where(x => x.IsActive && x.ItemType is "Income" or "Overtime").ToList();
     }
 
-    public static async Task SaveAsync(ApplicationDbContext dbContext, SalaryItem item)
+    public static async Task<bool> SaveAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, SalaryItem item)
     {
         await EnsureAsync(dbContext);
+        if (item.CompanyId is not > 0 || !scope.Allows(item.CompanyId)) return false;
 
         if (item.Id > 0)
         {
-            await HrmsDatabase.ExecuteAsync(
+            return await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
 UPDATE SalaryItems
@@ -174,39 +192,44 @@ SET Name = @Name, NameEn = @NameEn, ItemType = @ItemType, ValueKind = @ValueKind
     Prorated = @Prorated, OvertimeEligible = @OvertimeEligible, UnpaidLeaveEligible = @UnpaidLeaveEligible,
     IsActive = @IsActive, SortOrder = @SortOrder,
     MinValue = @MinValue, MaxValue = @MaxValue, ValidFrom = @ValidFrom, ValidTo = @ValidTo, EligibilityJson = @EligibilityJson
-WHERE Id = @Id;
+WHERE Id = @Id AND IsSystem = 0 AND CompanyId = @CompanyId;
+SELECT @@ROWCOUNT;
 """,
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", item.Id);
                     AddParameters(command, item);
-                });
+                }) > 0;
         }
         else
         {
-            await HrmsDatabase.ExecuteAsync(
+            return await HrmsDatabase.ScalarAsync<int>(
                 dbContext,
                 """
-INSERT INTO SalaryItems (Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, MinValue, MaxValue, ValidFrom, ValidTo, EligibilityJson)
-VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @GosiEligible, @InGross, @Prorated, @OvertimeEligible, @UnpaidLeaveEligible, 0, @IsActive, @SortOrder, @MinValue, @MaxValue, @ValidFrom, @ValidTo, @EligibilityJson);
+INSERT INTO SalaryItems (CompanyId, Name, NameEn, ItemType, ValueKind, DefaultValue, Formula, Taxable, GosiEligible, InGross, Prorated, OvertimeEligible, UnpaidLeaveEligible, IsSystem, IsActive, SortOrder, MinValue, MaxValue, ValidFrom, ValidTo, EligibilityJson)
+VALUES (@CompanyId, @Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable, @GosiEligible, @InGross, @Prorated, @OvertimeEligible, @UnpaidLeaveEligible, 0, @IsActive, @SortOrder, @MinValue, @MaxValue, @ValidFrom, @ValidTo, @EligibilityJson);
+SELECT @@ROWCOUNT;
 """,
-                command => AddParameters(command, item));
+                command => AddParameters(command, item)) > 0;
         }
     }
 
     /// <summary>الحذف ممنوع لعناصر النظام.</summary>
-    public static async Task DeleteAsync(ApplicationDbContext dbContext, int id)
+    public static async Task<bool> DeleteAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, int id)
     {
         await EnsureAsync(dbContext);
-        await HrmsDatabase.ExecuteAsync(
+        if (scope.IsDeniedAll) return false;
+        return await HrmsDatabase.ScalarAsync<int>(
             dbContext,
-            "DELETE FROM SalaryItems WHERE Id = @Id AND IsSystem = 0;",
-            command => HrmsDatabase.AddParameter(command, "@Id", id));
+            $"DELETE FROM SalaryItems WHERE Id = @Id AND IsSystem = 0 AND {scope.ToSqlPredicate("CompanyId")}; SELECT @@ROWCOUNT;",
+            command => HrmsDatabase.AddParameter(command, "@Id", id)) > 0;
     }
 
     private static SalaryItem Read(System.Data.Common.DbDataReader reader) => new()
     {
         Id = HrmsDatabase.GetInt(reader, "Id"),
+        CompanyId = reader["CompanyId"] is int companyId ? companyId : null,
         Name = HrmsDatabase.GetString(reader, "Name"),
         NameEn = HrmsDatabase.GetString(reader, "NameEn") is { Length: > 0 } en ? en : null,
         ItemType = HrmsDatabase.GetString(reader, "ItemType") is { Length: > 0 } t ? t : "Income",
@@ -231,6 +254,7 @@ VALUES (@Name, @NameEn, @ItemType, @ValueKind, @DefaultValue, @Formula, @Taxable
 
     private static void AddParameters(System.Data.Common.DbCommand command, SalaryItem item)
     {
+        HrmsDatabase.AddParameter(command, "@CompanyId", item.CompanyId!.Value);
         HrmsDatabase.AddParameter(command, "@Name", item.Name);
         HrmsDatabase.AddParameter(command, "@NameEn", (object?)item.NameEn ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@ItemType", item.ItemType);

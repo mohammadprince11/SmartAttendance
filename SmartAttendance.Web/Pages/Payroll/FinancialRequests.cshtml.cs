@@ -43,7 +43,6 @@ public class FinancialRequestsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         Rows = await FinancialRequestStore.ListAsync(_db, scope, kind: Kind, status: Status, search: Search);
         Employees = await FinancialRequestStore.EmployeeBasicsAsync(_db, scope);
@@ -89,7 +88,7 @@ public class FinancialRequestsModel : PageModel
             return RedirectToPage();
         }
 
-        var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, CurrentUser);
+        var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, CurrentUser, "Admin");
         TempData["SuccessMessage"] = requestId > 0
             ? $"تم إنشاء طلب {FinancialRequestStore.KindLabel(kind)} وإرساله للجنة الموافقة."
             : "تعذّر إنشاء الطلب.";
@@ -98,15 +97,17 @@ public class FinancialRequestsModel : PageModel
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var result = await ApprovalWorkflowEngine.ApproveAsync(
-            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note);
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note,
+            User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value),
+            int.TryParse(User.FindFirst("EmployeeId")?.Value, out var actorEmployeeId) ? actorEmployeeId : null);
         var message = result.Message;
 
         if (result.FinalApproved)
         {
             var applied = await FinancialRequestStore.ApplyIfFinancialAsync(
-                _db, id, CurrentUser, HttpContext.Connection.RemoteIpAddress?.ToString());
+                _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser,
+                HttpContext.Connection.RemoteIpAddress?.ToString());
             if (applied) message = "تم الاعتماد النهائي وتفعيل الأثر المالي (قرض/بدل/زيادة حسب النوع).";
         }
 
@@ -116,9 +117,10 @@ public class FinancialRequestsModel : PageModel
 
     public async Task<IActionResult> OnPostRejectAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
         var result = await ApprovalWorkflowEngine.RejectAsync(
-            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note);
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser, Note,
+            User.Claims.Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value),
+            int.TryParse(User.FindFirst("EmployeeId")?.Value, out var actorEmployeeId) ? actorEmployeeId : null);
         TempData["SuccessMessage"] = result.Message;
         return RedirectToPage();
     }

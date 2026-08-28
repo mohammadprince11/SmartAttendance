@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -17,11 +18,19 @@ public class DocumentRequestModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly IWebHostEnvironment _environment;
+    private readonly IFileThreatScanner _threatScanner;
+    private readonly MalwareScanningOptions _malwareOptions;
 
-    public DocumentRequestModel(ApplicationDbContext db, IWebHostEnvironment environment)
+    public DocumentRequestModel(
+        ApplicationDbContext db,
+        IWebHostEnvironment environment,
+        IFileThreatScanner threatScanner,
+        IOptions<MalwareScanningOptions> malwareOptions)
     {
         _db = db;
         _environment = environment;
+        _threatScanner = threatScanner;
+        _malwareOptions = malwareOptions.Value;
     }
 
     [TempData] public string? StatusMessage { get; set; }
@@ -33,20 +42,23 @@ public class DocumentRequestModel : PageModel
     public List<DocumentTemplateStore.Template> Available { get; private set; } = new();
     public List<DocumentRequestStore.Request> MyRequests { get; private set; } = new();
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "DocumentRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
-            return;
+            return Forbid();
         }
 
         Available = await DocumentRequestStore.RequestableAsync(_db, employeeId, DateOnly.FromDateTime(DateTime.Today));
         MyRequests = await DocumentRequestStore.LoadAsync(_db, employeeId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "DocumentRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
@@ -78,6 +90,16 @@ public class DocumentRequestModel : PageModel
                 return RedirectToPage();
             }
 
+            if (!await UploadSignatureValidator.IsValidForExtensionAsync(Attachment, extension)
+                || !FileThreatPolicy.CanStore(
+                    _malwareOptions,
+                    await FileThreatPolicy.ScanUploadAsync(
+                        _threatScanner, Attachment, HttpContext.RequestAborted)))
+            {
+                StatusMessage = "رُفض المرفق بعد فحص المحتوى الأمني.";
+                return RedirectToPage();
+            }
+
             key = ProtectedFileStore.BuildStorageKey(employeeId, "doc-request", extension);
             var root = ProtectedFileStore.ResolveRoot(_environment.ContentRootPath);
 
@@ -106,6 +128,7 @@ public class DocumentRequestModel : PageModel
 
     public async Task<IActionResult> OnPostWithdrawAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "DocumentRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         var done = employeeId > 0 && await DocumentRequestStore.WithdrawAsync(_db, id, employeeId);
 

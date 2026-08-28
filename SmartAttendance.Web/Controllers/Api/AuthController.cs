@@ -12,6 +12,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 /// الاعتماد نفسه المستخدم في صفحة الدخول)، والخروج يُلغيه.
 /// </summary>
 [ApiController]
+[Route("api/v1/auth")]
 [Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {
@@ -35,7 +36,6 @@ public sealed class AuthController : ControllerBase
         if (body is null || string.IsNullOrWhiteSpace(body.Username) || string.IsNullOrWhiteSpace(body.Password))
             return BadRequest(new { message = "اسم المستخدم وكلمة المرور مطلوبة." });
 
-        await LoginDatabase.EnsureCreatedAsync(_db);
         var utcNow = DateTime.UtcNow;
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         var user = await LoginDatabase.GetByUsernameAsync(_db, body.Username.Trim());

@@ -7,6 +7,7 @@
     var editing = Model.EditingId.HasValue;
     var parent = Model.ParentPayload();
 }
+<link rel="stylesheet" href="~/css/pages/probationperiod-401be52829.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -95,12 +96,12 @@
             <table class="zyp-table">
                 <thead>
                     <tr>
-                        <th style="width:56px">الأسبقية</th>
+                        <th class="zyu-8b145917e433">الأسبقية</th>
                         <th>النسخة</th>
                         <th>تُطبَّق على</th>
                         <th>ما تغيّره</th>
-                        <th style="width:90px">عدد الموظفين</th>
-                        <th style="width:220px"></th>
+                        <th class="zyu-f47e3b970dce">عدد الموظفين</th>
+                        <th class="zyu-e104eb5fa217"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -130,22 +131,22 @@
                             </td>
                             <td>
                                 <div class="zyp-actions">
-                                    <form method="post" asp-page-handler="MoveCopy" style="display:inline">
+                                    <form method="post" asp-page-handler="MoveCopy" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@copy.Id" />
                                         <input type="hidden" name="direction" value="-1" />
                                         <button type="submit" class="zyp-move" title="رفع الأسبقية" @(i == 0 ? "disabled" : "")>↑</button>
                                     </form>
-                                    <form method="post" asp-page-handler="MoveCopy" style="display:inline">
+                                    <form method="post" asp-page-handler="MoveCopy" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@copy.Id" />
                                         <input type="hidden" name="direction" value="1" />
                                         <button type="submit" class="zyp-move" title="خفض الأسبقية" @(i == Model.Copies.Count - 1 ? "disabled" : "")>↓</button>
                                     </form>
                                     <a asp-page="./ProbationPeriod" asp-route-edit="@copy.Id">تعديل</a>
-                                    <form method="post" asp-page-handler="DuplicateCopy" style="display:inline">
+                                    <form method="post" asp-page-handler="DuplicateCopy" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@copy.Id" />
                                         <button type="submit">انشئ نسخة</button>
                                     </form>
-                                    <form method="post" asp-page-handler="DeleteCopy" style="display:inline">
+                                    <form method="post" asp-page-handler="DeleteCopy" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@copy.Id" />
                                         <button type="submit" data-zyconfirm="حذف النسخة؟">حذف</button>
                                     </form>
@@ -220,7 +221,7 @@
 
             <footer class="nxhs-actions">
                 <button type="submit">حفظ النسخة</button>
-                <a class="zyp-move" asp-page="./ProbationPeriod" style="padding:8px 14px">إلغاء</a>
+                <a class="zyp-move zyu-e3da42537cb5" asp-page="./ProbationPeriod">إلغاء</a>
             </footer>
         </form>
     }

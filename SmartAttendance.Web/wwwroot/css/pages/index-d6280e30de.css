@@ -1,0 +1,55 @@
+/* Source: Pages/EmployeePermissions/Index.cshtml */
+.permissions-layout {
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .permission-group {
+        border: 1px solid var(--sa-border, var(--zy-migrated-color-3b313dfb66));
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 14px;
+        background: var(--sa-surface, var(--zy-white));
+    }
+
+    .permission-group h3 {
+        margin: 0 0 12px;
+        font-size: 16px;
+    }
+
+    .permission-check {
+        display: grid;
+        grid-template-columns: 24px 1fr;
+        gap: 10px;
+        padding: 9px 0;
+        border-top: 1px solid var(--sa-border, var(--zy-migrated-color-4702b16c05));
+    }
+
+    .permission-check:first-of-type {
+        border-top: 0;
+    }
+
+    .permission-code {
+        font-weight: 700;
+        color: var(--sa-text, var(--zy-migrated-color-0e684e5160));
+    }
+
+    .permission-desc {
+        color: var(--sa-muted, var(--zy-migrated-color-6b3d6d843d));
+        font-size: 12px;
+        margin-top: 3px;
+    }
+
+    @media (max-width: 1000px) {
+        .permissions-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+/* Static inline utilities migrated from Pages/EmployeePermissions/Index.cshtml */
+
+.zyu-c804002a4185 { margin-bottom: 12px; }
+
+.zyu-5a2dfef236e7 { text-align:center; }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
 
@@ -26,18 +27,20 @@ public class FinancialRequestModel : PageModel
     public List<FinancialRequestStore.Row> MyRequests { get; private set; } = new();
     public bool HasEmployee { get; private set; }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_db);
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         HasEmployee = employeeId > 0;
         if (employeeId > 0)
-            MyRequests = (await FinancialRequestStore.ListAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted()))
-                .Where(r => r.EmployeeId == employeeId).ToList();
+            MyRequests = await FinancialRequestStore.ListAsync(
+                _db, CompanyScope.Unrestricted(), employeeId: employeeId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
@@ -67,7 +70,8 @@ public class FinancialRequestModel : PageModel
             Reason = string.IsNullOrWhiteSpace(form["Reason"]) ? null : form["Reason"].ToString().Trim()
         };
 
-        var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, User.Identity?.Name ?? "Employee");
+        var requestId = await FinancialRequestStore.SubmitAsync(
+            _db, detail, employeeId, User.Identity?.Name ?? "Employee", "SelfService");
         StatusMessage = requestId > 0
             ? $"تم إرسال طلب {FinancialRequestStore.KindLabel(kind)} وهو الآن قيد المراجعة."
             : "تعذّر إرسال الطلب.";
@@ -76,12 +80,14 @@ public class FinancialRequestModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         // تأكّد أن الطلب لهذا الموظف قبل الحذف.
         if (employeeId > 0)
         {
-            var mine = (await FinancialRequestStore.ListAsync(_db, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted())).Any(r => r.RequestId == id && r.EmployeeId == employeeId);
-            if (mine) await FinancialRequestStore.DeletePendingAsync(_db, id);
+            var mine = (await FinancialRequestStore.ListAsync(
+                _db, CompanyScope.Unrestricted(), employeeId: employeeId)).Any(r => r.RequestId == id);
+            if (mine) await FinancialRequestStore.DeletePendingAsync(_db, id, employeeId);
         }
         StatusMessage = "تم حذف الطلب المعلّق.";
         return RedirectToPage();

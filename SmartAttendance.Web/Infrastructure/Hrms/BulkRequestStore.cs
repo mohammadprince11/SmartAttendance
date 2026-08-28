@@ -451,11 +451,11 @@ WHERE EmployeeId = @Employee
 INSERT INTO SelfServiceRequests
     (EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason,
      Status, CurrentStep, CreatedBy, ReviewedBy, ReviewNote, HrStatus, HrReviewedBy,
-     HrReviewedAt, UpdatedAt, DaysCount, ShiftTypeId)
+     HrReviewedAt, UpdatedAt, DaysCount, ShiftTypeId, RequestSource)
 VALUES
     (@Employee, @Type, CAST(GETDATE() AS date), @From, @To, @StartTime, @EndTime, @Reason,
      N'Approved', N'Completed', @Actor, @Actor, @Note, N'Approved', @Actor,
-     SYSUTCDATETIME(), SYSUTCDATETIME(), @Days, @Shift);
+     SYSUTCDATETIME(), SYSUTCDATETIME(), @Days, @Shift, N'Admin');
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 

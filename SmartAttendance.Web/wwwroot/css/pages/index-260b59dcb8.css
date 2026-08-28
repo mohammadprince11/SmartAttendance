@@ -1,0 +1,78 @@
+/* Source: Pages/ShiftOverrides/Index.cshtml */
+.sov-page { display: flex; flex-direction: column; gap: 14px; color: var(--sa-text, var(--zy-text)); }
+    .sov-head {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        padding: 16px 20px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 20px;
+        background: radial-gradient(circle at 90% 10%, var(--zy-migrated-color-add5638818), transparent 36%),
+                    linear-gradient(135deg, var(--zy-migrated-color-2d2722bfd0), var(--zy-migrated-color-d38141ec79));
+    }
+    html[data-theme="light"] .sov-head { background: linear-gradient(135deg, var(--zy-white), var(--zy-migrated-color-c2da37727c)); }
+    .sov-head h1 { margin: 0; font-size: 20px; font-weight: 1000; }
+    .sov-head p { margin: 2px 0 0; font-size: 12px; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sov-btn { min-height: 38px; padding: 8px 18px; border-radius: 12px; border: 0; font-size: 13px; font-weight: 900; cursor: pointer; background: linear-gradient(135deg, var(--zy-primary), var(--zy-primary-strong)); color: var(--zy-on-primary); }
+    .sov-btn.ghost { background: transparent; border: 1px solid var(--zy-migrated-color-28565ef553); color: inherit; }
+    .sov-btn.no { background: transparent; border: 1px solid var(--zy-migrated-color-348f8741cc); color: var(--zy-danger); }
+    .sov-btn.sm { min-height: 32px; padding: 5px 12px; font-size: 12px; }
+
+    .sov-bar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 16px; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+    .sov-bar label { font-size: 11px; font-weight: 900; color: var(--sa-muted, var(--zy-muted)); display: flex; flex-direction: column; gap: 4px; }
+    .sov-bar input { min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266); background: var(--zy-migrated-color-819b024f9d); color: var(--sa-text, var(--zy-text)); padding: 6px 10px; font-size: 13px; }
+    html[data-theme="light"] .sov-bar input { background: var(--zy-white); color: inherit; }
+
+    .sov-table-card { border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 18px; overflow: auto; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); }
+    .sov-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 820px; }
+    .sov-table th { text-align: start; padding: 10px 12px; font-size: 11px; font-weight: 1000; color: var(--sa-muted, var(--zy-muted)); border-bottom: 1px solid var(--zy-migrated-color-b9678111e3); background: var(--zy-migrated-color-733a2ff5ad); }
+    html[data-theme="light"] .sov-table th { background: var(--zy-migrated-color-c2da37727c); }
+    .sov-table td { padding: 9px 12px; border-bottom: 1px solid var(--zy-migrated-color-89acc81486); }
+    .sov-table tr:hover td { background: var(--zy-migrated-color-e174917010); }
+    .sov-shift { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; }
+    .sov-shift i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .sov-none { color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sov-period { direction: ltr; display: inline-block; font-weight: 900; font-size: 12px; }
+    .sov-chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 900; background: var(--zy-migrated-color-379e305887); color: var(--zy-info); }
+    .sov-empty { padding: 28px; text-align: center; color: var(--sa-muted, var(--zy-muted)); font-weight: 800; }
+    .sov-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid var(--zy-migrated-color-ab4e1fef3b); background: var(--zy-migrated-color-39bb173a0d); }
+
+    .sov-bulkbar { position: fixed; bottom: 18px; inset-inline: 0; margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
+        z-index: 60; display: none; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px;
+        border: 1px solid var(--zy-migrated-color-17523f5ab6); border-radius: 16px;
+        background: var(--sa-surface, var(--zy-migrated-color-02e74ab91e)); box-shadow: 0 14px 44px var(--zy-migrated-color-e1d0b86279); }
+    html[data-theme="light"] .sov-bulkbar { background: var(--zy-white); }
+    .sov-bulkbar.show { display: flex; }
+    .sov-bulkbar b { font-size: 13px; font-weight: 900; }
+    .sov-bulkbar b span { color: var(--zy-primary); }
+
+    /* السلايد */
+    .sov-form { display: flex; flex-direction: column; gap: 12px; }
+    .sov-form label { font-size: 12px; font-weight: 900; display: flex; flex-direction: column; gap: 4px; }
+    .sov-form input, .sov-form select { min-height: 36px; border-radius: 10px; border: 1px solid var(--zy-migrated-color-6a77190266); background: var(--zy-migrated-color-819b024f9d); color: inherit; padding: 6px 10px; }
+    html[data-theme="light"] .sov-form input, html[data-theme="light"] .sov-form select { background: var(--zy-white); }
+    .sov-seg { display: flex; gap: 0; border: 1px solid var(--zy-migrated-color-28565ef553); border-radius: 12px; overflow: hidden; width: max-content; }
+    .sov-seg button { min-height: 36px; padding: 6px 20px; border: 0; background: transparent; color: inherit; font-weight: 900; font-size: 13px; cursor: pointer; }
+    .sov-seg button.on { background: linear-gradient(135deg, var(--zy-primary), var(--zy-primary-strong)); color: var(--zy-on-primary); }
+    .sov-emps { border: 1px solid var(--zy-migrated-color-0aac1ba379); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+    .sov-emplist { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+    .sov-emprow { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .sov-emprow:hover { background: var(--zy-migrated-color-0131c28a5e); }
+
+/* Static inline utilities migrated from Pages/ShiftOverrides/Index.cshtml */
+
+.zyu-f0fba43e897c { font-size:12px;align-self:center; }
+
+.zyu-b27868803587 { direction:ltr;display:inline-block; }
+
+.zyu-d12729b3d536 { width:34px; }
+
+.zyu-934736f196e1 { direction:ltr;text-align:start;font-weight:900; }
+
+.zyu-d1a8f8bc313b { display:flex;gap:6px;align-items:center; }
+
+.zyu-83725d2c6e00 { flex:1; }
+
+.zyu-33ee29812798 { font-size:11px; }
+
+.zyu-474799ee2243 { color:var(--zy-primary); }
+
+.zyu-71658681447f { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+
+.zyu-6e4c67e3c0a2 { direction:ltr; }

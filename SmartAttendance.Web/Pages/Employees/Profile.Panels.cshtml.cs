@@ -134,20 +134,23 @@ public partial class ProfileModel
             .Where(r => r.EmployeeId == Id)
             .OrderByDescending(r => r.ToDate).ThenByDescending(r => r.Id).ToListAsync();
 
-        FinancialInfo = await _dbContext.EmployeeFinancialInfos.AsNoTracking()
-            .FirstOrDefaultAsync(f => f.EmployeeId == Id);
-
-        await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
-        Allowances = await _dbContext.EmployeeAllowances.AsNoTracking()
-            .Where(a => a.EmployeeId == Id)
-            .OrderByDescending(a => a.FromDate).ToListAsync();
-
         var today = DateOnly.FromDateTime(DateTime.Today);
-        ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
+        if (CanViewSalary)
+        {
+            FinancialInfo = await _dbContext.EmployeeFinancialInfos.AsNoTracking()
+                .FirstOrDefaultAsync(f => f.EmployeeId == Id);
 
-        await LoadFinancialProfilesAsync(today);
+            await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
+            Allowances = await _dbContext.EmployeeAllowances.AsNoTracking()
+                .Where(a => a.EmployeeId == Id)
+                .OrderByDescending(a => a.FromDate).ToListAsync();
 
-        SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext);
+            ActiveAllowancesTotal = Allowances.Where(a => a.IsActiveOn(today)).Sum(a => a.Amount);
+            await LoadFinancialProfilesAsync(today);
+            var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+            SalaryItemOptions = await SalaryItemStore.ActiveIncomeItemsAsync(
+                _dbContext, companyScope, await AuthorizedEmployeeCompanyIdAsync(companyScope));
+        }
 
         await HrLookups.EnsureSchemaAsync(_dbContext);
 
@@ -184,8 +187,10 @@ public partial class ProfileModel
     /// </summary>
     private async Task LoadFinancialProfilesAsync(DateOnly today)
     {
-        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext);
-        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext);
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var companyId = await AuthorizedEmployeeCompanyIdAsync(scope);
+        var taxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_dbContext, scope, companyId);
+        var gosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_dbContext, scope, companyId);
 
         var rows = await HrConditionFacts.LoadAsync(_dbContext, Id);
         var facts = rows.Count > 0
@@ -258,6 +263,12 @@ public partial class ProfileModel
     private IActionResult BackToFiles() => RedirectToPage("./Profile", null, new { Id }, "profile-files");
 
     private static string? CleanText(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    private async Task<int?> AuthorizedEmployeeCompanyIdAsync(CompanyScope scope) =>
+        await HrmsDatabase.ScalarAsync<int?>(
+            _dbContext,
+            $"SELECT CompanyId FROM Employees e WHERE e.Id = @EmployeeId AND ISNULL(e.IsDeleted, 0) = 0 AND {SmartAttendance.Web.Infrastructure.Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", Id));
 
     public async Task<IActionResult> OnPostSaveDependentAsync()
     {
@@ -390,10 +401,15 @@ public partial class ProfileModel
     // ---- العلاوات: حفظ (إضافة/تعديل) وحذف — نفس نمط المعالين ----
     public async Task<IActionResult> OnPostSaveAllowanceAsync()
     {
+        if (!await HasEmployeeActionPermissionAsync(PeoplePermissionCodes.EditCompensation, Id))
+            return Forbid();
+
         await EmployeeAllowanceSchema.EnsureAsync(_dbContext);
         if (!await _dbContext.Employees.AnyAsync(e => e.Id == Id && !e.IsDeleted)) return NotFound();
-        var salaryItem = Allowance.SalaryItemId > 0
-            ? (await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext))
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var employeeCompanyId = await AuthorizedEmployeeCompanyIdAsync(scope);
+        var salaryItem = Allowance.SalaryItemId > 0 && employeeCompanyId is > 0
+            ? (await SalaryItemStore.ActiveIncomeItemsAsync(_dbContext, scope, employeeCompanyId))
                 .SingleOrDefault(x => x.Id == Allowance.SalaryItemId)
             : null;
         if (salaryItem == null) { PanelError = "عنصر الراتب غير موجود أو غير نشط."; return BackToFiles(); }
@@ -428,6 +444,9 @@ public partial class ProfileModel
 
     public async Task<IActionResult> OnPostDeleteAllowanceAsync(int recordId)
     {
+        if (!await HasEmployeeActionPermissionAsync(PeoplePermissionCodes.EditCompensation, Id))
+            return Forbid();
+
         var a = await _dbContext.EmployeeAllowances.FirstOrDefaultAsync(x => x.Id == recordId && x.EmployeeId == Id);
         if (a != null)
         {

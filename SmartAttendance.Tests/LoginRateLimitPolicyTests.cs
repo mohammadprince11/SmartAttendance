@@ -15,8 +15,11 @@ public class LoginRateLimitPolicyTests
     [Theory]
     [InlineData("/account/login")]
     [InlineData("/api/auth/login")]
+    [InlineData("/api/v1/auth/login")]
     [InlineData("/api/webauthn/login/options")]
+    [InlineData("/api/v1/webauthn/login/options")]
     [InlineData("/api/webauthn/login/verify")]
+    [InlineData("/api/v1/webauthn/login/verify")]
     public void LoginPaths_AreLimited(string path) =>
         Assert.True(LoginRateLimitPolicy.AppliesTo(path));
 
@@ -50,6 +53,20 @@ public class LoginRateLimitPolicyTests
     [InlineData("   ")]
     public void MissingPath_IsNotLimited(string? path) =>
         Assert.False(LoginRateLimitPolicy.AppliesTo(path));
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("HEAD")]
+    [InlineData("OPTIONS")]
+    public void ViewingLoginPage_DoesNotConsumePasswordAttemptBucket(string method) =>
+        Assert.False(LoginRateLimitPolicy.AppliesToAttempt(method, "/account/login"));
+
+    [Theory]
+    [InlineData("/account/login")]
+    [InlineData("/api/auth/login")]
+    [InlineData("/api/webauthn/login/verify")]
+    public void PostingAuthenticationAttempt_IsLimited(string path) =>
+        Assert.True(LoginRateLimitPolicy.AppliesToAttempt("POST", path));
 
     // ═══ مفتاح التقسيم ═══
 

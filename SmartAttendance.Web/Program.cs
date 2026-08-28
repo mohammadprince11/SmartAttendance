@@ -6,33 +6,23 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Application.AttendanceImports.Services;
 using SmartAttendance.Application.AttendanceProcessing.Services;
-using SmartAttendance.Application.AttendanceRecords.Mappings;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceReports.Services;
-using SmartAttendance.Application.Branches.Mappings;
 using SmartAttendance.Application.Branches.Services;
 using SmartAttendance.Application.Common.Interfaces.Repositories;
-using SmartAttendance.Application.Companies.Mappings;
+using SmartAttendance.Application.Common.Mapping;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Companies.Services;
-using SmartAttendance.Application.Departments.Mappings;
 using SmartAttendance.Application.Departments.Services;
-using SmartAttendance.Application.Devices.Mappings;
 using SmartAttendance.Application.Devices.Services;
 using SmartAttendance.Application.EmployeePermissions.Services;
-using SmartAttendance.Application.EmployeeShifts.Mappings;
 using SmartAttendance.Application.EmployeeShifts.Services;
-using SmartAttendance.Application.Employees.Mappings;
 using SmartAttendance.Application.Employees.Services;
-using SmartAttendance.Application.Holidays.Mappings;
 using SmartAttendance.Application.Holidays.Services;
-using SmartAttendance.Application.LeaveRequests.Mappings;
 using SmartAttendance.Application.LeaveRequests.Services;
 using SmartAttendance.Application.MasterDataImports.Services;
-using SmartAttendance.Application.Permissions.Mappings;
 using SmartAttendance.Application.Permissions.Services;
 using SmartAttendance.Application.Setup.Services;
-using SmartAttendance.Application.Shifts.Mappings;
 using SmartAttendance.Application.Shifts.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Infrastructure.Repositories;
@@ -41,6 +31,9 @@ using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Theming;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ProductionOperationsOptions>(
+    builder.Configuration.GetSection(ProductionOperationsOptions.SectionName));
 
 builder.Services.AddRazorPages()
     // محرك تقارير واحد يخدم مسارين: الأشخاص (/PeopleReports) والحضور
@@ -58,7 +51,18 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 
-// مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة (المرحلة 6).
+// مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة + فحص malware
+// قبل الكتابة. في التطوير يمكن تعطيل المحرك صراحةً، أما بوابة الإنتاج فتفرضه.
+builder.Services.Configure<MalwareScanningOptions>(
+    builder.Configuration.GetSection(MalwareScanningOptions.SectionName));
+var malwareOptions = builder.Configuration
+    .GetSection(MalwareScanningOptions.SectionName)
+    .Get<MalwareScanningOptions>() ?? new MalwareScanningOptions();
+if (malwareOptions.IsUsable)
+    builder.Services.AddSingleton<IFileThreatScanner, ClamAvFileThreatScanner>();
+else
+    builder.Services.AddSingleton<IFileThreatScanner, DisabledFileThreatScanner>();
+
 builder.Services.AddSingleton<IProtectedFileService, ProtectedFileService>();
 
 // مقاييس الطلبات بالذاكرة (FIX-004 · OBS-006): خطُّ الأساس الذي كان مفقوداً —
@@ -328,7 +332,9 @@ builder.Services.AddRateLimiter(options =>
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
         context =>
         {
-            if (!LoginRateLimitPolicy.AppliesTo(context.Request.Path.Value))
+            if (!LoginRateLimitPolicy.AppliesToAttempt(
+                    context.Request.Method,
+                    context.Request.Path.Value))
             {
                 return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("free");
             }
@@ -349,26 +355,14 @@ builder.Services.AddRateLimiter(options =>
 //   /health/live  — العملية حيّة (بلا لمس القاعدة، فلا يُعاد تشغيلها لعطل قاعدة عابر).
 //   /health/ready — القاعدة مستجيبة فعلاً.
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ApplicationDbContext>("database", tags: new[] { "ready" });
+    .AddDbContextCheck<ApplicationDbContext>("database", tags: new[] { "ready" })
+    .AddCheck<SmartAttendance.Web.Infrastructure.Observability.BackupFreshnessHealthCheck>(
+        "verified-offsite-backup", tags: new[] { "ready" });
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// AutoMapper
-builder.Services.AddAutoMapper(cfg =>
-{
-    cfg.AddProfile<CompanyProfile>();
-    cfg.AddProfile<BranchProfile>();
-    cfg.AddProfile<DepartmentProfile>();
-    cfg.AddProfile<EmployeeProfile>();
-    cfg.AddProfile<DeviceProfile>();
-    cfg.AddProfile<ShiftProfile>();
-    cfg.AddProfile<EmployeeShiftProfile>();
-    cfg.AddProfile<AttendanceRecordProfile>();
-    cfg.AddProfile<HolidayProfile>();
-    cfg.AddProfile<LeaveRequestProfile>();
-    cfg.AddProfile<PermissionProfile>();
-});
+builder.Services.AddSingleton<IModelMapper, ConventionModelMapper>();
 
 // Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -406,9 +400,11 @@ builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.ICompanyS
 // تكون معطّلة يُحقَن مرسِل No-Op ولا تعمل خدمة التسليم الخلفية (بلا استهلاك).
 builder.Services.Configure<SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions>(
     builder.Configuration.GetSection(SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions.SectionName));
-var smtpEnabled = builder.Configuration
+var smtpOptions = builder.Configuration
     .GetSection(SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions.SectionName)
-    .Get<SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions>()?.IsUsable ?? false;
+    .Get<SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions>()
+    ?? new SmartAttendance.Web.Infrastructure.Notifications.SmtpOptions();
+var smtpEnabled = smtpOptions.IsUsable;
 if (smtpEnabled)
 {
     builder.Services.AddSingleton<SmartAttendance.Web.Infrastructure.Notifications.IEmailSender,
@@ -439,6 +435,24 @@ else
 // صندوق داخل النظام + Web-Push. يعمل دائماً (لا يحتاج SMTP) ويمنع التكرار بجدول أحداث.
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGeneratorService>();
 
+// Webhooks: صندوق صادر durable يعمل حتى إن لم توجد اشتراكات؛ الأسرار محمية
+// بـData Protection، والتحويلات ممنوعة كي لا تتجاوز سياسة عنوان الوجهة.
+builder.Services.Configure<SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherOptions>(
+    builder.Configuration.GetSection(
+        SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherOptions.SectionName));
+builder.Services.AddHttpClient("ZynoraWebhooks", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false,
+    AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+});
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integrations.WebhookDispatcherService>();
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integrations.DevicePunchProcessorService>();
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Reports.ReportScheduleDispatcherService>();
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Hrms.ApprovalSlaDispatcherService>();
+
 // كلمة مرور شهادة HTTPS لم تعد بالمستودع: مصدرها متغيّر البيئة وحده. نفشل بوضوح
 // عند الحاجة إليها وغيابها بدل رسالة ربط غامضة من Kestrel أو تشغيل بلا TLS بصمت.
 var certificatePath = builder.Configuration["Kestrel:Certificates:Default:Path"];
@@ -467,6 +481,23 @@ if (!string.IsNullOrWhiteSpace(certificatePath))
     }
 }
 
+// لا يكفي أن تكون الاختبارات خضراء كي يكون تشغيل الإنتاج آمناً. هذه البوابة
+// تفشل قبل لمس القاعدة إذا لم يوثَّق قبول المالك وRPO/RTO والنسخ الخارجي
+// والمراقبة وSMTP وفحص الملفات. يمكن تعطيلها صراحةً فقط بقرار طوارئ موثّق.
+var productionOperations = builder.Configuration
+    .GetSection(ProductionOperationsOptions.SectionName)
+    .Get<ProductionOperationsOptions>() ?? new ProductionOperationsOptions();
+var readinessFailures = ProductionReadinessGuard.Validate(
+    builder.Environment.EnvironmentName,
+    productionOperations,
+    smtpOptions,
+    malwareOptions);
+if (readinessFailures.Count > 0)
+{
+    throw new InvalidOperationException(
+        ProductionReadinessGuard.BuildFailureMessage(readinessFailures));
+}
+
 var app = builder.Build();
 
 // حارس فصل البيئات — **قبل المهاجر لا بعده.** تشغيلٌ غير إنتاجي يشير لقاعدة
@@ -489,6 +520,10 @@ using (var migrationScope = app.Services.CreateScope())
     await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
+    // الجداول القديمة الأساسية يجب أن توجد قبل الهجرات التي تضيف لها علاقات
+    // (مثل ApprovalRequestWatchers -> SelfServiceRequests).
+    await SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.EnsureCreatedAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Security.LoginDatabase.EnsureCreatedAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
 
     // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.

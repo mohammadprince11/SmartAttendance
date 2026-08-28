@@ -1,0 +1,22 @@
+/* Source: Pages/EmployeePortal/ShiftRequest.cshtml */
+.esr { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,var(--zy-text)); }
+    .esr-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); padding:18px; }
+    .esr-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .esr-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .esr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .esr-grid .full { grid-column:1/-1; }
+    .esr-field { display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:900; color:var(--sa-muted,var(--zy-muted)); }
+    .esr-field select, .esr-field input, .esr-field textarea {
+        border:1px solid var(--zy-migrated-color-28565ef553); border-radius:12px; background:transparent;
+        color:var(--sa-text,var(--zy-text)); padding:10px 12px; font-size:14px; font-weight:800; }
+    .esr-btn { margin-top:14px; width:100%; border:0; border-radius:14px; padding:12px;
+        font-size:14px; font-weight:1000; cursor:pointer; background:var(--zy-migrated-color-fa48ddcd46); color:var(--zy-white); }
+    .esr-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,var(--zy-migrated-color-b035e56d5f) 12%,transparent); }
+    .esr-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .esr-table th, .esr-table td { padding:8px 6px; border-bottom:1px solid var(--zy-migrated-color-cbebfcf5a2); text-align:end; }
+    .esr-table th { color:var(--sa-muted,var(--zy-muted)); font-weight:900; }
+    .esr-chip { border-radius:999px; padding:2px 10px; font-size:11px; font-weight:900; }
+    .esr-chip.Pending { color:var(--zy-migrated-color-f8e175950d); background:var(--zy-migrated-color-af5096d51b); }
+    .esr-chip.Approved { color:var(--zy-migrated-color-0f176030df); background:var(--zy-migrated-color-7304d11da4); }
+    .esr-chip.Rejected { color:var(--zy-danger); background:var(--zy-migrated-color-e92da98547); }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -129,7 +129,6 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         NormalizeDefaults();
         await LoadImportCompanyOptionsAsync();
         await LoadCurrentTabAsync();
@@ -137,7 +136,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostPreviewAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Tab = "import";
         await LoadImportCompanyOptionsAsync();
 
@@ -200,7 +198,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostImportAsync(string token)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Tab = "import";
         await LoadImportCompanyOptionsAsync();
 
@@ -274,7 +271,6 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostUpsertAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
         Tab = "process";
 
         if (string.IsNullOrWhiteSpace(Correction.EmployeeNo) || string.IsNullOrWhiteSpace(Correction.Date))
@@ -528,7 +524,6 @@ ORDER BY ar.AttendanceDate, e.EmployeeNo, ar.CheckIn;
     /// </summary>
     public async Task<IActionResult> OnPostSavePunchesAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         var redirect = new
         {
@@ -709,7 +704,6 @@ END;
     /// <summary>إضافة زوج بصمة غير-حضوري (نظير «إضافة بصمات أخرى» بكيان).</summary>
     public async Task<IActionResult> OnPostAddOtherPunchAsync()
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         var redirect = new
         {
@@ -771,7 +765,6 @@ VALUES
 
     public async Task<IActionResult> OnPostDeleteOtherPunchAsync(int id)
     {
-        await HrmsDatabase.EnsureCreatedAsync(_dbContext);
 
         // 🛡️ عزل الشركات (Issue 1 — حذف بمعرّف): كان الحذف بمعرّف البصمة بلا فحص شركة،
         // فمستخدم شركة A يحذف بصمة موظف شركة B بمعرّفٍ مزوَّر. الآن الحذف مربوطٌ بشركة

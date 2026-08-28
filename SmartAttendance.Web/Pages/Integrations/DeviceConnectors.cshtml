@@ -1,0 +1,93 @@
+@page "/Integrations/DeviceConnectors"
+@model SmartAttendance.Web.Pages.Integrations.DeviceConnectorsModel
+@{
+    ViewData["Title"] = "موصلات أجهزة الحضور";
+}
+<link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<main class="hrms-page" dir="rtl">
+    <header class="hrms-page-head">
+        <div>
+            <h1>موصلات أجهزة الحضور</h1>
+            <p>API خام مع idempotency وheartbeat وطابور dead-letter، معزول لكل شركة.</p>
+            <nav><a href="/Integrations/Webhooks">Webhooks</a> · <strong>أجهزة الحضور</strong> · <a href="/Integrations/Accounting">المحاسبة</a></nav>
+        </div>
+        <form method="get">
+            <select name="CompanyId" onchange="this.form.submit()" aria-label="الشركة">
+                <option value="">اختر الشركة</option>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
+                }
+            </select>
+        </form>
+    </header>
+
+    @if (TempData["SuccessMessage"] is string success) { <div class="hrms-alert success">@success</div> }
+    @if (TempData["ErrorMessage"] is string error) { <div class="hrms-alert danger">@error</div> }
+    @if (TempData["IntegrationKey"] is string key)
+    {
+        <div class="hrms-alert warning"><strong>المفتاح—يظهر مرة واحدة:</strong> <code dir="ltr">@key</code></div>
+    }
+
+    @if (Model.CompanyId is > 0)
+    {
+        <section class="hrms-card">
+            <h2>إصدار مفتاح جهاز</h2>
+            <form method="post" asp-page-handler="IssueKey" class="hrms-form-grid">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <label>الاسم<input name="name" required maxlength="150" placeholder="بوابة جهاز الفرع الرئيسي" /></label>
+                <label>انتهاء اختياري<input name="expiresAt" type="date" /></label>
+                <button class="hrms-btn-primary" type="submit">إصدار مفتاح attendance.write</button>
+            </form>
+            <p>POST <code dir="ltr">/api/v1/attendance/device-punches</code> مع
+               <code dir="ltr">X-Zynora-Key</code> و<code dir="ltr">X-Zynora-Connector</code>.</p>
+        </section>
+
+        <section class="hrms-card">
+            <h2>المفاتيح</h2>
+            <div class="hrms-table-wrap"><table class="hrms-table">
+                <thead><tr><th>الاسم</th><th>الصلاحية</th><th>آخر استخدام</th><th>الحالة</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.Keys)
+                {
+                    <tr>
+                        <td>@item.Name</td><td dir="ltr">@item.ScopesCsv</td>
+                        <td>@(item.LastUsedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                        <td>@(item.IsActive ? "نشط" : "ملغى")</td>
+                        <td>@if (item.IsActive) {
+                            <form method="post" asp-page-handler="RevokeKey">
+                                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button class="hrms-btn-danger" type="submit" data-zyconfirm="إلغاء المفتاح؟">إلغاء</button>
+                            </form>
+                        }</td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+        </section>
+
+        <section class="hrms-card">
+            <h2>نبض الموصل والطوابير</h2>
+            <div class="hrms-table-wrap"><table class="hrms-table">
+                <thead><tr><th>الموصل</th><th>آخر اتصال</th><th>آخر دفعة</th><th>معلق</th><th>Dead-letter</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.Heartbeats)
+                {
+                    <tr>
+                        <td dir="ltr">@item.ConnectorKey</td><td>@item.LastSeenAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@item.LastBatchCount</td><td>@item.Pending</td><td>@item.DeadLetter</td>
+                        <td>@if (item.DeadLetter > 0) {
+                            <form method="post" asp-page-handler="RetryDeadLetters">
+                                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                                <input type="hidden" name="connectorKey" value="@item.ConnectorKey" />
+                                <button class="hrms-btn-secondary" type="submit">إعادة المحاولة</button>
+                            </form>
+                        }</td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+        </section>
+    }
+</main>

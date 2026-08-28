@@ -7,7 +7,7 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// الحضور الشهري (نمط كيان — قسمي 9 و13 بدراسة الحضور): صف لكل موظف×شهر يجمع
 /// يومياته المحللة (أيام عمل/حضور/غياب، ساعات تأخير/خروج مبكر/عمل) بدورة حالة:
 /// UnderReview ← Approved ← Locked. القفل هو بوابة الرواتب — الشهر المقفل لا
-/// تتغير أرقامه بإعادة البناء ولا يُرجع للمراجعة. «بناء الشهر» يجدد أرقام
+/// تتغير أرقامه بإعادة البناء ولا يُفتح إلا استثنائياً مع سبب وسجل تدقيق. «بناء الشهر» يجدد أرقام
 /// الأشهر تحت المراجعة فقط ويترك المعتمد/المقفل كما هو.
 /// </summary>
 public static class MonthAttendanceStore
@@ -299,6 +299,44 @@ WHERE m.Id IN ({inList}) AND {scopeFilter};
     public static Task<int> LockAsync(ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids) =>
         Transition(dbContext, scope, ids, from: "Approved", to: "Locked",
             "LockedAt = SYSUTCDATETIME()");
+
+    /// <summary>فتحٌ استثنائي ومدقّق: مقفل ← معتمد. لا يقبل سبباً فارغاً.</summary>
+    public static async Task<int> UnlockAsync(
+        ApplicationDbContext dbContext, CompanyScope scope, IReadOnlyCollection<int> ids,
+        string? userName, string? ipAddress, string reason)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (ids.Count == 0 || scope.IsDeniedAll || string.IsNullOrWhiteSpace(reason)) return 0;
+        await EnsureAsync(dbContext);
+        var scopeFilter = scope.IsUnrestricted ? "1 = 1" : scope.ToSqlPredicate("e.CompanyId");
+        var total = 0;
+        foreach (var chunk in ids.Chunk(500))
+        {
+            var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
+            total += await HrmsDatabase.ScalarAsync<int>(dbContext, $"""
+DECLARE @Changed TABLE (Id int NOT NULL);
+UPDATE m SET m.Status = N'Approved', m.LockedAt = NULL
+OUTPUT inserted.Id INTO @Changed(Id)
+FROM EmployeeMonthAttendance m
+INNER JOIN Employees e ON e.Id = m.EmployeeId
+WHERE m.Id IN ({inList}) AND m.Status = N'Locked' AND {scopeFilter};
+IF OBJECT_ID('AuditLogs','U') IS NOT NULL
+    INSERT INTO AuditLogs (EntityName, EntityId, Action, OldValues, NewValues, UserName, IpAddress, CreatedAt)
+    SELECT N'EmployeeMonthAttendance', CONVERT(nvarchar(80), Id), N'Unlock',
+           N'Status=Locked', CONCAT(N'Status=Approved; Reason=', @Reason), @User, @Ip, SYSUTCDATETIME()
+    FROM @Changed;
+SELECT COUNT(1) FROM @Changed;
+""", command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Reason", reason.Trim());
+                HrmsDatabase.AddParameter(command, "@User", (object?)userName ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Ip", (object?)ipAddress ?? DBNull.Value);
+                for (var i = 0; i < chunk.Length; i++)
+                    HrmsDatabase.AddParameter(command, $"@P{i}", chunk[i]);
+            });
+        }
+        return total;
+    }
 
     private static async Task<int> Transition(ApplicationDbContext dbContext,
         CompanyScope scope, IReadOnlyCollection<int> ids, string from, string to, string extraSet)

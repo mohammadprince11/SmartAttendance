@@ -537,9 +537,11 @@ VALUES (@EmployeeId, @Type, @FileName, @Path, @Notes, @By);
     // ── الأرشيف ────────────────────────────────────────────────────────────────
 
     public static async Task<List<Generated>> LoadGeneratedAsync(
-        ApplicationDbContext db, int? employeeId = null, int? templateId = null)
+        ApplicationDbContext db, int? employeeId = null, int? templateId = null,
+        Security.CompanyScope? scope = null)
     {
         var filters = new List<string>();
+        if (scope is not null) filters.Add(Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId"));
         if (employeeId is not null) filters.Add("g.EmployeeId = @EmployeeId");
         if (templateId is not null) filters.Add("g.TemplateId = @TemplateId");
         var where = filters.Count == 0 ? string.Empty : " AND " + string.Join(" AND ", filters);
@@ -587,8 +589,9 @@ ORDER BY g.Id DESC;
                 HrmsDatabase.GetString(reader, "RevokedBy")));
     }
 
-    public static async Task<Generated?> FindGeneratedAsync(ApplicationDbContext db, int id) =>
-        (await LoadGeneratedAsync(db)).FirstOrDefault(row => row.Id == id);
+    public static async Task<Generated?> FindGeneratedAsync(
+        ApplicationDbContext db, int id, Security.CompanyScope? scope = null) =>
+        (await LoadGeneratedAsync(db, scope: scope)).FirstOrDefault(row => row.Id == id);
 
     /// <summary>
     /// الـPIN الصادر بآخر عملية توليد — يُعرض **مرّة واحدة** للمُصدِر ثم يُنسى.

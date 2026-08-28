@@ -62,13 +62,13 @@ public class RaisesModel : PageModel
         TotalCount = Items.Count;
 
         Employees = await SalaryRaiseStore.EmployeeBasicsAsync(_db, scope);
-        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db);
+        (AllDepartments, AllBranches, AllJobTitles) = await MassScopeResolver.OrgListsAsync(_db, authorizationScope: scope);
     }
 
     /// <summary>تطبيق جماعي (= قفل) للزيادات المحددة قيد الانتظار.</summary>
     public async Task<IActionResult> OnPostApplyManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         var n = await SalaryRaiseStore.ApplyManyAsync(_db, await ScopeAsync(), ids, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = $"طُبّقت {n} زيادة وحُدّثت رواتبها الأساسية.";
@@ -78,7 +78,7 @@ public class RaisesModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteManyAsync()
     {
-        var ids = Request.Form["SelectedIds"].Where(v => int.TryParse(v, out _)).Select(int.Parse).ToList();
+        var ids = SelectedIdParser.Parse(Request.Form["SelectedIds"]);
         if (ids.Count == 0) { TempData["PayrollMessage"] = "حدد زيادات أولاً."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         await SalaryRaiseStore.DeleteManyAsync(_db, await ScopeAsync(), ids);
         TempData["PayrollMessage"] = $"تم حذف {ids.Count} زيادة.";
@@ -94,11 +94,12 @@ public class RaisesModel : PageModel
         var value = decimal.TryParse(f["RaiseValue"], out var v) ? v : 0;
         if (value <= 0) { TempData["PayrollMessage"] = "قيمة الزيادة يجب أن تكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
-        var (empIds, skipped, scopeLabel, err) = await MassScopeResolver.ResolveAsync(_db, f, massFile);
+        var scope = await ScopeAsync();
+        var (empIds, skipped, scopeLabel, err) = await MassScopeResolver.ResolveAsync(
+            _db, f, massFile, authorizationScope: scope);
         if (err != null) { TempData["PayrollMessage"] = err; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (empIds.Count == 0) { TempData["PayrollMessage"] = "لم يُحدَّد أي موظف مطابق."; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
-        var scope = await ScopeAsync();
         // القاموس مقيَّد بشركاتي؛ فأي معرّف يحلّه النطاق الجماعي خارج شركاتي لا يوجد
         // هنا فيُتخطّى — لا تُنشأ زيادة لموظف خارج العزل (الحارس يرفضه كذلك بالمتجر).
         var basics = (await SalaryRaiseStore.EmployeeBasicsAsync(_db, scope)).ToDictionary(x => x.Id, x => x.Basic);

@@ -6,6 +6,7 @@
     ViewData["Title"] = "وثائق الشركة";
     var editing = Model.EditingId.HasValue;
 }
+<link rel="stylesheet" href="~/css/pages/index-143e1fa932.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -41,12 +42,12 @@
 
         @if (Model.Categories.Count > 0)
         {
-            <div class="zyp-actions" style="justify-content:flex-start;flex-wrap:wrap">
-                <a asp-page="./Index" style="@(Model.CategoryFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
+            <div class="zyp-actions zyu-2d1bdd415249">
+                <a asp-page="./Index" data-zy-style="@(Model.CategoryFilter is null ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">الكل</a>
                 @foreach (var category in Model.Categories)
                 {
                     <a asp-page="./Index" asp-route-cat="@category.Id"
-                       style="@(Model.CategoryFilter == category.Id ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">
+                       data-zy-style="@(Model.CategoryFilter == category.Id ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">
                         @category.Name (@category.DocumentCount)
                     </a>
                 }
@@ -68,7 +69,7 @@
                         <th>تنتهي</th>
                         <th>الجمهور</th>
                         <th>للموظفين</th>
-                        <th style="width:170px"></th>
+                        <th class="zyu-55d8ffef28ea"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -106,7 +107,7 @@
                             <td>
                                 <div class="zyp-actions">
                                     <a asp-page="./Index" asp-route-edit="@document.Id">تعديل</a>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@document.Id" />
                                         <button type="submit" data-zyconfirm="حذف الوثيقة؟">حذف</button>
                                     </form>
@@ -172,7 +173,7 @@
                     <input asp-for="Upload" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" />
                     @if (Model.DocumentId > 0)
                     {
-                        <span style="font-size:.75rem">اتركه فارغاً للإبقاء على الملف الحالي.</span>
+                        <span class="zyu-a0ba227f24b5">اتركه فارغاً للإبقاء على الملف الحالي.</span>
                     }
                 </label>
             </div>
@@ -189,7 +190,7 @@
 
             <footer class="nxhs-actions">
                 <button type="submit">حفظ الوثيقة</button>
-                <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">إلغاء</a>
+                <a class="zyp-move zyu-e3da42537cb5" asp-page="./Index">إلغاء</a>
             </footer>
         </form>
     }
@@ -210,7 +211,7 @@
                         <th>الوصف</th>
                         <th>الترتيب</th>
                         <th>عدد الوثائق</th>
-                        <th style="width:90px"></th>
+                        <th class="zyu-f47e3b970dce"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -223,7 +224,7 @@
                             <td class="zyp-count">@category.DocumentCount</td>
                             <td>
                                 <div class="zyp-actions">
-                                    <form method="post" asp-page-handler="DeleteCategory" style="display:inline">
+                                    <form method="post" asp-page-handler="DeleteCategory" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@category.Id" />
                                         <button type="submit" data-zyconfirm="حذف الفئة؟ وثائقها تبقى.">حذف</button>
                                     </form>
@@ -235,7 +236,7 @@
             </table>
         }
 
-        <form method="post" asp-page-handler="SaveCategory" class="zyp-editor-grid" style="border:0;padding:0">
+        <form method="post" asp-page-handler="SaveCategory" class="zyp-editor-grid zyu-410cf9349439">
             <label>
                 اسم فئة جديدة
                 <input asp-for="CategoryName" placeholder="اللوائح والسياسات" />
@@ -248,9 +249,9 @@
                 الترتيب
                 <input asp-for="CategorySortOrder" type="number" min="0" />
             </label>
-            <label style="justify-content:flex-end">
+            <label class="zyu-110c1427da8c">
                 &nbsp;
-                <button type="submit" class="zyc-add-rule" style="align-self:stretch">إضافة فئة</button>
+                <button type="submit" class="zyc-add-rule zyu-8ede280590c3">إضافة فئة</button>
             </label>
         </form>
     </div>

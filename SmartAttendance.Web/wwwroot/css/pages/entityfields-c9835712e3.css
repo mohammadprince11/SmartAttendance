@@ -1,0 +1,22 @@
+/* Source: Pages/HrSettings/EntityFields.cshtml */
+.efb-layout { display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
+    @media (max-width: 900px) { .efb-layout { grid-template-columns: 1fr; } }
+    .efb-catalog a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; color: var(--nxhs-text, var(--zy-text)); text-decoration: none; font-size: 13px; font-weight: 800; }
+    .efb-catalog a:hover { background: var(--zy-migrated-color-ce40b6b922); }
+    .efb-catalog a.active { background: var(--zy-migrated-color-b8b6cac45e); color: var(--zy-migrated-color-0f1cc78a41); }
+    .efb-count { font-size: 11px; opacity: .75; background: var(--zy-migrated-color-d67c6fff40); border-radius: 999px; padding: 1px 8px; }
+    .efb-row { display: grid; grid-template-columns: 26px 1fr 130px 1fr 74px 74px 120px; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--zy-migrated-color-cbebfcf5a2); border-radius: 12px; margin-bottom: 6px; background: var(--zy-migrated-color-3b1d5b2218); }
+    .efb-row.efb-dragging { opacity: .4; }
+    .efb-row input[type="text"], .efb-row select, .efb-row textarea, .efb-add input[type="text"], .efb-add select, .efb-add textarea { min-height: 32px; border-radius: 8px; border: 1px solid var(--zy-migrated-color-8c4327f6fd); background: var(--zy-migrated-color-18a22573f7); color: inherit; padding: 4px 10px; font-size: 12px; width: 100%; }
+    .efb-row textarea, .efb-add textarea { min-height: 32px; resize: vertical; }
+    .efb-grip { cursor: grab; opacity: .6; text-align: center; user-select: none; }
+    .efb-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 800; }
+    .efb-head { display: grid; grid-template-columns: 26px 1fr 130px 1fr 74px 74px 120px; gap: 8px; padding: 4px 10px; font-size: 11px; opacity: .65; font-weight: 900; }
+    .efb-add { display: grid; grid-template-columns: 1fr 130px 1fr 74px auto; gap: 8px; align-items: center; padding: 12px; border: 1px dashed var(--zy-migrated-color-ee0656c16a); border-radius: 14px; margin-bottom: 14px; }
+    .efb-actions button { background: none; border: 0; cursor: pointer; font-weight: 800; font-size: 12px; }
+
+/* Static inline utilities migrated from Pages/HrSettings/EntityFields.cshtml */
+
+.zyu-650e9bff6c5d { color:var(--zy-migrated-color-0f1cc78a41); }
+
+.zyu-8928e688b476 { color:var(--zy-danger); }

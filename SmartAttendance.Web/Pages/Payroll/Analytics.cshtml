@@ -7,52 +7,8 @@
     var totalOut = b.Basic + b.Allowances; // إجمالي قبل الاستقطاع
     decimal Seg(decimal v) => totalOut <= 0 ? 0 : Math.Round(v / totalOut * 100m, 1);
 }
+<link rel="stylesheet" href="~/css/pages/analytics-4497d48a04.css" asp-append-version="true" />
 
-<style>
-    .pa-page { display:flex; flex-direction:column; gap:14px; color:var(--sa-text,#DCEAF4); }
-    .pa-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-        padding:16px 20px; border:1px solid rgba(73,111,151,.22); border-radius:20px;
-        background:radial-gradient(circle at 92% 8%,rgba(18,217,227,.12),transparent 38%),linear-gradient(135deg,rgba(9,31,52,.95),rgba(5,16,29,.95)); }
-    html[data-theme="light"] .pa-head { background:linear-gradient(135deg,#fff,#f2f7fb); }
-    .pa-head h1 { margin:0; font-size:20px; font-weight:1000; }
-    .pa-head p { margin:2px 0 0; font-size:12px; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-    .pa-filter { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-    .pa-filter select { min-height:34px; border-radius:10px; border:1px solid rgba(73,111,151,.25); background:rgba(0,0,0,.16); color:inherit; padding:4px 10px; font-weight:900; max-width:220px; }
-    html[data-theme="light"] .pa-filter select { background:#fff; }
-
-    .pa-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
-    .pa-kpi { padding:14px 16px; border:1px solid rgba(73,111,151,.22); border-radius:16px; background:var(--sa-surface,rgba(8,25,43,.9)); position:relative; overflow:hidden; }
-    .pa-kpi::before { content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background:var(--acc,#12D9E3); }
-    .pa-kpi b { display:block; font-size:20px; font-weight:1000; direction:ltr; unicode-bidi:plaintext; }
-    .pa-kpi span { font-size:11px; font-weight:900; color:var(--sa-muted,#8FA8BC); }
-
-    .pa-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:12px; }
-    .pa-card { border:1px solid rgba(73,111,151,.22); border-radius:18px; background:var(--sa-surface,rgba(8,25,43,.9)); padding:16px 18px; }
-    .pa-card h3 { margin:0 0 4px; font-size:14px; font-weight:1000; }
-    .pa-card .sub { font-size:11px; font-weight:800; color:var(--sa-muted,#8FA8BC); margin-bottom:14px; }
-    .pa-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; font-weight:900; margin-bottom:10px; }
-    .pa-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-inline-end:5px; vertical-align:middle; }
-
-    /* رسم أعمدة شهرية */
-    .pa-chart { display:flex; align-items:flex-end; gap:10px; height:200px; padding-top:6px; overflow-x:auto; }
-    .pa-col { flex:1 0 34px; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:34px; }
-    .pa-bars { display:flex; align-items:flex-end; gap:3px; height:170px; width:100%; justify-content:center; }
-    .pa-bar { width:12px; border-radius:4px 4px 0 0; min-height:2px; transition:height .3s; }
-    .pa-bar.g { background:linear-gradient(180deg,#12D9E3,#0ea5b5); }
-    .pa-bar.n { background:linear-gradient(180deg,#4ade80,#22a35a); }
-    .pa-bar.gs { background:linear-gradient(180deg,#a78bfa,#7c5cd6); }
-    .pa-xlabel { font-size:10px; font-weight:900; color:var(--sa-muted,#8FA8BC); direction:ltr; }
-
-    /* شريط التركيب */
-    .pa-stack { display:flex; height:34px; border-radius:9px; overflow:hidden; border:1px solid rgba(73,111,151,.25); }
-    .pa-seg { display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; color:#04141d; white-space:nowrap; min-width:0; }
-    .pa-rows { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
-    .pa-row { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:900; }
-    .pa-row .lbl { display:flex; align-items:center; gap:7px; color:var(--sa-muted,#8FA8BC); }
-    .pa-row .lbl i { width:10px; height:10px; border-radius:3px; }
-    .pa-row .val { direction:ltr; unicode-bidi:plaintext; }
-    .pa-empty { padding:34px; text-align:center; color:var(--sa-muted,#8FA8BC); font-weight:800; }
-</style>
 
 <section class="pa-page" dir="rtl">
     <header class="pa-head">
@@ -76,10 +32,10 @@
     </header>
 
     <div class="pa-kpis">
-        <div class="pa-kpi" style="--acc:#12D9E3"><b>@Model.YearGross.ToString("#,0")</b><span>إجمالي الأجور (12 شهراً)</span></div>
-        <div class="pa-kpi" style="--acc:#4ade80"><b>@Model.YearNet.ToString("#,0")</b><span>صافي مدفوع (12 شهراً)</span></div>
-        <div class="pa-kpi" style="--acc:#a78bfa"><b>@Model.YearGosi.ToString("#,0")</b><span>حصة الشركة — الضمان</span></div>
-        <div class="pa-kpi" style="--acc:#facc15"><b>@Model.Breakdown.Employees</b><span>موظفو آخر مسير · @Model.Breakdown.PeriodLabel</span></div>
+        <div class="pa-kpi zyu-7198287e0e8a"><b>@Model.YearGross.ToString("#,0")</b><span>إجمالي الأجور (12 شهراً)</span></div>
+        <div class="pa-kpi zyu-2b7d3f92b385"><b>@Model.YearNet.ToString("#,0")</b><span>صافي مدفوع (12 شهراً)</span></div>
+        <div class="pa-kpi zyu-8b6a7c0b3c73"><b>@Model.YearGosi.ToString("#,0")</b><span>حصة الشركة — الضمان</span></div>
+        <div class="pa-kpi zyu-1107ff14a820"><b>@Model.Breakdown.Employees</b><span>موظفو آخر مسير · @Model.Breakdown.PeriodLabel</span></div>
     </div>
 
     <div class="pa-grid">
@@ -87,8 +43,8 @@
             <h3>الإجمالي مقابل الصافي — شهرياً</h3>
             <div class="sub">آخر 12 دورة مسير</div>
             <div class="pa-legend">
-                <span><i style="background:#12D9E3"></i>الإجمالي</span>
-                <span><i style="background:#4ade80"></i>الصافي</span>
+                <span><i class="zyu-e5ea0bf4d874"></i>الإجمالي</span>
+                <span><i class="zyu-f71302e3f7df"></i>الصافي</span>
             </div>
             @if (Model.Series.Count == 0)
             {
@@ -101,8 +57,8 @@
                     {
                         <div class="pa-col">
                             <div class="pa-bars">
-                                <div class="pa-bar g" style="height:@(Pct(p.Gross, Model.MaxGross))%" title="إجمالي @p.Label: @p.Gross.ToString("#,0")"></div>
-                                <div class="pa-bar n" style="height:@(Pct(p.Net, Model.MaxGross))%" title="صافي @p.Label: @p.Net.ToString("#,0")"></div>
+                                <div class="pa-bar g" data-zy-style="height:@(Pct(p.Gross, Model.MaxGross))%" title="إجمالي @p.Label: @p.Gross.ToString("#,0")"></div>
+                                <div class="pa-bar n" data-zy-style="height:@(Pct(p.Net, Model.MaxGross))%" title="صافي @p.Label: @p.Net.ToString("#,0")"></div>
                             </div>
                             <div class="pa-xlabel">@p.Label</div>
                         </div>
@@ -114,7 +70,7 @@
         <div class="pa-card">
             <h3>حصة الشركة — الضمان الاجتماعي شهرياً</h3>
             <div class="sub">تكلفة صاحب العمل عبر الدورات</div>
-            <div class="pa-legend"><span><i style="background:#a78bfa"></i>حصة الشركة</span></div>
+            <div class="pa-legend"><span><i class="zyu-c847403c4978"></i>حصة الشركة</span></div>
             @if (Model.Series.Count == 0)
             {
                 <div class="pa-empty">لا بيانات.</div>
@@ -126,7 +82,7 @@
                     {
                         <div class="pa-col">
                             <div class="pa-bars">
-                                <div class="pa-bar gs" style="width:20px;height:@(Pct(p.GosiCompany, Model.MaxGosi))%" title="@p.Label: @p.GosiCompany.ToString("#,0")"></div>
+                                <div class="pa-bar gs" data-zy-style="width:20px;height:@(Pct(p.GosiCompany, Model.MaxGosi))%" title="@p.Label: @p.GosiCompany.ToString("#,0")"></div>
                             </div>
                             <div class="pa-xlabel">@p.Label</div>
                         </div>
@@ -135,7 +91,7 @@
             }
         </div>
 
-        <div class="pa-card" style="grid-column:1 / -1">
+        <div class="pa-card zyu-75be3216d07d">
             <h3>تفكيك آخر مسير — @Model.Breakdown.PeriodLabel</h3>
             <div class="sub">كيف يتكوّن الإجمالي وأين يذهب</div>
             @if (Model.Breakdown.Employees == 0)
@@ -145,17 +101,17 @@
             else
             {
                 <div class="pa-stack">
-                    <div class="pa-seg" style="flex:@Seg(b.Basic);background:#12D9E3" title="أساسي">@(Seg(b.Basic) >= 8 ? "أساسي" : "")</div>
-                    <div class="pa-seg" style="flex:@Seg(b.Allowances);background:#60a5fa" title="علاوات">@(Seg(b.Allowances) >= 8 ? "علاوات" : "")</div>
+                    <div class="pa-seg" data-zy-style="flex:@Seg(b.Basic);background:#12D9E3" title="أساسي">@(Seg(b.Basic) >= 8 ? "أساسي" : "")</div>
+                    <div class="pa-seg" data-zy-style="flex:@Seg(b.Allowances);background:#60a5fa" title="علاوات">@(Seg(b.Allowances) >= 8 ? "علاوات" : "")</div>
                 </div>
                 <div class="pa-rows">
-                    <div class="pa-row"><span class="lbl"><i style="background:#12D9E3"></i>الأساسي</span><span class="val">@b.Basic.ToString("#,0.##")</span></div>
-                    <div class="pa-row"><span class="lbl"><i style="background:#60a5fa"></i>العلاوات</span><span class="val">@b.Allowances.ToString("#,0.##")</span></div>
-                    <div class="pa-row" style="border-top:1px solid rgba(73,111,151,.18);padding-top:8px"><span class="lbl"><i style="background:#f87171"></i>الضريبة</span><span class="val">@b.Tax.ToString("#,0.##")</span></div>
-                    <div class="pa-row"><span class="lbl"><i style="background:#fb923c"></i>ضمان الموظف</span><span class="val">@b.GosiEmployee.ToString("#,0.##")</span></div>
-                    <div class="pa-row"><span class="lbl"><i style="background:#eab308"></i>استقطاعات أخرى</span><span class="val">@b.OtherDeductions.ToString("#,0.##")</span></div>
-                    <div class="pa-row" style="border-top:1px solid rgba(73,111,151,.18);padding-top:8px"><span class="lbl"><i style="background:#4ade80"></i>الصافي المدفوع</span><span class="val" style="color:#4ade80">@b.Net.ToString("#,0.##")</span></div>
-                    <div class="pa-row"><span class="lbl"><i style="background:#a78bfa"></i>حصة الشركة (الضمان)</span><span class="val" style="color:#a78bfa">@b.GosiCompany.ToString("#,0.##")</span></div>
+                    <div class="pa-row"><span class="lbl"><i class="zyu-e5ea0bf4d874"></i>الأساسي</span><span class="val">@b.Basic.ToString("#,0.##")</span></div>
+                    <div class="pa-row"><span class="lbl"><i class="zyu-6564e555e13a"></i>العلاوات</span><span class="val">@b.Allowances.ToString("#,0.##")</span></div>
+                    <div class="pa-row zyu-3808165fdccb"><span class="lbl"><i class="zyu-16280ad178fd"></i>الضريبة</span><span class="val">@b.Tax.ToString("#,0.##")</span></div>
+                    <div class="pa-row"><span class="lbl"><i class="zyu-f9437ec20e24"></i>ضمان الموظف</span><span class="val">@b.GosiEmployee.ToString("#,0.##")</span></div>
+                    <div class="pa-row"><span class="lbl"><i class="zyu-e272c5493a75"></i>استقطاعات أخرى</span><span class="val">@b.OtherDeductions.ToString("#,0.##")</span></div>
+                    <div class="pa-row zyu-3808165fdccb"><span class="lbl"><i class="zyu-f71302e3f7df"></i>الصافي المدفوع</span><span class="val zyu-22d70a2892cd">@b.Net.ToString("#,0.##")</span></div>
+                    <div class="pa-row"><span class="lbl"><i class="zyu-c847403c4978"></i>حصة الشركة (الضمان)</span><span class="val zyu-82b0a99c0d42">@b.GosiCompany.ToString("#,0.##")</span></div>
                 </div>
             }
         </div>

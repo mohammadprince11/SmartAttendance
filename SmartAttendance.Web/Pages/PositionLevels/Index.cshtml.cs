@@ -2,12 +2,15 @@ using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.PositionLevels;
 
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;

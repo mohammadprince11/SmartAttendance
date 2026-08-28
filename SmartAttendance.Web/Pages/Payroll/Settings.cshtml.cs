@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -14,10 +16,21 @@ namespace SmartAttendance.Web.Pages.Payroll;
 public class SettingsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public SettingsModel(ApplicationDbContext db)
+    public SettingsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
+    }
+
+    [BindProperty(SupportsGet = true)]
+    public int? CompanyId { get; set; }
+    public List<CompanyOption> Companies { get; set; } = new();
+    public sealed class CompanyOption
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     public List<PayrollConfigStore.TaxProfile> TaxProfiles { get; set; } = new();
@@ -56,38 +69,46 @@ public class SettingsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db);
-        GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db);
+        var scope = await _companyScope.GetAsync();
+        await LoadCompaniesAsync(scope);
+        if (CompanyId.HasValue && !scope.Allows(CompanyId.Value))
+        {
+            TaxProfiles = new();
+            GosiProfiles = new();
+            return;
+        }
+        TaxProfiles = await PayrollConfigStore.ListTaxProfilesAsync(_db, scope, CompanyId);
+        GosiProfiles = await PayrollConfigStore.ListGosiProfilesAsync(_db, scope, CompanyId);
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
-        LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db);
+        LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db, CompanyId);
 
         OvertimeBaseMode = PayrollEarningBase.NormalizeMode(
-            await HrSettingsStore.GetAsync(_db, "Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic));
+            await GetSettingAsync("Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic));
         UnpaidLeaveBaseMode = PayrollEarningBase.NormalizeMode(
-            await HrSettingsStore.GetAsync(_db, "Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic));
+            await GetSettingAsync("Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic));
         SalaryDaysBasis = PayrollDivisorPolicy.NormalizeBasis(
-            await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30));
+            await GetSettingAsync(PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30));
         StandardDailyHours = PayrollDivisorPolicy.DailyHours(
-            await HrSettingsStore.GetAsync(_db, PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
-        GosiTaxBaseMode = (await HrSettingsStore.GetAsync(_db, "Payroll.GosiTaxBase", "Prorated")) == "FullBasic"
+            await GetSettingAsync(PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+        GosiTaxBaseMode = (await GetSettingAsync("Payroll.GosiTaxBase", "Prorated")) == "FullBasic"
             ? "FullBasic" : "Prorated";
 
         RequireCommitteeApproval = bool.TryParse(
-            await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
+            await GetSettingAsync(PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
 
-        FiscalYearStartMonth = int.TryParse(await HrSettingsStore.GetAsync(_db, KeyFiscalYearStartMonth, "1"), out var fy) && fy is >= 1 and <= 12 ? fy : 1;
-        ExtraSalariesPerYear = int.TryParse(await HrSettingsStore.GetAsync(_db, KeyExtraSalariesPerYear, "0"), out var es) && es >= 0 ? es : 0;
+        FiscalYearStartMonth = int.TryParse(await GetSettingAsync(KeyFiscalYearStartMonth, "1"), out var fy) && fy is >= 1 and <= 12 ? fy : 1;
+        ExtraSalariesPerYear = int.TryParse(await GetSettingAsync(KeyExtraSalariesPerYear, "0"), out var es) && es >= 0 ? es : 0;
 
         ConfigMonitorEnabled = bool.TryParse(
-            await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyEnabled, "False"), out var cme) && cme;
-        ConfigMonitorRole = await HrSettingsStore.GetAsync(_db, PayrollConfigChangeMonitor.KeyTargetRole, PayrollConfigChangeMonitor.DefaultTargetRole);
+            await GetSettingAsync(PayrollConfigChangeMonitor.KeyEnabled, "False"), out var cme) && cme;
+        ConfigMonitorRole = await GetSettingAsync(PayrollConfigChangeMonitor.KeyTargetRole, PayrollConfigChangeMonitor.DefaultTargetRole);
 
         Caps = PayrollCapsPolicy.Parse(
-            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
-            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
-            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
-            await HrSettingsStore.GetAsync(_db, PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
+            await GetSettingAsync(PayrollCapsPolicy.KeyDeductionCapAmount, "0"),
+            await GetSettingAsync(PayrollCapsPolicy.KeyDeductionCapPercent, "0"),
+            await GetSettingAsync(PayrollCapsPolicy.KeyOvertimeCapAmount, "0"),
+            await GetSettingAsync(PayrollCapsPolicy.KeyOvertimeCapHours, "0"));
     }
 
     /// <summary>
@@ -96,7 +117,17 @@ public class SettingsModel : PageModel
     /// </summary>
     private Task<bool> TrackAsync(string key, string? value) =>
         PayrollConfigChangeMonitor.SetAndTrackAsync(
-            _db, key, value, User?.Identity?.Name ?? "system", HttpContext.Connection.RemoteIpAddress?.ToString());
+            _db, CompanyId ?? 0, key, value, User?.Identity?.Name ?? "system", HttpContext.Connection.RemoteIpAddress?.ToString());
+
+    private Task<string> GetSettingAsync(string key, string fallback) => CompanyId is > 0
+        ? HrSettingsStore.GetCompanyAsync(_db, CompanyId.Value, key, fallback)
+        : HrSettingsStore.GetAsync(_db, key, fallback);
+
+    private async Task<bool> CanWriteCompanyAsync()
+    {
+        if (CompanyId is not > 0) return false;
+        return (await _companyScope.GetAsync(HttpContext.RequestAborted)).Allows(CompanyId);
+    }
 
     // ── السنة المالية (نظير «السنة المالية» بكيان: بداية السنة · عدد الرواتب الإضافية · ساعات الدوام) ──
     public const string KeyFiscalYearStartMonth = "Payroll.FiscalYear.StartMonth";
@@ -113,6 +144,7 @@ public class SettingsModel : PageModel
 
     public async Task<IActionResult> OnPostSaveFiscalYearAsync(int fiscalYearStartMonth, int extraSalariesPerYear)
     {
+        if (!await CanWriteCompanyAsync()) return Forbid();
         if (fiscalYearStartMonth is < 1 or > 12)
         {
             TempData["PayrollMessage"] = "شهر بداية السنة المالية بين 1 و12."; TempData["PayrollOk"] = false;
@@ -136,6 +168,7 @@ public class SettingsModel : PageModel
 
     public async Task<IActionResult> OnPostSaveMonitorAsync(bool monitorEnabled, string? monitorRole)
     {
+        if (!await CanWriteCompanyAsync()) return Forbid();
         await TrackAsync(PayrollConfigChangeMonitor.KeyEnabled, monitorEnabled.ToString());
         await TrackAsync(PayrollConfigChangeMonitor.KeyTargetRole,
             string.IsNullOrWhiteSpace(monitorRole) ? PayrollConfigChangeMonitor.DefaultTargetRole : monitorRole.Trim());
@@ -153,6 +186,7 @@ public class SettingsModel : PageModel
 
     public async Task<IActionResult> OnPostSaveApprovalAsync(bool requireCommitteeApproval)
     {
+        if (!await CanWriteCompanyAsync()) return Forbid();
         await TrackAsync(PayrollRunStore.KeyRequireCommitteeApproval, requireCommitteeApproval.ToString());
         TempData["PayrollMessage"] = requireCommitteeApproval
             ? "حُفظ: إصدار الرواتب يتطلب اعتماد اللجنة على الدفعة المقفلة أولاً."
@@ -167,6 +201,7 @@ public class SettingsModel : PageModel
     public async Task<IActionResult> OnPostSaveCapsAsync(
         string? deductionCapAmount, string? deductionCapPercent, string? overtimeCapAmount, string? overtimeCapHours)
     {
+        if (!await CanWriteCompanyAsync()) return Forbid();
         var caps = PayrollCapsPolicy.Parse(deductionCapAmount, deductionCapPercent, overtimeCapAmount, overtimeCapHours);
         if (caps.DeductionCapPercentOfGross > 100)
         {
@@ -193,6 +228,7 @@ public class SettingsModel : PageModel
     /// </summary>
     public async Task<IActionResult> OnPostSaveGosiTaxBaseAsync(string gosiTaxBase)
     {
+        if (!await CanWriteCompanyAsync()) return Forbid();
         var mode = gosiTaxBase == "FullBasic" ? "FullBasic" : "Prorated";
         await TrackAsync("Payroll.GosiTaxBase", mode);
         TempData["PayrollMessage"] = mode == "FullBasic"
@@ -208,6 +244,7 @@ public class SettingsModel : PageModel
     public async Task<IActionResult> OnPostSaveBasePolicyAsync(
         string overtimeBaseMode, string unpaidLeaveBaseMode, string salaryDaysBasis, string standardDailyHours)
     {
+        if (!await CanWriteCompanyAsync()) return Forbid();
         var otMode = PayrollEarningBase.NormalizeMode(overtimeBaseMode);
         var ulMode = PayrollEarningBase.NormalizeMode(unpaidLeaveBaseMode);
         var basis = PayrollDivisorPolicy.NormalizeBasis(salaryDaysBasis);
@@ -251,7 +288,8 @@ public class SettingsModel : PageModel
     {
         // المقام لم يعد يُحفظ هنا — يأتي من سياسة الغلق «أيام العمل» بالمسير.
         var policy = new AttendanceSalaryLink.Policy(mode, absenceDays, allowNegative).Normalized();
-        await AttendanceSalaryLinkSettings.SaveAsync(_db, policy);
+        if (!await CanWriteCompanyAsync()) return Forbid();
+        await AttendanceSalaryLinkSettings.SaveAsync(_db, CompanyId!.Value, policy);
 
         var notes = new List<string> { AttendanceSalaryLink.ModeLabel(policy.Mode) };
         if (policy.Mode != AttendanceSalaryLink.Lenient)
@@ -298,10 +336,13 @@ public class SettingsModel : PageModel
 
     public async Task<IActionResult> OnPostSaveGosiAsync()
     {
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId)) return Forbid();
         var form = Request.Form;
         var profile = new PayrollConfigStore.GosiProfile
         {
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
+            CompanyId = CompanyId,
             Name = form["Name"].ToString().Trim(),
             EmployeeRate = decimal.TryParse(form["EmployeeRate"], out var er) ? er : 0,
             CompanyRate = decimal.TryParse(form["CompanyRate"], out var cr) ? cr : 0,
@@ -313,33 +354,38 @@ public class SettingsModel : PageModel
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
             TempData["PayrollMessage"] = "اسم ملف الضمان مطلوب.";
-            return RedirectToPage();
+            return RedirectToPage(new { CompanyId });
         }
         var gosiErrors = PayrollConfigValidation.ValidateGosi(profile.EmployeeRate, profile.CompanyRate, profile.Ceiling);
         if (gosiErrors.Count > 0)
         {
             TempData["PayrollMessage"] = "لم يُحفظ ملف الضمان: " + string.Join(" · ", gosiErrors);
-            return RedirectToPage();
+            return RedirectToPage(new { CompanyId });
         }
-        var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, profile);
+        var gosiId = await PayrollConfigStore.SaveGosiProfileAsync(_db, scope, profile);
         var gosiNote = await SaveBaseFromFormAsync(SalaryBaseComposer.GosiBaseKey, gosiId);
         TempData["PayrollMessage"] = "تم حفظ ملف الضمان." + ConditionNote(profile.ConditionsJson) + gosiNote;
-        return RedirectToPage();
+        return RedirectToPage(new { CompanyId });
     }
 
     public async Task<IActionResult> OnPostDeleteGosiAsync(int id)
     {
-        await PayrollConfigStore.DeleteGosiProfileAsync(_db, id);
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId)) return Forbid();
+        await PayrollConfigStore.DeleteGosiProfileAsync(_db, scope, id);
         TempData["PayrollMessage"] = "تم حذف ملف الضمان.";
-        return RedirectToPage();
+        return RedirectToPage(new { CompanyId });
     }
 
     public async Task<IActionResult> OnPostSaveTaxAsync()
     {
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId)) return Forbid();
         var form = Request.Form;
         var profile = new PayrollConfigStore.TaxProfile
         {
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
+            CompanyId = CompanyId,
             Name = form["Name"].ToString().Trim(),
             ExemptionAmount = decimal.TryParse(form["ExemptionAmount"], out var ex) ? ex : 0,
             IsActive = form["IsActive"] == "true",
@@ -349,7 +395,7 @@ public class SettingsModel : PageModel
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
             TempData["PayrollMessage"] = "اسم ملف الضريبة مطلوب.";
-            return RedirectToPage();
+            return RedirectToPage(new { CompanyId });
         }
 
         var froms = form["bracket_from"];
@@ -369,19 +415,36 @@ public class SettingsModel : PageModel
         if (taxErrors.Count > 0)
         {
             TempData["PayrollMessage"] = "لم يُحفظ ملف الضريبة: " + string.Join(" · ", taxErrors);
-            return RedirectToPage();
+            return RedirectToPage(new { CompanyId });
         }
 
-        var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, profile);
+        var taxId = await PayrollConfigStore.SaveTaxProfileAsync(_db, scope, profile);
         var taxNote = await SaveBaseFromFormAsync(SalaryBaseComposer.TaxBaseKey, taxId);
         TempData["PayrollMessage"] = "تم حفظ ملف الضريبة وشرائحه." + ConditionNote(profile.ConditionsJson) + taxNote;
-        return RedirectToPage();
+        return RedirectToPage(new { CompanyId });
     }
 
     public async Task<IActionResult> OnPostDeleteTaxAsync(int id)
     {
-        await PayrollConfigStore.DeleteTaxProfileAsync(_db, id);
+        var scope = await _companyScope.GetAsync();
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId)) return Forbid();
+        await PayrollConfigStore.DeleteTaxProfileAsync(_db, scope, id);
         TempData["PayrollMessage"] = "تم حذف ملف الضريبة.";
-        return RedirectToPage();
+        return RedirectToPage(new { CompanyId });
+    }
+
+    private async Task LoadCompaniesAsync(CompanyScope scope)
+    {
+        var query = _db.Companies.AsNoTracking().Where(company => !company.IsDeleted && company.IsActive);
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(company => allowed.Contains(company.Id));
+        }
+
+        Companies = await query.OrderBy(company => company.Name)
+            .Select(company => new CompanyOption { Id = company.Id, Name = company.Name })
+            .ToListAsync();
+        if (!CompanyId.HasValue && Companies.Count == 1) CompanyId = Companies[0].Id;
     }
 }

@@ -4,6 +4,7 @@
     ViewData["Title"] = "أداء النظام";
     var uptime = DateTime.UtcNow - Model.StartedUtc;
 }
+<link rel="stylesheet" href="~/css/pages/index-cbd525f2d1.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 
@@ -18,7 +19,7 @@
         </form>
     </div>
 
-    <div class="hrms-grid-3" style="margin-bottom:1rem;">
+    <div class="hrms-grid-3 zyu-68227a912990">
         <div class="hrms-stat-card">
             <span class="hrms-stat-label">إجمالي الطلبات</span>
             <span class="hrms-stat-value">@Model.TotalRequests.ToString("N0")</span>
@@ -39,7 +40,7 @@
     }
     else
     {
-        <div style="overflow-x:auto;">
+        <div class="zyu-fbff25e9fc50">
             <table class="hrms-table">
                 <thead>
                     <tr>
@@ -70,7 +71,7 @@
                 </tbody>
             </table>
         </div>
-        <p style="margin-top:0.5rem;font-size:0.85rem;opacity:0.7;">
+        <p class="zyu-67028daeaf5b">
             المئينات تقديريّة من دلاء زمنٍ (حدود عليا: 5·10·25·50·100·250·500·1000·2500·5000 ms) — للرصد لا للفوترة.
         </p>
     }

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.AttendanceSettings;
 
@@ -13,12 +15,17 @@ namespace SmartAttendance.Web.Pages.AttendanceSettings;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public IndexModel(ApplicationDbContext dbContext)
+    public IndexModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
+    [BindProperty(SupportsGet = true)]
+    public int? CompanyId { get; set; }
+    public List<CompanyOption> Companies { get; set; } = new();
     public List<PunchSemanticStore.PunchSemantic> Semantics { get; set; } = new();
     public List<AttendanceSourceStore.AttendanceSource> Sources { get; set; } = new();
 
@@ -46,8 +53,20 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
+        var scope = await _companyScope.GetAsync();
+        var companies = _dbContext.Companies.AsNoTracking().Where(company => !company.IsDeleted && company.IsActive);
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = scope.AllowedCompanyIds.ToArray();
+            companies = companies.Where(company => allowed.Contains(company.Id));
+        }
+        Companies = await companies.OrderBy(company => company.Name)
+            .Select(company => new CompanyOption { Id = company.Id, Name = company.Name }).ToListAsync();
+        if (CompanyId is > 0 && !scope.Allows(CompanyId.Value)) CompanyId = null;
+        if (CompanyId is null && Companies.Count == 1) CompanyId = Companies[0].Id;
+
         Semantics = await PunchSemanticStore.ListAsync(_dbContext);
-        Sources = await AttendanceSourceStore.ListAsync(_dbContext);
+        Sources = await AttendanceSourceStore.ListAsync(_dbContext, scope, CompanyId);
         MinCheckoutHours = await OnlinePunchStore.GetMinCheckoutHoursAsync(_dbContext);
         EnforceGeofence = await OnlinePunchStore.GetEnforceGeofenceAsync(_dbContext);
         RequireBiometric = await OnlinePunchStore.GetRequireBiometricAsync(_dbContext);
@@ -195,6 +214,7 @@ public class IndexModel : PageModel
         var source = new AttendanceSourceStore.AttendanceSource
         {
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
+            CompanyId = int.TryParse(form["CompanyId"], out var companyId) ? companyId : null,
             Name = form["Name"].ToString().Trim(),
             ReadType = form["ReadType"].ToString() is { Length: > 0 } type ? type : "Excel",
             ConfigValue = string.IsNullOrWhiteSpace(form["ConfigValue"]) ? null : form["ConfigValue"].ToString().Trim(),
@@ -216,15 +236,25 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        await AttendanceSourceStore.SaveAsync(_dbContext, source);
+        var scope = await _companyScope.GetAsync();
+        if (source.CompanyId is not > 0 || !scope.Allows(source.CompanyId.Value)) return Forbid();
+        await AttendanceSourceStore.SaveAsync(_dbContext, scope, source);
         TempData["SuccessMessage"] = source.Id > 0 ? "تم تحديث المصدر." : "تمت إضافة المصدر.";
-        return RedirectToPage();
+        return RedirectToPage(new { CompanyId = source.CompanyId });
     }
 
-    public async Task<IActionResult> OnPostDeleteSourceAsync(int id)
+    public async Task<IActionResult> OnPostDeleteSourceAsync(int id, int companyId)
     {
-        await AttendanceSourceStore.DeleteAsync(_dbContext, id);
+        var scope = await _companyScope.GetAsync();
+        if (!scope.Allows(companyId)) return Forbid();
+        await AttendanceSourceStore.DeleteAsync(_dbContext, scope, companyId, id);
         TempData["SuccessMessage"] = "تم حذف المصدر.";
-        return RedirectToPage();
+        return RedirectToPage(new { CompanyId = companyId });
+    }
+
+    public sealed class CompanyOption
+    {
+        public int Id { get; init; }
+        public string Name { get; init; } = string.Empty;
     }
 }

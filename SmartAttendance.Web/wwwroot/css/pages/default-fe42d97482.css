@@ -1,0 +1,40 @@
+/* Source: Pages/Shared/Components/EmployeeNotificationBell/Default.cshtml */
+.emp-bell { position: relative; }
+    .emp-bell > summary {
+        list-style: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+        width: 40px; height: 40px; border-radius: 12px; position: relative;
+        background: var(--zy-migrated-color-5704ef9ed3); border: 1px solid var(--zy-migrated-color-b34d3e7911); color: var(--zy-migrated-color-3bd84bea55);
+    }
+    .emp-bell > summary::-webkit-details-marker { display: none; }
+    .emp-bell[open] > summary { background: var(--zy-migrated-color-c0f96b0043); border-color: var(--zy-migrated-color-c69e4cc6b5); }
+    .emp-bell-ico { width: 20px; height: 20px; }
+    .emp-bell-badge {
+        position: absolute; top: -5px; inset-inline-end: -5px; min-width: 18px; height: 18px; padding: 0 5px;
+        border-radius: 9px; background: var(--zy-migrated-color-c27ad05e85); color: var(--zy-white); font-size: 11px; font-weight: 700; line-height: 18px;
+        text-align: center; box-shadow: 0 0 0 2px var(--zy-migrated-color-271426c0f0);
+    }
+    /* في RTL: inline-start = اليمين، فتُثبَّت الحافة اليمنى عند الجرس وتنسدل للداخل
+       (يساراً) بدل أن تخرج عن حافة الشاشة اليمنى فيُقصّ محتواها. */
+    .emp-bell-panel {
+        position: absolute; inset-inline-start: 0; top: calc(100% + 8px); width: 340px; max-width: 88vw;
+        background: var(--zy-migrated-color-57c5aa9398); border: 1px solid var(--zy-migrated-color-b34d3e7911); border-radius: 14px;
+        box-shadow: 0 18px 48px var(--zy-migrated-color-fd9af3c8e7); z-index: 2200; overflow: hidden;
+    }
+    /* حركة ظهور سلسة عند فتح المنسدلة (fade + انزلاق بسيط) */
+    .emp-bell[open] > .emp-bell-panel { animation: empBellIn .2s cubic-bezier(.2,.8,.25,1); transform-origin: top; }
+    @keyframes empBellIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .emp-bell-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--zy-migrated-color-c201d2dab2); }
+    .emp-bell-head b { font-size: 14px; color: var(--zy-migrated-color-3bd84bea55); }
+    .emp-bell-all { background: transparent; border: 0; cursor: pointer; padding: 4px 6px; border-radius: 8px; color: var(--zy-migrated-color-0f1cc78a41); font-size: 12px; font-weight: 600; }
+    .emp-bell-all[disabled] { opacity: .45; cursor: default; }
+    .emp-bell-list { max-height: 60vh; overflow-y: auto; }
+    .emp-bell-item {
+        display: block; padding: 11px 14px; text-decoration: none; color: inherit;
+        border-bottom: 1px solid var(--zy-migrated-color-5704ef9ed3); border-inline-start: 3px solid var(--zy-migrated-color-0f1cc78a41);
+    }
+    .emp-bell-item.is-read { border-inline-start-color: transparent; opacity: .58; }
+    /* العنوان سطر واحد، والنص سطران كحدّ أقصى مع … — لا يأخذ مساحة كبيرة */
+    .emp-bell-item-t { font-size: 13px; font-weight: 600; color: var(--zy-migrated-color-3bd84bea55); margin: 0 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .emp-bell-item-m { font-size: 12px; color: var(--zy-migrated-color-6d65c193c8); margin: 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .emp-bell-item-d { font-size: 11px; color: var(--zy-migrated-color-d442acb154); margin-top: 4px; display: block; }
+    .emp-bell-empty { padding: 26px 14px; text-align: center; color: var(--zy-migrated-color-6d65c193c8); font-size: 13px; }

@@ -44,9 +44,9 @@ public static class ShiftRequestStore
             db,
             """
 INSERT INTO SelfServiceRequests
-    (EmployeeId, RequestType, RequestDate, FromDate, ToDate, ShiftTypeId, Reason, Status, CurrentStep, CreatedBy)
+    (EmployeeId, RequestType, RequestDate, FromDate, ToDate, ShiftTypeId, Reason, Status, CurrentStep, CreatedBy, RequestSource)
 VALUES
-    (@Employee, @Type, CAST(GETDATE() AS date), @From, @To, @Shift, @Reason, N'Pending', N'Direct Manager', @Actor);
+    (@Employee, @Type, CAST(GETDATE() AS date), @From, @To, @Shift, @Reason, N'Pending', N'Direct Manager', @Actor, N'SelfService');
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 
@@ -70,7 +70,10 @@ SELECT @RequestId;
             });
 
         if (requestId > 0)
-            await ApprovalWorkflowEngine.StartAsync(db, requestId, RequestType, employeeId);
+        {
+            var start=await ApprovalWorkflowEngine.StartAsync(db, requestId, RequestType, employeeId);
+            if(!start.Ok) return 0;
+        }
 
         return requestId;
     }

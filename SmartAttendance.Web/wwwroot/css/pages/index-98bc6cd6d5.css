@@ -1,0 +1,49 @@
+/* Source: Pages/UserAccess/Index.cshtml */
+.zua-bulk-bar { border:1px solid var(--zua-line); border-radius:18px; padding:14px 18px; margin:0 0 14px; }
+    .zua-bulk-title { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .zua-bulk-title b { font-size:14px; }
+    .zua-bulk-title #zua-bulk-count { color:var(--zua-muted); font-size:12px; font-weight:800; }
+    .zua-bulk-fields { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
+    .zua-bulk-fields label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); }
+    .zua-bulk-fields input[type=password] { min-height:38px; padding:0 12px; border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; min-width:190px; }
+    .zua-bulk-codes { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:800; color:var(--zua-muted); margin-bottom:8px; }
+    .zua-bulk-codes textarea { border:1px solid var(--zua-line); border-radius:12px; background:transparent; color:inherit; padding:10px 12px; resize:vertical; font-family:inherit; }
+    .zua-pager { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:center; margin:14px 0; }
+    .zua-pager .disabled { pointer-events:none; opacity:.45; }
+    .zua-pager-info { font-weight:800; font-size:13px; color:var(--zua-muted); padding:0 8px; }
+    .zua-accessroles { border:1px solid var(--zua-line); border-radius:12px; padding:10px 12px; }
+    .zua-ar-title { display:block; font-weight:800; font-size:12px; color:var(--zua-muted); margin-bottom:8px; }
+    .zua-ar-grid { display:flex; flex-direction:column; gap:6px; max-height:180px; overflow:auto; }
+    .zua-ar-item { display:flex !important; flex-direction:row !important; align-items:center; gap:8px; font-weight:700; }
+    .zua-ar-item input { min-height:auto; width:auto; }
+    .zua-ar-item small { color:var(--zua-muted); font-weight:600; }
+    .zua-bulk-check { flex-direction:row !important; align-items:center; gap:8px; color:var(--zua-muted); }
+    .zua-bulk-check input { min-height:auto; }
+
+/* Static inline utilities migrated from Pages/UserAccess/Index.cshtml */
+
+.zyu-39762d086def { display:block;margin:-4px 0 8px; }
+
+.zyu-6523cf68ed39 { display:none;margin-top:10px; }
+
+.zyu-ed113db286a5 { margin-top:10px;color:var(--zua-amber);font-weight:800; }
+
+.zyu-5074b45d6175 { margin:6px 0 0; }
+
+.zyu-71745d42e472 { background:var(--zy-migrated-color-b94a76fb44); }
+
+.zyu-d12729b3d536 { width:34px; }
+
+.zyu-814fec806937 { text-align:end; }
+
+.zyu-fe133f3edfdb { color:var(--zua-teal);text-decoration:none;font-weight:800; }
+
+.zyu-4ff8060297b2 { color:var(--zua-muted); }
+
+.zyu-0b6b7bbb5492 { direction:ltr;text-align:end;font-size:12px;color:var(--zua-muted); }
+
+.zyu-6b8b63d565c4 { display:inline; }
+
+.zyu-95e15889185d { flex-direction:row;align-items:center;gap:8px; }
+
+.zyu-2d2defc6e3bc { min-height:auto; }

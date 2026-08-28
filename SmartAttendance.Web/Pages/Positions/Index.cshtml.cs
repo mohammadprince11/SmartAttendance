@@ -2,9 +2,11 @@ using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Positions;
 
@@ -12,6 +14,7 @@ namespace SmartAttendance.Web.Pages.Positions;
 /// المناصب (الهيكل الوظيفي): جدول المناصب بفئاتها ومستوياتها مع بحث وترقيم —
 /// يغذي قوائم المنصب بشاشات الموظف والهيكل التنظيمي.
 /// </summary>
+[Authorize(Roles = RoleRouteCatalog.Admin)]
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;

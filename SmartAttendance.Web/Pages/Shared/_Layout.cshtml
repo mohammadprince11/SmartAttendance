@@ -4,13 +4,9 @@
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 @inject IThemeContextService ThemeContextService
 @inject IAccessRoleService AccessRoleService
-@inject SmartAttendance.Infrastructure.Persistence.ApplicationDbContext DesignTokenDb
 @{
     var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
     var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA HR" : companyTheme.DisplayName;
-
-    // مقاسات الواجهة المخصَّصة. مكشوفةٌ من كاش العملية لا من القاعدة بكل طلب.
-    var designTokenCss = DesignTokenStore.CompileCss(await DesignTokenStore.LoadAsync(DesignTokenDb));
 }
 
 <!DOCTYPE html>
@@ -65,8 +61,7 @@
 
     @* حاجز الوميض: لا رسمة وسيطة إطلاقاً — الصفحة مخفية حتى يكتمل بناء DOM وتطبيق
        كل أوراق الأنماط الحاجبة، فتظهر مرة واحدة بشكلها النهائي. مهلة أمان 3ث. *@
-    <style>html:not([data-ready]) body { visibility: hidden; }</style>
-    <script>
+        <script>
         (function () {
             function ready() { document.documentElement.setAttribute("data-ready", "1"); }
             if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready);
@@ -92,6 +87,8 @@
     <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-theme-contract.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-migrated-color-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/_layout-8952eebe4e.css" asp-append-version="true" />
     @* Design System v1 الموحد (كلاسات zy-*): مرجع إعادة التصميم صفحة-صفحة — إضافي لا يمس القديم *@
     <link rel="stylesheet" href="~/css/zynora-design-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
@@ -101,6 +98,7 @@
     <link rel="stylesheet" href="~/css/zynora-checkbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-file-input.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-command-search.css" asp-append-version="true" />
     @* منتقي الموظف المشترك — متاح لكل صفحة بسطر واحد: partial name="_EmployeePicker" *@
     <link rel="stylesheet" href="~/css/zynora-employee-picker.css" asp-append-version="true" />
 
@@ -109,13 +107,10 @@
     @* Branding & Theme Engine injection point (P4): overrides the token contract
        for the active company. Rendered last so it wins the cascade; absent for
        the ZYNORA Default so the shell is byte-identical to pre-engine. *@
-    @if (companyTheme.HasCompanyOverride)
-    {
-        <style id="company-theme">@Html.Raw(companyTheme.CompiledCss)</style>
-    }
+    <link rel="stylesheet" href="~/theme/current.css" />
 </head>
 
-<body dir="rtl">
+<body dir="rtl" class="zy-app">
     @{
         var loginUser = Context.User.Identity?.Name;
         var displayNameCookie = Context.Request.Cookies["SA.DisplayName"] ?? Context.User.FindFirst("DisplayName")?.Value;
@@ -162,11 +157,18 @@
             ? await AccessRoleService.ResolveAsync(systemUserId, Context.RequestAborted)
             : null;
         Func<string, bool> CanPage = code => accessProfile == null || accessProfile.CanViewPage(code);
+        Func<string, bool> CanModule = module => PageCatalog.Modules
+            .First(item => item.Key.Equals(module, StringComparison.OrdinalIgnoreCase))
+            .Pages.Any(page => CanPage(page.Code));
 
         // إخفاء ما سيمنعه الحارس: نفس مصدر الحقيقة الذي ينفّذه RoleSecurityMiddleware.
         // بدونها كان الدور غير الأدمن يرى روابط تنتهي كلها بـ«لا صلاحية».
         Func<string, bool> CanRoute = path =>
-            SmartAttendance.Web.Infrastructure.Security.RoleRouteCatalog.IsAllowed(loginRole, path);
+        {
+            if (!SmartAttendance.Web.Infrastructure.Security.RoleRouteCatalog.IsAllowed(loginRole, path)) return false;
+            var pageCode = PageAccessRouteCatalog.ResolvePageCode(path);
+            return pageCode is null || CanPage(pageCode);
+        };
 
         var canViewOrganization = isAdminRole ||
             loginRole.Equals("HR Manager", StringComparison.OrdinalIgnoreCase) ||
@@ -249,7 +251,8 @@
             || IsUnder("/WorkFromHome") || IsUnder("/Roster") || IsUnder("/ShiftAssignments") || IsUnder("/ShiftOverrides")
             || IsUnder("/ShiftTypes") || IsUnder("/ShiftRules") || IsUnder("/PeriodRules") || IsUnder("/BiometricKeys")
             || IsUnder("/EmployeeGeoLocations") || IsUnder("/Holidays") || IsUnder("/Devices");
-        var requestsOpen = IsUnder("/LeaveRequests") || IsUnder("/Approvals") || IsUnder("/SelfServices");
+        var requestsOpen = IsUnder("/Approvals") || IsUnder("/HrSettings/ApprovalTemplates");
+        var settingsOpen = IsUnder("/Settings") || IsUnder("/Setup") || IsUnder("/UserAccess") || IsUnder("/AccessRoles") || IsUnder("/Branding") || IsUnder("/Integrations") || IsUnder("/AuditLogs");
         var payrollOpen = IsUnder("/Payroll");
     }
 
@@ -266,7 +269,7 @@
                     <span class="nexora-brand-tagline">
                         Smarter People. Stronger Business.
                         @* رقم الإصدار — يزيد مع كل تعديل نعمله (v.1 ← v.2 ← ...) *@
-                        <span class="nexora-brand-version" style="opacity:.6;font-size:.72em;margin-inline-start:.35em;">v.21</span>
+                        <span class="nexora-brand-version zyu-3c4b6eac2c1a">v.21</span>
                     </span>
                 </div>
             </div>
@@ -280,26 +283,7 @@
                     <span>لوحة البيانات</span>
                 </a>
 
-                @if (loginRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-                {
-                    <a asp-page="/Setup/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/Setup") ? "active nexora-active" : "")" data-nav-area="setup" data-sidebar-label="&#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;">
-                        <span class="nexora-nav-dot gold"></span>
-                        <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                    </a>
-                    <a asp-page="/UserAccess/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/UserAccess") ? "active nexora-active" : "")" data-nav-area="identity" data-sidebar-label="&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;&#x064A;&#x0646;">
-                        <span class="nexora-nav-dot"></span>
-                        <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0633;&#x062A;&#x062E;&#x062F;&#x0645;&#x064A;&#x0646;</span>
-                    </a>
-                    <a asp-page="/Branding/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/Branding") ? "active nexora-active" : "")" data-nav-area="branding" data-sidebar-label="&#x0627;&#x0644;&#x0647;&#x0648;&#x064A;&#x0629; &#x0648;&#x0627;&#x0644;&#x062B;&#x064A;&#x0645;">
-                        <span class="nexora-nav-dot gold"></span>
-                        <span>الهوية والثيم</span>
-                    </a>
-                    <a asp-page="/AccessRoles/Index" class="nexora-nav-link nexora-root-link @(IsUnder("/AccessRoles") ? "active nexora-active" : "")" data-nav-area="access-roles" data-sidebar-label="&#x0623;&#x062F;&#x0648;&#x0627;&#x0631; &#x0627;&#x0644;&#x0648;&#x0635;&#x0648;&#x0644;">
-                        <span class="nexora-nav-dot"></span>
-                        <span>أدوار الوصول</span>
-                    </a>
-                }
-                @if (hasVisiblePeopleNavigation && CanPage("People.Directory"))
+                @if ((hasVisiblePeopleNavigation || accessProfile?.HasPagesRole == true) && CanModule("People"))
                 {
                     <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
                         <summary data-nav-area="people" data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
@@ -577,7 +561,7 @@
                     </details>
                 }
 
-                @if (CanPage("Attendance.Operations"))
+                @if (CanModule("Attendance"))
                 {
                 <details name="nexora-main-menu" class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
                     <summary data-nav-area="attendance" data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
@@ -767,7 +751,7 @@
                 </details>
                 }
 
-                @if (CanPage("Payroll.TaxSocial"))
+                @if (CanModule("Payroll"))
                 {
                 <details name="nexora-main-menu" class="nexora-nav-group" @(payrollOpen ? "open" : "")>
                     <summary data-nav-area="payroll" data-sidebar-label="&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;">
@@ -831,17 +815,62 @@
                            ولا يقرأهما أحد، بينما المحرّك يقرأ TaxProfiles/GosiProfiles من
                            «الضريبة والضمان» أدناه — فكان الأدمن يعدّل بلا أثر وبلا تحذير.
                            الجدولان اليتيمان يبقيان بالقاعدة حتى تُسقطهما هجرة محكومة. *@
-                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/SalaryScale") ? "open" : "")>
+                        <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/SalaryScale") || IsUnder("/Payroll/ExchangeRates") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
                                 <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
                                 <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>الضريبة والضمان</span></a>
+                                <a asp-page="/Payroll/ExchangeRates" class="nexora-nav-link @(IsUnder("/Payroll/ExchangeRates") ? "active nexora-active" : "")"><span>أسعار الصرف</span></a>
                                 <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
                                 <a asp-page="/Payroll/SalaryScale" class="nexora-nav-link @(IsUnder("/Payroll/SalaryScale") ? "active nexora-active" : "")"><span>سلم الرواتب</span></a>
                             </div>
                         </details>
                     </div>
                 </details>
+                }
+
+                @if (CanRoute("/Approvals"))
+                {
+                    <details name="nexora-main-menu" class="nexora-nav-group" @(requestsOpen ? "open" : "")>
+                        <summary data-nav-area="approvals" data-sidebar-label="الموافقات">
+                            <span class="nexora-nav-dot"></span>
+                            <span class="nexora-nav-text">الموافقات</span>
+                            <span class="nexora-chevron"></span>
+                        </summary>
+                        <div class="nexora-nav-group-links" data-ky-title="الموافقات">
+                            <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2"><span>الموافقات</span></div>
+                            <a asp-page="/Approvals/Index" class="nexora-nav-link @(IsCurrent("/Approvals") || IsCurrent("/Approvals/Index") ? "active nexora-active" : "")"><span>مركز الموافقات</span></a>
+                            <a href="/Approvals?Source=SelfService" class="nexora-nav-link"><span>طلبات الخدمة الذاتية</span></a>
+                            <a href="/Approvals?Source=Admin" class="nexora-nav-link"><span>طلبات المشرفين</span></a>
+                            <a asp-page="/Approvals/Reports" class="nexora-nav-link @(IsUnder("/Approvals/Reports") ? "active nexora-active" : "")"><span>تقارير الموافقات</span></a>
+                            @if (isAdminRole)
+                            {
+                                <a asp-page="/Approvals/Committees" class="nexora-nav-link @(IsUnder("/Approvals/Committees") ? "active nexora-active" : "")"><span>اللجان ومجموعاتها</span></a>
+                                <a asp-page="/HrSettings/ApprovalTemplates" class="nexora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active nexora-active" : "")"><span>قوالب الموافقات</span></a>
+                                <a href="/HrSettings/ApprovalTemplates#approval-delegations" class="nexora-nav-link"><span>تفضيلات التفويض</span></a>
+                            }
+                        </div>
+                    </details>
+                }
+
+                @if (isAdminRole)
+                {
+                    <details name="nexora-main-menu" class="nexora-nav-group" @(settingsOpen ? "open" : "")>
+                        <summary data-nav-area="settings" data-sidebar-label="الإعدادات">
+                            <span class="nexora-nav-dot gold"></span>
+                            <span class="nexora-nav-text">الإعدادات</span>
+                            <span class="nexora-chevron"></span>
+                        </summary>
+                        <div class="nexora-nav-group-links" data-ky-title="الإعدادات">
+                            <a asp-page="/Settings/Index" class="nexora-nav-link ky-drawer-title @(IsUnder("/Settings") ? "active nexora-active" : "")"><span>مركز الإعدادات</span></a>
+                            <a asp-page="/Setup/Index" class="nexora-nav-link @(IsUnder("/Setup") ? "active nexora-active" : "")"><span>تهيئة الشركة</span></a>
+                            <a asp-page="/UserAccess/Index" class="nexora-nav-link @(IsUnder("/UserAccess") ? "active nexora-active" : "")"><span>إدارة المستخدمين</span></a>
+                            <a asp-page="/AccessRoles/Index" class="nexora-nav-link @(IsUnder("/AccessRoles") ? "active nexora-active" : "")"><span>أدوار الوصول</span></a>
+                            <a asp-page="/AuditLogs/Index" class="nexora-nav-link @(IsUnder("/AuditLogs") ? "active nexora-active" : "")"><span>سجل التدقيق</span></a>
+                            <a asp-page="/Branding/Index" class="nexora-nav-link @(IsUnder("/Branding") ? "active nexora-active" : "")"><span>الهوية والثيم</span></a>
+                            <a asp-page="/Integrations/Webhooks" class="nexora-nav-link @(IsUnder("/Integrations") ? "active nexora-active" : "")"><span>التكاملات</span></a>
+                        </div>
+                    </details>
                 }
                     <!-- NEXORA_SAFE_MAIN_MENU_END -->
                 </nav>
@@ -857,6 +886,18 @@
                         <div class="nexora-page-subtitle">زينورا · عمليات موارد بشرية ذكية</div>
                     </div>
                 </div>
+
+                @if (isLoggedIn)
+                {
+                    <div class="zy-command-search" data-zy-command-search>
+                        <label class="zy-command-search__field" for="zy-command-search-input">
+                            <span aria-hidden="true">⌕</span>
+                            <input id="zy-command-search-input" type="search" autocomplete="off" placeholder="ابحث عن صفحة أو إعداد…" aria-label="البحث في صفحات النظام" aria-controls="zy-command-search-results" aria-expanded="false" />
+                            <kbd>Ctrl K</kbd>
+                        </label>
+                        <div class="zy-command-search__results" id="zy-command-search-results" role="listbox" hidden></div>
+                    </div>
+                }
 
                 <div class="nexora-controls">
                     @if (isLoggedIn)
@@ -915,7 +956,7 @@
                 </div>
             </header>
 
-            <main class="nexora-content zy-scope">
+            <main class="nexora-content zy-scope zy-ui-contract">
                 @RenderBody()
             </main>
         </div>
@@ -939,13 +980,14 @@
        داخل الملف = مظهر ما قبل الميزة حرفياً. *@
     <link rel="stylesheet" href="~/css/zynora-tokens.css" asp-append-version="true" />
 
+    @* العقد البصري النهائي: كلاسات zy-* فقط، ويأتي أخيراً كي لا تعيد صفحة قديمة
+       تعريف الزر/الحقل/الجدول بعد التوحيد. *@
+    <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
+    <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
+
     @* يُسكِت تأثيرات «التمرير-فوق» أثناء السكرول — انظر تعليق السكربت.
        غير مؤجَّل (بلا defer) عمداً: تأجيله يترك أول تمريرةٍ بعد التحميل بلا حماية. *@
     <script src="~/js/zynora-scroll-hover-guard.js" asp-append-version="true"></script>
-    @if (!string.IsNullOrEmpty(designTokenCss))
-    {
-        <style id="zy-design-tokens">@Html.Raw(designTokenCss)</style>
-    }
 
     <script>
         window.SA_AUTH = {
@@ -956,8 +998,10 @@
 
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
     <script src="~/js/hrms-ui.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-dynamic-style.js" asp-append-version="true" defer></script>
     <script src="~/js/zynora-theme.js" asp-append-version="true"></script>
     <script src="~/js/zynora-kayan-nav.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-command-search.js" asp-append-version="true" defer></script>
     <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     <script src="~/js/zynora-employee-picker.js" asp-append-version="true" defer></script>
     @await RenderSectionAsync("Scripts", required: false)
@@ -971,6 +1015,3 @@
     <script src="~/js/zynora-ux-guards.js" asp-append-version="true"></script>
 </body>
 </html>
-
-
-

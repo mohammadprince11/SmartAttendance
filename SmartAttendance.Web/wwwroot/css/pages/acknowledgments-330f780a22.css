@@ -1,0 +1,34 @@
+/* Source: Pages/EmployeePortal/Acknowledgments.cshtml */
+.eak { display:flex; flex-direction:column; gap:16px; color:var(--sa-text,var(--zy-text)); }
+    .eak-card { border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:18px; background:var(--sa-surface,var(--zy-migrated-color-8c7f75b04e)); padding:18px; }
+    .eak-card h2 { margin:0 0 4px; font-size:16px; font-weight:1000; }
+    .eak-card p.sub { margin:0 0 14px; font-size:12px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .eak-msg { border-radius:12px; padding:10px 14px; font-size:13px; font-weight:900;
+        background:color-mix(in srgb,var(--zy-migrated-color-b035e56d5f) 12%,transparent); }
+    .eak-item { display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:12px 0; border-bottom:1px solid var(--zy-migrated-color-cbebfcf5a2); }
+    .eak-item:last-child { border-bottom:0; }
+    .eak-item b { font-size:14px; font-weight:1000; }
+    .eak-item .meta { font-size:11px; color:var(--sa-muted,var(--zy-muted)); font-weight:800; }
+    .eak-chip { border-radius:999px; padding:3px 11px; font-size:11px; font-weight:900; white-space:nowrap; }
+    .eak-chip.pending { color:var(--zy-migrated-color-f8e175950d); background:var(--zy-migrated-color-af5096d51b); }
+    .eak-chip.done { color:var(--zy-migrated-color-0f176030df); background:var(--zy-migrated-color-7304d11da4); }
+    .eak-chip.declined { color:var(--zy-danger); background:var(--zy-migrated-color-e92da98547); }
+    .eak-open { border:0; border-radius:12px; padding:8px 14px; font-size:12px; font-weight:1000;
+        cursor:pointer; background:var(--zy-migrated-color-fa48ddcd46); color:var(--zy-white); text-decoration:none; display:inline-block; }
+    .eak-body { white-space:pre-wrap; line-height:1.9; font-size:13px; font-weight:700;
+        border:1px solid var(--zy-migrated-color-b9678111e3); border-radius:14px; padding:14px; max-height:50vh; overflow:auto; }
+    .eak-actions { display:flex; gap:10px; margin-top:14px; }
+    .eak-btn { flex:1; border:0; border-radius:14px; padding:12px; font-size:14px; font-weight:1000; cursor:pointer; }
+    .eak-btn.ok { background:var(--zy-migrated-color-fa48ddcd46); color:var(--zy-white); }
+    .eak-btn.no { background:transparent; color:var(--zy-danger); border:1px solid var(--zy-migrated-color-348f8741cc); }
+    .eak-note { width:100%; margin-top:10px; border:1px solid var(--zy-migrated-color-28565ef553); border-radius:12px;
+        background:transparent; color:var(--sa-text,var(--zy-text)); padding:10px 12px; font-size:13px; font-weight:800; }
+
+/* Static inline utilities migrated from Pages/EmployeePortal/Acknowledgments.cshtml */
+
+.zyu-c53ea1da2385 { margin-top:14px; }
+
+.zyu-0ee7f66ad9c0 { margin-top:12px; }
+
+.zyu-a4e017b7b0ef { display:flex;align-items:center;gap:8px; }

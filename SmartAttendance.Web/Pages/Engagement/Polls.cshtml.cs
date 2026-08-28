@@ -53,6 +53,13 @@ public class PollsModel : EngagementPageModel
             return RedirectToPage("/Engagement/Index", new { tab = "polls" });
         }
 
+        if (!await IsTargetWithinCompanyScopeAsync(
+                targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId))
+        {
+            StatusMessage = "الجهة المستهدفة خارج نطاق شركاتك.";
+            return RedirectToPage("/Engagement/Index", new { tab = "polls" });
+        }
+
         var targetValue = BuildTargetValue(targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId);
         var category = string.IsNullOrWhiteSpace(Poll.Category) ? "استطلاع" : Poll.Category.Trim();
         var isPublished = Poll.PublishNow;

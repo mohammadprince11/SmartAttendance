@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "تحديثات العقود";
 }
+<link rel="stylesheet" href="~/css/pages/movements-e1bb5cfba0.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -35,11 +36,11 @@
             </p>
         </header>
 
-        <div class="zyp-actions" style="justify-content:flex-start">
+        <div class="zyp-actions zyu-68b2edc6f599">
             <a asp-page="./Movements" asp-route-locked="false"
-               style="@(Model.ShowLocked ? "" : "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)")">حركات غير مقفلة</a>
+               data-zy-style="@(Model.ShowLocked ? "" : "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)")">حركات غير مقفلة</a>
             <a asp-page="./Movements" asp-route-locked="true"
-               style="@(Model.ShowLocked ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">حركات مقفلة</a>
+               data-zy-style="@(Model.ShowLocked ? "border-color:var(--zy-electric-teal);color:var(--zy-electric-teal)" : "")">حركات مقفلة</a>
         </div>
 
         @if (Model.Movements.Count == 0)
@@ -58,7 +59,7 @@
                         <th>من – إلى تاريخ</th>
                         <th>تاريخ التنفيذ</th>
                         <th>المصدر</th>
-                        <th style="width:150px"></th>
+                        <th class="zyu-662c8e43345e"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,7 +70,7 @@
                             <td><b>@movement.EmployeeName</b></td>
                             <td>@movement.ContractType</td>
                             <td>
-                                <span class="zyp-rank" style="min-width:auto;padding:0 8px">@movement.KindLabel</span>
+                                <span class="zyp-rank zyu-c2f07af63a01">@movement.KindLabel</span>
                             </td>
                             <td class="zyp-conditions">
                                 @(movement.FromDate is { } from ? from.ToString("yyyy/MM/dd") : "—")
@@ -82,11 +83,11 @@
                                 <div class="zyp-actions">
                                     @if (!movement.IsLocked)
                                     {
-                                        <form method="post" asp-page-handler="Lock" style="display:inline">
+                                        <form method="post" asp-page-handler="Lock" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="id" value="@movement.Id" />
                                             <button type="submit" data-zyconfirm="قفل الحركة؟ لن تُعدَّل بعدها.">قفل</button>
                                         </form>
-                                        <form method="post" asp-page-handler="Delete" style="display:inline">
+                                        <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                             <input type="hidden" name="id" value="@movement.Id" />
                                             <button type="submit" data-zyconfirm="حذف الحركة؟">حذف</button>
                                         </form>
@@ -177,7 +178,7 @@
 
         <footer class="nxhs-actions">
             <button type="submit">تنفيذ الحركة</button>
-            <a class="zyp-move" asp-page="./Index" style="padding:8px 14px">← السجلّ</a>
+            <a class="zyp-move zyu-e3da42537cb5" asp-page="./Index">← السجلّ</a>
         </footer>
     </form>
 </section>

@@ -1,41 +1,42 @@
 ﻿@page
 @model SmartAttendance.Web.Pages.Employees.IndexModel
-@{ 
-    ViewData["Title"] = "قائمة الموظفين"; 
-    var employees = Model.Employees; 
-    string BuildEmployeePageUrl(int pageNumber) 
-    { 
-        return Url.Page("./Index", new { Model.CompanyId, Model.SearchTerm, Model.BranchId, Model.DepartmentId, Model.StatusFilter, Model.SortBy, Model.PageSize, PageNumber = pageNumber }) ?? "#"; 
-    } 
+@{
+    ViewData["Title"] = "قائمة الموظفين";
+    var employees = Model.Employees;
+    string BuildEmployeePageUrl(int pageNumber)
+    {
+        return Url.Page("./Index", new { Model.CompanyId, Model.SearchTerm, Model.BranchId, Model.DepartmentId, Model.StatusFilter, Model.SortBy, Model.PageSize, PageNumber = pageNumber }) ?? "#";
+    }
 }
 @section Styles { <link rel="stylesheet" href="~/css/zynora-people.css" asp-append-version="true" /> }
+<link rel="stylesheet" href="~/css/pages/index-9de51f6552.css" asp-append-version="true" />
 <script src="~/js/nexora-employee-row-click.js" asp-append-version="true" defer></script>
 
 <div class="zhr-container">
     <div class="zhr-header">
         <div class="zhr-company-badge">
-            <span style="color:var(--zhr-text-secondary); margin-left:8px;">الشركة الحالية:</span>
-            <strong style="color:var(--cloud-white);">@Model.SelectedCompanyName</strong>
+            <span class="zyu-c75f6b24bb4b">الشركة الحالية:</span>
+            <strong class="zyu-254959ab5526">@Model.SelectedCompanyName</strong>
         </div>
-        @if (Model.CanCreateEmployee || Model.CanImportEmployees) 
-        { 
-            <div style="display:flex; gap:12px;"> 
+        @if (Model.CanCreateEmployee || Model.CanImportEmployees)
+        {
+            <div class="zyu-5fcdd953a3c9">
                 @if (Model.CanImportEmployees) { <button type="button" class="zhr-btn zhr-btn-secondary" data-import-open>استيراد الموظفين</button> }
-                @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary">إضافة موظف</a> } 
-            </div> 
+                @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary">إضافة موظف</a> }
+            </div>
         }
     </div>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div style="background:rgba(40, 167, 69, 0.1); color:var(--success); border: 1px solid var(--success); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+        <div class="zyu-61c777fb5bde">
             @TempData["SuccessMessage"]
         </div>
     }
 
     @if (TempData["ErrorMessage"] != null)
     {
-        <div style="background:rgba(220, 53, 69, 0.1); color:var(--danger); border: 1px solid var(--danger); padding:12px; border-radius:8px; margin-bottom:20px; font-weight:bold;">
+        <div class="zyu-2243a35b7e50">
             @TempData["ErrorMessage"]
         </div>
     }
@@ -49,12 +50,12 @@
     </section>
 
     <section class="zhr-filter-card">
-        <form method="get" id="zhr-filter-form" autocomplete="off" style="margin: 0;">
+        <form method="get" id="zhr-filter-form" autocomplete="off" class="zyu-02419cffd4a2">
             <input type="hidden" name="PageNumber" value="1" />
             <div class="zhr-filter-grid">
                 <div class="zhr-form-group">
                     <label class="zhr-label">الشركة</label>
-                    <select name="CompanyId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="CompanyId" class="zhr-select" aria-label="الشركة" onchange="document.getElementById('zhr-filter-form').submit()">
                         @foreach(var c in Model.CompanyOptions){<option value="@c.Id" selected="@(Model.CompanyId==c.Id ? "selected" : null)">@c.Name</option>}
                     </select>
                 </div>
@@ -64,21 +65,21 @@
                 </div>
                 <div class="zhr-form-group">
                     <label class="zhr-label">موقع العمل</label>
-                    <select name="BranchId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="BranchId" class="zhr-select" aria-label="موقع العمل" onchange="document.getElementById('zhr-filter-form').submit()">
                         <option value="">الكل</option>
                         @foreach(var b in Model.BranchOptions){<option value="@b.Id" selected="@(Model.BranchId==b.Id ? "selected" : null)">@b.Name</option>}
                     </select>
                 </div>
                 <div class="zhr-form-group">
                     <label class="zhr-label">القسم</label>
-                    <select name="DepartmentId" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="DepartmentId" class="zhr-select" aria-label="القسم" onchange="document.getElementById('zhr-filter-form').submit()">
                         <option value="">الكل</option>
                         @foreach(var d in Model.DepartmentOptions){<option value="@d.Id" selected="@(Model.DepartmentId==d.Id ? "selected" : null)">@d.Name</option>}
                     </select>
                 </div>
                 <div class="zhr-form-group">
                     <label class="zhr-label">الحالة</label>
-                    <select name="StatusFilter" class="zhr-select" onchange="document.getElementById('zhr-filter-form').submit()">
+                    <select name="StatusFilter" class="zhr-select" aria-label="الحالة" onchange="document.getElementById('zhr-filter-form').submit()">
                         <option value="all" selected="@(Model.StatusFilter=="all" ? "selected" : null)">الكل</option>
                         <option value="active" selected="@(Model.StatusFilter=="active" ? "selected" : null)">فعال</option>
                         <option value="inactive" selected="@(Model.StatusFilter=="inactive" ? "selected" : null)">غير فعال</option>
@@ -97,8 +98,8 @@
                 @if(Model.FilteredEmployees > 0){<text>عرض @Model.FirstItemNumber إلى @Model.LastItemNumber من أصل @Model.FilteredEmployees</text>}else{<text>لا توجد نتائج</text>}
             </span>
             <div class="zhr-pagesize-wrapper">
-                <label class="zhr-label" style="margin:0;">الأسطر:</label>
-                <select name="PageSize" form="zhr-filter-form" class="zhr-select" style="padding: 4px 8px; width: auto; height: 32px;" onchange="document.getElementById('zhr-filter-form').submit()">
+                <label class="zhr-label zyu-38965f9b18ca">الأسطر:</label>
+                <select name="PageSize" form="zhr-filter-form" class="zhr-select zyu-5dc4c949cfa8" aria-label="عدد الأسطر في الصفحة" onchange="document.getElementById('zhr-filter-form').submit()">
                     <option value="10" selected="@(Model.PageSize==10 ? "selected" : null)">10</option>
                     <option value="25" selected="@(Model.PageSize==25 ? "selected" : null)">25</option>
                     <option value="50" selected="@(Model.PageSize==50 ? "selected" : null)">50</option>
@@ -127,7 +128,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="7" style="text-align:center; padding:32px; color:var(--zhr-text-secondary);">لا توجد بيانات مطابقة</td></tr>
+                        <tr><td colspan="7" class="zyu-8b4c0db2f788">لا توجد بيانات مطابقة</td></tr>
                     }
                 </tbody>
             </table>
@@ -135,15 +136,15 @@
         @if(Model.TotalPages > 1)
         {
             <div class="zhr-pagination">
-                @if(Model.PageNumber > 1){<a href="@BuildEmployeePageUrl(Model.PageNumber - 1)" class="zhr-page-link">السابق</a>}else{<button class="zhr-page-link" disabled>السابق</button>} 
+                @if(Model.PageNumber > 1){<a href="@BuildEmployeePageUrl(Model.PageNumber - 1)" class="zhr-page-link">السابق</a>}else{<button class="zhr-page-link" disabled>السابق</button>}
                 @foreach(var p in Model.PaginationPages)
                 {
                     if(p.HasValue)
                     {
                         if(p.Value == Model.PageNumber){<button class="zhr-page-link active" disabled>@p.Value</button>}else{<a href="@BuildEmployeePageUrl(p.Value)" class="zhr-page-link">@p.Value</a>}
                     }
-                    else{<span style="color:var(--zhr-text-secondary);">...</span>}
-                } 
+                    else{<span class="zyu-1d8951e3fc68">...</span>}
+                }
                 @if(Model.PageNumber < Model.TotalPages){<a href="@BuildEmployeePageUrl(Model.PageNumber + 1)" class="zhr-page-link">التالي</a>}else{<button class="zhr-page-link" disabled>التالي</button>}
             </div>
         }
@@ -155,7 +156,7 @@
     @* inert لا hidden: القوقعة تعطي .zy-modal ‏display:flex فيهزم أي hidden *@
     <div class="zy-modal-backdrop" id="zhr-import-backdrop" inert></div>
     @* عرضٌ أضيق من الافتراضي (640px) — النافذة أربعة عناصر لا صفحة *@
-    <div class="zy-modal" id="zhr-import-modal" role="dialog" aria-modal="true" aria-labelledby="zhr-import-title" style="inset-inline:max(16px, calc(50vw - 250px));" inert>
+    <div class="zy-modal zyu-7abdba98c688" id="zhr-import-modal" role="dialog" aria-modal="true" aria-labelledby="zhr-import-title" inert>
         <div class="zy-modal__header">
             <h2 id="zhr-import-title">استيراد</h2>
             <button type="button" class="zhr-import-close" data-import-close aria-label="إغلاق">
@@ -178,7 +179,7 @@
                 </div>
 
                 <div class="zhr-import-row">
-                    <span class="zhr-label" style="margin:0;">أرفق ملف</span>
+                    <span class="zhr-label zyu-38965f9b18ca">أرفق ملف</span>
                     <span class="zhr-import-links">
                         <a asp-page-handler="Template">تحميل القالب</a>
                         <a asp-page-handler="TemplateData">تحميل البيانات</a>
@@ -194,11 +195,11 @@
                         </svg>
                         اضف ملف
                     </span>
-                    <input type="file" id="zhr-import-file" name="importFile" accept=".xlsx,.csv" style="display:none;" />
+                    <input type="file" id="zhr-import-file" name="importFile" accept=".xlsx,.csv" class="zyu-d0466aa33fa8" />
                 </label>
             </div>
-            <div class="zy-modal__footer" style="justify-content:center;">
-                <button type="submit" class="zhr-btn zhr-btn-primary" style="min-width:150px;">استيراد</button>
+            <div class="zy-modal__footer zyu-3dc9c801db6b">
+                <button type="submit" class="zhr-btn zhr-btn-primary zyu-d2dbc7c4eca8">استيراد</button>
             </div>
         </form>
     </div>

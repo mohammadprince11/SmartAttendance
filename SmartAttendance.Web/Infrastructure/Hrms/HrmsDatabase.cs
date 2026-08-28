@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Data.Common;
+using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -9,27 +10,32 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 public static class HrmsDatabase
 {
-    // حارس تشغيل-مرّة-واحدة لسكربت الشفاء الذاتي (DDL).
+    // حارس تشغيل-مرّة-واحدة لكل قاعدة لسكربت المخطط القديم (DDL).
     // كان يُنفَّذ كامل السكربت (226 سطراً) في كل طلب عبر 57 موضع استدعاء —
     // هدرٌ على مسار القراءة وخرقٌ لقاعدة «لا شفاء ذاتي على الطلب». السكربت
-    // idempotent (كل جملة محروسة بـIF)، فتشغيله مرّة واحدة لكل عملية آمن.
-    // يُضبط العَلَم بعد النجاح فقط ⟹ فشلٌ جزئي يُعاد عند الطلب التالي.
-    private static volatile bool _schemaEnsured;
-    private static readonly SemaphoreSlim _ensureGate = new(1, 1);
+    // idempotent (كل جملة محروسة بـIF). المفتاح يتضمن الخادم والقاعدة: العَلَم
+    // العالمي القديم كان يمنع تهيئة قاعدة ثانية داخل نفس العملية. لا تُسجّل
+    // القاعدة إلا بعد نجاح السكربت كي يُعاد الفشل الجزئي بالمحاولة التالية.
+    private static readonly ConcurrentDictionary<string, byte> EnsuredDatabases = new();
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> EnsureGates = new();
 
     public static async Task EnsureCreatedAsync(ApplicationDbContext dbContext)
     {
-        if (_schemaEnsured) return;
-        await _ensureGate.WaitAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        var databaseKey = $"{connection.DataSource}|{connection.Database}";
+        if (EnsuredDatabases.ContainsKey(databaseKey)) return;
+
+        var gate = EnsureGates.GetOrAdd(databaseKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
         try
         {
-            if (_schemaEnsured) return;
+            if (EnsuredDatabases.ContainsKey(databaseKey)) return;
             await RunSchemaScriptAsync(dbContext);
-            _schemaEnsured = true;
+            EnsuredDatabases.TryAdd(databaseKey, 0);
         }
         finally
         {
-            _ensureGate.Release();
+            gate.Release();
         }
     }
 
@@ -191,14 +197,15 @@ IF COL_LENGTH('AttendanceRecords', 'PunchSemanticId') IS NULL
 -- للمسار القديم (AttendanceProcessingService بـEF) أن يفرّقها بشرط بسيط بلا
 -- معرفة مُعرّف الدلالة النظامية. الشرط EXISTS يمنع تحديث الجدول بلا داعٍ.
 IF OBJECT_ID('PunchSemantics', 'U') IS NOT NULL
-   AND EXISTS (SELECT 1 FROM AttendanceRecords ar
-               INNER JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
-               WHERE ps.IsSystem = 1)
 BEGIN
-    UPDATE ar SET ar.PunchSemanticId = NULL
-    FROM AttendanceRecords ar
-    INNER JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
-    WHERE ps.IsSystem = 1;
+    -- Dynamic SQL is intentional: SQL Server resolves static table references for
+    -- the whole batch before evaluating IF, so a clean database without the optional
+    -- catalog otherwise fails with "Invalid object name PunchSemantics".
+    EXEC sp_executesql N'
+        UPDATE ar SET ar.PunchSemanticId = NULL
+        FROM AttendanceRecords ar
+        INNER JOIN PunchSemantics ps ON ps.Id = ar.PunchSemanticId
+        WHERE ps.IsSystem = 1;';
 END;
 
 IF OBJECT_ID('ApprovalHistories', 'U') IS NULL

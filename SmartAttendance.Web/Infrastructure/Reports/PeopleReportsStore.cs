@@ -1,6 +1,7 @@
 using System.Data.Common;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Infrastructure.Reports;
 
@@ -13,6 +14,7 @@ public static class PeopleReportsStore
     public sealed class SavedReport
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string DatasetKey { get; set; } = string.Empty;
@@ -26,6 +28,9 @@ public static class PeopleReportsStore
         public bool ShareWithEmployees { get; set; }
         public string? SharedWithCsv { get; set; }
         public string? FilterColumnsCsv { get; set; }
+        public string? GroupColumnKey { get; set; }
+        public string? SortColumnKey { get; set; }
+        public bool SortDescending { get; set; }
         public int SortOrder { get; set; }
 
         public List<string> Columns => ColumnsCsv
@@ -51,6 +56,7 @@ BEGIN
     CREATE TABLE [dbo].[PeopleReports]
     (
         [Id] int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [CompanyId] int NULL,
         [Name] nvarchar(200) NOT NULL,
         [DatasetKey] nvarchar(60) NOT NULL,
         [FilterKey] nvarchar(60) NULL,
@@ -62,6 +68,9 @@ BEGIN
         [SortOrder] int NOT NULL CONSTRAINT DF_PeopleReports_SortOrder DEFAULT 0,
         [IsDeleted] bit NOT NULL CONSTRAINT DF_PeopleReports_IsDeleted DEFAULT 0,
         [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_PeopleReports_CreatedAt DEFAULT SYSUTCDATETIME()
+        ,[GroupColumnKey] nvarchar(60) NULL
+        ,[SortColumnKey] nvarchar(60) NULL
+        ,[SortDescending] bit NOT NULL CONSTRAINT DF_PeopleReports_SortDescending DEFAULT 0
     );
 END;
 
@@ -167,32 +176,38 @@ END;
 """);
     }
 
-    public static async Task<List<SavedReport>> LoadAllAsync(ApplicationDbContext db)
+    public static async Task<List<SavedReport>> LoadAllAsync(ApplicationDbContext db, CompanyScope scope)
     {
         await EnsureSchemaAsync(db);
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
 
         return await HrmsDatabase.QueryAsync(
             db,
-            """
-SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ISNULL(ShareWithEmployees, 0) AS ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, SortOrder
+            $"""
+SELECT Id, CompanyId, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ISNULL(ShareWithEmployees, 0) AS ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, GroupColumnKey, SortColumnKey, ISNULL(SortDescending, 0) AS SortDescending, SortOrder
 FROM PeopleReports
 WHERE IsDeleted = 0
+  AND ((IsSystem = 1 AND CompanyId IS NULL)
+       OR (IsSystem = 0 AND {companyPredicate}))
 ORDER BY SortOrder, Id;
 """,
             command => { },
             Map);
     }
 
-    public static async Task<SavedReport?> GetAsync(ApplicationDbContext db, int id)
+    public static async Task<SavedReport?> GetAsync(ApplicationDbContext db, CompanyScope scope, int id)
     {
         await EnsureSchemaAsync(db);
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
 
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
-SELECT Id, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ISNULL(ShareWithEmployees, 0) AS ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, SortOrder
+            $"""
+SELECT Id, CompanyId, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ISNULL(ShareWithEmployees, 0) AS ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, GroupColumnKey, SortColumnKey, ISNULL(SortDescending, 0) AS SortDescending, SortOrder
 FROM PeopleReports
-WHERE Id = @Id AND IsDeleted = 0;
+WHERE Id = @Id AND IsDeleted = 0
+  AND ((IsSystem = 1 AND CompanyId IS NULL)
+       OR (IsSystem = 0 AND {companyPredicate}));
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", id),
             Map);
@@ -201,17 +216,20 @@ WHERE Id = @Id AND IsDeleted = 0;
     }
 
     public static async Task CreateAsync(
-        ApplicationDbContext db, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
-        string? sharedWithCsv = null, string? filterColumnsCsv = null, bool shareWithEmployees = false)
+        ApplicationDbContext db, CompanyScope scope, int companyId, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
+        string? sharedWithCsv = null, string? filterColumnsCsv = null, bool shareWithEmployees = false,
+        string? groupColumnKey = null, string? sortColumnKey = null, bool sortDescending = false)
     {
+        if (companyId <= 0 || !scope.Allows(companyId)) throw new UnauthorizedAccessException("Report company is outside the effective scope.");
         await HrmsDatabase.ExecuteAsync(
             db,
             """
-INSERT INTO PeopleReports (Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, SortOrder)
-VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsShared, @ShareEss, @SharedWith, @FilterColumns, 1000);
+INSERT INTO PeopleReports (CompanyId, Name, Description, DatasetKey, FilterKey, ColumnsCsv, OwnerUser, IsSystem, IsShared, ShareWithEmployees, SharedWithCsv, FilterColumnsCsv, GroupColumnKey, SortColumnKey, SortDescending, SortOrder)
+VALUES (@CompanyId, @Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsShared, @ShareEss, @SharedWith, @FilterColumns, @GroupColumn, @SortColumn, @SortDescending, 1000);
 """,
             command =>
             {
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
                 HrmsDatabase.AddParameter(command, "@Name", name);
                 HrmsDatabase.AddParameter(command, "@Description", string.IsNullOrWhiteSpace(description) ? DBNull.Value : description.Trim());
                 HrmsDatabase.AddParameter(command, "@DatasetKey", datasetKey);
@@ -221,31 +239,44 @@ VALUES (@Name, @Description, @DatasetKey, NULL, @ColumnsCsv, @OwnerUser, 0, @IsS
                 HrmsDatabase.AddParameter(command, "@ShareEss", shareWithEmployees ? 1 : 0);
                 HrmsDatabase.AddParameter(command, "@SharedWith", string.IsNullOrWhiteSpace(sharedWithCsv) ? DBNull.Value : sharedWithCsv);
                 HrmsDatabase.AddParameter(command, "@FilterColumns", string.IsNullOrWhiteSpace(filterColumnsCsv) ? DBNull.Value : filterColumnsCsv);
+                HrmsDatabase.AddParameter(command, "@GroupColumn", string.IsNullOrWhiteSpace(groupColumnKey) ? DBNull.Value : groupColumnKey);
+                HrmsDatabase.AddParameter(command, "@SortColumn", string.IsNullOrWhiteSpace(sortColumnKey) ? DBNull.Value : sortColumnKey);
+                HrmsDatabase.AddParameter(command, "@SortDescending", sortDescending ? 1 : 0);
             });
     }
 
     /// <summary>Owner-only update of a custom report (name/columns/sharing/filters).</summary>
     public static async Task UpdateOwnAsync(
-        ApplicationDbContext db, int id, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
-        string? sharedWithCsv, string? filterColumnsCsv, bool shareWithEmployees = false)
+        ApplicationDbContext db, CompanyScope scope, int companyId, int id, string name, string? description, string datasetKey, string columnsCsv, string ownerUser, bool isShared,
+        string? sharedWithCsv, string? filterColumnsCsv, bool shareWithEmployees = false,
+        string? groupColumnKey = null, string? sortColumnKey = null, bool sortDescending = false)
     {
+        if (companyId <= 0 || !scope.Allows(companyId)) throw new UnauthorizedAccessException("Report company is outside the effective scope.");
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
+
         await HrmsDatabase.ExecuteAsync(
             db,
-            """
+            $"""
 UPDATE PeopleReports
 SET Name = @Name,
+    CompanyId = @CompanyId,
     Description = @Description,
     DatasetKey = @DatasetKey,
     ColumnsCsv = @ColumnsCsv,
     IsShared = @IsShared,
     ShareWithEmployees = @ShareEss,
     SharedWithCsv = @SharedWith,
-    FilterColumnsCsv = @FilterColumns
-WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0;
+    FilterColumnsCsv = @FilterColumns,
+    GroupColumnKey = @GroupColumn,
+    SortColumnKey = @SortColumn,
+    SortDescending = @SortDescending
+WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0
+  AND {companyPredicate};
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
+                HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
                 HrmsDatabase.AddParameter(command, "@Owner", ownerUser);
                 HrmsDatabase.AddParameter(command, "@Name", name);
                 HrmsDatabase.AddParameter(command, "@Description", string.IsNullOrWhiteSpace(description) ? DBNull.Value : description.Trim());
@@ -255,14 +286,17 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0;
                 HrmsDatabase.AddParameter(command, "@ShareEss", shareWithEmployees ? 1 : 0);
                 HrmsDatabase.AddParameter(command, "@SharedWith", string.IsNullOrWhiteSpace(sharedWithCsv) ? DBNull.Value : sharedWithCsv);
                 HrmsDatabase.AddParameter(command, "@FilterColumns", string.IsNullOrWhiteSpace(filterColumnsCsv) ? DBNull.Value : filterColumnsCsv);
+                HrmsDatabase.AddParameter(command, "@GroupColumn", string.IsNullOrWhiteSpace(groupColumnKey) ? DBNull.Value : groupColumnKey);
+                HrmsDatabase.AddParameter(command, "@SortColumn", string.IsNullOrWhiteSpace(sortColumnKey) ? DBNull.Value : sortColumnKey);
+                HrmsDatabase.AddParameter(command, "@SortDescending", sortDescending ? 1 : 0);
             });
     }
 
-    public static async Task DeleteOwnAsync(ApplicationDbContext db, int id, string ownerUser)
+    public static async Task DeleteOwnAsync(ApplicationDbContext db, CompanyScope scope, int id, string ownerUser)
     {
         await HrmsDatabase.ExecuteAsync(
             db,
-            "UPDATE PeopleReports SET IsDeleted = 1 WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner;",
+            "UPDATE PeopleReports SET IsDeleted = 1 WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND " + scope.ToSqlPredicate("CompanyId") + ";",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
@@ -270,14 +304,16 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner AND IsDeleted = 0;
             });
     }
 
-    public static async Task ToggleShareOwnAsync(ApplicationDbContext db, int id, string ownerUser)
+    public static async Task ToggleShareOwnAsync(ApplicationDbContext db, CompanyScope scope, int id, string ownerUser)
     {
+        var companyPredicate = scope.ToSqlPredicate("CompanyId");
         await HrmsDatabase.ExecuteAsync(
             db,
-            """
+            $"""
 UPDATE PeopleReports
 SET IsShared = CASE WHEN IsShared = 1 THEN 0 ELSE 1 END
-WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner;
+WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner
+  AND {companyPredicate};
 """,
             command =>
             {
@@ -289,6 +325,7 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner;
     private static SavedReport Map(DbDataReader reader) => new()
     {
         Id = HrmsDatabase.GetInt(reader, "Id"),
+        CompanyId = reader["CompanyId"] == DBNull.Value ? null : HrmsDatabase.GetInt(reader, "CompanyId"),
         Name = HrmsDatabase.GetString(reader, "Name"),
         Description = HrmsDatabase.GetString(reader, "Description"),
         DatasetKey = HrmsDatabase.GetString(reader, "DatasetKey"),
@@ -300,6 +337,9 @@ WHERE Id = @Id AND IsSystem = 0 AND OwnerUser = @Owner;
         ShareWithEmployees = HrmsDatabase.GetBool(reader, "ShareWithEmployees"),
         SharedWithCsv = HrmsDatabase.GetString(reader, "SharedWithCsv"),
         FilterColumnsCsv = HrmsDatabase.GetString(reader, "FilterColumnsCsv"),
+        GroupColumnKey = HrmsDatabase.GetString(reader, "GroupColumnKey"),
+        SortColumnKey = HrmsDatabase.GetString(reader, "SortColumnKey"),
+        SortDescending = HrmsDatabase.GetBool(reader, "SortDescending"),
         SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
     };
 }

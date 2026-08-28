@@ -156,6 +156,7 @@ a{text-decoration:none;color:inherit}
 .nxex-ring span{color:#bfffd8;font-weight:1000}
 .nxex-pulse-insight p{color:#9fb3c7;text-align:center;line-height:1.8}
 .nxex-form{display:grid;gap:8px}
+.nxex-return-form{margin-top:10px}
 .nxex-form label{color:#c9d8e7;font-size:11px;font-weight:1000}
 .nxex-form input,.nxex-form select,.nxex-form textarea{width:100%;border-radius:14px;border:1px solid rgba(91,132,176,.35);background:#05111f;color:#eef7ff;outline:none;font-family:inherit;font-size:12px;font-weight:900}
 .nxex-form input,.nxex-form select{height:42px;padding:0 13px}

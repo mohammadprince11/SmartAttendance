@@ -31,6 +31,7 @@
    لا `Tajawal` لأن غلاف الصفحة القديم يورّثه لكل ما بالداخل. والمصمّم وحده
    يحتاجها (ورقة A4 · طبقات · منتقي ملف)، فحُصرت به. *@
 @section Styles {
+<link rel="stylesheet" href="~/css/pages/index-387bf545e8.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
     @if (activeTab == "library")
     {
@@ -171,9 +172,9 @@
                                         <tr>
                                             <th>الفئة (عربي)</th>
                                             <th>الفئة (English)</th>
-                                            <th style="width:90px">الترتيب</th>
+                                            <th class="zyu-f47e3b970dce">الترتيب</th>
                                             <th>على من تنطبق</th>
-                                            <th style="width:120px"></th>
+                                            <th class="zyu-d334b57bfcde"></th>
                                         </tr>
                                     </thead>
                                     <tbody data-zyw-rows>
@@ -281,12 +282,12 @@
                                     <table class="zyw-table">
                                         <thead>
                                             <tr>
-                                                <th style="width:170px">الفئة</th>
+                                                <th class="zyu-55d8ffef28ea">الفئة</th>
                                                 <th>المخالفة (عربي)</th>
                                                 <th>المخالفة (English)</th>
-                                                <th style="width:90px">الفقرة</th>
+                                                <th class="zyu-f47e3b970dce">الفقرة</th>
                                                 <th>على من تنطبق</th>
-                                                <th style="width:180px"></th>
+                                                <th class="zyu-e3f447c4f5ee"></th>
                                             </tr>
                                         </thead>
                                         <tbody data-zyw-rows>
@@ -453,7 +454,7 @@
                     }
                 </div>
             }
-            
+
             else if (activeTab == "articles")
             {
                 @* موادّ اللائحة، **ولكلٍّ حالة إنفاذها الصريحة**. مادّةٌ تُعرض كأنها
@@ -473,10 +474,10 @@
                         <table class="zyw-table">
                             <thead>
                                 <tr>
-                                    <th style="width:70px">المادة</th>
-                                    <th style="width:200px">الموضوع</th>
+                                    <th class="zyu-1ba51881f300">المادة</th>
+                                    <th class="zyu-3cab7ef27d09">الموضوع</th>
                                     <th>النصّ</th>
-                                    <th style="width:110px">الإنفاذ</th>
+                                    <th class="zyu-5a5f7abe4163">الإنفاذ</th>
                                     <th>أين</th>
                                 </tr>
                             </thead>
@@ -486,11 +487,11 @@
                                     <tr>
                                         <td><b>@article.Number</b></td>
                                         <td>@article.Title</td>
-                                        <td style="white-space:normal">@article.Text</td>
+                                        <td class="zyu-386c1b610660">@article.Text</td>
                                         <td>
                                             <span class="zy-pill">@Model.EnforcementLabel(article.State)</span>
                                         </td>
-                                        <td style="white-space:normal">@article.Where</td>
+                                        <td class="zyu-386c1b610660">@article.Where</td>
                                     </tr>
                                 }
                             </tbody>
@@ -781,7 +782,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Header" && x.IsActive))
                                     {
-                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" data-zy-style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
                                     }
                                 </div>
 
@@ -795,7 +796,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Body" && x.IsActive))
                                     {
-                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" data-zy-style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
                                     }
                                 </div>
 
@@ -811,7 +812,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 
                                     @foreach (var block in Model.TextBlocks.Where(x => x.Area == "Footer" && x.IsActive))
                                     {
-                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
+                                        <div class="nxpen-text-block" data-layer-id="@block.Id" data-layer-area="@block.Area" data-zy-style="@Model.BuildTextBlockStyle(block)">@block.Text</div>
                                     }
                                 </div>
                             </div>

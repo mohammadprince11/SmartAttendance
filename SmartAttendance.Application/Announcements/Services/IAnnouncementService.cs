@@ -8,6 +8,11 @@ public interface IAnnouncementService
         string? search,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<AnnouncementManagementItem>> GetManagementListAsync(
+        string? search,
+        AnnouncementManagementScope scope,
+        CancellationToken cancellationToken = default);
+
     Task<AnnouncementOperationResult> CreateAsync(
         AnnouncementCreateRequest request,
         AnnouncementActorContext actor,

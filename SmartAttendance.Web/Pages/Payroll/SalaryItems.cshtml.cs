@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
+using Microsoft.EntityFrameworkCore;
 
 namespace SmartAttendance.Web.Pages.Payroll;
 
@@ -9,17 +11,23 @@ namespace SmartAttendance.Web.Pages.Payroll;
 public class SalaryItemsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public SalaryItemsModel(ApplicationDbContext db)
+    public SalaryItemsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
     {
         _db = db;
+        _companyScope = companyScope;
     }
 
     public List<SalaryItemStore.SalaryItem> Items { get; set; } = new();
+    public sealed record CompanyOption(int Id, string Name);
+    public List<CompanyOption> Companies { get; set; } = new();
+    [BindProperty(SupportsGet = true)] public int? CompanyId { get; set; }
 
     public async Task OnGetAsync()
     {
-        Items = await SalaryItemStore.ListAsync(_db);
+        var scope = await LoadCompaniesAsync();
+        Items = await SalaryItemStore.ListAsync(_db, scope, CompanyId);
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -28,6 +36,7 @@ public class SalaryItemsModel : PageModel
         var item = new SalaryItemStore.SalaryItem
         {
             Id = int.TryParse(form["Id"], out var id) ? id : 0,
+            CompanyId = int.TryParse(form["CompanyId"], out var companyId) && companyId > 0 ? companyId : null,
             Name = form["Name"].ToString().Trim(),
             NameEn = string.IsNullOrWhiteSpace(form["NameEn"]) ? null : form["NameEn"].ToString().Trim(),
             ItemType = form["ItemType"].ToString() is { Length: > 0 } t ? t : "Income",
@@ -69,15 +78,38 @@ public class SalaryItemsModel : PageModel
             return RedirectToPage();
         }
 
-        await SalaryItemStore.SaveAsync(_db, item);
-        TempData["PayrollMessage"] = item.Id > 0 ? "تم تحديث العنصر." : "تمت إضافة العنصر.";
-        return RedirectToPage();
+        var saved = await SalaryItemStore.SaveAsync(
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), item);
+        TempData["PayrollMessage"] = saved
+            ? item.Id > 0 ? "تم تحديث العنصر." : "تمت إضافة العنصر."
+            : "تعذر الحفظ: الشركة غير محددة أو خارج نطاق صلاحيتك.";
+        return RedirectToPage(new { companyId = item.CompanyId });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)
     {
-        await SalaryItemStore.DeleteAsync(_db, id);
-        TempData["PayrollMessage"] = "تم حذف العنصر (عناصر النظام محميّة).";
-        return RedirectToPage();
+        var deleted = await SalaryItemStore.DeleteAsync(
+            _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id);
+        TempData["PayrollMessage"] = deleted
+            ? "تم حذف العنصر."
+            : "العنصر غير موجود أو خارج نطاق صلاحيتك أو عنصر نظام محمي.";
+        return RedirectToPage(new { companyId = CompanyId });
+    }
+
+    private async Task<CompanyScope> LoadCompaniesAsync()
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var query = _db.Companies.AsNoTracking().Where(c => c.IsActive && !c.IsDeleted);
+        if (!scope.IsUnrestricted)
+        {
+            var allowed = scope.AllowedCompanyIds.ToArray();
+            query = query.Where(c => allowed.Contains(c.Id));
+        }
+        Companies = await query.OrderBy(c => c.Name)
+            .Select(c => new CompanyOption(c.Id, c.Name))
+            .ToListAsync(HttpContext.RequestAborted);
+        if (CompanyId is > 0 && !Companies.Any(c => c.Id == CompanyId)) CompanyId = null;
+        if (CompanyId is null && Companies.Count == 1) CompanyId = Companies[0].Id;
+        return scope;
     }
 }

@@ -1,5 +1,5 @@
-﻿using System.Data;
-using AutoMapper;
+using System.Data;
+using SmartAttendance.Application.Common.Mapping;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SmartAttendance.Application.Branches.ViewModels;
@@ -17,12 +17,12 @@ namespace SmartAttendance.Infrastructure.Services;
 public class EmployeeService : IEmployeeService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
+    private readonly IModelMapper _mapper;
     private readonly ApplicationDbContext _dbContext;
 
     public EmployeeService(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
+        IModelMapper mapper,
         ApplicationDbContext dbContext)
     {
         _unitOfWork = unitOfWork;
@@ -84,7 +84,7 @@ public class EmployeeService : IEmployeeService
                     x.HireDate >= startOfYear &&
                     x.HireDate < startOfNextYear)
             })
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
 
         var totalEmployees = employeeSummary?.TotalEmployees ?? 0;
         var activeEmployees = employeeSummary?.ActiveEmployees ?? 0;

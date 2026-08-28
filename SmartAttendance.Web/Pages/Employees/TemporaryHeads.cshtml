@@ -6,6 +6,7 @@
     ViewData["Title"] = "رئيس وحدة مؤقت";
     var editing = Model.EditingId.HasValue;
 }
+<link rel="stylesheet" href="~/css/pages/temporaryheads-27fd27fcf9.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -56,7 +57,7 @@
                         <th>إلى</th>
                         <th>الحالة</th>
                         <th>ملاحظة</th>
-                        <th style="width:150px"></th>
+                        <th class="zyu-662c8e43345e"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,7 +72,7 @@
                             <td>
                                 @if (effective)
                                 {
-                                    <span class="zyp-rank" style="min-width:auto;padding:0 8px">سارٍ الآن</span>
+                                    <span class="zyp-rank zyu-c2f07af63a01">سارٍ الآن</span>
                                 }
                                 else
                                 {
@@ -82,7 +83,7 @@
                             <td>
                                 <div class="zyp-actions">
                                     <a asp-page="./TemporaryHeads" asp-route-edit="@row.Id">تعديل</a>
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
                                         <input type="hidden" name="id" value="@row.Id" />
                                         <button type="submit" data-zyconfirm="حذف الإسناد؟">حذف</button>
                                     </form>
@@ -147,7 +148,7 @@
 
             <footer class="nxhs-actions">
                 <button type="submit">حفظ الإسناد</button>
-                <a class="zyp-move" asp-page="./TemporaryHeads" style="padding:8px 14px">إلغاء</a>
+                <a class="zyp-move zyu-e3da42537cb5" asp-page="./TemporaryHeads">إلغاء</a>
             </footer>
         </form>
     }

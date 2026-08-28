@@ -6,26 +6,10 @@
 @{
     ViewData["Title"] = "حقول الكيانات";
 }
+<link rel="stylesheet" href="~/css/pages/entityfields-c9835712e3.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 
-<style>
-    .efb-layout { display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
-    @@media (max-width: 900px) { .efb-layout { grid-template-columns: 1fr; } }
-    .efb-catalog a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; color: var(--nxhs-text, #DCEAF4); text-decoration: none; font-size: 13px; font-weight: 800; }
-    .efb-catalog a:hover { background: rgba(25,211,224,.06); }
-    .efb-catalog a.active { background: rgba(25,211,224,.12); color: #19D3E0; }
-    .efb-count { font-size: 11px; opacity: .75; background: rgba(143,168,188,.16); border-radius: 999px; padding: 1px 8px; }
-    .efb-row { display: grid; grid-template-columns: 26px 1fr 130px 1fr 74px 74px 120px; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid rgba(73,111,151,.18); border-radius: 12px; margin-bottom: 6px; background: rgba(255,255,255,.02); }
-    .efb-row.efb-dragging { opacity: .4; }
-    .efb-row input[type="text"], .efb-row select, .efb-row textarea, .efb-add input[type="text"], .efb-add select, .efb-add textarea { min-height: 32px; border-radius: 8px; border: 1px solid rgba(143,168,188,.3); background: rgba(0,0,0,.2); color: inherit; padding: 4px 10px; font-size: 12px; width: 100%; }
-    .efb-row textarea, .efb-add textarea { min-height: 32px; resize: vertical; }
-    .efb-grip { cursor: grab; opacity: .6; text-align: center; user-select: none; }
-    .efb-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 800; }
-    .efb-head { display: grid; grid-template-columns: 26px 1fr 130px 1fr 74px 74px 120px; gap: 8px; padding: 4px 10px; font-size: 11px; opacity: .65; font-weight: 900; }
-    .efb-add { display: grid; grid-template-columns: 1fr 130px 1fr 74px auto; gap: 8px; align-items: center; padding: 12px; border: 1px dashed rgba(25,211,224,.35); border-radius: 14px; margin-bottom: 14px; }
-    .efb-actions button { background: none; border: 0; cursor: pointer; font-weight: 800; font-size: 12px; }
-</style>
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
@@ -104,8 +88,8 @@
                         <label class="efb-toggle"><input type="checkbox" name="isRequired" value="true" checked="@field.IsRequired" /></label>
                         <label class="efb-toggle"><input type="checkbox" name="isActive" value="true" checked="@field.IsActive" /></label>
                         <span class="efb-actions">
-                            <button type="submit" style="color:#19D3E0">حفظ</button>
-                            <button type="submit" formaction="?Entity=@Model.Entity&handler=Delete" style="color:#F87171"
+                            <button type="submit" class="zyu-650e9bff6c5d">حفظ</button>
+                            <button type="submit" formaction="?Entity=@Model.Entity&handler=Delete" class="zyu-8928e688b476"
                                     data-zyconfirm="حذف الحقل «@field.FieldLabel» وكل قيمه المخزّنة؟">حذف</button>
                         </span>
                     </form>

@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "تهيئة الأشخاص";
 }
+<link rel="stylesheet" href="~/css/pages/peopleconfiguration-2438a76cd5.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
@@ -43,7 +44,7 @@
 
         @if (!ViewData.ModelState.IsValid)
         {
-            <p class="zyp-hint" style="color:var(--zy-danger,#b42318)">
+            <p class="zyp-hint zyu-cf375d81062a">
                 @foreach (var entry in ViewData.ModelState.Values)
                 {
                     foreach (var error in entry.Errors)

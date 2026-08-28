@@ -1,0 +1,15 @@
+/* Source: Pages/Companies/Import.cshtml */
+/* NEXORA_FIX19B_COMPANY_IMPORT_OPTIONAL_BADGES */
+[data-import-page="companies"] .nxr-import-optional-badge {
+    border-color: var(--zy-migrated-color-1a1065a4cd) !important;
+    color: var(--zy-migrated-color-b6807aefcd) !important;
+    background: var(--zy-migrated-color-9d28f260fc) !important;
+}
+
+[data-import-page="companies"] .nexora-import-file {
+    color: var(--zy-migrated-color-21bb7eed1d) !important;
+}
+
+[data-import-page="companies"] .nexora-import-paste {
+    min-height: 128px !important;
+}

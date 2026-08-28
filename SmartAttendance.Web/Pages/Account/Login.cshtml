@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "تسجيل الدخول";
 }
+<link rel="stylesheet" href="~/css/pages/login-316e15b025.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/login-foundation.css" asp-append-version="true" />
 
@@ -42,11 +43,11 @@
 
         @* الدخول بالبصمة/الوجه (Passkey): يظهر فقط حين يدعمه المتصفح — يتطلب مفتاحاً
            مسجَّلاً من بوابة الموظف ومعتمَداً من الموارد البشرية. كلمة المرور تبقى بديلاً. *@
-        <button type="button" id="bio-login-btn" class="login-button" hidden
-                style="margin-top:10px;background:transparent;border:1px solid rgba(143,168,188,.45);color:inherit">
+        <button type="button" id="bio-login-btn" class="login-button zyu-8d3380c010b4" hidden
+               >
             🔐 الدخول بالبصمة/الوجه
         </button>
-        <div id="bio-login-error" class="login-error" hidden style="margin-top:10px"></div>
+        <div id="bio-login-error" class="login-error zyu-df928149c547" hidden></div>
 
         <script>
         (function () {

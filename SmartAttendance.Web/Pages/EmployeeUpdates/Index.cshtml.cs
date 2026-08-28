@@ -409,17 +409,8 @@ WHERE Id = @BatchId AND Status = 'Open';
     }
 
     // NEXORA_FIX14B_MOVEMENT_COLUMNS_START
-    private async Task EnsureMovementColumnsAsync()
-    {
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF COL_LENGTH('EmployeeUpdateBatches', 'EffectiveDate') IS NULL
-BEGIN
-    ALTER TABLE EmployeeUpdateBatches ADD EffectiveDate date NULL;
-END;
-""");
-    }
+    // Compatibility shim. EffectiveDate is owned by migration 20260826-21.
+    private Task EnsureMovementColumnsAsync() => Task.CompletedTask;
     // NEXORA_FIX14B_MOVEMENT_COLUMNS_END
     private async Task LoadPageAsync(int? employeeId, string? tab, string? section)
     {
@@ -475,7 +466,9 @@ Tab = NormalizeTab(tab);
                 FullName = e.FullName ?? string.Empty,
                 Position = e.Position ?? string.Empty,
                 DepartmentName = e.Department.Name ?? string.Empty,
-                BranchName = e.Department.Branch.Name ?? string.Empty
+                BranchName = e.Department.Branch == null
+                    ? string.Empty
+                    : e.Department.Branch.Name ?? string.Empty
             })
             .ToListAsync(HttpContext.RequestAborted);
     }
