@@ -165,6 +165,17 @@ public sealed class UnifiedPageDesignContractTests
         Assert.DoesNotContain("@addTagHelper *, SmartAttendance.Web", imports, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EmployeeCreate_LoginAccountUsesABalancedTwoColumnGrid()
+    {
+        var create = ReadWeb("Pages", "Employees", "Create.cshtml");
+        var css = ReadWeb("wwwroot", "css", "pages", "create-105041754d.css");
+
+        Assert.Contains("nxr-form-grid two nxr-login-account-grid", create, StringComparison.Ordinal);
+        Assert.Contains(".nxr-login-account-grid", css, StringComparison.Ordinal);
+        Assert.Contains("align-items: start !important", css, StringComparison.Ordinal);
+    }
+
     private static string ReadWeb(params string[] parts) =>
         File.ReadAllText(Path.Combine(new[] { WebRoot() }.Concat(parts).ToArray()));
 

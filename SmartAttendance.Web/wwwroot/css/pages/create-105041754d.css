@@ -784,3 +784,37 @@
 .zyu-72c74d31a983 { display:flex;align-items:center;gap:8px;font-weight:700;margin-top:10px; }
 
 .zyu-48bcc8a38351 { width:auto;min-height:auto; }
+
+/* Login-account fields share one balanced two-column row. The generic field
+   grid stretches items, which previously pushed the shorter password field
+   downward because the username field also contains helper text. */
+.nxr-login-account-body {
+    display: grid;
+    gap: 14px;
+}
+
+.nxr-login-account-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: start !important;
+}
+
+.nxr-login-account-grid > .nxr-field {
+    min-width: 0;
+    align-self: start !important;
+    align-content: start;
+}
+
+.nxr-login-account-grid > .nxr-field > input {
+    width: 100%;
+}
+
+.nxr-login-account-force {
+    margin-block-start: 0 !important;
+    justify-self: start;
+}
+
+@media (max-width: 760px) {
+    .nxr-login-account-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

@@ -516,13 +516,13 @@
             </div>
         </div>
 
-        <section class="nxr-card zyu-2bdf8e45fdfc">
+        <section class="nxr-card nxr-login-account-card zyu-2bdf8e45fdfc">
             <header class="nxr-card-head">
                 <h2>حساب الدخول</h2>
                 <p>يُنشأ للموظف حساب دخولٍ بدور «موظف» تلقائياً مع إضافته. كلمة المرور مطلوبة؛ اسم الدخول اختياري (افتراضياً = كود الموظف).</p>
             </header>
-            <div class="nxr-card-body">
-                <div class="nxr-form-grid">
+            <div class="nxr-card-body nxr-login-account-body">
+                <div class="nxr-form-grid two nxr-login-account-grid">
                     <div class="nxr-field">
                         <label asp-for="LoginUsername">اسم الدخول (اختياري)</label>
                         <input asp-for="LoginUsername" dir="ltr" autocomplete="off"
@@ -535,7 +535,7 @@
                                autocomplete="off" placeholder="8 أحرف على الأقل" />
                     </div>
                 </div>
-                <label class="zyu-72c74d31a983">
+                <label class="nxr-login-account-force zyu-72c74d31a983">
                     <input type="checkbox" asp-for="LoginForceChange" class="zyu-48bcc8a38351" />
                     إجبار الموظف على تغيير كلمة المرور عند أول دخول
                 </label>
