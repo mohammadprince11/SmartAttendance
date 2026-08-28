@@ -160,6 +160,13 @@
     padding-inline-end: 46px;
 }
 
+/* Edge/IE can render a native password-reveal control in addition to our
+   accessible ZYNORA toggle. Keep one predictable control across browsers. */
+.login-password-control > input::-ms-reveal,
+.login-password-control > input::-ms-clear {
+    display: none;
+}
+
 .login-password-control > .login-password-toggle {
     position: absolute !important;
     inset-inline-end: 10px;

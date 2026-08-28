@@ -187,6 +187,7 @@ public sealed class LocalizationContractTests
     public void LoginPasswordVisibilityToggle_IsAccessibleAndDoesNotAlterThePasswordValue()
     {
         var login = ReadWeb("Pages", "Account", "Login.cshtml");
+        var loginCss = ReadWeb("wwwroot", "css", "login-foundation.css");
 
         Assert.Contains("id=\"password-visibility-toggle\"", login, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"Password\"", login, StringComparison.Ordinal);
@@ -196,6 +197,8 @@ public sealed class LocalizationContractTests
         Assert.Contains("@T[Model.ErrorMessage]", login, StringComparison.Ordinal);
         Assert.DoesNotContain("input.value =", login, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", login, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".login-password-control > input::-ms-reveal", loginCss, StringComparison.Ordinal);
+        Assert.Contains(".login-password-control > input::-ms-clear", loginCss, StringComparison.Ordinal);
     }
 
     [Fact]
