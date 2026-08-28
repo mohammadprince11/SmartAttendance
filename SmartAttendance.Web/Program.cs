@@ -82,6 +82,13 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
 builder.Services.AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>();
+builder.Services.Configure<AzureTranslatorOptions>(
+    builder.Configuration.GetSection(AzureTranslatorOptions.SectionName));
+builder.Services.AddHttpClient<IAutomaticTextTranslator, AzureAutomaticTextTranslator>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
+builder.Services.AddScoped<ILocalizationAutoTranslationService, LocalizationAutoTranslationService>();
 
 // مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة + فحص malware
 // قبل الكتابة. في التطوير يمكن تعطيل المحرك صراحةً، أما بوابة الإنتاج فتفرضه.

@@ -12,8 +12,15 @@ public sealed class DictionaryModel : PageModel
 {
     private const int PageSize = 80;
     private readonly ILocalizationDictionaryService _dictionary;
+    private readonly ILocalizationAutoTranslationService _autoTranslation;
 
-    public DictionaryModel(ILocalizationDictionaryService dictionary) => _dictionary = dictionary;
+    public DictionaryModel(
+        ILocalizationDictionaryService dictionary,
+        ILocalizationAutoTranslationService autoTranslation)
+    {
+        _dictionary = dictionary;
+        _autoTranslation = autoTranslation;
+    }
 
     [BindProperty(SupportsGet = true)] public string? Culture { get; set; }
     [BindProperty(SupportsGet = true)] public string? Q { get; set; }
@@ -25,6 +32,8 @@ public sealed class DictionaryModel : PageModel
     public IReadOnlyList<DictionaryEntryRow> Entries { get; private set; } = [];
     public int TotalEntries { get; private set; }
     public int MissingEntries { get; private set; }
+    public int MachineGeneratedEntries { get; private set; }
+    public bool AutomaticTranslationEnabled => _autoTranslation.IsConfigured;
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalEntries / (double)PageSize));
 
     public async Task<IActionResult> OnGetAsync()
@@ -39,6 +48,7 @@ public sealed class DictionaryModel : PageModel
             .Where(item => string.Equals(item.CultureCode, SelectedLanguage.Code, StringComparison.OrdinalIgnoreCase))
             .ToArray();
         MissingEntries = rows.Count(item => !SelectedLanguage.IsDefault && string.IsNullOrWhiteSpace(item.Translation));
+        MachineGeneratedEntries = rows.Count(item => item.RequiresReview);
 
         IEnumerable<DictionaryEntryRow> filtered = rows;
         if (!string.IsNullOrWhiteSpace(Q))
@@ -119,6 +129,30 @@ public sealed class DictionaryModel : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostAutoTranslateAsync(string culture, int maximumItems = 250)
+    {
+        try
+        {
+            var result = await _autoTranslation.TranslateMissingAsync(
+                culture,
+                maximumItems,
+                HttpContext.RequestAborted);
+            TempData["SuccessMessage"] = result.Translated == 0
+                ? "لا توجد ترجمات ناقصة ضمن اللغة المحددة."
+                : $"تمت ترجمة {result.Translated} عبارة آلياً ووُسمت للمراجعة البشرية.";
+            if (result.Remaining > 0)
+                TempData["ImportNotice"] = result.Warning is null
+                    ? $"تبقّى {result.Remaining} عبارة من الدفعة المحددة. كرر العملية لإكمالها."
+                    : $"توقفت الدفعة بعد حفظ المكتمل. المتبقي {result.Remaining}. السبب: {result.Warning}";
+        }
+        catch (InvalidOperationException exception)
+        {
+            TempData["ErrorMessage"] = exception.Message;
+        }
+
+        return RedirectToPage(new { culture, missingOnly = true });
+    }
+
     public async Task<IActionResult> OnGetExportAsync(string culture)
     {
         var language = await _dictionary.FindLanguageAsync(culture, HttpContext.RequestAborted);
@@ -154,7 +188,8 @@ public sealed class DictionaryModel : PageModel
         ["EnglishName"] = item.EnglishName,
         ["Direction"] = item.Direction,
         ["Key"] = item.Key,
-        ["Translation"] = item.Translation
+        ["Translation"] = item.Translation,
+        ["ReviewStatus"] = item.RequiresReview ? "Machine translation - review required" : "Reviewed / manual"
     };
 
     private FileContentResult Workbook(IReadOnlyList<Dictionary<string, string>> rows, string fileName)
@@ -166,7 +201,8 @@ public sealed class DictionaryModel : PageModel
             new ReportExportService.Column("EnglishName", "الاسم بالإنجليزية"),
             new ReportExportService.Column("Direction", "الاتجاه"),
             new ReportExportService.Column("Key", "النص العربي / المفتاح"),
-            new ReportExportService.Column("Translation", "الترجمة")
+            new ReportExportService.Column("Translation", "الترجمة"),
+            new ReportExportService.Column("ReviewStatus", "حالة المراجعة")
         };
         var export = ReportExportService.Build("xlsx", "القاموس", columns, rows);
         return File(export.Bytes, export.ContentType, $"{fileName}.xlsx");

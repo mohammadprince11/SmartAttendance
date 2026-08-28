@@ -75,6 +75,40 @@
         </form>
     </section>
 
+    @if (!Model.SelectedLanguage.IsDefault)
+    {
+        <section class="zy-dictionary-automatic">
+            <div>
+                <span class="zy-dictionary-eyebrow">AZURE AI TRANSLATOR</span>
+                <h2>إكمال الكلمات الناقصة آلياً</h2>
+                <p>تُرسل عبارات واجهة النظام فقط إلى Azure، ثم تُحفظ النتائج كمسودات تحتاج مراجعة بشرية. لا تُرسل بيانات الموظفين.</p>
+            </div>
+            @if (Model.AutomaticTranslationEnabled)
+            {
+                <form method="post" asp-page-handler="AutoTranslate">
+                    <input type="hidden" name="culture" value="@Model.SelectedLanguage.Code" />
+                    <label>
+                        حجم الدفعة
+                        <select name="maximumItems">
+                            <option value="100">100 عبارة</option>
+                            <option value="250" selected>250 عبارة</option>
+                            <option value="500">500 عبارة</option>
+                            <option value="1000">1000 عبارة</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="zy-dictionary-btn zy-dictionary-btn--primary">ترجمة الناقص</button>
+                </form>
+            }
+            else
+            {
+                <div class="zy-dictionary-provider-status">
+                    <strong>بانتظار تفعيل Azure</strong>
+                    <span>ستتفعّل الأداة فور إضافة Endpoint والمفتاح والمنطقة إلى إعدادات التشغيل الآمنة.</span>
+                </div>
+            }
+        </section>
+    }
+
     <section class="zy-dictionary-toolbar">
         <form method="get">
             <input type="hidden" name="culture" value="@Model.SelectedLanguage.Code" />
@@ -90,6 +124,7 @@
             @if (!Model.SelectedLanguage.IsDefault)
             {
                 <span class="@(Model.MissingEntries > 0 ? "has-missing" : "")"><b>@Model.MissingEntries</b> ناقصة</span>
+                <span class="@(Model.MachineGeneratedEntries > 0 ? "needs-review" : "")"><b>@Model.MachineGeneratedEntries</b> تحتاج مراجعة</span>
             }
         </div>
     </section>
@@ -126,7 +161,9 @@
                                     <input type="hidden" name="missingOnly" value="@Model.MissingOnly.ToString().ToLowerInvariant()" />
                                     <input type="hidden" name="p" value="@Model.P" />
                                     <textarea name="translation" rows="2" dir="@Model.SelectedLanguage.Direction">@entry.Translation</textarea>
-                                    <span class="zy-dictionary-state">@(missing ? "ناقص" : "مترجم")</span>
+                                    <span class="zy-dictionary-state @(entry.RequiresReview ? "is-machine" : "")">
+                                        @(missing ? "ناقص" : entry.RequiresReview ? "آلي · يحتاج مراجعة" : "مراجَع")
+                                    </span>
                                     <button type="submit" class="zy-dictionary-btn">حفظ</button>
                                 </form>
                             }

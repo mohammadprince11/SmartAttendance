@@ -22,6 +22,19 @@ public sealed class LocalizationDictionaryTests
             }).Build();
             var service = new LocalizationDictionaryService(new TestEnvironment(directory), configuration);
             var sourceKey = (await service.GetRowsAsync()).First().Key;
+            await service.SaveTranslationsAsync(
+                "en-US",
+                new Dictionary<string, string> { [sourceKey] = "Machine draft" },
+                machineGenerated: true);
+            var machineDraft = (await service.GetRowsAsync()).Single(item =>
+                item.CultureCode == "en-US" && item.Key == sourceKey);
+            Assert.True(machineDraft.RequiresReview);
+
+            await service.SaveTranslationAsync("en-US", sourceKey, "Reviewed translation");
+            var reviewed = (await service.GetRowsAsync()).Single(item =>
+                item.CultureCode == "en-US" && item.Key == sourceKey);
+            Assert.False(reviewed.RequiresReview);
+
             var columns = new[]
             {
                 new ReportExportService.Column("CultureCode", "رمز اللغة"),
@@ -104,14 +117,17 @@ public sealed class LocalizationDictionaryTests
         Assert.Contains("OnGetNewLanguageTemplateAsync", model, StringComparison.Ordinal);
         Assert.Contains("OnPostImportAsync", model, StringComparison.Ordinal);
         Assert.Contains("OnPostDeleteLanguageAsync", model, StringComparison.Ordinal);
+        Assert.Contains("OnPostAutoTranslateAsync", model, StringComparison.Ordinal);
         Assert.Contains("CultureCode", model, StringComparison.Ordinal);
         Assert.Contains("Translation", model, StringComparison.Ordinal);
         Assert.Contains("رمز اللغة", model, StringComparison.Ordinal);
         Assert.Contains("النص العربي / المفتاح", model, StringComparison.Ordinal);
         Assert.Contains("asp-page-handler=\"Save\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"AutoTranslate\"", page, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Settings/Dictionary\"", settings, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Settings/Dictionary\"", layout, StringComparison.Ordinal);
         Assert.Contains("AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>", program, StringComparison.Ordinal);
+        Assert.Contains("AddHttpClient<IAutomaticTextTranslator, AzureAutomaticTextTranslator>", program, StringComparison.Ordinal);
         Assert.Contains("UseMiddleware<DynamicDictionaryCultureMiddleware>", program, StringComparison.Ordinal);
     }
 

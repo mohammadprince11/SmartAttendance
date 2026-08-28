@@ -17,6 +17,7 @@
 
 .zy-dictionary-hero,
 .zy-dictionary-import,
+.zy-dictionary-automatic,
 .zy-dictionary-toolbar,
 .zy-dictionary-table-wrap {
     border: 1px solid var(--zy-border);
@@ -37,11 +38,14 @@
 .zy-dictionary-hero h1,
 .zy-dictionary-hero p,
 .zy-dictionary-import h2,
-.zy-dictionary-import p { margin: 0; }
+.zy-dictionary-import p,
+.zy-dictionary-automatic h2,
+.zy-dictionary-automatic p { margin: 0; }
 
 .zy-dictionary-hero h1 { margin-block: 6px; font-size: clamp(24px, 3vw, 36px); }
 .zy-dictionary-hero p,
-.zy-dictionary-import p { color: var(--zy-text-muted); line-height: 1.7; }
+.zy-dictionary-import p,
+.zy-dictionary-automatic p { color: var(--zy-text-muted); line-height: 1.7; }
 .zy-dictionary-eyebrow { color: var(--zy-electric-teal); font-size: 10px; font-weight: 800; letter-spacing: .13em; }
 .zy-dictionary-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
@@ -114,6 +118,31 @@
 .zy-dictionary-import label,
 .zy-dictionary-toolbar label { display: inline-flex; align-items: center; gap: 7px; color: var(--zy-text-muted); font-size: 11px; }
 
+.zy-dictionary-automatic {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-block-start: 14px;
+    padding: 20px;
+    border-inline-start: 3px solid var(--zy-electric-teal);
+}
+.zy-dictionary-automatic h2 { margin-block: 4px; font-size: 17px; }
+.zy-dictionary-automatic form { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; }
+.zy-dictionary-automatic label { display: grid; gap: 6px; color: var(--zy-text-muted); font-size: 11px; }
+.zy-dictionary-automatic select {
+    min-width: 140px;
+    min-height: 40px;
+    padding-inline: 10px;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-md);
+    background: var(--zy-surface-raised);
+    color: var(--zy-text);
+}
+.zy-dictionary-provider-status { max-width: 390px; display: grid; gap: 5px; padding: 12px 14px; border: 1px dashed var(--zy-border-strong); border-radius: var(--zy-radius-md); }
+.zy-dictionary-provider-status strong { color: var(--zy-warning, var(--zy-text)); font-size: 12px; }
+.zy-dictionary-provider-status span { color: var(--zy-text-muted); font-size: 10px; line-height: 1.6; }
+
 .zy-dictionary-toolbar {
     display: flex;
     align-items: center;
@@ -127,6 +156,7 @@
 .zy-dictionary-stats { display: flex; gap: 10px; }
 .zy-dictionary-stats span { padding: 7px 10px; border-radius: 999px; background: var(--zy-surface-raised); color: var(--zy-text-muted); font-size: 11px; }
 .zy-dictionary-stats .has-missing { background: var(--zy-danger-soft); color: var(--zy-danger); }
+.zy-dictionary-stats .needs-review { background: var(--zy-warning-soft, var(--zy-surface-raised)); color: var(--zy-warning, var(--zy-text)); }
 
 .zy-dictionary-table-wrap { overflow: auto; }
 .zy-dictionary-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -139,11 +169,12 @@
 .zy-dictionary-table tr.is-missing { background: color-mix(in srgb, var(--zy-danger-soft) 45%, transparent); }
 .zy-dictionary-key { color: var(--zy-text); font-weight: 650; line-height: 1.65; overflow-wrap: anywhere; }
 .zy-dictionary-source { display: block; color: var(--zy-text-muted); line-height: 1.65; }
-.zy-dictionary-row-form { display: grid; grid-template-columns: minmax(240px, 1fr) 70px 74px; align-items: center; gap: 10px; }
+.zy-dictionary-row-form { display: grid; grid-template-columns: minmax(240px, 1fr) 105px 74px; align-items: center; gap: 10px; }
 .zy-dictionary-row-form textarea { width: 100%; min-height: 52px; resize: vertical; padding: 10px 12px; border: 1px solid var(--zy-border); border-radius: var(--zy-radius-md); background: var(--zy-surface-raised); color: var(--zy-text); font: inherit; line-height: 1.5; }
 .zy-dictionary-row-form textarea:focus { outline: 0; border-color: var(--zy-electric-teal); box-shadow: var(--zy-focus-ring); }
 .zy-dictionary-state { color: var(--zy-text-muted); font-size: 10px; text-align: center; }
 .is-missing .zy-dictionary-state { color: var(--zy-danger); }
+.zy-dictionary-state.is-machine { color: var(--zy-warning, var(--zy-text)); font-weight: 700; }
 .zy-dictionary-empty { padding: 48px !important; color: var(--zy-text-muted); text-align: center; }
 
 .zy-dictionary-pagination { display: flex; justify-content: center; align-items: center; gap: 14px; margin-block-start: 16px; }
@@ -154,6 +185,7 @@
     .zy-dictionary-page { width: min(100% - 24px, 1500px); }
     .zy-dictionary-hero,
     .zy-dictionary-import,
+    .zy-dictionary-automatic,
     .zy-dictionary-toolbar { align-items: stretch; flex-direction: column; }
     .zy-dictionary-table { min-width: 860px; }
 }

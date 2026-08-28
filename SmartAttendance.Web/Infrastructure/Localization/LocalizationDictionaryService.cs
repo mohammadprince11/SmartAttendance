@@ -19,7 +19,8 @@ public sealed record DictionaryEntryRow(
     string EnglishName,
     string Direction,
     string Key,
-    string Translation);
+    string Translation,
+    bool RequiresReview = false);
 
 public sealed record DictionaryImportResult(
     string CultureCode,
@@ -34,6 +35,11 @@ public interface ILocalizationDictionaryService
     Task<IReadOnlyDictionary<string, string>> GetCatalogAsync(string? culture, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DictionaryEntryRow>> GetRowsAsync(CancellationToken cancellationToken = default);
     Task SaveTranslationAsync(string culture, string key, string translation, CancellationToken cancellationToken = default);
+    Task<int> SaveTranslationsAsync(
+        string culture,
+        IReadOnlyDictionary<string, string> translations,
+        bool machineGenerated,
+        CancellationToken cancellationToken = default);
     Task<DictionaryImportResult> ImportAsync(Stream stream, string fileName, bool replace, CancellationToken cancellationToken = default);
     Task DeleteLanguageAsync(string culture, CancellationToken cancellationToken = default);
 }
@@ -121,6 +127,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         foreach (var language in state.Languages)
         {
             var catalog = await GetCatalogAsync(language.Code, cancellationToken);
+            state.MachineTranslatedKeys.TryGetValue(language.Code, out var machineTranslatedKeys);
             foreach (var key in keys)
             {
                 rows.Add(new DictionaryEntryRow(
@@ -129,7 +136,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                     language.EnglishName,
                     language.Direction,
                     key,
-                    language.IsDefault ? key : catalog.GetValueOrDefault(key, string.Empty)));
+                    language.IsDefault ? key : catalog.GetValueOrDefault(key, string.Empty),
+                    !language.IsDefault && machineTranslatedKeys?.Contains(key) == true));
             }
         }
 
@@ -140,10 +148,34 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         string culture,
         string key,
         string translation,
+        CancellationToken cancellationToken = default) =>
+        _ = await SaveTranslationsAsync(
+            culture,
+            new Dictionary<string, string>(StringComparer.Ordinal) { [key] = translation },
+            machineGenerated: false,
+            cancellationToken);
+
+    public async Task<int> SaveTranslationsAsync(
+        string culture,
+        IReadOnlyDictionary<string, string> translations,
+        bool machineGenerated,
         CancellationToken cancellationToken = default)
     {
-        key = NormalizeCell(key, 4_000, "Key");
-        translation = NormalizeCell(translation, 12_000, "Translation", allowEmpty: true);
+        if (translations.Count == 0) return 0;
+        if (translations.Count > 1_000)
+            throw new InvalidOperationException("لا يمكن حفظ أكثر من 1000 ترجمة في العملية الواحدة.");
+
+        var normalized = translations
+            .Select(pair => new KeyValuePair<string, string>(
+                NormalizeCell(pair.Key, 4_000, "Key"),
+                NormalizeCell(pair.Value, 12_000, "Translation", allowEmpty: true)))
+            .ToArray();
+
+        var duplicate = normalized
+            .GroupBy(pair => pair.Key, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicate is not null)
+            throw new InvalidOperationException($"المفتاح مكرر داخل عملية الحفظ: {duplicate.Key}");
 
         await _gate.WaitAsync(cancellationToken);
         try
@@ -153,13 +185,27 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
             if (language.IsDefault)
                 throw new InvalidOperationException("لا يمكن تعديل مفاتيح العربية لأنها لغة المصدر المحمية.");
 
-            if (!GetSourceKeys(state).Contains(key, StringComparer.Ordinal))
-                throw new InvalidOperationException("المفتاح غير موجود في قاموس النظام.");
+            var sourceKeys = GetSourceKeys(state);
+            var unknown = normalized
+                .Select(pair => pair.Key)
+                .FirstOrDefault(key => !sourceKeys.Contains(key));
+            if (unknown is not null)
+                throw new InvalidOperationException($"المفتاح غير موجود في قاموس النظام: {unknown}");
 
             if (!state.Translations.TryGetValue(language.Code, out var values))
                 state.Translations[language.Code] = values = new Dictionary<string, string>(StringComparer.Ordinal);
-            values[key] = translation;
+            if (!state.MachineTranslatedKeys.TryGetValue(language.Code, out var machineTranslatedKeys))
+                state.MachineTranslatedKeys[language.Code] = machineTranslatedKeys = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var (key, translation) in normalized)
+            {
+                values[key] = translation;
+                if (machineGenerated && translation.Length > 0) machineTranslatedKeys.Add(key);
+                else machineTranslatedKeys.Remove(key);
+            }
+
             await PersistUnsafeAsync(state, cancellationToken);
+            return normalized.Length;
         }
         finally
         {
@@ -250,6 +296,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 
             if (replace || !state.Translations.TryGetValue(code, out var translations))
                 state.Translations[code] = translations = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (replace || !state.MachineTranslatedKeys.TryGetValue(code, out var machineTranslatedKeys))
+                state.MachineTranslatedKeys[code] = machineTranslatedKeys = new HashSet<string>(StringComparer.Ordinal);
 
             var imported = 0;
             var empty = 0;
@@ -260,6 +308,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                 var value = NormalizeCell(item.Translation, 12_000, "Translation", allowEmpty: true);
                 if (value.Length == 0) empty++;
                 translations[key] = value;
+                machineTranslatedKeys.Remove(key);
                 imported++;
             }
 
@@ -283,6 +332,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                 throw new InvalidOperationException("لا يمكن حذف العربية لأنها لغة المصدر واللغة الاحتياطية للنظام.");
             state.Languages.Remove(language);
             state.Translations.Remove(language.Code);
+            state.MachineTranslatedKeys.Remove(language.Code);
             await PersistUnsafeAsync(state, cancellationToken);
         }
         finally
@@ -344,6 +394,13 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         state.Translations = new Dictionary<string, Dictionary<string, string>>(
             state.Translations ?? new Dictionary<string, Dictionary<string, string>>(),
             StringComparer.OrdinalIgnoreCase);
+        state.MachineTranslatedKeys = new Dictionary<string, HashSet<string>>(
+            (state.MachineTranslatedKeys ?? new Dictionary<string, HashSet<string>>())
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => new HashSet<string>(pair.Value ?? [], StringComparer.Ordinal),
+                    StringComparer.OrdinalIgnoreCase),
+            StringComparer.OrdinalIgnoreCase);
         if (!state.Languages.Any(item => item.IsDefault))
             throw new InvalidOperationException("ملف القاموس لا يحتوي لغة مصدر افتراضية.");
     }
@@ -401,6 +458,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     {
         public List<DictionaryLanguage> Languages { get; set; } = [];
         public Dictionary<string, Dictionary<string, string>> Translations { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, HashSet<string>> MachineTranslatedKeys { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);
     }
 }
