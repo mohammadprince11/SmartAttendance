@@ -3,6 +3,8 @@
 @using System.Text.Json
 @using System.Globalization
 @using Microsoft.AspNetCore.WebUtilities
+@using SmartAttendance.Web.Infrastructure.Localization
+@inject ILocalizationDictionaryService LocalizationDictionary
 
 @{
     ViewData["Title"] = T["تسجيل الدخول"];
@@ -15,6 +17,7 @@
     var cultureReturnUrl = string.IsNullOrWhiteSpace(requestedReturnUrl)
         ? Request.Path.Value ?? "/Account/Login"
         : QueryHelpers.AddQueryString(Request.Path.Value ?? "/Account/Login", "ReturnUrl", requestedReturnUrl);
+    var supportedLanguages = await LocalizationDictionary.GetLanguagesAsync(HttpContext.RequestAborted);
 }
 <link rel="stylesheet" href="~/css/pages/login-316e15b025.css" asp-append-version="true" />
 
@@ -39,7 +42,7 @@
             <input type="hidden" name="returnUrl" value="@cultureReturnUrl" />
             <label for="login-culture">@T["لغة الواجهة"]</label>
             <select id="login-culture" name="culture" aria-label="@T["لغة الواجهة"]">
-                @foreach (var language in ZynoraSupportedCultures.All)
+                @foreach (var language in supportedLanguages)
                 {
                     <option value="@language.Code"
                             data-zy-no-localize

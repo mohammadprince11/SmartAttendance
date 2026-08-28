@@ -63,6 +63,7 @@ public static class SpreadsheetReader
     private static List<string[]> ReadXlsx(Stream stream)
     {
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        ValidateArchive(archive);
         var shared = ReadSharedStrings(archive);
         var sheetEntry = archive.GetEntry(FirstSheetPath(archive))
             ?? throw new InvalidOperationException("لا توجد ورقة عمل داخل الملف.");
@@ -102,6 +103,23 @@ public static class SpreadsheetReader
             rows.Add(arr);
         }
         return rows;
+    }
+
+    private static void ValidateArchive(ZipArchive archive)
+    {
+        const long maxEntryBytes = 32L * 1024 * 1024;
+        const long maxTotalBytes = 64L * 1024 * 1024;
+        long total = 0;
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.Length > maxEntryBytes)
+                throw new InvalidOperationException("Excel يحتوي جزءاً أكبر من الحد الآمن.");
+            total += entry.Length;
+            if (total > maxTotalBytes)
+                throw new InvalidOperationException("حجم Excel بعد فك الضغط تجاوز الحد الآمن.");
+            if (entry.CompressedLength > 0 && entry.Length / (double)entry.CompressedLength > 200)
+                throw new InvalidOperationException("تم رفض Excel بسبب نسبة ضغط غير آمنة.");
+        }
     }
 
     private static List<string> ReadSharedStrings(ZipArchive archive)

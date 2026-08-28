@@ -3,15 +3,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Authorization;
 using SmartAttendance.Web;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Culture;
 
 [AllowAnonymous]
 public sealed class SetModel : PageModel
 {
-    public IActionResult OnPost(string? culture, string? returnUrl)
+    private readonly ILocalizationDictionaryService _dictionary;
+
+    public SetModel(ILocalizationDictionaryService dictionary) => _dictionary = dictionary;
+
+    public async Task<IActionResult> OnPostAsync(string? culture, string? returnUrl)
     {
-        if (!ZynoraSupportedCultures.TryGet(culture, out var supported))
+        var supported = await _dictionary.FindLanguageAsync(culture, HttpContext.RequestAborted);
+        if (supported is null)
             return BadRequest();
 
         Response.Cookies.Append(

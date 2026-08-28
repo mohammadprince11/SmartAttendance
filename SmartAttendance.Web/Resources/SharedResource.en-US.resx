@@ -564,4 +564,32 @@
   <data name="بحث متقدم" xml:space="preserve"><value>Advanced search</value></data>
   <data name="الجمعة" xml:space="preserve"><value>Friday</value></data>
   <data name="آب" xml:space="preserve"><value>August</value></data>
+  <data name="قاموس اللغات" xml:space="preserve"><value>Language dictionary</value></data>
+  <data name="إدارة كلمات النظام، تصديرها إلى Excel، وإضافة اللغات أو حذفها." xml:space="preserve"><value>Manage system text, export it to Excel, and add or remove languages.</value></data>
+  <data name="راجع جميع كلمات النظام، صحّح الترجمة مباشرة، أو انقل قاموس لغة كاملة عبر Excel." xml:space="preserve"><value>Review all system text, correct translations directly, or transfer a complete language dictionary through Excel.</value></data>
+  <data name="مسار الصفحة" xml:space="preserve"><value>Page path</value></data>
+  <data name="اللغات المثبتة" xml:space="preserve"><value>Installed languages</value></data>
+  <data name="قالب لغة جديدة" xml:space="preserve"><value>New language template</value></data>
+  <data name="استيراد Excel" xml:space="preserve"><value>Import Excel</value></data>
+  <data name="الملف يجب أن يحتوي لغة واحدة. فعّل الاستبدال لمسح ترجمات اللغة القديمة قبل الاستيراد." xml:space="preserve"><value>The file must contain one language. Enable replacement to clear old translations before importing.</value></data>
+  <data name="استبدال القاموس الحالي" xml:space="preserve"><value>Replace current dictionary</value></data>
+  <data name="فحص واستيراد" xml:space="preserve"><value>Validate and import</value></data>
+  <data name="ابحث في المفتاح أو الترجمة…" xml:space="preserve"><value>Search the key or translation…</value></data>
+  <data name="الناقصة فقط" xml:space="preserve"><value>Missing only</value></data>
+  <data name="نتيجة" xml:space="preserve"><value>results</value></data>
+  <data name="ناقصة" xml:space="preserve"><value>missing</value></data>
+  <data name="النص العربي / المفتاح" xml:space="preserve"><value>Arabic source / key</value></data>
+  <data name="لا توجد كلمات مطابقة." xml:space="preserve"><value>No matching words.</value></data>
+  <data name="ناقص" xml:space="preserve"><value>Missing</value></data>
+  <data name="مترجم" xml:space="preserve"><value>Translated</value></data>
+  <data name="صفحات القاموس" xml:space="preserve"><value>Dictionary pages</value></data>
+  <data name="صفحة {0} من {1}" xml:space="preserve"><value>Page {0} of {1}</value></data>
+  <data name="لغة المصدر" xml:space="preserve"><value>Source language</value></data>
+  <data name="أساس" xml:space="preserve"><value>Base</value></data>
+  <data name="حذف اللغة" xml:space="preserve"><value>Delete language</value></data>
+  <data name="حذف اللغة وكل ترجماتها؟" xml:space="preserve"><value>Delete the language and all its translations?</value></data>
+  <data name="تصدير {0}" xml:space="preserve"><value>Export {0}</value></data>
+  <data name="ترجمة {0}" xml:space="preserve"><value>{0} translation</value></data>
+  <data name="تم حفظ الترجمة وتفعيلها مباشرة." xml:space="preserve"><value>The translation was saved and activated immediately.</value></data>
+  <data name="اختر ملف Excel أو CSV أولاً." xml:space="preserve"><value>Select an Excel or CSV file first.</value></data>
 </root>

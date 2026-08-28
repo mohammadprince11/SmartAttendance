@@ -2,14 +2,19 @@
 @using SmartAttendance.Web.Infrastructure.Security
 @using SmartAttendance.Web.Infrastructure.Theming
 @using System.Globalization
+@using SmartAttendance.Web.Infrastructure.Localization
 @inject IPermissionAuthorizationService PermissionAuthorizationService
 @inject IThemeContextService ThemeContextService
 @inject IAccessRoleService AccessRoleService
+@inject ILocalizationDictionaryService LocalizationDictionary
 @{
     var companyTheme = await ThemeContextService.GetCurrentAsync(Context.RequestAborted);
     var brandName = string.IsNullOrWhiteSpace(companyTheme.DisplayName) ? "ZYNORA HR" : companyTheme.DisplayName;
     var currentCulture = CultureInfo.CurrentUICulture;
-    var currentDirection = currentCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+    var supportedLanguages = await LocalizationDictionary.GetLanguagesAsync(Context.RequestAborted);
+    var configuredLanguage = supportedLanguages.FirstOrDefault(item =>
+        string.Equals(item.Code, currentCulture.Name, StringComparison.OrdinalIgnoreCase));
+    var currentDirection = configuredLanguage?.Direction ?? (currentCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr");
     var currentLanguageCode = currentCulture.TwoLetterISOLanguageName.ToUpperInvariant();
     var currentReturnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
     var isLoginPage = Context.Request.Path.StartsWithSegments("/Account/Login");
@@ -1053,7 +1058,7 @@
                                     <button type="button" class="zy-language-dialog__close" data-zy-language-close aria-label="@T["إغلاق"]">×</button>
                                 </div>
                                 <div class="zy-language-dialog__options" role="radiogroup" aria-label="@T["لغة الواجهة"]">
-                                    @foreach (var language in ZynoraSupportedCultures.All)
+                                    @foreach (var language in supportedLanguages)
                                     {
                                         var isCurrentLanguage = string.Equals(
                                             currentCulture.Name,
@@ -1069,7 +1074,7 @@
                                                     role="radio"
                                                     aria-checked="@(isCurrentLanguage ? "true" : "false")">
                                                 <strong>@language.NativeName</strong>
-                                                <span>@(language.IsRightToLeft ? "RTL" : "LTR") · @language.Code</span>
+                                                <span>@language.Direction.ToUpperInvariant() · @language.Code</span>
                                             </button>
                                         </form>
                                     }

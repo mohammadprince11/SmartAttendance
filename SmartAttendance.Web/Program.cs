@@ -32,6 +32,7 @@ using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Seeding;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Theming;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +81,7 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
+builder.Services.AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>();
 
 // مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة + فحص malware
 // قبل الكتابة. في التطوير يمكن تعطيل المحرك صراحةً، أما بوابة الإنتاج فتفرضه.
@@ -573,6 +575,7 @@ if (reverseProxyOptions.Enabled)
 }
 
 app.UseRequestLocalization();
+app.UseMiddleware<DynamicDictionaryCultureMiddleware>();
 
 // معالج الأخطاء يعمل في الإنتاج بصرف النظر عن TLS: يمنع تسريب صفحة الاستثناء
 // المطوِّرة (stack trace) للمستخدم النهائي.
