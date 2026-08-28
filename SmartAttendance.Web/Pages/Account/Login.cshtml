@@ -61,7 +61,7 @@
 
         @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
         {
-            <div class="login-error">@Model.ErrorMessage</div>
+            <div class="login-error">@T[Model.ErrorMessage]</div>
         }
 
         <form method="post" class="login-form">

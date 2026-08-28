@@ -312,4 +312,10 @@
   <data name="وفاة" xml:space="preserve"><value>مردن</value></data>
   <data name="إظهار كلمة المرور" xml:space="preserve"><value>پیشاندانی وشەی نهێنی</value></data>
   <data name="إخفاء كلمة المرور" xml:space="preserve"><value>شاردنەوەی وشەی نهێنی</value></data>
+  <data name="رجوع" xml:space="preserve">
+    <value>گەڕانەوە</value>
+  </data>
+  <data name="بيانات الدخول غير صحيحة أو الحساب غير متاح مؤقتاً." xml:space="preserve">
+    <value>زانیاری چوونەژوورەوە هەڵەیە یان هەژمارەکە کاتێکی کاتی بەردەست نییە.</value>
+  </data>
 </root>

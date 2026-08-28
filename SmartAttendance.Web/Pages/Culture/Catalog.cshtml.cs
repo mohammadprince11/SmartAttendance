@@ -8,7 +8,7 @@ using SmartAttendance.Web;
 
 namespace SmartAttendance.Web.Pages.Culture;
 
-[ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Client, VaryByHeader = "Cookie")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [AllowAnonymous]
 public sealed class CatalogModel : PageModel
 {

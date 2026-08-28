@@ -70,12 +70,37 @@ public sealed class LocalizationContractTests
     public void LegacyLocalizationBridge_UsesExactTextAndSupportsDynamicContent()
     {
         var script = ReadWeb("wwwroot", "js", "zynora-runtime-localization.js");
+        var catalog = ReadWeb("Pages", "Culture", "Catalog.cshtml.cs");
 
         Assert.Contains("/Culture/Catalog?culture=", script, StringComparison.Ordinal);
+        Assert.Contains("cache: \"no-store\"", script, StringComparison.Ordinal);
         Assert.Contains("MutationObserver", script, StringComparison.Ordinal);
         Assert.Contains("Object.prototype.hasOwnProperty.call", script, StringComparison.Ordinal);
+        Assert.Contains("translateComposed", script, StringComparison.Ordinal);
+        Assert.Contains("characterData: true", script, StringComparison.Ordinal);
+        Assert.Contains("attributes: true", script, StringComparison.Ordinal);
+        Assert.Contains("data-zy-no-localize", script, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("localStorage", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("NoStore = true", catalog, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EnglishNavigation_ReversesThePhysicalShellAndDrawerPlacement()
+    {
+        var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
+        var navigation = ReadWeb("wwwroot", "js", "zynora-kayan-nav.js");
+
+        Assert.Contains("html[dir=\"ltr\"] .nexora-shell", refresh, StringComparison.Ordinal);
+        Assert.Contains("html[dir=\"ltr\"] .nexora-sidebar", refresh, StringComparison.Ordinal);
+        Assert.Contains("html[dir=\"ltr\"] .nexora-main", refresh, StringComparison.Ordinal);
+        Assert.Contains("--ky-left", refresh, StringComparison.Ordinal);
+        Assert.Contains("kySlideOverLtr", refresh, StringComparison.Ordinal);
+
+        Assert.Contains("links.style.setProperty(\"--ky-left\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("return \"Back\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("return \"گەڕانەوە\"", navigation, StringComparison.Ordinal);
+        Assert.DoesNotContain("back.innerHTML", navigation, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -88,6 +113,7 @@ public sealed class LocalizationContractTests
         Assert.Contains("aria-pressed=\"false\"", login, StringComparison.Ordinal);
         Assert.Contains("input.type = willShow ? \"text\" : \"password\"", login, StringComparison.Ordinal);
         Assert.Contains("toggle.dataset.hideLabel", login, StringComparison.Ordinal);
+        Assert.Contains("@T[Model.ErrorMessage]", login, StringComparison.Ordinal);
         Assert.DoesNotContain("input.value =", login, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", login, StringComparison.OrdinalIgnoreCase);
     }

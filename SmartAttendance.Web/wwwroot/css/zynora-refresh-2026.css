@@ -99,6 +99,12 @@ body {
     background: var(--zy-bg) !important;
 }
 
+/* Non-Arabic pages appear only after the local catalog has translated legacy
+   hard-coded labels.  This removes the visible Arabic-to-English flash. */
+html:not([lang^="ar"]):not([data-zy-localization-ready]) body {
+    visibility: hidden;
+}
+
 body {
     background-image: none !important;
     color: var(--zy-text) !important;
@@ -109,6 +115,37 @@ body {
 /* Application shell ------------------------------------------------------- */
 .nexora-shell {
     background: var(--zy-bg) !important;
+}
+
+/* The historical shell was physically pinned to the right.  Re-map the grid
+   itself when the selected culture is LTR; changing text direction alone is
+   not enough because grid-column values are physical. */
+html[dir="rtl"] .nexora-shell {
+    grid-template-columns: minmax(0, 1fr) var(--zy-sidebar-width) !important;
+}
+
+html[dir="rtl"] .nexora-sidebar {
+    grid-column: 2 !important;
+}
+
+html[dir="rtl"] .nexora-main {
+    grid-column: 1 !important;
+}
+
+html[dir="ltr"] {
+    --nxr-font: "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+}
+
+html[dir="ltr"] .nexora-shell {
+    grid-template-columns: var(--zy-sidebar-width) minmax(0, 1fr) !important;
+}
+
+html[dir="ltr"] .nexora-sidebar {
+    grid-column: 1 !important;
+}
+
+html[dir="ltr"] .nexora-main {
+    grid-column: 2 !important;
 }
 
 .nexora-main {
@@ -131,6 +168,49 @@ html[dir="rtl"] .nexora-sidebar {
 
 html[dir="ltr"] .nexora-sidebar {
     border-inline-end: 1px solid var(--zy-border) !important;
+}
+
+@media (min-width: 981px) {
+    html[dir="ltr"] .nexora-nav-group.ky-open > .nexora-nav-group-links,
+    html[dir="ltr"] .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+        inset-inline-start: var(--ky-left, 0) !important;
+        inset-inline-end: auto !important;
+        right: auto !important;
+        left: var(--ky-left, 0) !important;
+        border-inline-start: 0 !important;
+        border-inline-end: 1px solid var(--zy-border) !important;
+        box-shadow: 18px 0 44px rgba(15, 23, 42, .14) !important;
+    }
+
+    html[dir="ltr"] .nexora-nav-group.ky-open > .nexora-nav-group-links {
+        animation-name: kySlideOverLtr !important;
+    }
+
+    html[dir="ltr"] .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+        animation-name: kySlideOutLtr !important;
+    }
+
+    html[dir="ltr"] .ky-back-chev {
+        transform: rotate(-135deg) !important;
+    }
+
+    html[dir="ltr"] .ky-acc .ky-acc-body .nexora-nav-link {
+        border-radius: 0 10px 10px 0 !important;
+    }
+
+    html[dir="rtl"] .ky-acc .ky-acc-body .nexora-nav-link {
+        border-radius: 10px 0 0 10px !important;
+    }
+}
+
+@keyframes kySlideOverLtr {
+    from { transform: translateX(-28px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+
+@keyframes kySlideOutLtr {
+    from { transform: none; opacity: 1; }
+    to { transform: translateX(-28px); opacity: 0; }
 }
 
 .nexora-brand-card {

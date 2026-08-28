@@ -312,4 +312,10 @@
   <data name="وفاة" xml:space="preserve"><value>Death</value></data>
   <data name="إظهار كلمة المرور" xml:space="preserve"><value>Show password</value></data>
   <data name="إخفاء كلمة المرور" xml:space="preserve"><value>Hide password</value></data>
+  <data name="رجوع" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="بيانات الدخول غير صحيحة أو الحساب غير متاح مؤقتاً." xml:space="preserve">
+    <value>The credentials are incorrect or the account is temporarily unavailable.</value>
+  </data>
 </root>

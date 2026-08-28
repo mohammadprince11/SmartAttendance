@@ -12,6 +12,13 @@
 
     var desktop = window.matchMedia("(min-width: 981px)");
 
+    function backLabel() {
+        var language = (document.documentElement.lang || "ar-IQ").toLowerCase();
+        if (language.indexOf("en") === 0) return "Back";
+        if (language.indexOf("ckb") === 0) return "گەڕانەوە";
+        return "رجوع";
+    }
+
     // مجموعة الصفحة الحالية — **تُشتقّ من المسار نفسه**، لا من خاصية `open` ولا من
     // صنف `.active`.
     //
@@ -59,6 +66,7 @@
         if (sidebar) {
             var rect = sidebar.getBoundingClientRect();
             links.style.setProperty("--ky-right", (window.innerWidth - rect.right) + "px");
+            links.style.setProperty("--ky-left", rect.left + "px");
             links.style.setProperty("--ky-w", rect.width + "px");
         }
 
@@ -96,7 +104,13 @@
         var back = document.createElement("button");
         back.type = "button";
         back.className = "ky-back";
-        back.innerHTML = '<span class="ky-back-chev" aria-hidden="true"></span><span>رجوع</span>';
+        var backChevron = document.createElement("span");
+        backChevron.className = "ky-back-chev";
+        backChevron.setAttribute("aria-hidden", "true");
+        var backText = document.createElement("span");
+        backText.textContent = backLabel();
+        back.appendChild(backChevron);
+        back.appendChild(backText);
         back.addEventListener("click", function (e) {
             e.preventDefault();
             e.stopPropagation();
