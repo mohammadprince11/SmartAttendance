@@ -79,19 +79,6 @@
     text-align: center;
 }
 
-.login-logo {
-    width: 54px;
-    height: 54px;
-    border-radius: 17px;
-    margin: 0 auto 10px;
-    background: var(--sa-primary);
-    color: #fff;
-    display: grid;
-    place-items: center;
-    font-weight: 1000;
-    font-size: 20px;
-}
-
 .login-language-switcher {
     display: flex;
     align-items: center;
@@ -299,13 +286,6 @@ html[data-theme="dark"] .login-field input {
 
     .login-card {
         padding-block: 16px;
-    }
-
-    .login-logo {
-        width: 48px;
-        height: 48px;
-        margin-bottom: 8px;
-        font-size: 18px;
     }
 
     .login-card h1 {

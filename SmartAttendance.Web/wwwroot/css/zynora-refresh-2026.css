@@ -672,21 +672,6 @@ html[data-theme="dark"] .login-page {
     height: 17px !important;
 }
 
-.login-logo {
-    width: 48px !important;
-    height: 48px !important;
-    margin: 0 0 18px !important;
-    border: 1px solid var(--zy-border);
-    border-radius: 14px !important;
-    background: var(--zy-surface-raised) !important;
-}
-
-.login-logo img {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-}
-
 .login-card h1 {
     font-size: 28px !important;
     letter-spacing: -.02em;

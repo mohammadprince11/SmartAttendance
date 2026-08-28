@@ -141,7 +141,8 @@ public sealed class UnifiedPageDesignContractTests
 
         Assert.Contains("login-stage", login, StringComparison.Ordinal);
         Assert.Contains("login-visual", login, StringComparison.Ordinal);
-        Assert.Contains("zynora-symbol.svg", login, StringComparison.Ordinal);
+        Assert.Contains("zynora-logo-horizontal-light.svg", login, StringComparison.Ordinal);
+        Assert.DoesNotContain("login-logo", login, StringComparison.Ordinal);
         Assert.Contains("zy-login-shell", layout, StringComparison.Ordinal);
         Assert.Contains(".zy-login-shell .nexora-content", refresh, StringComparison.Ordinal);
         Assert.Contains("padding: 0 !important", refresh, StringComparison.Ordinal);
