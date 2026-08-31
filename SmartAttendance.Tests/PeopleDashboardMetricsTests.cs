@@ -84,4 +84,15 @@ public class PeopleDashboardMetricsTests
         Assert.Contains("ActiveEmployees + exits / 2.0", sql);
         Assert.Contains("averageHeadcount", sql);
     }
+
+    [Fact]
+    public void Dashboard_EnsuresLifecycleSchemaBeforeQueryingEndServices()
+    {
+        var source = Dashboard();
+        var ensure = source.IndexOf("EmployeeLifecycleSchema.EnsureAsync(_dbContext)", StringComparison.Ordinal);
+        var query = source.IndexOf("var rows = await HrmsDatabase.QueryAsync", StringComparison.Ordinal);
+
+        Assert.True(ensure >= 0, "لوحة الموظفين لا تهيئ مخطط دورة حياة الموظف.");
+        Assert.True(query > ensure, "يجب إنشاء جدول إنهاء الخدمات قبل أول استعلام للوحة.");
+    }
 }

@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="لوحة البيانات" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="أشخاص" xml:space="preserve"><value>People</value></data>
+  <data name="رسومات بيانية" xml:space="preserve"><value>Analytics</value></data>
+  <data name="عرض الموظفين" xml:space="preserve"><value>Employee directory</value></data>
+  <data name="عمليات الموارد البشرية" xml:space="preserve"><value>HR operations</value></data>
+  <data name="تفاعل الموظفين" xml:space="preserve"><value>Employee engagement</value></data>
+  <data name="تحديثات الموظف" xml:space="preserve"><value>Employee changes</value></data>
+  <data name="عقود الموظفين" xml:space="preserve"><value>Employee contracts</value></data>
+  <data name="سجلّ العقود" xml:space="preserve"><value>Contract register</value></data>
+  <data name="تحديثات العقود" xml:space="preserve"><value>Contract changes</value></data>
+  <data name="متابعة الطلبات المخصصة" xml:space="preserve"><value>Custom request tracking</value></data>
+  <data name="إدارة مهام الموظفين" xml:space="preserve"><value>Employee task management</value></data>
+  <data name="المخالفات" xml:space="preserve"><value>Violations</value></data>
+  <data name="إدارة العهد" xml:space="preserve"><value>Asset custody</value></data>
+  <data name="متابعة تقييمات" xml:space="preserve"><value>Evaluation tracking</value></data>
+  <data name="إنهاء الموظف — تسوية الفروقات" xml:space="preserve"><value>Employee termination — final settlement</value></data>
+  <data name="تخصيص رئيس الوحدة المؤقت" xml:space="preserve"><value>Temporary unit manager</value></data>
+  <data name="أرصدة الإجازات" xml:space="preserve"><value>Leave balances</value></data>
+  <data name="التنبيهات والانتهاءات" xml:space="preserve"><value>Alerts and expirations</value></data>
+  <data name="الهياكل التنظيمية" xml:space="preserve"><value>Organization structures</value></data>
+  <data name="وحدات العمل" xml:space="preserve"><value>Work units</value></data>
+  <data name="الهيكل الإداري" xml:space="preserve"><value>Administrative structure</value></data>
+  <data name="الهياكل الثلاث المتوازية" xml:space="preserve"><value>Parallel organization structures</value></data>
+  <data name="مركز الوثائق" xml:space="preserve"><value>Document center</value></data>
+  <data name="أرشيف وثائق الموظف" xml:space="preserve"><value>Employee document archive</value></data>
+  <data name="توليد وثائق الموظفين" xml:space="preserve"><value>Generate employee documents</value></data>
+  <data name="طلبات الوثائق" xml:space="preserve"><value>Document requests</value></data>
+  <data name="وثائق الشركة وفئاتها" xml:space="preserve"><value>Company documents and categories</value></data>
+  <data name="مركز بطاقات الموظفين" xml:space="preserve"><value>Employee badge center</value></data>
+  <data name="قوالب البطاقات" xml:space="preserve"><value>Badge templates</value></data>
+  <data name="بطاقات الموظفين وطباعتها" xml:space="preserve"><value>Employee badges and printing</value></data>
+  <data name="التقارير" xml:space="preserve"><value>Reports</value></data>
+  <data name="إعدادات الموارد البشرية" xml:space="preserve"><value>HR settings</value></data>
+  <data name="طلبات الموظفين المخصصة" xml:space="preserve"><value>Custom employee requests</value></data>
+  <data name="إعدادات المخالفات" xml:space="preserve"><value>Violation settings</value></data>
+  <data name="التهيئة" xml:space="preserve"><value>Configuration</value></data>
+  <data name="قائمة المخالفات وقواعدها" xml:space="preserve"><value>Violation catalog and rules</value></data>
+  <data name="إقرارات الموظفين" xml:space="preserve"><value>Employee acknowledgments</value></data>
+  <data name="قوالب الإقرارات" xml:space="preserve"><value>Acknowledgment templates</value></data>
+  <data name="متابعة الإقرارات" xml:space="preserve"><value>Acknowledgment tracking</value></data>
+  <data name="منشئ الوثائق" xml:space="preserve"><value>Document builder</value></data>
+  <data name="مختبر الصيغ" xml:space="preserve"><value>Formula lab</value></data>
+  <data name="فترة التجربة" xml:space="preserve"><value>Probation period</value></data>
+  <data name="فترة الإنذار" xml:space="preserve"><value>Notice period</value></data>
+  <data name="إعدادات الخدمة الذاتية" xml:space="preserve"><value>Self-service settings</value></data>
+  <data name="أسباب الإيقاف" xml:space="preserve"><value>Suspension reasons</value></data>
+  <data name="مركز الإشعارات" xml:space="preserve"><value>Notification center</value></data>
+  <data name="القوائم المرجعية" xml:space="preserve"><value>Reference lists</value></data>
+  <data name="مخطط رمز الموظف" xml:space="preserve"><value>Employee code scheme</value></data>
+  <data name="استوديو الحقول" xml:space="preserve"><value>Field studio</value></data>
+  <data name="قوالب الموافقات" xml:space="preserve"><value>Approval templates</value></data>
+  <data name="حقول الكيانات" xml:space="preserve"><value>Entity fields</value></data>
+  <data name="مجموعات الموظفين" xml:space="preserve"><value>Employee groups</value></data>
+  <data name="صلاحيات الموظفين" xml:space="preserve"><value>Employee permissions</value></data>
+  <data name="الحضور والانصراف" xml:space="preserve"><value>Time and attendance</value></data>
+  <data name="نظرة عامة" xml:space="preserve"><value>Overview</value></data>
+  <data name="إدارة الحضور" xml:space="preserve"><value>Attendance management</value></data>
+  <data name="اعتماد الحضور" xml:space="preserve"><value>Attendance approval</value></data>
+  <data name="الإجراءات المقترحة" xml:space="preserve"><value>Recommended actions</value></data>
+  <data name="العمل من المنزل" xml:space="preserve"><value>Work from home</value></data>
+  <data name="طلبات البصمة المفقودة" xml:space="preserve"><value>Missing punch requests</value></data>
+  <data name="الجداول والمناوبات" xml:space="preserve"><value>Schedules and shifts</value></data>
+  <data name="مناوبات العمل الثابتة" xml:space="preserve"><value>Fixed work shifts</value></data>
+  <data name="التعديلات المؤقتة" xml:space="preserve"><value>Temporary adjustments</value></data>
+  <data name="جدولة المناوبات" xml:space="preserve"><value>Shift scheduling</value></data>
+  <data name="قواعد المناوبات" xml:space="preserve"><value>Shift rules</value></data>
+  <data name="القواعد الفترية" xml:space="preserve"><value>Periodic rules</value></data>
+  <data name="تهيئة المناوبات" xml:space="preserve"><value>Shift setup</value></data>
+  <data name="الأجهزة" xml:space="preserve"><value>Devices</value></data>
+  <data name="اعتماد مفاتيح البصمة/الوجه" xml:space="preserve"><value>Approve biometric keys</value></data>
+  <data name="أيام العطل" xml:space="preserve"><value>Holidays</value></data>
+  <data name="المواقع الجغرافية للموظفين" xml:space="preserve"><value>Employee geolocations</value></data>
+  <data name="المسير" xml:space="preserve"><value>Payroll</value></data>
+  <data name="رسوم الرواتب" xml:space="preserve"><value>Payroll charts</value></data>
+  <data name="استعلام القسائم" xml:space="preserve"><value>Payslip inquiry</value></data>
+  <data name="نظام المحاكاة" xml:space="preserve"><value>Payroll simulation</value></data>
+  <data name="مدقق الحركات" xml:space="preserve"><value>Transaction auditor</value></data>
+  <data name="تقارير الرواتب" xml:space="preserve"><value>Payroll reports</value></data>
+  <data name="كشف الرواتب" xml:space="preserve"><value>Payroll register</value></data>
+  <data name="مركز الطلبات المالية" xml:space="preserve"><value>Financial request center</value></data>
+  <data name="الحركات الشهرية" xml:space="preserve"><value>Monthly transactions</value></data>
+  <data name="حركات الدخل" xml:space="preserve"><value>Earning transactions</value></data>
+  <data name="حركات الاقتطاع" xml:space="preserve"><value>Deduction transactions</value></data>
+  <data name="العمل الإضافي" xml:space="preserve"><value>Overtime</value></data>
+  <data name="تعديل أيام الراتب" xml:space="preserve"><value>Adjust payable days</value></data>
+  <data name="بدل إجازة" xml:space="preserve"><value>Leave allowance</value></data>
+  <data name="التزامات ومستحقات الموظف" xml:space="preserve"><value>Employee liabilities and entitlements</value></data>
+  <data name="القروض والسُّلف" xml:space="preserve"><value>Loans and advances</value></data>
+  <data name="زيادات الراتب" xml:space="preserve"><value>Salary increases</value></data>
+  <data name="نهاية الخدمة" xml:space="preserve"><value>End of service</value></data>
+  <data name="حساب الاحتياطي" xml:space="preserve"><value>Provision calculation</value></data>
+  <data name="تحديث المعلومات المالية" xml:space="preserve"><value>Update financial information</value></data>
+  <data name="معلومات الدفع" xml:space="preserve"><value>Payment information</value></data>
+  <data name="إعدادات الرواتب" xml:space="preserve"><value>Payroll settings</value></data>
+  <data name="عناصر الراتب" xml:space="preserve"><value>Salary items</value></data>
+  <data name="الضريبة والضمان" xml:space="preserve"><value>Tax and social security</value></data>
+  <data name="أسعار الصرف" xml:space="preserve"><value>Exchange rates</value></data>
+  <data name="قوالب ملفات البنوك" xml:space="preserve"><value>Bank file templates</value></data>
+  <data name="سلم الرواتب" xml:space="preserve"><value>Salary scale</value></data>
+  <data name="الموافقات" xml:space="preserve"><value>Approvals</value></data>
+  <data name="مركز الموافقات" xml:space="preserve"><value>Approval center</value></data>
+  <data name="طلبات الخدمة الذاتية" xml:space="preserve"><value>Self-service requests</value></data>
+  <data name="طلبات المشرفين" xml:space="preserve"><value>Supervisor requests</value></data>
+  <data name="تقارير الموافقات" xml:space="preserve"><value>Approval reports</value></data>
+  <data name="اللجان ومجموعاتها" xml:space="preserve"><value>Committees and groups</value></data>
+  <data name="تفضيلات التفويض" xml:space="preserve"><value>Delegation preferences</value></data>
+  <data name="الإعدادات" xml:space="preserve"><value>Settings</value></data>
+  <data name="مركز الإعدادات" xml:space="preserve"><value>Settings center</value></data>
+  <data name="تهيئة الشركة" xml:space="preserve"><value>Company setup</value></data>
+  <data name="إدارة المستخدمين" xml:space="preserve"><value>User management</value></data>
+  <data name="أدوار الوصول" xml:space="preserve"><value>Access roles</value></data>
+  <data name="سجل التدقيق" xml:space="preserve"><value>Audit log</value></data>
+  <data name="الهوية والثيم" xml:space="preserve"><value>Branding and theme</value></data>
+  <data name="التكاملات" xml:space="preserve"><value>Integrations</value></data>
+  <data name="زينورا · عمليات موارد بشرية ذكية" xml:space="preserve"><value>ZYNORA · Intelligent HR operations</value></data>
+  <data name="القائمة الجانبية" xml:space="preserve"><value>Sidebar</value></data>
+  <data name="القائمة الرئيسية" xml:space="preserve"><value>Main navigation</value></data>
+  <data name="ابحث عن صفحة أو إعداد…" xml:space="preserve"><value>Search for a page or setting…</value></data>
+  <data name="البحث في صفحات النظام" xml:space="preserve"><value>Search system pages</value></data>
+  <data name="تبديل الوضع الفاتح والداكن" xml:space="preserve"><value>Toggle light and dark mode</value></data>
+  <data name="الوضع الفاتح / الداكن" xml:space="preserve"><value>Light / dark mode</value></data>
+  <data name="فتح قائمة حساب {0}" xml:space="preserve"><value>Open {0} account menu</value></data>
+  <data name="إعدادات الحساب" xml:space="preserve"><value>Account settings</value></data>
+  <data name="تغيير اللغة" xml:space="preserve"><value>Change language</value></data>
+  <data name="تغيير العملة" xml:space="preserve"><value>Change currency</value></data>
+  <data name="حسب الصلاحية" xml:space="preserve"><value>Permission required</value></data>
+  <data name="تغيير كلمة المرور" xml:space="preserve"><value>Change password</value></data>
+  <data name="توقيع الموظف" xml:space="preserve"><value>Employee signature</value></data>
+  <data name="يتطلب ربط موظف" xml:space="preserve"><value>Employee profile required</value></data>
+  <data name="أمان الدخول والبصمة" xml:space="preserve"><value>Sign-in and biometric security</value></data>
+  <data name="تسجيل الخروج" xml:space="preserve"><value>Sign out</value></data>
+  <data name="اختر لغة واتجاه واجهة النظام." xml:space="preserve"><value>Choose the interface language and direction.</value></data>
+  <data name="إغلاق" xml:space="preserve"><value>Close</value></data>
+  <data name="لغة الواجهة" xml:space="preserve"><value>Interface language</value></data>
+  <data name="دخول" xml:space="preserve"><value>Sign in</value></data>
+  <data name="حفظ" xml:space="preserve"><value>Save</value></data>
+  <data name="إلغاء" xml:space="preserve"><value>Cancel</value></data>
+  <data name="بحث" xml:space="preserve"><value>Search</value></data>
+  <data name="إضافة" xml:space="preserve"><value>Add</value></data>
+  <data name="تعديل" xml:space="preserve"><value>Edit</value></data>
+  <data name="حذف" xml:space="preserve"><value>Delete</value></data>
+  <data name="عرض" xml:space="preserve"><value>View</value></data>
+  <data name="نعم" xml:space="preserve"><value>Yes</value></data>
+  <data name="لا" xml:space="preserve"><value>No</value></data>
+  <data name="تسجيل الدخول" xml:space="preserve"><value>Sign in</value></data>
+  <data name="دخول مستخدمي نظام Smart Attendance." xml:space="preserve"><value>Sign in to Zynora HR.</value></data>
+  <data name="اسم المستخدم" xml:space="preserve"><value>Username</value></data>
+  <data name="كلمة المرور" xml:space="preserve"><value>Password</value></data>
+  <data name="تذكرني" xml:space="preserve"><value>Remember me</value></data>
+  <data name="الدخول بالبصمة/الوجه" xml:space="preserve"><value>Sign in with fingerprint/face</value></data>
+  <data name="تعذّر بدء الدخول." xml:space="preserve"><value>Could not start sign-in.</value></data>
+  <data name="فشل الدخول بالمفتاح." xml:space="preserve"><value>Passkey sign-in failed.</value></data>
+  <data name="أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز." xml:space="preserve"><value>The operation was cancelled or no passkey is registered on this device.</value></data>
+  <data name="تعذّر الدخول بالمفتاح." xml:space="preserve"><value>Could not sign in with the passkey.</value></data>
+  <data name="الحالة" xml:space="preserve"><value>Status</value></data>
+  <data name="الموظف" xml:space="preserve"><value>Employee</value></data>
+  <data name="الكل" xml:space="preserve"><value>All</value></data>
+  <data name="ملاحظة" xml:space="preserve"><value>Note</value></data>
+  <data name="القسم" xml:space="preserve"><value>Department</value></data>
+  <data name="السنة" xml:space="preserve"><value>Year</value></data>
+  <data name="المبلغ" xml:space="preserve"><value>Amount</value></data>
+  <data name="إجراءات" xml:space="preserve"><value>Actions</value></data>
+  <data name="اسم الموظف" xml:space="preserve"><value>Employee name</value></data>
+  <data name="الشهر" xml:space="preserve"><value>Month</value></data>
+  <data name="النوع" xml:space="preserve"><value>Type</value></data>
+  <data name="الشركة" xml:space="preserve"><value>Company</value></data>
+  <data name="المسمى الوظيفي" xml:space="preserve"><value>Job title</value></data>
+  <data name="معتمد" xml:space="preserve"><value>Approved</value></data>
+  <data name="الفرع" xml:space="preserve"><value>Branch</value></data>
+  <data name="الموظفون" xml:space="preserve"><value>Employees</value></data>
+  <data name="الفترة" xml:space="preserve"><value>Period</value></data>
+  <data name="إلى" xml:space="preserve"><value>To</value></data>
+  <data name="الاسم" xml:space="preserve"><value>Name</value></data>
+  <data name="السبب" xml:space="preserve"><value>Reason</value></data>
+  <data name="الكود" xml:space="preserve"><value>Code</value></data>
+  <data name="المصدر" xml:space="preserve"><value>Source</value></data>
+  <data name="رمز" xml:space="preserve"><value>Code</value></data>
+  <data name="من" xml:space="preserve"><value>From</value></data>
+  <data name="أخرى" xml:space="preserve"><value>Other</value></data>
+  <data name="أخرى (نص حر)…" xml:space="preserve"><value>Other (free text)…</value></data>
+  <data name="اختر..." xml:space="preserve"><value>Select...</value></data>
+  <data name="اسم البند (نص حر)" xml:space="preserve"><value>Item name (free text)</value></data>
+  <data name="الإجمالي" xml:space="preserve"><value>Total</value></data>
+  <data name="تاريخ الحركة" xml:space="preserve"><value>Transaction date</value></data>
+  <data name="رمز الموظف" xml:space="preserve"><value>Employee code</value></data>
+  <data name="كل الأقسام" xml:space="preserve"><value>All departments</value></data>
+  <data name="كل الفروع" xml:space="preserve"><value>All branches</value></data>
+  <data name="من تاريخ" xml:space="preserve"><value>From date</value></data>
+  <data name="موقع العمل" xml:space="preserve"><value>Work location</value></data>
+  <data name="اختر" xml:space="preserve"><value>Select</value></data>
+  <data name="التاريخ" xml:space="preserve"><value>Date</value></data>
+  <data name="التالي" xml:space="preserve"><value>Next</value></data>
+  <data name="الرقم المرجعي" xml:space="preserve"><value>Reference number</value></data>
+  <data name="السابق" xml:space="preserve"><value>Previous</value></data>
+  <data name="المحدد:" xml:space="preserve"><value>Selected:</value></data>
+  <data name="بحث بالاسم أو الرمز" xml:space="preserve"><value>Search by name or code</value></data>
+  <data name="كل الموظفين النشطين" xml:space="preserve"><value>All active employees</value></data>
+  <data name="نشط" xml:space="preserve"><value>Active</value></data>
+  <data name="— اختر من الكتالوج —" xml:space="preserve"><value>— Select from catalog —</value></data>
+  <data name="أكواد الموظفين" xml:space="preserve"><value>Employee codes</value></data>
+  <data name="أيام" xml:space="preserve"><value>Days</value></data>
+  <data name="إلى تاريخ" xml:space="preserve"><value>To date</value></data>
+  <data name="اختر الشركة" xml:space="preserve"><value>Select company</value></data>
+  <data name="استيراد" xml:space="preserve"><value>Import</value></data>
+  <data name="اسم الموظف *" xml:space="preserve"><value>Employee name *</value></data>
+  <data name="البند" xml:space="preserve"><value>Item</value></data>
+  <data name="الجنسية" xml:space="preserve"><value>Nationality</value></data>
+  <data name="الحضور اليومي" xml:space="preserve"><value>Daily attendance</value></data>
+  <data name="الصافي" xml:space="preserve"><value>Net</value></data>
+  <data name="العلاوات" xml:space="preserve"><value>Allowances</value></data>
+  <data name="الملف (.xlsx أو .csv)" xml:space="preserve"><value>File (.xlsx or .csv)</value></data>
+  <data name="تحديد الظاهر" xml:space="preserve"><value>Select visible</value></data>
+  <data name="تنسيق الملف:" xml:space="preserve"><value>File format:</value></data>
+  <data name="خاضع للضريبة" xml:space="preserve"><value>Taxable</value></data>
+  <data name="ساعات العمل" xml:space="preserve"><value>Working hours</value></data>
+  <data name="قيد الموافقة" xml:space="preserve"><value>Pending approval</value></data>
+  <data name="كل المسميات" xml:space="preserve"><value>All job titles</value></data>
+  <data name="مسح الكل" xml:space="preserve"><value>Clear all</value></data>
+  <data name="مقفل" xml:space="preserve"><value>Locked</value></data>
+  <data name="ملاحظات" xml:space="preserve"><value>Notes</value></data>
+  <data name="ملف إكسل" xml:space="preserve"><value>Excel file</value></data>
+  <data name="مواطن" xml:space="preserve"><value>Citizen</value></data>
+  <data name="— اختر —" xml:space="preserve"><value>— Select —</value></data>
+  <data name="اختيار يدوي" xml:space="preserve"><value>Manual selection</value></data>
+  <data name="الأساسي" xml:space="preserve"><value>Basic</value></data>
+  <data name="الضريبة" xml:space="preserve"><value>Tax</value></data>
+  <data name="الملف (.xlsx أو .csv) *" xml:space="preserve"><value>File (.xlsx or .csv) *</value></data>
+  <data name="المنصب" xml:space="preserve"><value>Position</value></data>
+  <data name="الهاتف" xml:space="preserve"><value>Phone</value></data>
+  <data name="تطبيق" xml:space="preserve"><value>Apply</value></data>
+  <data name="حسب معايير" xml:space="preserve"><value>By criteria</value></data>
+  <data name="رجوع للقائمة" xml:space="preserve"><value>Back to list</value></data>
+  <data name="قائمة الموظفين" xml:space="preserve"><value>Employee list</value></data>
+  <data name="كود الموظف" xml:space="preserve"><value>Employee code</value></data>
+  <data name="مسح" xml:space="preserve"><value>Clear</value></data>
+  <data name="مسودة" xml:space="preserve"><value>Draft</value></data>
+  <data name="نوع الدفعة" xml:space="preserve"><value>Payment type</value></data>
+  <data name="استيراد إكسل" xml:space="preserve"><value>Import Excel</value></data>
+  <data name="البريد الإلكتروني" xml:space="preserve"><value>Email</value></data>
+  <data name="الجهاز" xml:space="preserve"><value>Device</value></data>
+  <data name="الخروج المبكر" xml:space="preserve"><value>Early departure</value></data>
+  <data name="الديانة" xml:space="preserve"><value>Religion</value></data>
+  <data name="الراتب الأساسي" xml:space="preserve"><value>Basic salary</value></data>
+  <data name="الراتب الكلي" xml:space="preserve"><value>Gross salary</value></data>
+  <data name="الفترة الحالية" xml:space="preserve"><value>Current period</value></data>
+  <data name="بحث: موظف/بند/رقم مرجعي" xml:space="preserve"><value>Search: employee/item/reference</value></data>
+  <data name="تاريخ التعيين" xml:space="preserve"><value>Hire date</value></data>
+  <data name="تاريخ السريان" xml:space="preserve"><value>Effective date</value></data>
+  <data name="تاريخ الميلاد" xml:space="preserve"><value>Date of birth</value></data>
+  <data name="تحت المراجعة" xml:space="preserve"><value>Under review</value></data>
+  <data name="حاضر" xml:space="preserve"><value>Present</value></data>
+  <data name="خارج الراتب" xml:space="preserve"><value>Off payroll</value></data>
+  <data name="ختم الخروج" xml:space="preserve"><value>Clock-out</value></data>
+  <data name="ختم الدخول" xml:space="preserve"><value>Clock-in</value></data>
+  <data name="داخل الراتب" xml:space="preserve"><value>In payroll</value></data>
+  <data name="رقم الهوية" xml:space="preserve"><value>National ID</value></data>
+  <data name="ساعات التأخير" xml:space="preserve"><value>Late hours</value></data>
+  <data name="صافي الراتب" xml:space="preserve"><value>Net salary</value></data>
+  <data name="عدد الحركات" xml:space="preserve"><value>Transaction count</value></data>
+  <data name="غائب" xml:space="preserve"><value>Absent</value></data>
+  <data name="فعال" xml:space="preserve"><value>Enabled</value></data>
+  <data name="كل الأنواع" xml:space="preserve"><value>All types</value></data>
+  <data name="كل الحالات" xml:space="preserve"><value>All statuses</value></data>
+  <data name="معتمدة" xml:space="preserve"><value>Approved</value></data>
+  <data name="معلومات الحركة" xml:space="preserve"><value>Transaction details</value></data>
+  <data name="نوع العقد" xml:space="preserve"><value>Contract type</value></data>
+  <data name="يُطبَّق على" xml:space="preserve"><value>Applies to</value></data>
+  <data name="طباعة" xml:space="preserve"><value>Print</value></data>
+  <data name="إدخال جماعي" xml:space="preserve"><value>Bulk entry</value></data>
+  <data name="اختياري" xml:space="preserve"><value>Optional</value></data>
+  <data name="استقالة" xml:space="preserve"><value>Resignation</value></data>
+  <data name="الاستقطاعات" xml:space="preserve"><value>Deductions</value></data>
+  <data name="الاسم الكامل" xml:space="preserve"><value>Full name</value></data>
+  <data name="البريد الشخصي" xml:space="preserve"><value>Personal email</value></data>
+  <data name="البلد" xml:space="preserve"><value>Country</value></data>
+  <data name="الجنس" xml:space="preserve"><value>Gender</value></data>
+  <data name="الحالة الاجتماعية" xml:space="preserve"><value>Marital status</value></data>
+  <data name="الخروج" xml:space="preserve"><value>Exit</value></data>
+  <data name="الدخل" xml:space="preserve"><value>Earnings</value></data>
+  <data name="الدخول" xml:space="preserve"><value>Entry</value></data>
+  <data name="الدرجة الوظيفية" xml:space="preserve"><value>Job grade</value></data>
+  <data name="الرواتب" xml:space="preserve"><value>Payroll</value></data>
+  <data name="الضمان" xml:space="preserve"><value>Social security</value></data>
+  <data name="العملة" xml:space="preserve"><value>Currency</value></data>
+  <data name="القيمة" xml:space="preserve"><value>Value</value></data>
+  <data name="الكفيل" xml:space="preserve"><value>Sponsor</value></data>
+  <data name="المدير المباشر" xml:space="preserve"><value>Direct manager</value></data>
+  <data name="المرجع" xml:space="preserve"><value>Reference</value></data>
+  <data name="امتداد الهاتف" xml:space="preserve"><value>Phone extension</value></data>
+  <data name="بصمة ناقصة" xml:space="preserve"><value>Missing punch</value></data>
+  <data name="تاريخ الحضور" xml:space="preserve"><value>Attendance date</value></data>
+  <data name="تحديد الكل" xml:space="preserve"><value>Select all</value></data>
+  <data name="تفاصيل الطلب" xml:space="preserve"><value>Request details</value></data>
+  <data name="تنبيه مهم" xml:space="preserve"><value>Important notice</value></data>
+  <data name="رقم الموظف" xml:space="preserve"><value>Employee number</value></data>
+  <data name="رقم جواز السفر" xml:space="preserve"><value>Passport number</value></data>
+  <data name="طريقة الدفع" xml:space="preserve"><value>Payment method</value></data>
+  <data name="قسيمة راتب" xml:space="preserve"><value>Payslip</value></data>
+  <data name="مجموع الدخل" xml:space="preserve"><value>Total earnings</value></data>
+  <data name="مرفوض" xml:space="preserve"><value>Rejected</value></data>
+  <data name="مرفوضة" xml:space="preserve"><value>Rejected</value></data>
+  <data name="معطّل" xml:space="preserve"><value>Disabled</value></data>
+  <data name="ملاحظات HR" xml:space="preserve"><value>HR notes</value></data>
+  <data name="نوع الدوام" xml:space="preserve"><value>Work schedule type</value></data>
+  <data name="نوع الطلب" xml:space="preserve"><value>Request type</value></data>
+  <data name="وفاة" xml:space="preserve"><value>Death</value></data>
+  <data name="إظهار كلمة المرور" xml:space="preserve"><value>Show password</value></data>
+  <data name="إخفاء كلمة المرور" xml:space="preserve"><value>Hide password</value></data>
+  <data name="رجوع" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="بيانات الدخول غير صحيحة أو الحساب غير متاح مؤقتاً." xml:space="preserve">
+    <value>The credentials are incorrect or the account is temporarily unavailable.</value>
+  </data>
+  <data name="نؤمن أن مستقبل الموارد البشرية لا يُبنى على كثرة الإجراءات، بل على منظومة ذكية توحّد البيانات، وتفهم الإنسان، وتحوّل كل معلومة إلى قرار أكثر دقة، وكل عملية إلى تجربة أكثر كفاءة." xml:space="preserve">
+    <value>We believe the future of Human Resources is not built on the complexity of processes, but on an intelligent ecosystem that unifies data, understands people, transforms every insight into a more precise decision, and every process into a more efficient experience.</value>
+  </data>
+  <data name="الدقة • الأمان • الذكاء • الكفاءة" xml:space="preserve">
+    <value>Accuracy • Security • Intelligence • Efficiency</value>
+  </data>
+  <data name="إعداد الشركة" xml:space="preserve"><value>Company setup</value></data>
+  <data name="إعداد الشركة وهيكل العمل" xml:space="preserve"><value>Company and work structure setup</value></data>
+  <data name="إدارة هوية الشركة، مواقع العمل، الأقسام، وسياسات الغلق من مكان واحد." xml:space="preserve"><value>Manage company identity, work locations, departments, and cutoff policies in one place.</value></data>
+  <data name="1. بيانات الشركة" xml:space="preserve"><value>1. Company details</value></data>
+  <data name="2. مواقع العمل" xml:space="preserve"><value>2. Work locations</value></data>
+  <data name="3. الأقسام" xml:space="preserve"><value>3. Departments</value></data>
+  <data name="4. سياسات الغلق" xml:space="preserve"><value>4. Cutoff policies</value></data>
+  <data name="مواقع العمل" xml:space="preserve"><value>Work locations</value></data>
+  <data name="الأقسام" xml:space="preserve"><value>Departments</value></data>
+  <data name="سياسات الغلق" xml:space="preserve"><value>Cutoff policies</value></data>
+  <data name="السياسات الفعالة" xml:space="preserve"><value>Active policies</value></data>
+  <data name="بيانات الشركة" xml:space="preserve"><value>Company details</value></data>
+  <data name="الهوية الرسمية والإعدادات المحلية للشركة." xml:space="preserve"><value>The company’s official identity and regional settings.</value></data>
+  <data name="اسم الشركة" xml:space="preserve"><value>Company name</value></data>
+  <data name="رقم الهاتف" xml:space="preserve"><value>Phone number</value></data>
+  <data name="المنطقة الزمنية" xml:space="preserve"><value>Time zone</value></data>
+  <data name="العنوان" xml:space="preserve"><value>Address</value></data>
+  <data name="الشركة فعالة" xml:space="preserve"><value>Company is active</value></data>
+  <data name="لا يمكن تعطيل الشركة حاليا" xml:space="preserve"><value>The company cannot be deactivated right now</value></data>
+  <data name="حفظ بيانات الشركة" xml:space="preserve"><value>Save company details</value></data>
+  <data name="شعار الشركة" xml:space="preserve"><value>Company logo</value></data>
+  <data name="اختيار شعار" xml:space="preserve"><value>Choose logo</value></data>
+  <data name="مواقع العمل والفروع" xml:space="preserve"><value>Work locations and branches</value></data>
+  <data name="أضف المكتب الرئيسي، الفروع، المشاريع، أو نقاط العمل التابعة للشركة." xml:space="preserve"><value>Add the head office, branches, projects, or company work points.</value></data>
+  <data name="إضافة موقع عمل" xml:space="preserve"><value>Add work location</value></data>
+  <data name="موقع العمل المحدد" xml:space="preserve"><value>Selected work location</value></data>
+  <data name="اسم موقع العمل" xml:space="preserve"><value>Work location name</value></data>
+  <data name="موقع العمل فعال" xml:space="preserve"><value>Work location is active</value></data>
+  <data name="أضف فرعا، مشروعا، مكتبا، أو نقطة عمل تابعة للشركة المحددة." xml:space="preserve"><value>Add a branch, project, office, or work point for the selected company.</value></data>
+  <data name="حدث اسم موقع العمل، العنوان، أو الحالة من دون مغادرة صفحة الإعداد." xml:space="preserve"><value>Update the work location name, address, or status without leaving setup.</value></data>
+  <data name="حفظ موقع العمل" xml:space="preserve"><value>Save work location</value></data>
+  <data name="حفظ التعديلات" xml:space="preserve"><value>Save changes</value></data>
+  <data name="حذف موقع العمل" xml:space="preserve"><value>Delete work location</value></data>
+  <data name="تأكيد حذف موقع العمل" xml:space="preserve"><value>Confirm work location deletion</value></data>
+  <data name="راجع اسم موقع العمل قبل تنفيذ الحذف." xml:space="preserve"><value>Review the work location name before deleting.</value></data>
+  <data name="لن يتم الحذف إذا كان موقع العمل مرتبطا بموظفين، أجهزة، أو بيانات أخرى." xml:space="preserve"><value>Deletion is blocked if the work location is linked to employees, devices, or other data.</value></data>
+  <data name="لا يمكن تعطيل موقع العمل" xml:space="preserve"><value>The work location cannot be deactivated</value></data>
+  <data name="إضافة قسم" xml:space="preserve"><value>Add department</value></data>
+  <data name="القسم المحدد" xml:space="preserve"><value>Selected department</value></data>
+  <data name="اسم القسم" xml:space="preserve"><value>Department name</value></data>
+  <data name="القسم فعال" xml:space="preserve"><value>Department is active</value></data>
+  <data name="القسم يتبع للشركة ويمكن استخدامه في أكثر من موقع عمل." xml:space="preserve"><value>The department belongs to the company and can be used at multiple work locations.</value></data>
+  <data name="القسم يتبع للشركة المحددة ويمكن استخدامه في جميع مواقعها." xml:space="preserve"><value>The department belongs to the selected company and can be used at all its locations.</value></data>
+  <data name="حدث اسم القسم أو حالته من دون مغادرة صفحة الإعداد." xml:space="preserve"><value>Update the department name or status without leaving setup.</value></data>
+  <data name="حفظ القسم" xml:space="preserve"><value>Save department</value></data>
+  <data name="حذف القسم" xml:space="preserve"><value>Delete department</value></data>
+  <data name="تأكيد حذف القسم" xml:space="preserve"><value>Confirm department deletion</value></data>
+  <data name="راجع اسم القسم قبل تنفيذ الحذف." xml:space="preserve"><value>Review the department name before deleting.</value></data>
+  <data name="لن يتم الحذف إذا كان القسم مرتبطا بموظفين أو بيانات أخرى." xml:space="preserve"><value>Deletion is blocked if the department is linked to employees or other data.</value></data>
+  <data name="لا يمكن تعطيل القسم" xml:space="preserve"><value>The department cannot be deactivated</value></data>
+  <data name="إضافة سياسة غلق" xml:space="preserve"><value>Add cutoff policy</value></data>
+  <data name="السياسة المحددة" xml:space="preserve"><value>Selected policy</value></data>
+  <data name="اسم السياسة" xml:space="preserve"><value>Policy name</value></data>
+  <data name="قاعدة الغلق" xml:space="preserve"><value>Cutoff rule</value></data>
+  <data name="شهري متكرر" xml:space="preserve"><value>Recurring monthly</value></data>
+  <data name="نوع البيانات" xml:space="preserve"><value>Data type</value></data>
+  <data name="من يوم" xml:space="preserve"><value>From day</value></data>
+  <data name="إلى يوم" xml:space="preserve"><value>To day</value></data>
+  <data name="أيام العمل" xml:space="preserve"><value>Work days</value></data>
+  <data name="سياسة الغلق فعالة" xml:space="preserve"><value>Cutoff policy is active</value></data>
+  <data name="حدد الفترة الشهرية والبيانات التي تدخل ضمنها." xml:space="preserve"><value>Define the monthly period and the data included in it.</value></data>
+  <data name="حدد فترة الاحتساب وأنواع البيانات داخل كل سياسة." xml:space="preserve"><value>Define the calculation period and data types for each policy.</value></data>
+  <data name="يبدأ الاحتساب من يوم محدد وينتهي بيوم محدد كل شهر." xml:space="preserve"><value>Calculation starts and ends on specified days each month.</value></data>
+  <data name="النوع المرتبط بسياسة فعالة يكون مقفلا هنا لمنع تكرار الاحتساب." xml:space="preserve"><value>A type linked to an active policy is locked here to prevent duplicate calculation.</value></data>
+  <data name="حفظ سياسة الغلق" xml:space="preserve"><value>Save cutoff policy</value></data>
+  <data name="حذف السياسة" xml:space="preserve"><value>Delete policy</value></data>
+  <data name="تأكيد حذف سياسة الغلق" xml:space="preserve"><value>Confirm cutoff policy deletion</value></data>
+  <data name="راجع اسم السياسة قبل تنفيذ الحذف." xml:space="preserve"><value>Review the policy name before deleting.</value></data>
+  <data name="سيتم تحرير أنواع البيانات المرتبطة بها لتصبح متاحة لسياسات أخرى." xml:space="preserve"><value>Its linked data types will be released for use by other policies.</value></data>
+  <data name="لا توجد سياسات غلق حاليا." xml:space="preserve"><value>There are no cutoff policies yet.</value></data>
+  <data name="إعدادات حقول ملف الموظف" xml:space="preserve"><value>Employee profile field settings</value></data>
+  <data name="الإشعارات" xml:space="preserve"><value>Notifications</value></data>
+  <data name="تعليم الكل كمقروء" xml:space="preserve"><value>Mark all as read</value></data>
+  <data name="لا توجد إشعارات" xml:space="preserve"><value>No notifications</value></data>
+  <data name="الإجراءات" xml:space="preserve"><value>Actions</value></data>
+  <data name="الإجازات" xml:space="preserve"><value>Leaves</value></data>
+  <data name="الإضافات" xml:space="preserve"><value>Additions</value></data>
+  <data name="التعيينات" xml:space="preserve"><value>Appointments</value></data>
+  <data name="العقوبات" xml:space="preserve"><value>Penalties</value></data>
+  <data name="تغييرات الراتب" xml:space="preserve"><value>Salary changes</value></data>
+  <data name="إنهاء الخدمة" xml:space="preserve"><value>End of service</value></data>
+  <data name="{0} موظف فعال،" xml:space="preserve"><value>{0} active employee,</value></data>
+  <data name="{0} موقع عمل فعال،" xml:space="preserve"><value>{0} active work location,</value></data>
+  <data name="{0} قسم فعال." xml:space="preserve"><value>{0} active department.</value></data>
+  <data name="{0} مرتبط بـ {1} موظف فعال." xml:space="preserve"><value>{0} is linked to {1} active employee(s).</value></data>
+  <data name="إعداد الشركة - ZYNORA HR" xml:space="preserve"><value>Company setup - ZYNORA HR</value></data>
+  <data name="لوحة التحكم" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="لوحة التحكم - ZYNORA HR" xml:space="preserve"><value>Dashboard - ZYNORA HR</value></data>
+  <data name="تخصيص اللوحة" xml:space="preserve"><value>Customize dashboard</value></data>
+  <data name="إضافة ويدجت" xml:space="preserve"><value>Add widget</value></data>
+  <data name="الويدجتات الحالية" xml:space="preserve"><value>Current widgets</value></data>
+  <data name="حفظ التخطيط" xml:space="preserve"><value>Save layout</value></data>
+  <data name="رتّب بالأسهم، أظهر/أخفِ بالمربع" xml:space="preserve"><value>Reorder with arrows and show or hide with the checkbox</value></data>
+  <data name="المقياس (شنو يظهر)" xml:space="preserve"><value>Metric (what appears)</value></data>
+  <data name="شكل العرض (شلون يظهر)" xml:space="preserve"><value>Display style</value></data>
+  <data name="عنوان مخصص (اختياري)" xml:space="preserve"><value>Custom title (optional)</value></data>
+  <data name="أشرطة أفقية" xml:space="preserve"><value>Horizontal bars</value></data>
+  <data name="أعمدة" xml:space="preserve"><value>Columns</value></data>
+  <data name="دونات" xml:space="preserve"><value>Donut</value></data>
+  <data name="جدول" xml:space="preserve"><value>Table</value></data>
+  <data name="رقم" xml:space="preserve"><value>Number</value></data>
+  <data name="إحصائيات الأعمار" xml:space="preserve"><value>Age statistics</value></data>
+  <data name="إحصائيات مدة الخدمة" xml:space="preserve"><value>Service length statistics</value></data>
+  <data name="ارسم أسبوعاً ونعبّي الشهر" xml:space="preserve"><value>Plot a week and complete the month</value></data>
+  <data name="الطلبات حسب الحالة" xml:space="preserve"><value>Requests by status</value></data>
+  <data name="الحالة الزوجية" xml:space="preserve"><value>Marital status</value></data>
+  <data name="حسب الجنس" xml:space="preserve"><value>By gender</value></data>
+  <data name="حسب الجنسية" xml:space="preserve"><value>By nationality</value></data>
+  <data name="حسب نوع العقد" xml:space="preserve"><value>By contract type</value></data>
+  <data name="الموظفون حسب الفرع" xml:space="preserve"><value>Employees by branch</value></data>
+  <data name="الموظفون حسب القسم" xml:space="preserve"><value>Employees by department</value></data>
+  <data name="الموظفون النشطون" xml:space="preserve"><value>Active employees</value></data>
+  <data name="الحاضرون اليوم" xml:space="preserve"><value>Present today</value></data>
+  <data name="حاضرون اليوم" xml:space="preserve"><value>Present today</value></data>
+  <data name="الغياب اليوم" xml:space="preserve"><value>Absent today</value></data>
+  <data name="غائبون اليوم" xml:space="preserve"><value>Absent today</value></data>
+  <data name="متأخرون اليوم" xml:space="preserve"><value>Late today</value></data>
+  <data name="حضور اليوم" xml:space="preserve"><value>Today’s attendance</value></data>
+  <data name="حالة الحضور اليوم" xml:space="preserve"><value>Today’s attendance status</value></data>
+  <data name="حضور الأسبوع" xml:space="preserve"><value>Weekly attendance</value></data>
+  <data name="من الأجهزة والجوال" xml:space="preserve"><value>From devices and mobile</value></data>
+  <data name="يصل للجوال فوراً" xml:space="preserve"><value>Delivered to mobile instantly</value></data>
+  <data name="إعلان للموظفين" xml:space="preserve"><value>Employee announcement</value></data>
+  <data name="طلبات معلقة" xml:space="preserve"><value>Pending requests</value></data>
+  <data name="بانتظار موافقتك" xml:space="preserve"><value>Awaiting your approval</value></data>
+  <data name="مهامك اليوم" xml:space="preserve"><value>Your tasks today</value></data>
+  <data name="لا شيء ينتظر قرارك الآن" xml:space="preserve"><value>Nothing awaits your decision now</value></data>
+  <data name="لا شيء معلّق" xml:space="preserve"><value>Nothing pending</value></data>
+  <data name="لا شيء ينتظر قرارك — كل الطلبات معتمَدة ولا مفاتيح ولا عقود تحتاج مراجعة." xml:space="preserve"><value>Nothing awaits your decision — all requests are approved and no keys or contracts need review.</value></data>
+  <data name="لا عقود قريبة" xml:space="preserve"><value>No contracts expiring soon</value></data>
+  <data name="لا غياب مسجَّل" xml:space="preserve"><value>No absence recorded</value></data>
+  <data name="لا يوجد بيانات" xml:space="preserve"><value>No data available</value></data>
+  <data name="غير محدد" xml:space="preserve"><value>Not specified</value></data>
+  <data name="عقود تنتهي خلال 60 يوماً" xml:space="preserve"><value>Contracts expiring within 60 days</value></data>
+  <data name="موظف جديد هذا الشهر" xml:space="preserve"><value>New employees this month</value></data>
+  <data name="موقوفون / غير فعالين" xml:space="preserve"><value>Suspended / inactive</value></data>
+  <data name="حضور · إجازات · رواتب" xml:space="preserve"><value>Attendance · Leaves · Payroll</value></data>
+  <data name="مسير الرواتب" xml:space="preserve"><value>Payroll run</value></data>
+  <data name="اليوم" xml:space="preserve"><value>Today</value></data>
+  <data name="الأحد" xml:space="preserve"><value>Sunday</value></data>
+  <data name="الإثنين" xml:space="preserve"><value>Monday</value></data>
+  <data name="الثلاثاء" xml:space="preserve"><value>Tuesday</value></data>
+  <data name="الأربعاء" xml:space="preserve"><value>Wednesday</value></data>
+  <data name="الخميس" xml:space="preserve"><value>Thursday</value></data>
+  <data name="السبت" xml:space="preserve"><value>Saturday</value></data>
+  <data name="طاب يومك، {0}" xml:space="preserve"><value>Good day, {0}</value></data>
+  <data name="{0} موظفاً نشطاً" xml:space="preserve"><value>{0} active employees</value></data>
+  <data name="الموظفون النشطون · موظف" xml:space="preserve"><value>Active employees · employee</value></data>
+  <data name="حاضرون اليوم · موظف" xml:space="preserve"><value>Present today · employee</value></data>
+  <data name="غائبون اليوم · موظف" xml:space="preserve"><value>Absent today · employee</value></data>
+  <data name="متأخرون اليوم · موظف" xml:space="preserve"><value>Late today · employee</value></data>
+  <data name="طلبات معلقة · طلب" xml:space="preserve"><value>Pending requests · request</value></data>
+  <data name="موظف جديد هذا الشهر · موظف" xml:space="preserve"><value>New this month · employee</value></data>
+  <data name="إجمالي الموظفين" xml:space="preserve"><value>Total employees</value></data>
+  <data name="إضافة موظف" xml:space="preserve"><value>Add employee</value></data>
+  <data name="استيراد الموظفين" xml:space="preserve"><value>Import employees</value></data>
+  <data name="بيانات الموظفين" xml:space="preserve"><value>Employee data</value></data>
+  <data name="تحميل البيانات" xml:space="preserve"><value>Upload data</value></data>
+  <data name="تحميل القالب" xml:space="preserve"><value>Download template</value></data>
+  <data name="أرفق ملف" xml:space="preserve"><value>Attach a file</value></data>
+  <data name="اضف ملف" xml:space="preserve"><value>Add file</value></data>
+  <data name="لا يوجد ملف محدد" xml:space="preserve"><value>No file selected</value></data>
+  <data name="ما الذي تريد استيراده؟" xml:space="preserve"><value>What do you want to import?</value></data>
+  <data name="الأسطر:" xml:space="preserve"><value>Rows:</value></data>
+  <data name="النتائج الحالية" xml:space="preserve"><value>Current results</value></data>
+  <data name="بحث سريع" xml:space="preserve"><value>Quick search</value></data>
+  <data name="الشركة الحالية:" xml:space="preserve"><value>Current company:</value></data>
+  <data name="عرض 1 إلى 1 من أصل 1" xml:space="preserve"><value>Showing 1 to 1 of 1</value></data>
+  <data name="غير فعال" xml:space="preserve"><value>Inactive</value></data>
+  <data name="تعيينات السنة" xml:space="preserve"><value>Appointments this year</value></data>
+  <data name="الخدمة الذاتية" xml:space="preserve"><value>Self service</value></data>
+  <data name="كل الطلبات" xml:space="preserve"><value>All requests</value></data>
+  <data name="طلبات تاريخية" xml:space="preserve"><value>Historical requests</value></data>
+  <data name="كل المناصب" xml:space="preserve"><value>All positions</value></data>
+  <data name="اسم أو كود الموظف" xml:space="preserve"><value>Employee name or code</value></data>
+  <data name="تاريخ الطلب (من — إلى)" xml:space="preserve"><value>Request date (from — to)</value></data>
+  <data name="تاريخ آخر حركة (من — إلى)" xml:space="preserve"><value>Last action date (from — to)</value></data>
+  <data name="تطبيق الفلاتر" xml:space="preserve"><value>Apply filters</value></data>
+  <data name="إزالة الفلتر" xml:space="preserve"><value>Clear filter</value></data>
+  <data name="اعتماد المحدد" xml:space="preserve"><value>Approve selected</value></data>
+  <data name="رفض المحدد" xml:space="preserve"><value>Reject selected</value></data>
+  <data name="إلغاء التحديد" xml:space="preserve"><value>Clear selection</value></data>
+  <data name="لا توجد طلبات حسب الفلاتر الحالية." xml:space="preserve"><value>No requests match the current filters.</value></data>
+  <data name="اختر طلباً من القائمة لتظهر تفاصيله — كل تفصيلة بسطر مستقل، ويُطبَّق أثر الطلبات المالية وتعديل البيانات آلياً عند الاعتماد النهائي." xml:space="preserve"><value>Select a request to view its details. Financial effects and data changes are applied automatically after final approval.</value></data>
+  <data name="المسير — دفعات الرواتب" xml:space="preserve"><value>Payroll — salary runs</value></data>
+  <data name="احتساب الرواتب من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات، بدورة اعتماد وقسائم." xml:space="preserve"><value>Calculate salaries from base pay, allowances, approved attendance, and violation deductions through an approval and payslip cycle.</value></data>
+  <data name="إجمالي الدفعات" xml:space="preserve"><value>Total runs</value></data>
+  <data name="إجمالي رواتب السنة" xml:space="preserve"><value>Total annual payroll</value></data>
+  <data name="صافي مدفوع السنة" xml:space="preserve"><value>Net paid this year</value></data>
+  <data name="آخر دفعة ·" xml:space="preserve"><value>Last run ·</value></data>
+  <data name="دفعات معتمدة/مصروفة" xml:space="preserve"><value>Approved/paid runs</value></data>
+  <data name="+ دفعة مسير جديدة" xml:space="preserve"><value>+ New payroll run</value></data>
+  <data name="دفعة مسير جديدة" xml:space="preserve"><value>New payroll run</value></data>
+  <data name="إنشاء الدفعة" xml:space="preserve"><value>Create run</value></data>
+  <data name="تُنشأ الدفعة كمسودة. بعدها «احتساب» يبني رواتب من يشملهم النطاق من الأساسي والعلاوات والحضور المعتمد وخصومات المخالفات." xml:space="preserve"><value>The run is created as a draft. Calculate then builds salaries for the selected scope from base pay, allowances, approved attendance, and deductions.</value></data>
+  <data name="نوع المسير" xml:space="preserve"><value>Run type</value></data>
+  <data name="اعتيادي — الأساسي والعلاوات والحضور" xml:space="preserve"><value>Regular — base pay, allowances, and attendance</value></data>
+  <data name="أثر رجعي — الحركات المؤشرة «بأثر رجعي» فقط" xml:space="preserve"><value>Retroactive — retroactive transactions only</value></data>
+  <data name="إضافي خارج الدورة — حركات «خارج الراتب» فقط" xml:space="preserve"><value>Off-cycle — off-payroll transactions only</value></data>
+  <data name="عكسي — يعكس مسيراً مقفلاً سابقاً" xml:space="preserve"><value>Reversal — reverses a previously locked run</value></data>
+  <data name="المسير الأصلي" xml:space="preserve"><value>Original run</value></data>
+  <data name="اختر مسيراً مقفلاً/صادراً" xml:space="preserve"><value>Select a locked/issued run</value></data>
+  <data name="سبب التسوية" xml:space="preserve"><value>Adjustment reason</value></data>
+  <data name="النطاق — من يشمله هذا التشغيل" xml:space="preserve"><value>Scope — who is included</value></data>
+  <data name="كل الموظفين" xml:space="preserve"><value>All employees</value></data>
+  <data name="قسم/فرع" xml:space="preserve"><value>Department/branch</value></data>
+  <data name="تحديد أشخاص" xml:space="preserve"><value>Select people</value></data>
+  <data name="موظفو آخر مسير" xml:space="preserve"><value>Employees from last run</value></data>
+  <data name="كل الشركات" xml:space="preserve"><value>All companies</value></data>
+  <data name="يشمل التشغيل" xml:space="preserve"><value>Run includes</value></data>
+  <data name="المطابقين للمعايير المختارة." xml:space="preserve"><value>matching the selected criteria.</value></data>
+  <data name="لصق أكواد" xml:space="preserve"><value>Paste codes</value></data>
+  <data name="لصق من الحافظة" xml:space="preserve"><value>Paste from clipboard</value></data>
+  <data name="عمود واحد يحوي" xml:space="preserve"><value>One column containing</value></data>
+  <data name="(صف الترويسة يُتخطّى تلقائياً إن لم يكن كوداً)." xml:space="preserve"><value>(The header row is skipped automatically if it is not a code).</value></data>
+  <data name="تحقّق من الأكواد" xml:space="preserve"><value>Validate codes</value></data>
+  <data name="اضغط «تحقّق من الأكواد» لترى" xml:space="preserve"><value>Click Validate codes to see</value></data>
+  <data name="الموجود مقابل المفقود قبل التشغيل" xml:space="preserve"><value>available versus missing before running</value></data>
+  <data name="— كود مخطئ واحد يعني موظفاً يغيب عن راتب الشهر." xml:space="preserve"><value>— One wrong code means an employee is omitted from the monthly payroll.</value></data>
+  <data name="— السلوك الافتراضي. من لا راتب أساسي له يُتخطّى ويُعرض عدده بعد الاحتساب." xml:space="preserve"><value>— Default behavior. Employees without base pay are skipped and counted after calculation.</value></data>
+  <data name="لا دفعات مسير  — ابدأ بـ«دفعة مسير جديدة» ثم شغّل الاحتساب." xml:space="preserve"><value>No payroll runs — create a new run, then calculate it.</value></data>
+  <data name="يناير (1)" xml:space="preserve"><value>January (1)</value></data>
+  <data name="فبراير (2)" xml:space="preserve"><value>February (2)</value></data>
+  <data name="مارس (3)" xml:space="preserve"><value>March (3)</value></data>
+  <data name="أبريل (4)" xml:space="preserve"><value>April (4)</value></data>
+  <data name="مايو (5)" xml:space="preserve"><value>May (5)</value></data>
+  <data name="يونيو (6)" xml:space="preserve"><value>June (6)</value></data>
+  <data name="يوليو (7)" xml:space="preserve"><value>July (7)</value></data>
+  <data name="أغسطس (8)" xml:space="preserve"><value>August (8)</value></data>
+  <data name="سبتمبر (9)" xml:space="preserve"><value>September (9)</value></data>
+  <data name="أكتوبر (10)" xml:space="preserve"><value>October (10)</value></data>
+  <data name="نوفمبر (11)" xml:space="preserve"><value>November (11)</value></data>
+  <data name="ديسمبر (12)" xml:space="preserve"><value>December (12)</value></data>
+  <data name="(0 كود)" xml:space="preserve"><value>(0 codes)</value></data>
+  <data name="(0 محدد)" xml:space="preserve"><value>(0 selected)</value></data>
+  <data name="الاحتساب والاعتماد" xml:space="preserve"><value>Calculation and approval</value></data>
+  <data name="التفاصيل" xml:space="preserve"><value>Details</value></data>
+  <data name="بحث متقدم" xml:space="preserve"><value>Advanced search</value></data>
+  <data name="الجمعة" xml:space="preserve"><value>Friday</value></data>
+  <data name="آب" xml:space="preserve"><value>August</value></data>
+  <data name="قاموس اللغات" xml:space="preserve"><value>Language dictionary</value></data>
+  <data name="إدارة كلمات النظام، تصديرها إلى Excel، وإضافة اللغات أو حذفها." xml:space="preserve"><value>Manage system text, export it to Excel, and add or remove languages.</value></data>
+  <data name="راجع جميع كلمات النظام، صحّح الترجمة مباشرة، أو انقل قاموس لغة كاملة عبر Excel." xml:space="preserve"><value>Review all system text, correct translations directly, or transfer a complete language dictionary through Excel.</value></data>
+  <data name="مسار الصفحة" xml:space="preserve"><value>Page path</value></data>
+  <data name="اللغات المثبتة" xml:space="preserve"><value>Installed languages</value></data>
+  <data name="قالب لغة جديدة" xml:space="preserve"><value>New language template</value></data>
+  <data name="استيراد Excel" xml:space="preserve"><value>Import Excel</value></data>
+  <data name="الملف يجب أن يحتوي لغة واحدة. فعّل الاستبدال لمسح ترجمات اللغة القديمة قبل الاستيراد." xml:space="preserve"><value>The file must contain one language. Enable replacement to clear old translations before importing.</value></data>
+  <data name="استبدال القاموس الحالي" xml:space="preserve"><value>Replace current dictionary</value></data>
+  <data name="فحص واستيراد" xml:space="preserve"><value>Validate and import</value></data>
+  <data name="ابحث في المفتاح أو الترجمة…" xml:space="preserve"><value>Search the key or translation…</value></data>
+  <data name="الناقصة فقط" xml:space="preserve"><value>Missing only</value></data>
+  <data name="نتيجة" xml:space="preserve"><value>results</value></data>
+  <data name="ناقصة" xml:space="preserve"><value>missing</value></data>
+  <data name="النص العربي / المفتاح" xml:space="preserve"><value>Arabic source / key</value></data>
+  <data name="لا توجد كلمات مطابقة." xml:space="preserve"><value>No matching words.</value></data>
+  <data name="ناقص" xml:space="preserve"><value>Missing</value></data>
+  <data name="مترجم" xml:space="preserve"><value>Translated</value></data>
+  <data name="صفحات القاموس" xml:space="preserve"><value>Dictionary pages</value></data>
+  <data name="صفحة {0} من {1}" xml:space="preserve"><value>Page {0} of {1}</value></data>
+  <data name="لغة المصدر" xml:space="preserve"><value>Source language</value></data>
+  <data name="أساس" xml:space="preserve"><value>Base</value></data>
+  <data name="حذف اللغة" xml:space="preserve"><value>Delete language</value></data>
+  <data name="حذف اللغة وكل ترجماتها؟" xml:space="preserve"><value>Delete the language and all its translations?</value></data>
+  <data name="تصدير {0}" xml:space="preserve"><value>Export {0}</value></data>
+  <data name="ترجمة {0}" xml:space="preserve"><value>{0} translation</value></data>
+  <data name="تم حفظ الترجمة وتفعيلها مباشرة." xml:space="preserve"><value>The translation was saved and activated immediately.</value></data>
+  <data name="اختر ملف Excel أو CSV أولاً." xml:space="preserve"><value>Select an Excel or CSV file first.</value></data>
+  <data name="داشبورد الأشخاص" xml:space="preserve"><value>People dashboard</value></data>
+  <data name="نظرة شاملة على القوى العاملة" xml:space="preserve"><value>Complete workforce overview</value></data>
+  <data name="مؤشرات الموظفين، الحركة الوظيفية وتوزيع القوى العاملة في شاشة واحدة." xml:space="preserve"><value>Employee indicators, workforce movement, and workforce distribution in one view.</value></data>
+  <data name="ملخص القوى العاملة" xml:space="preserve"><value>Workforce summary</value></data>
+  <data name="موظف فعال" xml:space="preserve"><value>active employees</value></data>
+  <data name="نسبة النشاط" xml:space="preserve"><value>Active rate</value></data>
+  <data name="فترة القياس" xml:space="preserve"><value>Measurement period</value></data>
+  <data name="شهراً" xml:space="preserve"><value>months</value></data>
+  <data name="مؤشرات الموظفين الرئيسية" xml:space="preserve"><value>Key employee indicators</value></data>
+  <data name="فعال حالياً" xml:space="preserve"><value>currently active</value></data>
+  <data name="جديد هذا الشهر" xml:space="preserve"><value>New this month</value></data>
+  <data name="انضمام جديد" xml:space="preserve"><value>New joiner</value></data>
+  <data name="في فترة التجربة" xml:space="preserve"><value>On probation</value></data>
+  <data name="يوماً من المباشرة" xml:space="preserve"><value>days from joining</value></data>
+  <data name="موقوف عن العمل" xml:space="preserve"><value>Suspended</value></data>
+  <data name="حالة غير نشطة" xml:space="preserve"><value>Inactive status</value></data>
+  <data name="أُنهي هذا الشهر" xml:space="preserve"><value>Ended this month</value></data>
+  <data name="إنهاء خدمة" xml:space="preserve"><value>End of service</value></data>
+  <data name="الحركة الوظيفية" xml:space="preserve"><value>Workforce movement</value></data>
+  <data name="معدل الدوران" xml:space="preserve"><value>Turnover rate</value></data>
+  <data name="آخر 12 شهراً" xml:space="preserve"><value>Last 12 months</value></data>
+  <data name="المعدل الإجمالي" xml:space="preserve"><value>Overall rate</value></data>
+  <data name="المغادرات الطوعية" xml:space="preserve"><value>Voluntary departures</value></data>
+  <data name="المغادرات غير الطوعية" xml:space="preserve"><value>Involuntary departures</value></data>
+  <data name="نسبة الطوعي من المغادرات" xml:space="preserve"><value>Voluntary share of departures</value></data>
+  <data name="معدل الدوران الطوعي" xml:space="preserve"><value>Voluntary turnover rate</value></data>
+  <data name="توزيع الموظفين" xml:space="preserve"><value>Employee distribution</value></data>
+  <data name="تكافؤ الجنسين" xml:space="preserve"><value>Gender balance</value></data>
+  <data name="الفعالون" xml:space="preserve"><value>Active</value></data>
+  <data name="إجمالي البيانات المصنّفة" xml:space="preserve"><value>Total classified records</value></data>
+  <data name="توزيع الجنسين" xml:space="preserve"><value>Gender distribution</value></data>
+  <data name="ذكور" xml:space="preserve"><value>Male</value></data>
+  <data name="إناث" xml:space="preserve"><value>Female</value></data>
+  <data name="لا توجد بيانات جنس مصنّفة للموظفين الفعالين." xml:space="preserve"><value>No classified gender data is available for active employees.</value></data>
+  <data name="التركيبة السكانية" xml:space="preserve"><value>Demographics</value></data>
+  <data name="شرائح الأعمار" xml:space="preserve"><value>Age groups</value></data>
+  <data name="موظف" xml:space="preserve"><value>employees</value></data>
+  <data name="لا توجد بيانات أعمار متاحة." xml:space="preserve"><value>No age data is available.</value></data>
+  <data name="الاستقرار الوظيفي" xml:space="preserve"><value>Workforce stability</value></data>
+  <data name="مدة الخدمة" xml:space="preserve"><value>Service length</value></data>
+  <data name="الموظفون الفعالون" xml:space="preserve"><value>Active employees</value></data>
+  <data name="لا توجد بيانات مدة خدمة متاحة." xml:space="preserve"><value>No service-length data is available.</value></data>
+  <data name="أقل من سنة" xml:space="preserve"><value>Less than one year</value></data>
+  <data name="1 – 3 سنوات" xml:space="preserve"><value>1–3 years</value></data>
+  <data name="3 – 5 سنوات" xml:space="preserve"><value>3–5 years</value></data>
+  <data name="أكثر من 5 سنوات" xml:space="preserve"><value>More than 5 years</value></data>
+  <data name="أقل من 25" xml:space="preserve"><value>Under 25</value></data>
+  <data name="25 – 35" xml:space="preserve"><value>25–35</value></data>
+  <data name="35 – 45" xml:space="preserve"><value>35–45</value></data>
+  <data name="45 فأكثر" xml:space="preserve"><value>45 and above</value></data>
+</root>

@@ -60,12 +60,23 @@ public static class ReportExportService
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>
 """);
-            Text(zip, "xl/workbook.xml", """
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets>
-</workbook>
-""");
+            var workbookEntry = zip.CreateEntry("xl/workbook.xml", CompressionLevel.Fastest);
+            using (var workbookStream = workbookEntry.Open())
+            using (var workbookWriter = XmlWriter.Create(workbookStream, new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = false }))
+            {
+                workbookWriter.WriteStartDocument(true);
+                workbookWriter.WriteStartElement("workbook", "http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+                workbookWriter.WriteAttributeString("xmlns", "r", null, "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+                workbookWriter.WriteStartElement("sheets");
+                workbookWriter.WriteStartElement("sheet");
+                workbookWriter.WriteAttributeString("name", WorksheetName(title));
+                workbookWriter.WriteAttributeString("sheetId", "1");
+                workbookWriter.WriteAttributeString("r", "id", "http://schemas.openxmlformats.org/officeDocument/2006/relationships", "rId1");
+                workbookWriter.WriteEndElement();
+                workbookWriter.WriteEndElement();
+                workbookWriter.WriteEndElement();
+                workbookWriter.WriteEndDocument();
+            }
             Text(zip, "xl/_rels/workbook.xml.rels", """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -80,7 +91,7 @@ public static class ReportExportService
   <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
   <borders count="1"><border/></borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+  <cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs>
 </styleSheet>
 """);
 
@@ -93,6 +104,7 @@ public static class ReportExportService
             writer.WriteStartElement("sheetView"); writer.WriteAttributeString("workbookViewId", "0"); writer.WriteAttributeString("rightToLeft", "1");
             writer.WriteStartElement("pane"); writer.WriteAttributeString("ySplit", "1"); writer.WriteAttributeString("topLeftCell", "A2"); writer.WriteAttributeString("state", "frozen"); writer.WriteEndElement();
             writer.WriteEndElement(); writer.WriteEndElement();
+            WriteColumns(writer, columns, rows);
             writer.WriteStartElement("sheetData");
             WriteRow(writer, 1, columns.Select(column => column.Label), header: true);
             for (var index = 0; index < rows.Count; index++)
@@ -118,7 +130,7 @@ public static class ReportExportService
         foreach (var value in values)
         {
             writer.WriteStartElement("c"); writer.WriteAttributeString("r", ColumnName(index++) + number); writer.WriteAttributeString("t", "inlineStr");
-            if (header) writer.WriteAttributeString("s", "1");
+            writer.WriteAttributeString("s", header ? "1" : "2");
             writer.WriteStartElement("is");
             writer.WriteStartElement("t");
             writer.WriteAttributeString("xml", "space", null, "preserve");
@@ -129,11 +141,45 @@ public static class ReportExportService
         writer.WriteEndElement();
     }
 
+    private static void WriteColumns(
+        XmlWriter writer,
+        IReadOnlyList<Column> columns,
+        IReadOnlyList<Dictionary<string, string>> rows)
+    {
+        if (columns.Count == 0) return;
+        writer.WriteStartElement("cols");
+        for (var index = 0; index < columns.Count; index++)
+        {
+            var column = columns[index];
+            var longest = rows.Select(row => row.GetValueOrDefault(column.Key, string.Empty)?.Length ?? 0)
+                .Append(column.Label.Length)
+                .DefaultIfEmpty(8)
+                .Max();
+            var width = Math.Clamp(longest + 2, 10, 60);
+            writer.WriteStartElement("col");
+            writer.WriteAttributeString("min", (index + 1).ToString());
+            writer.WriteAttributeString("max", (index + 1).ToString());
+            writer.WriteAttributeString("width", width.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            writer.WriteAttributeString("customWidth", "1");
+            writer.WriteEndElement();
+        }
+        writer.WriteEndElement();
+    }
+
     private static string ColumnName(int index)
     {
         var name = string.Empty;
         while (index > 0) { index--; name = (char)('A' + index % 26) + name; index /= 26; }
         return name;
+    }
+
+    private static string WorksheetName(string? title)
+    {
+        var value = new string((title ?? string.Empty)
+            .Where(character => character is not '[' and not ']' and not ':' and not '*' and not '?' and not '/' and not '\\')
+            .ToArray()).Trim();
+        if (value.Length == 0) value = "تقرير";
+        return value.Length <= 31 ? value : value[..31];
     }
 
     private static string Sanitize(string? value) => new((value ?? string.Empty)

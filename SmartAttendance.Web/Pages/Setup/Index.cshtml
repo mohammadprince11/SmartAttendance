@@ -7,7 +7,7 @@
 }
 
 @{
-    ViewData["Title"] = "\u0625\u0639\u062f\u0627\u062f \u0627\u0644\u0634\u0631\u0643\u0629";
+    ViewData["Title"] = T["إعداد الشركة"];
     var setup = Model.Setup;
     var hasCompanies = Model.Companies.Count > 0;
     var policyCount = setup?.CutoffPolicies.Count ?? 0;
@@ -159,7 +159,7 @@
                         <span asp-validation-for="Profile.CountryCode" class="text-danger"></span>
                     </label>
 
-                    <label class="nx-setup-field">
+                    <label class="nx-setup-field" id="company-currency">
                         <span>&#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x0629;</span>
                         <select asp-for="Profile.CurrencyCode" asp-items="Model.CurrencyOptions" data-nexora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x0629;">
                             <option value="">--</option>
@@ -206,9 +206,9 @@
                              role="note">
                             <strong>&#x0644;&#x0627; &#x064A;&#x0645;&#x0643;&#x0646; &#x062A;&#x0639;&#x0637;&#x064A;&#x0644; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;</strong>
                             <span>
-                                @Model.ActiveEmployeeCount &#x0645;&#x0648;&#x0638;&#x0641; &#x0641;&#x0639;&#x0627;&#x0644;&#x060C;
-                                @Model.ActiveBranchCount &#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644; &#x0641;&#x0639;&#x0627;&#x0644;&#x060C;
-                                @Model.ActiveDepartmentCount &#x0642;&#x0633;&#x0645; &#x0641;&#x0639;&#x0627;&#x0644;.
+                                @T["{0} موظف فعال،", Model.ActiveEmployeeCount]
+                                @T["{0} موقع عمل فعال،", Model.ActiveBranchCount]
+                                @T["{0} قسم فعال.", Model.ActiveDepartmentCount]
                             </span>
                         </div>
                     }

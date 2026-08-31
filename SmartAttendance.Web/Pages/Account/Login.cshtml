@@ -1,51 +1,190 @@
 @page
 @model SmartAttendance.Web.Pages.Account.LoginModel
+@using System.Text.Json
+@using System.Globalization
+@using Microsoft.AspNetCore.WebUtilities
+@using SmartAttendance.Web.Infrastructure.Localization
+@inject ILocalizationDictionaryService LocalizationDictionary
 
 @{
-    ViewData["Title"] = "تسجيل الدخول";
+    ViewData["Title"] = T["تسجيل الدخول"];
+    var passkeyStartError = JsonSerializer.Serialize(T["تعذّر بدء الدخول."].Value);
+    var passkeyVerifyError = JsonSerializer.Serialize(T["فشل الدخول بالمفتاح."].Value);
+    var passkeyCancelledError = JsonSerializer.Serialize(T["أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز."].Value);
+    var passkeyGenericError = JsonSerializer.Serialize(T["تعذّر الدخول بالمفتاح."].Value);
+    var currentCultureName = CultureInfo.CurrentUICulture.Name;
+    var requestedReturnUrl = Request.Query["ReturnUrl"].ToString();
+    var cultureReturnUrl = string.IsNullOrWhiteSpace(requestedReturnUrl)
+        ? Request.Path.Value ?? "/Account/Login"
+        : QueryHelpers.AddQueryString(Request.Path.Value ?? "/Account/Login", "ReturnUrl", requestedReturnUrl);
+    var supportedLanguages = await LocalizationDictionary.GetLanguagesAsync(HttpContext.RequestAborted);
 }
 <link rel="stylesheet" href="~/css/pages/login-316e15b025.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/login-foundation.css" asp-append-version="true" />
 
 <div class="login-page">
+    <div class="login-stage">
+        <section class="login-visual" aria-label="ZYNORA HR">
+            <div class="login-visual__brand">
+                <img src="~/brand/zynora-logo-horizontal-light.svg" alt="ZYNORA HR" />
+            </div>
+            <div class="login-visual__copy">
+                <span>ZYNORA WORKSPACE</span>
+                <h2>@T["نؤمن أن مستقبل الموارد البشرية لا يُبنى على كثرة الإجراءات، بل على منظومة ذكية توحّد البيانات، وتفهم الإنسان، وتحوّل كل معلومة إلى قرار أكثر دقة، وكل عملية إلى تجربة أكثر كفاءة."]</h2>
+            </div>
+            <div class="login-visual__modules">
+                <span>@T["الدقة • الأمان • الذكاء • الكفاءة"]</span>
+            </div>
+        </section>
     <div class="login-card">
-        <div class="login-logo">SA</div>
+        <form method="post" asp-page="/Culture/Set" id="login-language-form" class="login-language-switcher">
+            <input type="hidden" name="returnUrl" value="@cultureReturnUrl" />
+            <label for="login-culture">@T["لغة الواجهة"]</label>
+            <select id="login-culture" name="culture" aria-label="@T["لغة الواجهة"]">
+                @foreach (var language in supportedLanguages)
+                {
+                    <option value="@language.Code"
+                            data-zy-no-localize
+                            selected="@(string.Equals(currentCultureName, language.Code, StringComparison.OrdinalIgnoreCase))">
+                        @language.NativeName
+                    </option>
+                }
+            </select>
+            <button type="button"
+                    id="login-theme-toggle"
+                    class="zy-theme-btn login-theme-toggle"
+                    data-nexora-hover="off"
+                    aria-label="@T["تبديل الوضع الفاتح والداكن"]"
+                    title="@T["الوضع الفاتح / الداكن"]">
+                <svg class="zy-tt-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="zy-tt-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+        </form>
 
-        <h1>تسجيل الدخول</h1>
-        <p>دخول مستخدمي نظام Smart Attendance.</p>
+        <script>
+        (function () {
+            var languageForm = document.getElementById("login-language-form");
+            var languageSelect = document.getElementById("login-culture");
+            var themeToggle = document.getElementById("login-theme-toggle");
+            var isChangingLanguage = false;
+
+            if (languageForm && languageSelect) {
+                languageSelect.addEventListener("change", function () {
+                    if (isChangingLanguage) return;
+                    isChangingLanguage = true;
+                    languageSelect.setAttribute("aria-busy", "true");
+                    languageForm.requestSubmit();
+                });
+            }
+
+            if (themeToggle) {
+                document.addEventListener("click", function (event) {
+                    var clickedThemeToggle = event.target.closest
+                        ? event.target.closest("#login-theme-toggle")
+                        : null;
+                    if (!clickedThemeToggle) return;
+                    event.preventDefault();
+
+                    if (window.ZynoraTheme && typeof window.ZynoraTheme.toggle === "function") {
+                        window.ZynoraTheme.toggle();
+                        return;
+                    }
+
+                    var root = document.documentElement;
+                    var nextTheme = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+                    root.setAttribute("data-theme-switching", "");
+                    root.setAttribute("data-theme", nextTheme);
+                    try { localStorage.setItem("ZY.Theme", nextTheme); } catch (e) { }
+
+                    var finishThemeSwitch = function () { root.removeAttribute("data-theme-switching"); };
+                    requestAnimationFrame(function () { requestAnimationFrame(finishThemeSwitch); });
+                    setTimeout(finishThemeSwitch, 200);
+                }, true);
+            }
+        })();
+        </script>
+
+        <h1>@T["تسجيل الدخول"]</h1>
+        <p>@T["دخول مستخدمي نظام Smart Attendance."]</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
         {
-            <div class="login-error">@Model.ErrorMessage</div>
+            <div class="login-error">@T[Model.ErrorMessage]</div>
         }
 
         <form method="post" class="login-form">
             <input asp-for="ReturnUrl" type="hidden" />
 
             <div class="login-field">
-                <label>اسم المستخدم</label>
+                <label asp-for="Username">@T["اسم المستخدم"]</label>
                 <input asp-for="Username" autocomplete="username" autofocus />
             </div>
 
             <div class="login-field">
-                <label>كلمة المرور</label>
-                <input asp-for="Password" type="password" autocomplete="current-password" />
+                <label asp-for="Password">@T["كلمة المرور"]</label>
+                <div class="login-password-control">
+                    <input asp-for="Password" type="password" autocomplete="current-password" />
+                    <button type="button"
+                            id="password-visibility-toggle"
+                            class="login-password-toggle"
+                            data-nexora-hover="off"
+                            aria-controls="Password"
+                            aria-pressed="false"
+                            aria-label="@T["إظهار كلمة المرور"]"
+                            title="@T["إظهار كلمة المرور"]"
+                            data-show-label="@T["إظهار كلمة المرور"]"
+                            data-hide-label="@T["إخفاء كلمة المرور"]">
+                        <svg class="login-password-toggle__show" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                            <circle cx="12" cy="12" r="2.75" />
+                        </svg>
+                        <svg class="login-password-toggle__hide" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
+                            <path d="M4 4 20 20" />
+                            <path d="M9.4 6.45A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.3 3.05M14.6 17.55A10.7 10.7 0 0 1 12 18c-6 0-9.5-6-9.5-6a15 15 0 0 1 2.3-3.05" />
+                            <path d="M9.95 9.95A2.75 2.75 0 0 0 14.05 14.05" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <label class="login-check">
                 <input asp-for="RememberMe" />
-                <span>تذكرني</span>
+                <span>@T["تذكرني"]</span>
             </label>
 
-            <button type="submit" class="login-button">دخول</button>
+            <button type="submit" class="login-button">@T["دخول"]</button>
         </form>
+
+        <script>
+        (function () {
+            var input = document.getElementById("Password");
+            var toggle = document.getElementById("password-visibility-toggle");
+            if (!input || !toggle) return;
+
+            var showIcon = toggle.querySelector(".login-password-toggle__show");
+            var hideIcon = toggle.querySelector(".login-password-toggle__hide");
+
+            toggle.addEventListener("click", function () {
+                var willShow = input.type === "password";
+                input.type = willShow ? "text" : "password";
+                toggle.setAttribute("aria-pressed", willShow ? "true" : "false");
+
+                var label = willShow ? toggle.dataset.hideLabel : toggle.dataset.showLabel;
+                toggle.setAttribute("aria-label", label);
+                toggle.setAttribute("title", label);
+                showIcon.hidden = willShow;
+                hideIcon.hidden = !willShow;
+                input.focus({ preventScroll: true });
+            });
+        })();
+        </script>
 
         @* الدخول بالبصمة/الوجه (Passkey): يظهر فقط حين يدعمه المتصفح — يتطلب مفتاحاً
            مسجَّلاً من بوابة الموظف ومعتمَداً من الموارد البشرية. كلمة المرور تبقى بديلاً. *@
         <button type="button" id="bio-login-btn" class="login-button zyu-8d3380c010b4" hidden
                >
-            🔐 الدخول بالبصمة/الوجه
+            🔐 @T["الدخول بالبصمة/الوجه"]
         </button>
         <div id="bio-login-error" class="login-error zyu-df928149c547" hidden></div>
 
@@ -53,7 +192,19 @@
         (function () {
             var btn = document.getElementById("bio-login-btn");
             var err = document.getElementById("bio-login-error");
-            if (!window.PublicKeyCredential) return;
+            var messages = {
+                start: @Html.Raw(passkeyStartError),
+                verify: @Html.Raw(passkeyVerifyError),
+                cancelled: @Html.Raw(passkeyCancelledError),
+                generic: @Html.Raw(passkeyGenericError)
+            };
+            // المتصفح العادي يدعم WebAuthn أيضاً، لذلك لا يكفي فحص
+            // PublicKeyCredential وحده. نظهر الخيار فقط عند تشغيل زينورا كتطبيق
+            // مثبّت (PWA standalone)، ونبقيه مخفياً داخل تبويب المتصفح العادي.
+            var isInstalledAppMode =
+                (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+                window.navigator.standalone === true;
+            if (!isInstalledAppMode || !window.PublicKeyCredential) return;
             btn.hidden = false;
 
             function a2b(s) {
@@ -75,7 +226,7 @@
                 try {
                     var r = await fetch("/api/webauthn/login/options", { method: "POST" });
                     var data = await r.json();
-                    if (!r.ok) throw new Error(data.message || "تعذّر بدء الدخول.");
+                    if (!r.ok) throw new Error(data.message || messages.start);
                     var o = data.options;
                     o.challenge = a2b(o.challenge);
                     (o.allowCredentials || []).forEach(function (c) { c.id = a2b(c.id); });
@@ -100,12 +251,12 @@
                         })
                     });
                     var d2 = await r2.json();
-                    if (!r2.ok) throw new Error(d2.message || "فشل الدخول بالمفتاح.");
+                    if (!r2.ok) throw new Error(d2.message || messages.verify);
                     window.location.href = d2.redirect || "/";
                 } catch (e) {
                     err.textContent = e.name === "NotAllowedError"
-                        ? "أُلغيت العملية أو لا يوجد مفتاح مسجَّل على هذا الجهاز."
-                        : (e.message || "تعذّر الدخول بالمفتاح.");
+                        ? messages.cancelled
+                        : (e.message || messages.generic);
                     err.hidden = false;
                     btn.disabled = false;
                 }
@@ -116,5 +267,6 @@
         @* أُزيل عرض «الدخول الافتراضي» — كان يكشف حساب الأدمن وكلمة مروره لأي زائر
            لصفحة الدخول (بما فيهم غير المصادَقين على الإنترنت العام). بيانات الدخول
            تُسلَّم للمسؤول خارج التطبيق. راجع docs/SECURITY-CREDENTIAL-ROTATION.md *@
+    </div>
     </div>
 </div>

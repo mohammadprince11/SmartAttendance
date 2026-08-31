@@ -28,6 +28,9 @@ public sealed class UnifiedPageDesignContractTests
         var uncovered = Directory.EnumerateFiles(pagesRoot, "*.cshtml", SearchOption.AllDirectories)
             .Where(path => File.ReadAllText(path).Contains("@page", StringComparison.Ordinal))
             .Where(path => !Path.GetFileName(path).Equals("ThemeCss.cshtml", StringComparison.OrdinalIgnoreCase))
+            // Culture endpoints only return JSON or a redirect from their PageModel;
+            // their cshtml files are routing stubs and never render an HTML document.
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}Culture{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Select(path => new { path, source = File.ReadAllText(path) })
             .Where(page => Regex.IsMatch(page.source, @"Layout\s*=\s*null", RegexOptions.IgnoreCase))
             .Where(page => !page.source.Contains("zy-ui-contract", StringComparison.Ordinal)
@@ -120,6 +123,39 @@ public sealed class UnifiedPageDesignContractTests
             navigation, StringComparison.Ordinal);
         Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group-links .ky-drawer-title",
             navigation, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refresh2026_IsTheFinalVisualAuthorityAndLoginUsesTheNewBrandStage()
+    {
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
+        var login = ReadWeb("Pages", "Account", "Login.cshtml");
+        var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
+
+        Assert.True(
+            layout.LastIndexOf("zynora-refresh-2026.css", StringComparison.Ordinal) >
+            layout.LastIndexOf("zynora-direction.css", StringComparison.Ordinal),
+            "The refresh stylesheet must remain the final visual authority.");
+        Assert.Contains("data-theme=\"light\"", layout, StringComparison.Ordinal);
+        Assert.Contains("refresh-2026-v1", layout, StringComparison.Ordinal);
+
+        Assert.Contains("login-stage", login, StringComparison.Ordinal);
+        Assert.Contains("login-visual", login, StringComparison.Ordinal);
+        Assert.Contains("zynora-logo-horizontal-light.svg", login, StringComparison.Ordinal);
+        Assert.DoesNotContain("login-logo", login, StringComparison.Ordinal);
+        Assert.Contains("zy-login-shell", layout, StringComparison.Ordinal);
+        Assert.Contains(".zy-login-shell .nexora-content", refresh, StringComparison.Ordinal);
+        Assert.Contains("padding: 0 !important", refresh, StringComparison.Ordinal);
+        Assert.Contains("min-height: 100dvh !important", refresh, StringComparison.Ordinal);
+
+        foreach (var selector in new[]
+                 {
+                     ".nexora-sidebar", ".nexora-topbar", ".zy-ui-contract .zy-card",
+                     ".zy-ui-contract .zy-table", ".login-stage", ".login-visual"
+                 })
+        {
+            Assert.Contains(selector, refresh, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

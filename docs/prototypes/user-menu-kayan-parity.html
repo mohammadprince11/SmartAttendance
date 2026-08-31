@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ZYNORA — اختبار قائمة الحساب</title>
+    <link rel="stylesheet" href="/SmartAttendance.Web/wwwroot/css/zynora-theme-contract.css" />
+    <link rel="stylesheet" href="/SmartAttendance.Web/wwwroot/css/zynora-design-tokens.css" />
+    <link rel="stylesheet" href="/SmartAttendance.Web/wwwroot/css/nexora-brand.css" />
+    <link rel="stylesheet" href="/SmartAttendance.Web/wwwroot/css/zynora-user-menu.css" />
+    <link rel="stylesheet" href="/docs/prototypes/user-menu-kayan-parity.css" />
+</head>
+<body>
+    <main class="zy-user-menu-preview">
+        <section class="zy-user-menu-preview__card" aria-labelledby="preview-title">
+            <p class="zy-user-menu-preview__eyebrow">ZYNORA UI TEST</p>
+            <h1 id="preview-title">قائمة إعدادات الحساب</h1>
+            <p>نموذج معزول لاختبار الشكل والتفاعل بلا بيانات أو اتصال بقاعدة النظام.</p>
+
+            <div class="zy-user-menu" data-zy-user-menu>
+                <button type="button" class="zy-user-menu__trigger"
+                        data-zy-user-menu-trigger aria-haspopup="menu" aria-expanded="false"
+                        aria-controls="zy-user-menu-panel"
+                        aria-label="فتح قائمة حساب محمد علي زيدان">
+                    <span class="zy-user-menu__name" data-zy-user-name-trigger dir="auto">محمد علي زيدان</span>
+                    <span class="zy-user-menu__avatar" aria-hidden="true">مز</span>
+                    <svg class="zy-user-menu__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
+                </button>
+
+                <div class="zy-user-menu__panel" id="zy-user-menu-panel" data-zy-user-menu-panel
+                     role="menu" aria-label="إعدادات الحساب" hidden>
+                    <button type="button" class="zy-user-menu__item" role="menuitem" data-zy-language-open>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h12M9 3v2m1.5 0c-1 4-3.5 7-7.5 9m3-6c1.5 2.5 3.5 4.5 6 6m4-7h5m-2.5-2v4m-4 12 3.5-9 3.5 9m-5.8-4h4.6" /></svg>
+                        <span data-zy-menu-label data-ar="تغيير اللغة" data-en="Change language">تغيير اللغة</span>
+                        <span class="zy-user-menu__meta" data-zy-language-code>AR</span>
+                    </button>
+                    <a href="#currency" class="zy-user-menu__item" role="menuitem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M8 9.5h6.2a2.3 2.3 0 0 1 0 4.6H10a2.3 2.3 0 0 0 0 4.6h6M12 6v12" /></svg>
+                        <span data-zy-menu-label data-ar="تغيير العملة" data-en="Change currency">تغيير العملة</span>
+                    </a>
+                    <a href="#password" class="zy-user-menu__item" role="menuitem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v2" /></svg>
+                        <span data-zy-menu-label data-ar="تغيير كلمة المرور" data-en="Change password">تغيير كلمة المرور</span>
+                    </a>
+                    <a href="#signature" class="zy-user-menu__item" role="menuitem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3-4 5-4 7-1 1.5-3 3.5-3 5 0 1-1 2-1 4 0M5 14 15.5 3.5a2.1 2.1 0 0 1 3 3L8 17H5v-3Z" /></svg>
+                        <span data-zy-menu-label data-ar="توقيع الموظف" data-en="Employee signature">توقيع الموظف</span>
+                    </a>
+                    <a href="#security" class="zy-user-menu__item" role="menuitem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V8a4 4 0 0 1 8 0v3M6 11h12v9H6zM12 15v2" /><path d="M3 8V5a2 2 0 0 1 2-2h3m8 0h3a2 2 0 0 1 2 2v3" /></svg>
+                        <span data-zy-menu-label data-ar="أمان الدخول والبصمة" data-en="Sign-in security">أمان الدخول والبصمة</span>
+                    </a>
+                    <a href="#logout" class="zy-user-menu__item zy-user-menu__item--danger" role="menuitem">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4m4-4H9" /></svg>
+                        <span data-zy-menu-label data-ar="تسجيل الخروج" data-en="Sign out">تسجيل الخروج</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <dialog class="zy-language-dialog" data-zy-language-dialog aria-labelledby="zy-language-dialog-title">
+        <form method="dialog" class="zy-language-dialog__card">
+            <div class="zy-language-dialog__head">
+                <div><h2 id="zy-language-dialog-title">تغيير اللغة</h2><p>اختر لغة واتجاه واجهة النظام.</p></div>
+                <button type="submit" value="cancel" class="zy-language-dialog__close" aria-label="إغلاق">×</button>
+            </div>
+            <div class="zy-language-dialog__options" role="radiogroup" aria-label="لغة الواجهة">
+                <button type="button" class="zy-language-dialog__option" data-zy-language-option="ar" role="radio" aria-checked="true"><strong>العربية</strong><span>RTL</span></button>
+                <button type="button" class="zy-language-dialog__option" data-zy-language-option="en" role="radio" aria-checked="false"><strong>English</strong><span>LTR</span></button>
+            </div>
+        </form>
+    </dialog>
+    <script src="/SmartAttendance.Web/wwwroot/js/zynora-user-menu.js"></script>
+</body>
+</html>

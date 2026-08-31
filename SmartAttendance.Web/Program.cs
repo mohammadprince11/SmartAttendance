@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc.Razor;
+using SmartAttendance.Web;
 using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Announcements.Services;
@@ -29,13 +32,22 @@ using SmartAttendance.Infrastructure.Repositories;
 using SmartAttendance.Infrastructure.Seeding;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Theming;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
 builder.Services.Configure<ProductionOperationsOptions>(
     builder.Configuration.GetSection(ProductionOperationsOptions.SectionName));
 
 builder.Services.AddRazorPages()
+    .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+    .AddDataAnnotationsLocalization(options =>
+    {
+        options.DataAnnotationLocalizerProvider = (_, factory) =>
+            factory.Create(typeof(SharedResource));
+    })
     // محرك تقارير واحد يخدم مسارين: الأشخاص (/PeopleReports) والحضور
     // (/AttendanceReports). الصفحة تستنتج الموديول من المسار وتعرض مصادره فقط.
     .AddRazorPagesOptions(options =>
@@ -45,11 +57,38 @@ builder.Services.AddRazorPages()
         options.Conventions.AddPageRoute("/PeopleReports/Index", "/PayrollReports");
     });
 
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var cultures = ZynoraSupportedCultures.All
+        .Select(item => item.Culture)
+        .ToArray();
+
+    options.DefaultRequestCulture = new RequestCulture(ZynoraSupportedCultures.DefaultCode);
+    options.SupportedCultures = cultures;
+    options.SupportedUICultures = cultures;
+    options.FallBackToParentCultures = true;
+    options.FallBackToParentUICultures = true;
+    options.ApplyCurrentCultureToResponseHeaders = true;
+    options.RequestCultureProviders =
+    [
+        new CookieRequestCultureProvider(),
+        new QueryStringRequestCultureProvider()
+    ];
+});
+
 // Branding & Theme Engine runtime (P4): in-memory theme cache + request-scoped
 // resolver. No company theme is persisted yet, so this serves the ZYNORA Default.
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IThemeContextService, ThemeContextService>();
+builder.Services.AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>();
+builder.Services.Configure<AzureTranslatorOptions>(
+    builder.Configuration.GetSection(AzureTranslatorOptions.SectionName));
+builder.Services.AddHttpClient<IAutomaticTextTranslator, AzureAutomaticTextTranslator>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
+builder.Services.AddScoped<ILocalizationAutoTranslationService, LocalizationAutoTranslationService>();
 
 // مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة + فحص malware
 // قبل الكتابة. في التطوير يمكن تعطيل المحرك صراحةً، أما بوابة الإنتاج فتفرضه.
@@ -541,6 +580,9 @@ if (reverseProxyOptions.Enabled)
 {
     app.UseForwardedHeaders();
 }
+
+app.UseRequestLocalization();
+app.UseMiddleware<DynamicDictionaryCultureMiddleware>();
 
 // معالج الأخطاء يعمل في الإنتاج بصرف النظر عن TLS: يمنع تسريب صفحة الاستثناء
 // المطوِّرة (stack trace) للمستخدم النهائي.

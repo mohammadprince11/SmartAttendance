@@ -61,6 +61,10 @@ public sealed class ReportExportServiceTests
         Assert.Contains("  محمد علي  ", xml, StringComparison.Ordinal);
         Assert.Contains("نص آمن", xml, StringComparison.Ordinal);
         Assert.DoesNotContain("\u0001", xml, StringComparison.Ordinal);
+
+        using var workbookReader = new StreamReader(archive.GetEntry("xl/workbook.xml")!.Open(), Encoding.UTF8);
+        var workbookXml = workbookReader.ReadToEnd();
+        Assert.Contains("name=\"الموظفون\"", workbookXml, StringComparison.Ordinal);
     }
 
     [Fact]

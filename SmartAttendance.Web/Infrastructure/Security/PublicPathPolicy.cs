@@ -35,6 +35,8 @@ public static class PublicPathPolicy
 
         if (path == "/account/login" ||
             path == "/account/logout" ||
+            path == "/culture/catalog" ||
+            path == "/culture/set" ||
             path == "/accessdenied")
         {
             return PathAccessClass.Public;
