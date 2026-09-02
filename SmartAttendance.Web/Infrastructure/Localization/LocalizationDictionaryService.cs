@@ -74,8 +74,10 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     {
         _statePath = configuration["LocalizationDictionary:Path"]
             ?? Path.Combine(environment.ContentRootPath, "App_Data", "localization-dictionary.json");
+        var publishedSourceCatalogPath = configuration["LocalizationDictionary:SourceCatalogPath"]
+            ?? Path.Combine(environment.ContentRootPath, "localization-source-keys.json");
         _scannedSourceKeys = new Lazy<IReadOnlyCollection<string>>(
-            () => LocalizationSourceTextScanner.Scan(environment.ContentRootPath),
+            () => LoadPublishedSourceCatalog(environment.ContentRootPath, publishedSourceCatalogPath),
             LazyThreadSafetyMode.ExecutionAndPublication);
         _includeScannedSourceKeys = !string.Equals(
             configuration["LocalizationDictionary:IncludeScannedSourceKeys"],
@@ -434,6 +436,49 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         state.Languages.FirstOrDefault(item => string.Equals(item.Code, culture, StringComparison.OrdinalIgnoreCase))
         ?? throw new InvalidOperationException("اللغة المطلوبة غير موجودة.");
 
+    private static IReadOnlyCollection<string> LoadPublishedSourceCatalog(
+        string contentRootPath,
+        string publishedSourceCatalogPath)
+    {
+        // Published applications do not contain the complete Razor/C# source tree.
+        // The publish pipeline therefore ships a deterministic catalog generated
+        // from the source checkout. Development falls back to live source scanning.
+        if (!File.Exists(publishedSourceCatalogPath))
+            return LocalizationSourceTextScanner.Scan(contentRootPath);
+
+        try
+        {
+            using var stream = File.OpenRead(publishedSourceCatalogPath);
+            var values = JsonSerializer.Deserialize<string[]>(stream) ?? [];
+            var keys = new SortedSet<string>(StringComparer.Ordinal);
+
+            foreach (var value in values)
+            {
+                if (string.IsNullOrWhiteSpace(value) || value.Length > 4_000)
+                    continue;
+
+                keys.Add(value);
+            }
+
+            if (keys.Count == 0)
+                throw new InvalidOperationException(
+                    "كتالوج مفاتيح الترجمة المنشور فارغ. أعد نشر النظام من المصدر.");
+
+            return keys;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "تعذر قراءة كتالوج مفاتيح الترجمة المنشور. أعد نشر النظام من المصدر.",
+                exception);
+        }
+        catch (IOException exception)
+        {
+            throw new InvalidOperationException(
+                "تعذر فتح كتالوج مفاتيح الترجمة المنشور.",
+                exception);
+        }
+    }
     private SortedSet<string> GetSourceKeys(DictionaryState state)
     {
         var keys = new SortedSet<string>(StringComparer.Ordinal);

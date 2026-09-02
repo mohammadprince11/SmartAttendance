@@ -158,6 +158,46 @@ public sealed class LocalizationDictionaryTests
         }
     }
 
+    [Fact]
+    public async Task DictionaryService_UsesPublishedSourceCatalogWithoutSourceFiles()
+    {
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "zynora-published-localization-catalog-tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            const string publishedKey = "نص واجهة من كتالوج البناء المنشور";
+            var catalogPath = Path.Combine(directory, "localization-source-keys.json");
+            await File.WriteAllTextAsync(
+                catalogPath,
+                System.Text.Json.JsonSerializer.Serialize(new[] { publishedKey }));
+
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["LocalizationDictionary:Path"] = Path.Combine(directory, "dictionary.json"),
+                    ["LocalizationDictionary:SourceCatalogPath"] = catalogPath,
+                    ["LocalizationDictionary:IncludeScannedSourceKeys"] = "true"
+                }).Build();
+
+            var service = new LocalizationDictionaryService(
+                new TestEnvironment(directory),
+                configuration);
+
+            var rows = await service.GetRowsAsync();
+
+            Assert.Contains(rows, item =>
+                item.CultureCode == "ar-IQ" &&
+                item.Key == publishedKey);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());

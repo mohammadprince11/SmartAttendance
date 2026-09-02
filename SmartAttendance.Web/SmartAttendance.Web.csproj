@@ -22,4 +22,14 @@
     <ProjectReference Include="..\SmartAttendance.Infrastructure\SmartAttendance.Infrastructure.csproj" />
   </ItemGroup>
 
+
+  <Target Name="GenerateLocalizationSourceCatalog" AfterTargets="Publish">
+    <PropertyGroup>
+      <LocalizationCatalogToolProject>$(MSBuildProjectDirectory)\..\tools\SmartAttendance.LocalizationCatalog\SmartAttendance.LocalizationCatalog.csproj</LocalizationCatalogToolProject>
+      <LocalizationCatalogOutput>$(PublishDir)localization-source-keys.json</LocalizationCatalogOutput>
+    </PropertyGroup>
+
+    <Exec Command="dotnet run --project &quot;$(LocalizationCatalogToolProject)&quot; --configuration $(Configuration) --no-launch-profile -- &quot;$(MSBuildProjectDirectory)&quot; &quot;$(LocalizationCatalogOutput)&quot;" />
+    <Error Condition="!Exists('$(LocalizationCatalogOutput)')" Text="Localization source catalog was not generated: $(LocalizationCatalogOutput)" />
+  </Target>
 </Project>

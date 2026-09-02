@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/tools/">
     <Project Path="tools/SmartAttendance.E2E.Bootstrap/SmartAttendance.E2E.Bootstrap.csproj" />
+    <Project Path="tools/SmartAttendance.LocalizationCatalog/SmartAttendance.LocalizationCatalog.csproj" />
   </Folder>
   <Project Path="SmartAttendance.API/SmartAttendance.API.csproj" />
   <Project Path="SmartAttendance.Application/SmartAttendance.Application.csproj" />
