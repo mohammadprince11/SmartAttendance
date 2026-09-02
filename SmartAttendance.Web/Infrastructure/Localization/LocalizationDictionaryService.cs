@@ -477,13 +477,16 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     private static string NormalizeKey(string? value, bool allowEmpty = false)
     {
         value ??= string.Empty;
+
         if (string.IsNullOrWhiteSpace(value))
         {
             if (allowEmpty) return string.Empty;
-            throw new InvalidOperationException("Key Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºØ§Ù‹.");
+            throw new InvalidOperationException("Key لا يمكن أن يكون فارغاً.");
         }
+
         if (value.Length > 4_000)
-            throw new InvalidOperationException("Key ØªØ¬Ø§ÙˆØ² Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¹Ù„Ù‰ Ø§Ù„Ù…Ø³Ù…ÙˆØ­.");
+            throw new InvalidOperationException("Key تجاوز الحد الأعلى المسموح.");
+
         return value;
     }
 
