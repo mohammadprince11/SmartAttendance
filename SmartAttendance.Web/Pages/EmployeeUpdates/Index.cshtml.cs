@@ -530,7 +530,7 @@ ORDER BY b.Name, d.Name;
             """
 CREATE TABLE #PositionOptions
 (
-    [Name] nvarchar(400) NOT NULL
+    [Name] nvarchar(400) COLLATE DATABASE_DEFAULT NOT NULL
 );
 
 IF OBJECT_ID(N'dbo.HrJobPositions', N'U') IS NOT NULL
@@ -600,7 +600,7 @@ DROP TABLE #PositionOptions;
             """
 CREATE TABLE #NationalityOptions
 (
-    [Name] nvarchar(400) NOT NULL
+    [Name] nvarchar(400) COLLATE DATABASE_DEFAULT NOT NULL
 );
 
 IF OBJECT_ID(N'dbo.Nationalities', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Nationalities', N'Name') IS NOT NULL
