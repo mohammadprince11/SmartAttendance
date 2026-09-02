@@ -205,6 +205,8 @@ SELECT TOP 300
     r.ToDate,
     r.StartTime,
     r.EndTime,
+    punches.ActualCheckIn,
+    punches.ActualCheckOut,
     r.DaysCount,
     r.Status,
     ISNULL(r.CurrentStep, '') AS CurrentStep,
@@ -217,6 +219,20 @@ INNER JOIN Employees e ON r.EmployeeId = e.Id
 LEFT JOIN Employees m ON e.DirectManagerId = m.Id
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
+OUTER APPLY
+(
+    SELECT
+        MIN(CASE
+                WHEN ar.CheckOut IS NULL OR ar.CheckOut <> ar.CheckIn
+                    THEN ar.CheckIn
+            END) AS ActualCheckIn,
+        MAX(ar.CheckOut) AS ActualCheckOut
+    FROM AttendanceRecords ar
+    WHERE ar.EmployeeId = r.EmployeeId
+      AND ISNULL(ar.IsDeleted, 0) = 0
+      AND ar.AttendanceDate >= CAST(COALESCE(r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
+      AND ar.AttendanceDate <= CAST(COALESCE(r.ToDate, r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
+) punches
 WHERE {scopeFilter}
   AND (@Source = 'All' OR r.RequestSource = @Source)
   AND (@Status = 'All' OR r.Status = @Status)
@@ -261,6 +277,8 @@ ORDER BY r.CreatedAt DESC;
                 ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate"),
                 StartTime = HrmsDatabase.GetTimeSpan(reader, "StartTime"),
                 EndTime = HrmsDatabase.GetTimeSpan(reader, "EndTime"),
+                ActualCheckIn = HrmsDatabase.GetDateTime(reader, "ActualCheckIn"),
+                ActualCheckOut = HrmsDatabase.GetDateTime(reader, "ActualCheckOut"),
                 DaysCount = HrmsDatabase.GetNullableDecimal(reader, "DaysCount"),
                 Status = HrmsDatabase.GetString(reader, "Status"),
                 CurrentStep = HrmsDatabase.GetString(reader, "CurrentStep"),
@@ -336,6 +354,8 @@ ORDER BY r.CreatedAt DESC;
         public DateOnly? ToDate { get; set; }
         public TimeSpan? StartTime { get; set; }
         public TimeSpan? EndTime { get; set; }
+        public DateTime? ActualCheckIn { get; set; }
+        public DateTime? ActualCheckOut { get; set; }
         public decimal? DaysCount { get; set; }
         public string Status { get; set; } = string.Empty;
         public string CurrentStep { get; set; } = string.Empty;

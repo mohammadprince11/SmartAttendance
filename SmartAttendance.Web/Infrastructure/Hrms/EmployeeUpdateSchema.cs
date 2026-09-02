@@ -20,9 +20,13 @@ BEGIN
         Status nvarchar(40) NOT NULL DEFAULT('Open'),
         RequestedBy nvarchar(150) NULL,
         RequestedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
+        EffectiveDate date NULL,
+        IsRetroactive bit NULL,
         LockedBy nvarchar(150) NULL,
         LockedAt datetime2 NULL,
-        Note nvarchar(max) NULL
+        Note nvarchar(max) NULL,
+        AttachmentName nvarchar(260) NULL,
+        AttachmentPath nvarchar(500) NULL
     );
 END;
 

@@ -23,6 +23,13 @@ public static class PortalSessionPolicy
     /// <summary>مفتاح «آخر نشاط» داخل خصائص تذكرة الكوكي المشفّرة (لا يعبث به العميل).</summary>
     public const string LastActivityItem = "laUtc";
 
+    /// <summary>
+    /// مطالبة موقّعة داخل تذكرة الدخول تميّز الجلسة التي اختار صاحبها «تذكّرني».
+    /// لا نخزّن كلمة المرور أو اسم المستخدم على الجهاز؛ المتصفح يحتفظ فقط بكوكي
+    /// المصادقة المشفّر حتى ثلاثين يوماً.
+    /// </summary>
+    public const string RememberMeClaimType = "Zynora.RememberMe";
+
     /// <summary>لا نعيد إصدار التذكرة بكل طلب — تجديد كل دقيقة يكفي دقةً ويوفّر الكتابة.</summary>
     public static readonly TimeSpan RenewInterval = TimeSpan.FromSeconds(60);
 
@@ -33,6 +40,13 @@ public static class PortalSessionPolicy
     /// <summary>هل حان تجديد ختم «آخر نشاط» بالتذكرة؟</summary>
     public static bool ShouldRenew(DateTime lastActivityUtc, DateTime nowUtc) =>
         nowUtc - lastActivityUtc >= RenewInterval;
+
+    /// <summary>
+    /// الجلسة المتذكّرة لا تُنهى عند إغلاق التطبيق أو خمول الواجهة، وإلا يصبح
+    /// اختيار «تذكّرني» بلا أثر. إبطال الحساب/تغيير كلمة المرور يبقى نافذاً.
+    /// </summary>
+    public static bool ShouldEnforceSessionTimeouts(bool isRememberedSession) =>
+        !isRememberedSession;
 
     /// <summary>قراءة آمنة لقيمة إعداد عددية (سالب/تالف ⟵ الافتراضي، وسقف يمنع العبث).</summary>
     public static int ParseSetting(string? raw, int fallback, int max) =>

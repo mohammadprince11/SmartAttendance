@@ -21,7 +21,7 @@
 }
 
 <!DOCTYPE html>
-<html lang="@currentCulture.Name" dir="@currentDirection" data-theme="light" data-sidebar="expanded">
+<html lang="@currentCulture.Name" dir="@currentDirection" data-theme="dark" data-sidebar="expanded">
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -55,27 +55,10 @@
                 "expanded"
             );
 
-            // الوضع المحفوظ (زر الشمس/الهلال بالشريط العلوي). الهوية الجديدة
-            // Light-first لراحة القراءة اليومية؛ يبقى الداكن خياراً محفوظاً.
-            var zyTheme = null;
-            try { zyTheme = localStorage.getItem("ZY.Theme"); } catch (e) { }
-
-            // نُظهر الهوية الفاتحة الجديدة مرة واحدة لكل متصفح عند ترقية التصميم.
-            // بعد ذلك يبقى اختيار المستخدم (فاتح/داكن) محفوظاً بصورة طبيعية.
-            try {
-                var visualVersion = "refresh-2026-v1";
-                if (localStorage.getItem("ZY.VisualVersion") !== visualVersion) {
-                    zyTheme = "light";
-                    localStorage.setItem("ZY.Theme", zyTheme);
-                    localStorage.setItem("ZY.VisualVersion", visualVersion);
-                }
-            } catch (e) { }
-
-            if (zyTheme !== "light" && zyTheme !== "dark") {
-                zyTheme = "light";
-            }
-
-            document.documentElement.setAttribute("data-theme", zyTheme);
+            // الوضع الفاتح متوقف مؤقتاً إلى حين اكتمال إعادة تصميمه. نُثبّت
+            // الداكن قبل أول رسمة ونستبدل أي اختيار Light قديم محفوظ بالمتصفح.
+            try { localStorage.setItem("ZY.Theme", "dark"); } catch (e) { }
+            document.documentElement.setAttribute("data-theme", "dark");
         })();
     </script>
 
@@ -284,7 +267,7 @@
     }
 
     <div class="nexora-shell">
-        <aside class="nexora-sidebar" aria-label="القائمة الجانبية">
+        <aside class="nexora-sidebar" id="zy-mobile-navigation" aria-label="@T["القائمة الجانبية"]">
             <div class="nexora-brand-card">
                 @* الشعار عرض فقط (لا رابط) — وحرف Z نفسه هو زر الطي: خطوطه الثلاثة
                    تتحول بأنميشن إلى ثلاث خطوط أفقية عند الانكماش. *@
@@ -786,10 +769,10 @@
                         <span class="nexora-nav-text">&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;</span>
                         <span class="nexora-chevron"></span>
                     </summary>
-                    @* توزيع كيان: المسير عنواناً ← العمليات اليومية ← أكورديونات (حركات/التزامات) ← الإعدادات آخر شيء *@
+                    @* عمليات الرواتب اليومية أولاً ← أكورديونات (حركات/التزامات) ← الإعدادات آخر شيء *@
                     <div class="nexora-nav-group-links" data-ky-title="الرواتب">
-                        <a asp-page="/Payroll/Runs" class="nexora-nav-link ky-drawer-title @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
-                            <span>المسير</span>
+                        <a asp-page="/Payroll/Runs" class="nexora-nav-link @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
+                            <span>احتساب الرواتب</span>
                         </a>
                         <a asp-page="/Payroll/Analytics" class="nexora-nav-link @(IsUnder("/Payroll/Analytics") ? "active nexora-active" : "")">
                             <span>رسوم الرواتب</span>
@@ -895,6 +878,7 @@
                             <a asp-page="/AccessRoles/Index" class="nexora-nav-link @(IsUnder("/AccessRoles") ? "active nexora-active" : "")"><span>أدوار الوصول</span></a>
                             <a asp-page="/AuditLogs/Index" class="nexora-nav-link @(IsUnder("/AuditLogs") ? "active nexora-active" : "")"><span>سجل التدقيق</span></a>
                             <a asp-page="/Settings/Dictionary" class="nexora-nav-link @(IsUnder("/Settings/Dictionary") ? "active nexora-active" : "")"><span>قاموس اللغات</span></a>
+                            <a asp-page="/Settings/DataLanguages" class="nexora-nav-link @(IsUnder("/Settings/DataLanguages") ? "active nexora-active" : "")"><span>لغات بيانات الشركة</span></a>
                             <a asp-page="/Branding/Index" class="nexora-nav-link @(IsUnder("/Branding") ? "active nexora-active" : "")"><span>الهوية والثيم</span></a>
                             <a asp-page="/Integrations/Webhooks" class="nexora-nav-link @(IsUnder("/Integrations") ? "active nexora-active" : "")"><span>التكاملات</span></a>
                         </div>
@@ -905,9 +889,28 @@
             }
         </aside>
 
+        <button type="button"
+                class="zy-mobile-nav-backdrop"
+                data-zy-mobile-nav-close
+                aria-label="@T["إغلاق القائمة"]"
+                tabindex="-1"></button>
+
         <div class="nexora-main">
             <header class="nexora-topbar">
                 <div class="nexora-topbar-left">
+                    @if (isLoggedIn)
+                    {
+                        <button type="button"
+                                class="zy-mobile-nav-toggle"
+                                data-zy-mobile-nav-toggle
+                                aria-controls="zy-mobile-navigation"
+                                aria-expanded="false"
+                                aria-label="@T["فتح القائمة"]">
+                            <span aria-hidden="true"></span>
+                            <span aria-hidden="true"></span>
+                            <span aria-hidden="true"></span>
+                        </button>
+                    }
                     <div>
                         @* عنوان دلاليّ: كان `div` فلم يكن لأي صفحة عنوانٌ من المستوى الأول، و`/Employees` وحدها بلا h1 خاصّ. أُبقي العنصر والصنف كما هما (صفر أثر بصري) وأُضيف الدلالة بـARIA. *@
                         <div class="nexora-page-title" role="heading" aria-level="1">@pageTitle</div>
@@ -930,38 +933,6 @@
                 <div class="nexora-controls">
                     @if (isLoggedIn)
                     {
-                        @* زر الوضع الفاتح/الداكن (شمس/هلال) — بصف الإشعارات، بتبديل ناعم ومحفوظ *@
-                        <button type="button" class="zy-theme-btn" id="zy-theme-toggle" aria-label="تبديل الوضع الفاتح والداكن" title="الوضع الفاتح / الداكن">
-                            <svg class="zy-tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                            <svg class="zy-tt-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                        </button>
-                        <script>
-                            (function () {
-                                var btn = document.getElementById("zy-theme-toggle");
-                                if (!btn) return;
-                                // التبديل فوريّ: أُزيل صنف `zy-theme-anim` ومؤقّته (450ms)
-                                // مع حذف انتقال الـ220ms من نظام التصميم — انظر التعليق هناك.
-                                // و`data-theme-switching` يُسكِت انتقالات المكوّنات الخاصة
-                                // (المكتوبة لتأثير المرور) إطارين فقط، وإلا تلاشى 123 عنصراً
-                                // من كل 400 رغم حذف قاعدتنا. يُرفع بعد إطارين لا بمؤقّت:
-                                // الإطار الأول يطبّق الألوان الجديدة، والثاني يضمن رسمها.
-                                btn.addEventListener("click", function () {
-                                    var h = document.documentElement;
-                                    var next = h.getAttribute("data-theme") === "light" ? "dark" : "light";
-                                    h.setAttribute("data-theme-switching", "");
-                                    h.setAttribute("data-theme", next);
-                                    try { localStorage.setItem("ZY.Theme", next); } catch (e) { }
-                                    // ⚠️ الرفع بحارسين لا بواحد. rAF **لا ينطلق** إن كان
-                                    // التبويب خلفياً أو خُنق المتصفح، ووقتها تبقى السمة
-                                    // فتُسكِت كل حركة بالنظام للأبد (رُصد فعلياً بالقياس).
-                                    // فمؤقّتٌ قصير يضمن الرفع مهما حدث، وأيّهما سبق كفى.
-                                    var clear = function () { h.removeAttribute("data-theme-switching"); };
-                                    requestAnimationFrame(function () { requestAnimationFrame(clear); });
-                                    setTimeout(clear, 200);
-                                });
-                            })();
-                        </script>
-
                         @await Component.InvokeAsync("NotificationBell")
 
                         <div class="zy-user-menu" data-zy-user-menu>

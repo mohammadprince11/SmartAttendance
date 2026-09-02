@@ -1,16 +1,15 @@
 /* Source: Pages/Shared/Components/NotificationBell/Default.cshtml */
 .zy-bell { position: relative; }
-    .zy-bell > summary {
-        list-style: none; cursor: pointer; display: inline-flex;
+    .zy-bell-button {
+        appearance: none; padding: 0; font: inherit; cursor: pointer; display: inline-flex;
         align-items: center; justify-content: center;
         width: 40px; height: 40px; border-radius: 12px;
-        background: var(--color-background, var(--zy-migrated-color-2703940bf1)));
+        background: var(--color-background, var(--zy-migrated-color-2703940bf1));
         border: 1px solid var(--color-border, var(--zy-migrated-color-edf6a60092));
         color: var(--color-text-primary, var(--zy-migrated-color-97e9c72026)); position: relative; transition: background .15s ease;
     }
-    .zy-bell > summary::-webkit-details-marker { display: none; }
-    .zy-bell > summary:hover { background: var(--color-primary-soft, var(--zy-migrated-color-edf6a60092)); }
-    .zy-bell[open] > summary { background: var(--color-primary-soft, var(--zy-migrated-color-edf6a60092)); }
+    .zy-bell-button:hover,
+    .zy-bell.is-open .zy-bell-button { background: var(--color-primary-soft, var(--zy-migrated-color-edf6a60092)); }
     .zy-bell-icon { width: 20px; height: 20px; }
     .zy-bell-badge {
         position: absolute; top: -4px; inset-inline-end: -4px; min-width: 18px; height: 18px;
@@ -19,10 +18,13 @@
         box-shadow: 0 0 0 2px var(--zy-bg, var(--zy-migrated-color-c17a96fa98));
     }
     .zy-bell-panel {
-        position: absolute; inset-inline-end: 0; top: calc(100% + 8px); width: 360px; max-width: 92vw;
+        position: fixed; width: min(360px, calc(100vw - 24px)); max-height: min(520px, calc(100vh - 84px));
         background: var(--color-surface, var(--zy-migrated-color-196166a6b7)); border: 1px solid var(--color-border, var(--zy-migrated-color-edf6a60092));
-        border-radius: 14px; box-shadow: 0 18px 48px var(--zy-migrated-color-844ffb311d); z-index: 1400; overflow: hidden;
+        border-radius: 14px; box-shadow: 0 18px 48px var(--zy-migrated-color-844ffb311d); z-index: 4000; overflow: hidden;
+        animation: zyBellIn .16s cubic-bezier(.2,.8,.25,1); transform-origin: top center;
     }
+    .zy-bell-panel[hidden] { display: none !important; }
+    @keyframes zyBellIn { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
     .zy-bell-head {
         display: flex; align-items: center; justify-content: space-between;
         padding: 12px 14px; border-bottom: 1px solid var(--zy-border, var(--zy-migrated-color-c201d2dab2));
@@ -34,7 +36,7 @@
     }
     .zy-bell-markall:hover { background: var(--color-background, var(--zy-migrated-color-2703940bf1))); }
     .zy-bell-markall[disabled] { opacity: .45; cursor: default; }
-    .zy-bell-list { max-height: 380px; overflow-y: auto; }
+    .zy-bell-list { max-height: min(380px, calc(100vh - 160px)); overflow-y: auto; overscroll-behavior: contain; }
     .zy-bell-item {
         display: block; padding: 11px 14px; text-decoration: none; color: inherit;
         border-bottom: 1px solid var(--zy-border, var(--zy-migrated-color-8caa693a1d));

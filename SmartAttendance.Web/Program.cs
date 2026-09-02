@@ -89,6 +89,7 @@ builder.Services.AddHttpClient<IAutomaticTextTranslator, AzureAutomaticTextTrans
     client.Timeout = TimeSpan.FromSeconds(45);
 });
 builder.Services.AddScoped<ILocalizationAutoTranslationService, LocalizationAutoTranslationService>();
+builder.Services.AddScoped<ICompanyDataLocalizationService, CompanyDataLocalizationService>();
 
 // مرفقات الموظفين الحسّاسة: حفظ خارج wwwroot + روابط تنزيل موقّعة + فحص malware
 // قبل الكتابة. في التطوير يمكن تعطيل المحرك صراحةً، أما بوابة الإنتاج فتفرضه.
@@ -294,6 +295,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             }
 
             if (!string.Equals(role, "Employee", StringComparison.OrdinalIgnoreCase)) return;
+
+            var isRememberedSession = context.Principal?.HasClaim(
+                SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.RememberMeClaimType,
+                bool.TrueString) == true;
+
+            if (!SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy
+                    .ShouldEnforceSessionTimeouts(isRememberedSession))
+            {
+                return;
+            }
 
             var now = DateTime.UtcNow;
             if (!context.Properties.Items.TryGetValue(

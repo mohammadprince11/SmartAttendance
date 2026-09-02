@@ -387,8 +387,18 @@ Write-Step '٥) نسخ لمجلّد الموقع'
 #     وهو ما حدث فعلاً بنشر 2026-08-07 وأسقط الموقع.
 #   • run-*.vbs / run-*.bat — مشغّلات المهمة المجدولة. حذفها يترك المهمة تنادي
 #     ملفاً غير موجود («Can not find script file»).
-#   • App_Data و uploads — بيانات ومرفقات المستخدمين، لا مخرجات بناء.
-$preserveDirs  = @('certs', 'App_Data', 'uploads', 'logs', 'keys')
+#   • App_Data وuploads وwwwroot\tenant-assets — بيانات ومرفقات وهوية الشركات،
+#     لا مخرجات بناء. tenant-assets داخل wwwroot لكنه يُكتب وقت التشغيل.
+$preserveDirs  = @(
+    'certs',
+    'App_Data',
+    'uploads',
+    'logs',
+    'keys',
+    # A nested relative /XD entry can still be traversed by robocopy /MIR;
+    # excluding the exact destination path protects runtime branding files.
+    (Join-Path $SitePath 'wwwroot\tenant-assets')
+)
 $preserveFiles = @('appsettings*.json', 'run-*.vbs', 'run-*.bat', '*.dev-backup', '*.pfx')
 
 robocopy $PublishDir $SitePath /MIR /XD $preserveDirs /XF $preserveFiles /NFL /NDL /NJH /NJS /NP | Out-Null

@@ -38,6 +38,13 @@
     {
         <div class="nxex-alert">@Model.StatusMessage</div>
     }
+    @if (!string.IsNullOrWhiteSpace(Model.InlineRequestError))
+    {
+        <div class="nxex-request-guard nxex-request-guard--inline" role="alert">
+            <strong>الطلب متوقف لحين إكمال ملف الموظف</strong>
+            <span>@Model.InlineRequestError</span>
+        </div>
+    }
 
     @if (Model.IsDemoMode)
     {
@@ -553,7 +560,7 @@
                         <button type="button" data-request-type="أوفر تايم">⏱️<span>أوفر تايم</span></button>
                     </div>
 
-                    <form method="post" asp-page-handler="CreateRequest" enctype="multipart/form-data" class="nxex-form nxex-request-form" data-request-form>
+                    <form method="post" asp-page-handler="CreateRequest" enctype="multipart/form-data" class="nxex-form nxex-request-form" data-request-form data-request-submit>
                         <input type="hidden" name="returnTab" value="requests" />
                         <input type="hidden" asp-for="RequestInput.RequestType" value="إجازة" data-request-type-input />
 
@@ -566,7 +573,7 @@
                         <div class="nxex-form-row">
                             <div>
                                 <label>من تاريخ *</label>
-                                <input asp-for="RequestInput.FromDate" type="date" />
+                                <input asp-for="RequestInput.FromDate" type="date" required data-request-required-label="تاريخ البداية" />
                             </div>
                             <div>
                                 <label>إلى تاريخ</label>
@@ -692,9 +699,25 @@
                                 </div>
                                 <p>@Model.DisplayValue(row.Reason)</p>
                                 <small>من @Model.DisplayDate(row.FromDate) إلى @Model.DisplayDate(row.ToDate) · تم الإرسال @Model.DisplayDate(row.CreatedAt)</small>
+                                @if (row.StartTime.HasValue || row.EndTime.HasValue || row.ActualCheckIn.HasValue || row.ActualCheckOut.HasValue)
+                                {
+                                    <small>وقت الطلب: @Model.DisplayClock(row.StartTime)@(row.EndTime.HasValue ? " → " + Model.DisplayClock(row.EndTime) : "")</small>
+                                    @if (row.ActualCheckIn.HasValue)
+                                    {
+                                        <small>بصمة الدخول: @row.ActualCheckIn.Value.ToString("yyyy-MM-dd HH:mm")</small>
+                                    }
+                                    @if (row.ActualCheckOut.HasValue)
+                                    {
+                                        <small>بصمة الخروج: @row.ActualCheckOut.Value.ToString("yyyy-MM-dd HH:mm")</small>
+                                    }
+                                    @if (!row.ActualCheckIn.HasValue && !row.ActualCheckOut.HasValue)
+                                    {
+                                        <small>لا توجد بصمة مسجلة ضمن تاريخ الطلب.</small>
+                                    }
+                                }
                                 @if (row.Status.Equals("Returned", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    <form method="post" asp-page-handler="ResubmitReturned" class="nxex-form nxex-return-form">
+                                    <form method="post" asp-page-handler="ResubmitReturned" class="nxex-form nxex-return-form" data-request-submit>
                                         <input type="hidden" name="id" value="@row.Id" />
                                         <textarea name="revisedReason" required>@row.Reason</textarea>
                                         <input type="date" name="revisedFrom" value="@(row.FromDate?.ToString("yyyy-MM-dd"))" />
@@ -792,7 +815,7 @@
             <div class="nxex-feedback-grid">
                 <section class="nxex-card">
                     <header class="nxex-card-head"><h2>إرسال شكوى أو مقترح</h2><span class="nxex-chip">موظف</span></header>
-                    <form method="post" asp-page-handler="Feedback" class="nxex-form">
+                    <form method="post" asp-page-handler="Feedback" class="nxex-form" data-request-submit>
                         <input type="hidden" name="returnTab" value="feedback" />
                         <label>النوع</label>
                         <select asp-for="Feedback.Type">
@@ -807,9 +830,9 @@
                             <option value="عالي">عالي</option>
                         </select>
                         <label>العنوان</label>
-                        <input asp-for="Feedback.Title" placeholder="اكتب عنوان مختصر" />
+                        <input asp-for="Feedback.Title" placeholder="اكتب عنوان مختصر" required data-request-required-label="العنوان" />
                         <label>التفاصيل</label>
-                        <textarea asp-for="Feedback.Message" placeholder="اكتب التفاصيل"></textarea>
+                        <textarea asp-for="Feedback.Message" placeholder="اكتب التفاصيل" required data-request-required-label="التفاصيل"></textarea>
                         <button type="submit">إرسال</button>
                     </form>
                 </section>
@@ -938,7 +961,7 @@
                 var catTypes = Model.ReqTypes.Where(x => x.CategoryId == cat.Id).ToList();
                 var isDefault = !cat.IsPickerEntry && !shownDefault;
                 if (isDefault) { shownDefault = true; }
-                <form method="post" asp-page-handler="CreateLeave" enctype="multipart/form-data"
+                <form method="post" asp-page-handler="CreateLeave" enctype="multipart/form-data" data-request-submit
                       class="nxex-leave-form" data-leave-panel="cat-@cat.Id"
                       data-picker-entry="@cat.IsPickerEntry.ToString().ToLower()" data-cat-name="@cat.Name"
                       hidden="@(isDefault ? null : "hidden")">
@@ -981,8 +1004,8 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
                             <span data-date-display>اختر التاريخ</span>
                         </button>
-                        <input type="hidden" name="from" data-dp-from required />
-                        <input type="hidden" name="to" data-dp-to required />
+                            <input type="hidden" name="from" data-dp-from required data-request-required-label="تاريخ البداية" />
+                            <input type="hidden" name="to" data-dp-to required data-request-required-label="تاريخ النهاية" />
                     </div>
 
                     <div class="nxex-daycount" data-daycount>عدد الأيام: <strong data-leave-days>—</strong></div>
@@ -992,7 +1015,7 @@
                     </div>
 
                     @* بوابة نسيان البصمة: تظهر فور اختيار التاريخ لنوع زمني ⟹ تُقفل الإرسال *@
-                    <div class="nxex-punch-block" data-punch-block hidden></div>
+                    <div class="nxex-punch-block" data-punch-block aria-live="polite" hidden></div>
 
                     <div class="nxex-form-row-2 nxex-time-row" hidden>
                         <div class="nxex-field">
@@ -1045,30 +1068,30 @@
         <div class="nxex-more-grid">
             @if (Model.ReqCategories.Any(c => !c.IsPickerEntry))
             {
-                <button type="button" class="nxex-more-item" data-open-leave-modal>
+                <button type="button" class="nxex-more-item" data-open-leave-modal data-request-entry>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V10l6-4 6 4v11M9 21v-5h6v5"/></svg>
                     <span>إجازة</span>
                 </button>
             }
-            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/MissingPunch?embed=1" data-embed-title="نسيان بصمة">
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/MissingPunch?embed=1" data-embed-title="نسيان بصمة" data-request-entry>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3m0 0 2 2m-2-2-2 2M7 8a5 5 0 0 1 10 0c0 2-1 3-1 5"/><circle cx="12" cy="12" r="9"/></svg>
                 <span>نسيان بصمة</span>
             </button>
-            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/DataChange?embed=1" data-embed-title="تعديل بياناتي">
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/DataChange?embed=1" data-embed-title="تعديل بياناتي" data-request-entry>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 <span>تعديل بياناتي</span>
             </button>
-            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/FinancialRequest?embed=1" data-embed-title="طلب مالي">
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/FinancialRequest?embed=1" data-embed-title="طلب مالي" data-request-entry>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 <span>طلب مالي</span>
             </button>
-            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/ShiftRequest?embed=1" data-embed-title="طلب مناوبة">
+            <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/ShiftRequest?embed=1" data-embed-title="طلب مناوبة" data-request-entry>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span>طلب مناوبة</span>
             </button>
             @foreach (var cat in Model.ReqCategories.Where(c => c.IsPickerEntry))
             {
-                <button type="button" class="nxex-more-item" data-open-cat="cat-@cat.Id">
+                <button type="button" class="nxex-more-item" data-open-cat="cat-@cat.Id" data-request-entry>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                     <span>@cat.Name</span>
                 </button>

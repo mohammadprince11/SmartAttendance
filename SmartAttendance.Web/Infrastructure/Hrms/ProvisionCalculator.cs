@@ -54,7 +54,7 @@ public static class ProvisionCalculator
         // 1) الموظفون النشطون + الأساسي + التعيين + التنظيم (استعلام واحد)
         var employees = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary, COALESCE(e.HireDate, e.JoiningDate) AS HireDate,

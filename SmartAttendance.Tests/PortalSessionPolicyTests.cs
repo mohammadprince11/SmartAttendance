@@ -58,4 +58,11 @@ public class PortalSessionPolicyTests
         Assert.Equal(30, PortalSessionPolicy.DefaultIdleMinutes);
         Assert.Equal(60, PortalSessionPolicy.DefaultLeaveSeconds);
     }
+
+    [Fact]
+    public void RememberedSession_DoesNotUseIdleOrLeaveLogout()
+    {
+        Assert.False(PortalSessionPolicy.ShouldEnforceSessionTimeouts(isRememberedSession: true));
+        Assert.True(PortalSessionPolicy.ShouldEnforceSessionTimeouts(isRememberedSession: false));
+    }
 }

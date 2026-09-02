@@ -77,6 +77,7 @@
   <data name="أيام العطل" xml:space="preserve"><value>ڕۆژانی پشوو</value></data>
   <data name="المواقع الجغرافية للموظفين" xml:space="preserve"><value>شوێنی جوگرافی کارمەندان</value></data>
   <data name="المسير" xml:space="preserve"><value>مووچە</value></data>
+  <data name="احتساب الرواتب" xml:space="preserve"><value>حیسابکردنی مووچە</value></data>
   <data name="رسوم الرواتب" xml:space="preserve"><value>هێڵکاری مووچە</value></data>
   <data name="استعلام القسائم" xml:space="preserve"><value>پرسیاری پسوڵەی مووچە</value></data>
   <data name="نظام المحاكاة" xml:space="preserve"><value>سیستەمی هاوشێوەکردن</value></data>
@@ -642,4 +643,13 @@
   <data name="25 – 35" xml:space="preserve"><value>25–35</value></data>
   <data name="35 – 45" xml:space="preserve"><value>35–45</value></data>
   <data name="45 فأكثر" xml:space="preserve"><value>45 و زیاتر</value></data>
+  <data name="فتح القائمة" xml:space="preserve"><value>کردنەوەی ڕێنوێنی</value></data>
+  <data name="إغلاق القائمة" xml:space="preserve"><value>داخستنی ڕێنوێنی</value></data>
+  <data name="صباح الخير" xml:space="preserve"><value>بەیانی باش</value></data>
+  <data name="مساء الخير" xml:space="preserve"><value>ئێوارە باش</value></data>
+  <data name="تعليم كل الإشعارات كمقروءة" xml:space="preserve"><value>هەموو ئاگادارکردنەوەکان وەک خوێندراوە دیاری بکە</value></data>
+  <data name="فارغ = تسمية المقياس" xml:space="preserve"><value>بەتاڵ = ناوی پێوەر</value></data>
+  <data name="الكود، الاسم، القسم..." xml:space="preserve"><value>کۆد، ناو، بەش...</value></data>
+  <data name="مسح الفلاتر" xml:space="preserve"><value>سڕینەوەی پاڵێوەرەکان</value></data>
+  <data name="عدد الأسطر في الصفحة" xml:space="preserve"><value>ژمارەی ڕیزەکان لە پەڕەدا</value></data>
 </root>

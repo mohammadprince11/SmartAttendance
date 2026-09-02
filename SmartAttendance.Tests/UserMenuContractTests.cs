@@ -65,6 +65,23 @@ public sealed class UserMenuContractTests
         Assert.Contains("id=\"employee-signature\"", employeeEdit, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EmployeeEdit_DefersEnglishNamesAndUsesTheDesignedSignaturePicker()
+    {
+        var employeeEdit = ReadWeb("Pages", "Employees", "Edit.cshtml");
+        var employeeEditModel = ReadWeb("Pages", "Employees", "Edit.cshtml.cs");
+
+        foreach (var property in new[] { "FirstNameEn", "SecondNameEn", "ThirdNameEn", "LastNameEn" })
+        {
+            Assert.DoesNotContain($"asp-for=\"Employee.{property}\"", employeeEdit, StringComparison.Ordinal);
+            Assert.Contains($"Employee.{property} = current.{property};", employeeEditModel, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("class=\"nxr-edit-signature-card\"", employeeEdit, StringComparison.Ordinal);
+        Assert.Contains("data-signature-file-name", employeeEdit, StringComparison.Ordinal);
+        Assert.Contains("RequiredFieldKeys.ExceptWith(DeferredTranslatedNameKeys)", employeeEditModel, StringComparison.Ordinal);
+    }
+
     private static string ReadWeb(params string[] parts) =>
         File.ReadAllText(Path.Combine(new[] { RepoRoot(), "SmartAttendance.Web" }.Concat(parts).ToArray()));
 

@@ -202,6 +202,7 @@ public class LoginModel : PageModel
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
             new("SessionIssuedUtc", issuedUtc.ToString("O")),
+            new(PortalSessionPolicy.RememberMeClaimType, RememberMe.ToString()),
             new(AccountSecurityStore.SecurityStampClaimType, securityStamp)
         };
 

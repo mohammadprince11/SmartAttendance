@@ -77,6 +77,7 @@
   <data name="أيام العطل" xml:space="preserve"><value>Holidays</value></data>
   <data name="المواقع الجغرافية للموظفين" xml:space="preserve"><value>Employee geolocations</value></data>
   <data name="المسير" xml:space="preserve"><value>Payroll</value></data>
+  <data name="احتساب الرواتب" xml:space="preserve"><value>Payroll calculation</value></data>
   <data name="رسوم الرواتب" xml:space="preserve"><value>Payroll charts</value></data>
   <data name="استعلام القسائم" xml:space="preserve"><value>Payslip inquiry</value></data>
   <data name="نظام المحاكاة" xml:space="preserve"><value>Payroll simulation</value></data>
@@ -642,4 +643,13 @@
   <data name="25 – 35" xml:space="preserve"><value>25–35</value></data>
   <data name="35 – 45" xml:space="preserve"><value>35–45</value></data>
   <data name="45 فأكثر" xml:space="preserve"><value>45 and above</value></data>
+  <data name="فتح القائمة" xml:space="preserve"><value>Open navigation</value></data>
+  <data name="إغلاق القائمة" xml:space="preserve"><value>Close navigation</value></data>
+  <data name="صباح الخير" xml:space="preserve"><value>Good morning</value></data>
+  <data name="مساء الخير" xml:space="preserve"><value>Good evening</value></data>
+  <data name="تعليم كل الإشعارات كمقروءة" xml:space="preserve"><value>Mark all notifications as read</value></data>
+  <data name="فارغ = تسمية المقياس" xml:space="preserve"><value>Blank = metric label</value></data>
+  <data name="الكود، الاسم، القسم..." xml:space="preserve"><value>Code, name, department...</value></data>
+  <data name="مسح الفلاتر" xml:space="preserve"><value>Clear filters</value></data>
+  <data name="عدد الأسطر في الصفحة" xml:space="preserve"><value>Rows per page</value></data>
 </root>

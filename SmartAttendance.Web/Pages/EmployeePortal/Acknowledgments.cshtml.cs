@@ -21,7 +21,7 @@ public class AcknowledgmentsModel : PageModel
 
     public AcknowledgmentsModel(ApplicationDbContext db) => _db = db;
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData(Key = "EmployeePortal.Acknowledgments.StatusMessage")] public string? StatusMessage { get; set; }
 
     [BindProperty(SupportsGet = true, Name = "open")] public int? OpenId { get; set; }
 

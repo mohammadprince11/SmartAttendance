@@ -18,7 +18,8 @@ public class FinancialRequestModel : PageModel
 
     public FinancialRequestModel(ApplicationDbContext db) => _db = db;
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData(Key = "EmployeePortal.FinancialRequest.StatusMessage")] public string? StatusMessage { get; set; }
+    public string? InlineRequestError { get; private set; }
 
     /// <summary>الأنواع المتاحة للموظف ذاتياً (بلا زيادة راتب).</summary>
     public IReadOnlyList<FinancialRequestStore.Kind> Kinds { get; private set; } =
@@ -31,10 +32,7 @@ public class FinancialRequestModel : PageModel
     {
         if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        HasEmployee = employeeId > 0;
-        if (employeeId > 0)
-            MyRequests = await FinancialRequestStore.ListAsync(
-                _db, CompanyScope.Unrestricted(), employeeId: employeeId);
+        await LoadAsync(employeeId);
         return Page();
     }
 
@@ -46,6 +44,16 @@ public class FinancialRequestModel : PageModel
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
             return RedirectToPage();
+        }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            StatusMessage = null;
+            InlineRequestError = profileEligibility.Message;
+            await LoadAsync(employeeId);
+            return Page();
         }
 
         var form = Request.Form;
@@ -76,6 +84,14 @@ public class FinancialRequestModel : PageModel
             ? $"تم إرسال طلب {FinancialRequestStore.KindLabel(kind)} وهو الآن قيد المراجعة."
             : "تعذّر إرسال الطلب.";
         return RedirectToPage();
+    }
+
+    private async Task LoadAsync(int employeeId)
+    {
+        HasEmployee = employeeId > 0;
+        if (!HasEmployee) return;
+        MyRequests = await FinancialRequestStore.ListAsync(
+            _db, CompanyScope.Unrestricted(), employeeId: employeeId);
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)

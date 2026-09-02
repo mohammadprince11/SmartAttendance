@@ -33,7 +33,14 @@
         </div>
     </header>
 
-    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    @if (!string.IsNullOrWhiteSpace(Model.InlineRequestError))
+    {
+        <div class="nxex-request-guard nxex-request-guard--inline" role="alert">
+            <strong>الطلب متوقف لحين إكمال ملف الموظف</strong>
+            <span>@Model.InlineRequestError</span>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
     {
         <div class="nxex-flash">@Model.StatusMessage</div>
     }
@@ -87,7 +94,7 @@
     <section class="nxex-card">
         @if (Model.Fields.Any())
         {
-            <form method="post" class="nxex-form" enctype="multipart/form-data">
+            <form method="post" class="nxex-form" enctype="multipart/form-data" data-request-submit data-request-requires-change>
                 <input type="hidden" name="editId" value="@Model.EditId" />
                 @* ===== الصورة الشخصية ===== *@
                 <div class="nxex-dc-photo">

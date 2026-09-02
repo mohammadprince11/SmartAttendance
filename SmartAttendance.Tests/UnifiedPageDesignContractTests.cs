@@ -136,8 +136,9 @@ public sealed class UnifiedPageDesignContractTests
             layout.LastIndexOf("zynora-refresh-2026.css", StringComparison.Ordinal) >
             layout.LastIndexOf("zynora-direction.css", StringComparison.Ordinal),
             "The refresh stylesheet must remain the final visual authority.");
-        Assert.Contains("data-theme=\"light\"", layout, StringComparison.Ordinal);
-        Assert.Contains("refresh-2026-v1", layout, StringComparison.Ordinal);
+        Assert.Contains("data-theme=\"dark\"", layout, StringComparison.Ordinal);
+        Assert.Contains("localStorage.setItem(\"ZY.Theme\", \"dark\")", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"zy-theme-toggle\"", layout, StringComparison.Ordinal);
 
         Assert.Contains("login-stage", login, StringComparison.Ordinal);
         Assert.Contains("login-visual", login, StringComparison.Ordinal);
@@ -156,6 +157,36 @@ public sealed class UnifiedPageDesignContractTests
         {
             Assert.Contains(selector, refresh, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void EmployeePortalShell_IsPinnedToTheSupportedDarkTheme()
+    {
+        var layout = ReadWeb("Pages", "Shared", "_EmployeePortalLayout.cshtml");
+
+        Assert.Contains("data-theme=\"dark\"", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"zy-theme-toggle\"", layout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ChangePassword_UsesCanonicalThemeSurfacesInsteadOfAWhiteFallback()
+    {
+        var css = ReadWeb("wwwroot", "css", "pages", "changepassword-c91cdc5956.css");
+
+        Assert.Contains("background:var(--surface-panel", css, StringComparison.Ordinal);
+        Assert.Contains("background:var(--surface-input", css, StringComparison.Ordinal);
+        Assert.Contains("color:var(--text-default", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("background:var(--card,var(--zy-white))", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PayrollCalculation_IsARegularPayrollMenuItemInsteadOfADetachedDrawerTitle()
+    {
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
+
+        Assert.Contains("<span>احتساب الرواتب</span>", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Payroll/Runs\" class=\"nexora-nav-link ky-drawer-title", layout, StringComparison.Ordinal);
+        Assert.Contains("/Payroll/Runs\" class=\"nexora-nav-link @(", layout, StringComparison.Ordinal);
     }
 
     [Fact]

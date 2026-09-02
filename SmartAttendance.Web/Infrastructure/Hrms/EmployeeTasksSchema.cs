@@ -60,19 +60,19 @@ END;
 
 IF NOT EXISTS (SELECT 1 FROM HrTaskTemplates)
 BEGIN
-    INSERT INTO HrTaskTemplates (ProcessType, Title, AssigneeRole, DueDays, SortOrder)
+    INSERT INTO HrTaskTemplates (ProcessType, Title, AssigneeRole, DueDays, SortOrder, IsActive, IsDeleted, CreatedAt)
     VALUES
-        (1, N'توقيع عقد العمل',                N'HR',            0, 10),
-        (1, N'استلام الوثائق المطلوبة',        N'HR',            1, 20),
-        (1, N'تسجيل بصمة الحضور',              N'HR',            0, 30),
-        (1, N'إنشاء حساب البريد والنظام',      N'IT',            1, 40),
-        (1, N'تسليم العهدة (جهاز/أدوات)',      N'IT',            2, 50),
-        (1, N'التعريف بالفريق والمدير',        N'المدير المباشر', 0, 60),
-        (2, N'استلام العهدة',                  N'IT',            0, 10),
-        (2, N'إلغاء الحسابات والصلاحيات',      N'IT',            0, 20),
-        (2, N'تصفية رصيد الإجازات',            N'HR',            1, 30),
-        (2, N'براءة الذمة المالية',            N'المالية',       2, 40),
-        (2, N'مقابلة الخروج',                  N'HR',            0, 50);
+        (1, N'توقيع عقد العمل',                N'HR',            0, 10, 1, 0, SYSUTCDATETIME()),
+        (1, N'استلام الوثائق المطلوبة',        N'HR',            1, 20, 1, 0, SYSUTCDATETIME()),
+        (1, N'تسجيل بصمة الحضور',              N'HR',            0, 30, 1, 0, SYSUTCDATETIME()),
+        (1, N'إنشاء حساب البريد والنظام',      N'IT',            1, 40, 1, 0, SYSUTCDATETIME()),
+        (1, N'تسليم العهدة (جهاز/أدوات)',      N'IT',            2, 50, 1, 0, SYSUTCDATETIME()),
+        (1, N'التعريف بالفريق والمدير',        N'المدير المباشر', 0, 60, 1, 0, SYSUTCDATETIME()),
+        (2, N'استلام العهدة',                  N'IT',            0, 10, 1, 0, SYSUTCDATETIME()),
+        (2, N'إلغاء الحسابات والصلاحيات',      N'IT',            0, 20, 1, 0, SYSUTCDATETIME()),
+        (2, N'تصفية رصيد الإجازات',            N'HR',            1, 30, 1, 0, SYSUTCDATETIME()),
+        (2, N'براءة الذمة المالية',            N'المالية',       2, 40, 1, 0, SYSUTCDATETIME()),
+        (2, N'مقابلة الخروج',                  N'HR',            0, 50, 1, 0, SYSUTCDATETIME());
 END;
 """);
     }

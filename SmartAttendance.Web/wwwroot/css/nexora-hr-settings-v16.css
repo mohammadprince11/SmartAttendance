@@ -836,3 +836,168 @@ body.nxhs-modal-open {
 .apt-delegation-form select,.apt-delegation-form input{min-height:40px}
 @media(max-width:1100px){.apt-delegation-form{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.apt-delegation-form{grid-template-columns:1fr}}
+
+/* --------------------------------------------------------------------------
+   Light theme contract
+
+   This stylesheet predates the shared theme tokens and was originally authored
+   as dark-only.  Keep that appearance as the default/dark contract, but map all
+   large surfaces and their text to the canonical theme tokens in light mode.
+   The explicit background-image reset is important: a light background-color
+   alone cannot override the legacy dark gradients.
+   -------------------------------------------------------------------------- */
+html[data-theme="light"] .nxhs-page {
+    --nxhs-line: var(--border-default);
+    --nxhs-text: var(--text-default);
+    --nxhs-muted: var(--text-muted);
+    --nxhs-cyan: var(--color-primary-text);
+    --nxhs-green: var(--color-success);
+    --nxhs-red: var(--color-danger);
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxhs-titlebar,
+html[data-theme="light"] .nxhs-hero,
+html[data-theme="light"] .nxhs-panel,
+html[data-theme="light"] .nxhs-card,
+html[data-theme="light"] .nxhs-delete-dialog,
+html[data-theme="light"] .apt-slide {
+    background-color: var(--surface-panel);
+    background-image: none;
+    border-color: var(--border-default);
+    color: var(--text-default);
+    box-shadow: var(--shadow);
+}
+
+html[data-theme="light"] .nxhs-titlebar h1,
+html[data-theme="light"] .nxhs-hero h1,
+html[data-theme="light"] .nxhs-panel h2,
+html[data-theme="light"] .nxhs-setting-section h2,
+html[data-theme="light"] .nxhs-subbox h3,
+html[data-theme="light"] .nxhs-notification-item h3,
+html[data-theme="light"] .nxhs-card strong,
+html[data-theme="light"] .nxhs-delete-dialog h2,
+html[data-theme="light"] .apt-slide h2 {
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxhs-titlebar a,
+html[data-theme="light"] .nxhs-hero span {
+    color: var(--color-primary-text);
+}
+
+html[data-theme="light"] .nxhs-panel p,
+html[data-theme="light"] .nxhs-helper,
+html[data-theme="light"] .nxhs-hero p,
+html[data-theme="light"] .nxhs-card small,
+html[data-theme="light"] .nxhs-delete-dialog p {
+    color: var(--text-muted);
+}
+
+html[data-theme="light"] .nxhs-duration-row,
+html[data-theme="light"] .nxhs-extension-row,
+html[data-theme="light"] .nxhs-option-row,
+html[data-theme="light"] .nxhs-subbox,
+html[data-theme="light"] .nxhs-setting-section,
+html[data-theme="light"] .nxhs-notification-item,
+html[data-theme="light"] .nxhs-inline-add,
+html[data-theme="light"] .nxhs-notif-grid b,
+html[data-theme="light"] .nxhs-segment {
+    background-color: var(--surface-raised);
+    background-image: none;
+    border-color: var(--border-default);
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxhs-notification-item header {
+    background: color-mix(in srgb, var(--surface-raised) 76%, var(--surface-panel));
+}
+
+html[data-theme="light"] .nxhs-field,
+html[data-theme="light"] .nxhs-field-row,
+html[data-theme="light"] .nxhs-days-field,
+html[data-theme="light"] .nxhs-level-select,
+html[data-theme="light"] .nxhs-notif-grid label,
+html[data-theme="light"] .nxhs-segment label,
+html[data-theme="light"] .nxhs-check-line,
+html[data-theme="light"] .nxhs-permission-grid label,
+html[data-theme="light"] .apt-delegation-form label {
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxhs-field input,
+html[data-theme="light"] .nxhs-field select,
+html[data-theme="light"] .nxhs-field-row select,
+html[data-theme="light"] .nxhs-days-field input,
+html[data-theme="light"] .nxhs-level-select select,
+html[data-theme="light"] .nxhs-inline-add input,
+html[data-theme="light"] .nxhs-inline-add select,
+html[data-theme="light"] .nxhs-reason-row input,
+html[data-theme="light"] .nxhs-reason-row select,
+html[data-theme="light"] .nxhs-search-head input,
+html[data-theme="light"] .nxhs-notif-grid input,
+html[data-theme="light"] .nxhs-notif-grid select,
+html[data-theme="light"] .apt-delegation-form input,
+html[data-theme="light"] .apt-delegation-form select {
+    background-color: var(--surface-input);
+    color: var(--text-default);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="light"] .nxhs-field select,
+html[data-theme="light"] .nxhs-field-row select,
+html[data-theme="light"] .nxhs-level-select select,
+html[data-theme="light"] .nxhs-inline-add select,
+html[data-theme="light"] .nxhs-reason-row select,
+html[data-theme="light"] .nxhs-notif-grid select {
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+        linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+}
+
+html[data-theme="light"] .nxhs-field select option,
+html[data-theme="light"] .nxhs-field-row select option,
+html[data-theme="light"] .nxhs-level-select select option,
+html[data-theme="light"] .nxhs-inline-add select option,
+html[data-theme="light"] .nxhs-reason-row select option,
+html[data-theme="light"] .nxhs-notif-grid select option {
+    background: var(--surface-panel);
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxhs-table th,
+html[data-theme="light"] .nxhs-table td {
+    color: var(--text-default);
+    border-color: var(--border-default);
+}
+
+html[data-theme="light"] .nxhs-table th {
+    background: var(--surface-raised);
+    color: var(--text-muted);
+}
+
+html[data-theme="light"] .nxhs-alert {
+    background: var(--color-success-soft);
+    border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+    color: var(--color-success);
+}
+
+html[data-theme="light"] .nxhs-delete-trigger,
+html[data-theme="light"] .nxhs-delete-form button,
+html[data-theme="light"] .nxhs-delete-x,
+html[data-theme="light"] .nxhs-delete-icon {
+    background: var(--color-danger-soft);
+    border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+    color: var(--color-danger);
+}
+
+html[data-theme="light"] .nxhs-delete-warning {
+    background: color-mix(in srgb, #d7b26d 14%, var(--surface-panel));
+    color: #745314;
+}
+
+html[data-theme="light"] .nxhs-modal-cancel {
+    background: var(--surface-raised);
+    border-color: var(--border-strong);
+    color: var(--text-default);
+}

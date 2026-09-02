@@ -62,20 +62,33 @@
                     <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
                     <img data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" src="@employeePhotoSrc" alt="Employee photo" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
                 </label>
-                <div class="nxr-edit-photo-info" id="employee-signature">
+                <div class="nxr-edit-photo-info">
                     <strong>صورة الموظف</strong>
                     <span>اختر صورة PNG أو JPG أو WEBP.</span>
                     <small>Max 5MB</small>
                 </div>
                 @* التوقيع يغذّي رمز {Employee-Signature-Url} بمنشئ الوثائق.
                    يُخزَّن بالمخزن المحميّ لا بمسار عام — أثرٌ قانونيّ لا يُكشف بلا مصادقة. *@
-                <div class="nxr-edit-photo-info">
-                    <strong>توقيع الموظف</strong>
-                    <input asp-for="EmployeeSignature" type="file" accept="image/png,image/jpeg,image/webp" />
-                    <small>يُستعمل بالوثائق المولَّدة · Max 2MB</small>
+                <div class="nxr-edit-signature-card" id="employee-signature">
+                    <div class="nxr-edit-signature-heading">
+                        <span class="nxr-edit-signature-icon" aria-hidden="true">✒</span>
+                        <div>
+                            <strong>توقيع الموظف</strong>
+                            <span>يُستخدم تلقائياً في الوثائق المولّدة.</span>
+                        </div>
+                    </div>
+                    <label class="nxr-edit-signature-picker" for="EmployeeSignature">
+                        <input asp-for="EmployeeSignature" class="nxr-edit-signature-input" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="employee-signature-help" />
+                        <span class="nxr-edit-signature-picker-action">اختيار صورة التوقيع</span>
+                        <span class="nxr-edit-signature-file-name" data-signature-file-name>لم يتم اختيار ملف</span>
+                    </label>
+                    <small id="employee-signature-help">PNG أو JPG أو WEBP · الحد الأقصى 2MB</small>
                     @if (!string.IsNullOrWhiteSpace(Model.CurrentSignatureUrl))
                     {
-                        <img src="@Model.CurrentSignatureUrl" alt="توقيع الموظف" class="zyu-dbe95fd5b2ba" />
+                        <figure class="nxr-edit-signature-preview">
+                            <img src="@Model.CurrentSignatureUrl" alt="التوقيع الحالي للموظف" class="zyu-dbe95fd5b2ba" />
+                            <figcaption>التوقيع الحالي</figcaption>
+                        </figure>
                     }
                 </div>
                 @* منسدلة بسيطة بدل مربّع اختيار بتسمية طويلة: «فعال داخل النظام»
@@ -115,22 +128,6 @@
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.LastName">اللقب (عربي)</label>
                     <input asp-for="Employee.LastName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.FirstNameEn">First Name</label>
-                    <input asp-for="Employee.FirstNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.SecondNameEn">Second Name</label>
-                    <input asp-for="Employee.SecondNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.ThirdNameEn">Third Name</label>
-                    <input asp-for="Employee.ThirdNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.LastNameEn">Last Name</label>
-                    <input asp-for="Employee.LastNameEn" dir="ltr" />
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
@@ -358,6 +355,19 @@
 
 @section Scripts {
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
+
+    <script>
+        (() => {
+            const input = document.querySelector(".nxr-edit-signature-input");
+            const fileName = document.querySelector("[data-signature-file-name]");
+            if (!input || !fileName) return;
+            input.addEventListener("change", () => {
+                fileName.textContent = input.files && input.files.length
+                    ? input.files[0].name
+                    : "لم يتم اختيار ملف";
+            });
+        })();
+    </script>
 
     <!-- سكربت القائمة الذكية للمدير المباشر -->
     <script>

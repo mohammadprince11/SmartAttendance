@@ -8,6 +8,13 @@
 *.log
 *.log.*
 TestResults/
+.mobile-tools/
+artifacts/mobile/*.apk
+artifacts/mobile/*.aab
+# Local QA screenshots and complete publish outputs are reproducible and can
+# contain runtime/user data. Keep them out of source control.
+/artifacts/
+/_artifacts/
 
 # Patch and temporary files
 *.zip

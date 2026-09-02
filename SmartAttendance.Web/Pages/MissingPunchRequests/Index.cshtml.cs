@@ -151,8 +151,29 @@ public class IndexModel : PageModel
             Source = "مباشر"
         };
 
+        var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (id == 0)
+        {
+            if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
+                    _db, req.EmployeeId, companyScope, HttpContext.RequestAborted))
+            {
+                TempData["MpMessage"] = "الموظف خارج نطاق صلاحيتك.";
+                TempData["MpOk"] = false;
+                return RedirectToPage(Route());
+            }
+
+            var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+                _db, req.EmployeeId, HttpContext.RequestAborted);
+            if (!profileEligibility.IsEligible)
+            {
+                TempData["MpMessage"] = profileEligibility.Message;
+                TempData["MpOk"] = false;
+                return RedirectToPage(Route());
+            }
+        }
+
         var (ok, message) = await MissingPunchRequestStore.SaveAsync(
-            _db, await _companyScope.GetAsync(), req, UserName);
+            _db, companyScope, req, UserName);
         TempData["MpMessage"] = message;
         TempData["MpOk"] = ok;
         return RedirectToPage(Route());

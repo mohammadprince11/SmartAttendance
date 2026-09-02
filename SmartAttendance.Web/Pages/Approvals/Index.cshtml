@@ -360,41 +360,6 @@
                                     </div>
                                 }
                             }
-                            else if (request.StartTime.HasValue)
-                            {
-                                @* طلب بوقت (مغادرة/أوفرتايم/مغادرة عمل): يُظهر التاريخ والوقت والساعات *@
-                                <div class="apv-sect">تفاصيل الطلب</div>
-                                <div class="apv-frow">
-                                    <span class="apv-fbody">
-                                        <span class="lbl">التاريخ</span>
-                                        <span class="val apv-dates">@request.FromDate?.ToString("yyyy-MM-dd")</span>
-                                    </span>
-                                </div>
-                                <div class="apv-frow">
-                                    <span class="apv-fbody">
-                                        <span class="lbl">الوقت</span>
-                                        <span class="val apv-dates">@T(request.StartTime)@(request.EndTime.HasValue ? " → " + T(request.EndTime) : "")</span>
-                                    </span>
-                                </div>
-                                @if (request.EndTime.HasValue)
-                                {
-                                    <div class="apv-frow">
-                                        <span class="apv-fbody">
-                                            <span class="lbl">المدة</span>
-                                            <span class="val"><span class="apv-new">@Dur(request.StartTime.Value, request.EndTime.Value)</span></span>
-                                        </span>
-                                    </div>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(request.Reason))
-                                {
-                                    <div class="apv-frow">
-                                        <span class="apv-fbody">
-                                            <span class="lbl">السبب</span>
-                                            <span class="val apv-reason">@request.Reason</span>
-                                        </span>
-                                    </div>
-                                }
-                            }
                             else if (request.FromDate.HasValue)
                             {
                                 <div class="apv-sect">تفاصيل الطلب</div>
@@ -426,6 +391,54 @@
                                         <span class="val apv-reason">@(string.IsNullOrWhiteSpace(request.Reason) ? "لا توجد تفاصيل إضافية." : request.Reason)</span>
                                     </span>
                                 </div>
+                            }
+
+                            @* الوقت والبصمات مستقلان عن نوع الطلب، حتى يظهران أيضاً
+                               في الطلبات المخصصة التي تحتوي حقولاً إضافية. *@
+                            @if (request.StartTime.HasValue || request.EndTime.HasValue || request.ActualCheckIn.HasValue || request.ActualCheckOut.HasValue)
+                            {
+                                <div class="apv-sect">وقت الطلب والبصمات المسجلة</div>
+                                <div class="apv-frow">
+                                    <span class="apv-fbody">
+                                        <span class="lbl">وقت الطلب</span>
+                                        <span class="val apv-dates">@T(request.StartTime)@(request.EndTime.HasValue ? " → " + T(request.EndTime) : "")</span>
+                                    </span>
+                                </div>
+                                @if (request.StartTime.HasValue && request.EndTime.HasValue)
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">المدة</span>
+                                            <span class="val"><span class="apv-new">@Dur(request.StartTime.Value, request.EndTime.Value)</span></span>
+                                        </span>
+                                    </div>
+                                }
+                                @if (request.ActualCheckIn.HasValue)
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">بصمة الدخول</span>
+                                            <span class="val apv-dates">@request.ActualCheckIn.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                        </span>
+                                    </div>
+                                }
+                                @if (request.ActualCheckOut.HasValue)
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="lbl">بصمة الخروج</span>
+                                            <span class="val apv-dates">@request.ActualCheckOut.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                        </span>
+                                    </div>
+                                }
+                                @if (!request.ActualCheckIn.HasValue && !request.ActualCheckOut.HasValue)
+                                {
+                                    <div class="apv-frow">
+                                        <span class="apv-fbody">
+                                            <span class="val apv-reason">لا توجد بصمة مسجلة ضمن تاريخ الطلب.</span>
+                                        </span>
+                                    </div>
+                                }
                             }
 
                             @if (canAct)

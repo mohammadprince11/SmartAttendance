@@ -69,8 +69,14 @@ public class IndexModel : PageModel
     [BindProperty]
     public SelfServiceRequestInput RequestInput { get; set; } = new();
 
-    [TempData]
+    [TempData(Key = "EmployeePortal.Index.StatusMessage")]
     public string? StatusMessage { get; set; }
+
+    /// <summary>
+    /// خطأ يخصّ محاولة الطلب الحالية فقط. لا يُحفظ في TempData كي لا ينتقل إلى
+    /// صفحات أو تبويبات أخرى.
+    /// </summary>
+    public string? InlineRequestError { get; private set; }
 
     public bool IsDemoMode { get; private set; }
     public string Initials => GetInitials(Employee.FullName);
@@ -89,7 +95,7 @@ public class IndexModel : PageModel
     {
         Tab = NormalizeTab(tab);
         await LoadAsync();
-        StatusMessage = punch switch
+        var punchMessage = punch switch
         {
             "in" => "سُجّلت بصمة الحضور عبر الإنترنت — تدخل الحضور عند «تحديث الحضور».",
             "out" => "سُجّلت بصمة الانصراف عبر الإنترنت — تدخل الحضور عند «تحديث الحضور».",
@@ -97,9 +103,31 @@ public class IndexModel : PageModel
             "dup" => "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة.",
             "geo" => "رُفضت البصمة: أنت خارج نطاق موقع العمل المحدد لك (أو لم يصل موقعك — تأكد من السماح بالوصول للموقع).",
             "bio" => "رُفضت البصمة: مطلوب تأكيد بيولوجي (بصمة/وجه الجهاز) — أعد المحاولة واقبل طلب البصمة عند ظهوره.",
-            _ => StatusMessage
+            _ => null
         };
+        // لا نعيد إسناد رسالة TempData المقروءة لنفسها؛ ذلك كان يحفظها من جديد
+        // ويجعل التنبيه عالقاً عند التنقّل بين كل صفحات البوابة.
+        if (punchMessage is not null)
+            StatusMessage = punchMessage;
         return Page();
+    }
+
+    /// <summary>فحص خفيف للواجهة قبل فتح أي نموذج طلب؛ الإنفاذ الحاسم يبقى في POST.</summary>
+    public async Task<IActionResult> OnGetRequestEligibilityAsync()
+    {
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        var employeeId = await ResolveEmployeeIdAsync();
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext,
+            employeeId,
+            HttpContext.RequestAborted);
+
+        return new JsonResult(new
+        {
+            eligible = eligibility.IsEligible,
+            message = eligibility.Message,
+            missingFields = eligibility.MissingFields
+        });
     }
 
     public async Task<IActionResult> OnPostReadAnnouncementAsync(
@@ -133,6 +161,11 @@ public class IndexModel : PageModel
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
             return RedirectToPage(new { tab = returnTab ?? "feedback" });
         }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+            return await RequestProfileBlockedAsync(profileEligibility);
 
         var type = string.IsNullOrWhiteSpace(Feedback.Type) ? "اقتراح" : Feedback.Type.Trim();
         var priority = string.IsNullOrWhiteSpace(Feedback.Priority) ? "متوسط" : Feedback.Priority.Trim();
@@ -255,6 +288,11 @@ VALUES (@PollId, @OptionId, @EmployeeId, SYSUTCDATETIME());
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
 
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+            return await RequestProfileBlockedAsync(profileEligibility);
+
         var type = (RequestInput.RequestType ?? string.Empty).Trim();
         var fromDate = RequestInput.FromDate;
         var toDate = RequestInput.ToDate;
@@ -362,6 +400,10 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     {
         var employeeId=await ResolveEmployeeIdAsync();
         if (employeeId<=0) return Forbid();
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+            return await RequestProfileBlockedAsync(profileEligibility);
         var result=await ApprovalWorkflowEngine.ResubmitReturnedAsync(
             _dbContext,id,employeeId,revisedReason??string.Empty,revisedFrom,revisedTo);
         StatusMessage=result.Message;
@@ -398,6 +440,11 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             StatusMessage = "تعذّر تحديد الموظف.";
             return RedirectToPage(new { tab = "requests" });
         }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+            return await RequestProfileBlockedAsync(profileEligibility);
 
         var typeLabel = (reqType ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(typeLabel))
@@ -545,6 +592,11 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
 
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+            return await RequestProfileBlockedAsync(profileEligibility);
+
         var form = Request.Form;
         DateTime? punchAt = null;
         if (DateOnly.TryParse(form["MpDate"], out var d) && TimeOnly.TryParse(form["MpTime"], out var tm))
@@ -601,33 +653,73 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     private static string IncompletePunchMessage(string day) =>
         $"تعذّر تقديم الطلب: يوم {day} يحمل بصمة ناقصة (نسيان بصمة) في سجل الحضور. يجب معالجة البصمة أولاً قبل تقديم أي طلب بوقت لذلك اليوم.";
 
+    private sealed record PunchDaySummary(
+        DateOnly Date,
+        IReadOnlyList<PunchTypingEngine.TypedPunch> Punches)
+    {
+        public bool IsIncomplete => Punches.Count % 2 != 0;
+    }
+
     /// <summary>
-    /// يبحث عن أول يوم في المدى يحمل «بصمة ناقصة» (دخول بلا خروج) — محسوباً حياً من
-    /// البصمات الخام AttendanceRecords بنفس دلالة المحرّك (MIN(دخول) موجود وMAX(خروج)
-    /// معدوم)، فلا يعتمد على جدول اليوميات المشتق ويمسك يوم اليوم الجاري قبل تحليله.
-    /// يُرجِع اليوم بصيغة yyyy-MM-dd أو null إن كانت كل الأيام مكتملة البصمة.
+    /// يقرأ كل بصمات المدى ويصنّفها بنفس محرك الدخول/الخروج المستخدم في شاشة الحضور.
+    /// هذا مهم خصوصاً لبصمة الموبايل: بصمة الخروج تُخزّن في صف يكون فيه CheckIn وCheckOut
+    /// متساويين، لذلك لا يصح اعتبار امتلاء العمودين وحده دليلاً على اكتمال اليوم.
     /// </summary>
-    private async Task<string?> FindIncompletePunchDayAsync(int employeeId, DateOnly from, DateOnly to)
+    private async Task<List<PunchDaySummary>> LoadPunchDaySummariesAsync(
+        int employeeId, DateOnly from, DateOnly to)
     {
         if (to < from) (from, to) = (to, from);
-        return await HrmsDatabase.ScalarAsync<string>(
+
+        var rows = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
-SELECT TOP 1 CONVERT(varchar(10), AttendanceDate, 23)
+SELECT AttendanceDate, CheckIn, CheckOut
 FROM AttendanceRecords
 WHERE EmployeeId = @Emp
   AND AttendanceDate BETWEEN @From AND @To
   AND ISNULL(IsDeleted, 0) = 0
-GROUP BY AttendanceDate
-HAVING MIN(CheckIn) IS NOT NULL AND MAX(CheckOut) IS NULL
-ORDER BY AttendanceDate;
+ORDER BY AttendanceDate, CheckIn, CheckOut;
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Emp", employeeId);
                 HrmsDatabase.AddParameter(command, "@From", from);
                 HrmsDatabase.AddParameter(command, "@To", to);
+            },
+            reader => new
+            {
+                Date = HrmsDatabase.GetDateOnly(reader, "AttendanceDate"),
+                CheckIn = HrmsDatabase.GetDateTime(reader, "CheckIn"),
+                CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")
             });
+
+        return rows
+            .Where(row => row.Date.HasValue)
+            .GroupBy(row => row.Date!.Value)
+            .Select(group =>
+            {
+                var times = new List<DateTime>();
+                foreach (var row in group)
+                {
+                    if (row.CheckIn.HasValue) times.Add(row.CheckIn.Value);
+                    if (row.CheckOut.HasValue && row.CheckOut != row.CheckIn) times.Add(row.CheckOut.Value);
+                }
+
+                return new PunchDaySummary(group.Key, PunchTypingEngine.Derive(times.Distinct()));
+            })
+            .OrderBy(day => day.Date)
+            .ToList();
+    }
+
+    /// <summary>
+    /// يبحث عن أول يوم في المدى يحمل عدداً فردياً من البصمات بعد تصنيفها زمنياً؛ أي
+    /// دخولاً بلا خروج مقابل. يُرجِع اليوم بصيغة yyyy-MM-dd أو null عند اكتمال المدى.
+    /// </summary>
+    private async Task<string?> FindIncompletePunchDayAsync(int employeeId, DateOnly from, DateOnly to)
+    {
+        var incomplete = (await LoadPunchDaySummariesAsync(employeeId, from, to))
+            .FirstOrDefault(day => day.IsIncomplete);
+        return incomplete?.Date.ToString("yyyy-MM-dd");
     }
 
     /// <summary>
@@ -642,10 +734,29 @@ ORDER BY AttendanceDate;
             return new JsonResult(new { blocked = false });
         if (!DateOnly.TryParse(to, out var t)) t = f;
 
-        var day = await FindIncompletePunchDayAsync(employeeId, f, t);
-        return string.IsNullOrEmpty(day)
-            ? new JsonResult(new { blocked = false })
-            : new JsonResult(new { blocked = true, day, message = IncompletePunchMessage(day) });
+        var summaries = await LoadPunchDaySummariesAsync(employeeId, f, t);
+        var incomplete = summaries.FirstOrDefault(day => day.IsIncomplete);
+        var day = incomplete?.Date.ToString("yyyy-MM-dd");
+        var punches = summaries.Select(summary => new
+        {
+            date = summary.Date.ToString("yyyy-MM-dd"),
+            checkIns = summary.Punches
+                .Where(punch => punch.Type == "In")
+                .Select(punch => punch.At.ToString("HH:mm"))
+                .ToArray(),
+            checkOuts = summary.Punches
+                .Where(punch => punch.Type == "Out")
+                .Select(punch => punch.At.ToString("HH:mm"))
+                .ToArray()
+        }).ToArray();
+
+        return new JsonResult(new
+        {
+            blocked = !string.IsNullOrEmpty(day),
+            day,
+            message = string.IsNullOrEmpty(day) ? null : IncompletePunchMessage(day),
+            punches
+        });
     }
 
     /// <summary>
@@ -662,6 +773,11 @@ ORDER BY AttendanceDate;
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
             return RedirectToPage(new { tab = returnTab ?? "requests" });
         }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+            return await RequestProfileBlockedAsync(profileEligibility);
 
         await DataChangeRequestStore.EnsureAsync(_dbContext);
         var editable = await DataChangeRequestStore.ListEditableAsync(_dbContext, employeeId);
@@ -1168,6 +1284,17 @@ FROM EmployeeViolationCases v WHERE v.Id = @Id AND v.EmployeeId = @EmployeeId;
         return 0;
     }
 
+    private async Task<IActionResult> RequestProfileBlockedAsync(
+        EmployeeRequestEligibility.Result eligibility)
+    {
+        // رسالة هذه المحاولة لا تدخل TempData ولا تعيش بعد الصفحة الحالية.
+        StatusMessage = null;
+        InlineRequestError = eligibility.Message;
+        Tab = "requests";
+        await LoadAsync();
+        return Page();
+    }
+
     private async Task<EmployeePortalEmployee?> LoadEmployeeAsync(int employeeId)
     {
         var list = await HrmsDatabase.QueryAsync(
@@ -1356,16 +1483,34 @@ ORDER BY DisplayOrder, Id;
             _dbContext,
             """
 SELECT TOP 15
-    Id,
-    RequestType,
-    CreatedAt,
-    FromDate,
-    ToDate,
-    ISNULL(Reason, '') AS Reason,
-    Status
-FROM SelfServiceRequests
-WHERE EmployeeId = @EmployeeId
-ORDER BY CreatedAt DESC, Id DESC;
+    r.Id,
+    r.RequestType,
+    r.CreatedAt,
+    r.FromDate,
+    r.ToDate,
+    r.StartTime,
+    r.EndTime,
+    punches.ActualCheckIn,
+    punches.ActualCheckOut,
+    ISNULL(r.Reason, '') AS Reason,
+    r.Status
+FROM SelfServiceRequests r
+OUTER APPLY
+(
+    SELECT
+        MIN(CASE
+                WHEN ar.CheckOut IS NULL OR ar.CheckOut <> ar.CheckIn
+                    THEN ar.CheckIn
+            END) AS ActualCheckIn,
+        MAX(ar.CheckOut) AS ActualCheckOut
+    FROM AttendanceRecords ar
+    WHERE ar.EmployeeId = r.EmployeeId
+      AND ISNULL(ar.IsDeleted, 0) = 0
+      AND ar.AttendanceDate >= CAST(COALESCE(r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
+      AND ar.AttendanceDate <= CAST(COALESCE(r.ToDate, r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
+) punches
+WHERE r.EmployeeId = @EmployeeId
+ORDER BY r.CreatedAt DESC, r.Id DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
             reader => new EmployeePortalRequest
@@ -1375,6 +1520,10 @@ ORDER BY CreatedAt DESC, Id DESC;
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt"),
                 FromDate = HrmsDatabase.GetDateTime(reader, "FromDate"),
                 ToDate = HrmsDatabase.GetDateTime(reader, "ToDate"),
+                StartTime = HrmsDatabase.GetTimeSpan(reader, "StartTime"),
+                EndTime = HrmsDatabase.GetTimeSpan(reader, "EndTime"),
+                ActualCheckIn = HrmsDatabase.GetDateTime(reader, "ActualCheckIn"),
+                ActualCheckOut = HrmsDatabase.GetDateTime(reader, "ActualCheckOut"),
                 Reason = HrmsDatabase.GetString(reader, "Reason"),
                 Status = HrmsDatabase.GetString(reader, "Status")
             });
@@ -1535,6 +1684,8 @@ ORDER BY CreatedAt DESC, Id DESC;
 
     public string DisplayDate(DateTime? date) => date.HasValue ? date.Value.ToString("dd/MM/yyyy") : "-";
     public string DisplayTime(DateTime? date) => date.HasValue ? date.Value.ToString("HH:mm") : "-";
+    public string DisplayClock(TimeSpan? time) =>
+        time.HasValue ? $"{(int)time.Value.TotalHours:00}:{time.Value.Minutes:00}" : "-";
     public string DisplayValue(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     public string DisplayMoney(decimal value) => value <= 0 ? "غير مدخل" : $"IQD {value:N0}";
 
@@ -1703,6 +1854,10 @@ ORDER BY CreatedAt DESC, Id DESC;
         public DateTime? CreatedAt { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public TimeSpan? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
+        public DateTime? ActualCheckIn { get; set; }
+        public DateTime? ActualCheckOut { get; set; }
         public string Reason { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
     }

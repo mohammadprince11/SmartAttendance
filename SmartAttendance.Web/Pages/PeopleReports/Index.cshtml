@@ -397,120 +397,153 @@
     }
 </div>
 
-@* ---------------- Slide-over: report builder (Kayan-style) ---------------- *@
-<aside class="hrms-slideover wide" id="report-builder" aria-hidden="true">
+@* ---------------- Full-page report builder workspace ---------------- *@
+<aside class="hrms-slideover wide rep-builder" id="report-builder" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="builder-title">
     <div class="hrms-slideover-head">
-        <h2 id="builder-title">تقرير جديد</h2>
+        <div>
+            <h2 id="builder-title">تقرير جديد</h2>
+            <p>أنشئ التقرير وحدد بياناته وأعمدته ومرشحاته من مساحة عمل واحدة.</p>
+        </div>
         <button type="button" class="hrms-slideover-close" data-hrms-close>×</button>
     </div>
     <div class="hrms-slideover-body">
-        <form method="post" action="@Model.SelfPath?handler=CreateReport" class="hrms-page" onsubmit="return repCollectColumns();">
+        <form method="post" action="@Model.SelfPath?handler=CreateReport" class="hrms-page rep-builder-form" onsubmit="return repCollectColumns();">
             <input type="hidden" name="id" id="rep-edit-id" value="0" />
-            <div class="hrms-field">
-                <label>الشركة</label>
-                <select name="companyId" id="rep-company" required>
-                    <option value="">اختر الشركة</option>
-                    @foreach (var company in Model.Companies)
-                    {
-                        <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="hrms-field">
-                <label>اسم التقرير</label>
-                <input name="name" id="rep-name" required placeholder="مثال: هواتف موظفي الفروع" />
-            </div>
-            <div class="hrms-field">
-                <label>الوصف (اختياري)</label>
-                <input name="description" id="rep-description" placeholder="وصف مختصر للتقرير" />
-            </div>
-            <div class="hrms-field">
-                <label>من يمكنه مشاهدة هذا التقرير</label>
-                <select name="visibility" id="rep-visibility">
-                    <option value="me">أنا فقط</option>
-                    <option value="everyone">الجميع</option>
-                    <option value="specific">أشخاص محددون</option>
-                </select>
-            </div>
-            <div class="hrms-field zyu-6aa34d7432e7" id="rep-shared-with-field">
-                <label>اختر الأشخاص (Ctrl لتحديد أكثر من شخص)</label>
-                <select name="sharedWith" id="rep-shared-with" multiple size="5">
-                    @foreach (var shareUser in Model.ShareUserOptions)
-                    {
-                        <option value="@shareUser">@shareUser</option>
-                    }
-                </select>
-            </div>
-            @* نشر التقرير ببوابة الموظف — الموظف يرى صفوفه هو فقط لا صفوف زملائه *@
-            <div class="hrms-field">
-                <label class="zyu-a4e017b7b0ef">
-                    <input type="checkbox" name="shareWithEmployees" value="true" id="rep-share-ess" />
-                    نشره ببوابة الموظف
-                </label>
-                <p class="rep-dnd-hint">الموظف يرى <b>صفوفه هو فقط</b> من هذا التقرير، لا صفوف زملائه.</p>
-            </div>
-            <div class="hrms-field">
-                <label>أعمدة التقرير</label>
-                <p class="rep-dnd-hint">اختر المودل أولاً، ثم اسحب الحقل وأفلته بـ«أعمدة التقرير» (أو انقره). التبديل بين المودلات يحتفظ باختياراتك لكل مودل.</p>
-                <div class="rep-dnd">
-                    <div class="rep-dnd-panel">
-                        <select name="datasetKey" id="builder-dataset" class="rep-model-select">
-                            @foreach (var dataset in Model.Datasets)
+            <section class="rep-builder-section">
+                <div class="rep-builder-section-head">
+                    <span class="rep-builder-step">1</span>
+                    <div><h3>بيانات التقرير</h3><p>المعلومات الأساسية وصلاحية مشاهدة التقرير.</p></div>
+                </div>
+                <div class="rep-builder-basics">
+                    <div class="hrms-field">
+                        <label>الشركة</label>
+                        <select name="companyId" id="rep-company" required>
+                            <option value="">اختر الشركة</option>
+                            @foreach (var company in Model.Companies)
                             {
-                                <option value="@dataset.Key">@dataset.Label</option>
+                                <option value="@company.Id" selected="@(Model.CompanyId == company.Id ? "selected" : null)">@company.Name</option>
                             }
                         </select>
-                        <div class="rep-field-search">
-                            <span>&#128269;</span>
-                            <input type="search" id="rep-field-search" placeholder="بحث" autocomplete="off" />
-                        </div>
-                        <div id="rep-available" class="rep-pool"></div>
                     </div>
-                    <div class="rep-dnd-panel">
-                        <span class="rep-panel-title">أعمدة التقرير (بالترتيب)</span>
-                        <div id="rep-selected" class="rep-drop"></div>
+                    <div class="hrms-field">
+                        <label>اسم التقرير</label>
+                        <input name="name" id="rep-name" required placeholder="مثال: هواتف موظفي الفروع" />
+                    </div>
+                    <div class="hrms-field rep-builder-description">
+                        <label>الوصف (اختياري)</label>
+                        <input name="description" id="rep-description" placeholder="وصف مختصر للتقرير" />
+                    </div>
+                    <div class="hrms-field">
+                        <label>من يمكنه مشاهدة هذا التقرير</label>
+                        <select name="visibility" id="rep-visibility">
+                            <option value="me">أنا فقط</option>
+                            <option value="everyone">الجميع</option>
+                            <option value="specific">أشخاص محددون</option>
+                        </select>
+                    </div>
+                    <div class="hrms-field zyu-6aa34d7432e7 rep-builder-shared" id="rep-shared-with-field">
+                        <label>اختر الأشخاص (Ctrl لتحديد أكثر من شخص)</label>
+                        <select name="sharedWith" id="rep-shared-with" multiple size="5">
+                            @foreach (var shareUser in Model.ShareUserOptions)
+                            {
+                                <option value="@shareUser">@shareUser</option>
+                            }
+                        </select>
+                    </div>
+                    @* نشر التقرير ببوابة الموظف — الموظف يرى صفوفه هو فقط لا صفوف زملائه *@
+                    <div class="hrms-field rep-builder-portal">
+                        <label class="zyu-a4e017b7b0ef">
+                            <input type="checkbox" name="shareWithEmployees" value="true" id="rep-share-ess" />
+                            نشره ببوابة الموظف
+                        </label>
+                        <p class="rep-dnd-hint">الموظف يرى <b>صفوفه هو فقط</b> من هذا التقرير، لا صفوف زملائه.</p>
                     </div>
                 </div>
+            </section>
+
+            <div class="rep-builder-workspace-grid">
+                <section class="rep-builder-section">
+                    <div class="rep-builder-section-head">
+                        <span class="rep-builder-step">2</span>
+                        <div><h3>أعمدة التقرير</h3><p>اختر المودل ثم انقل الحقول ورتبها.</p></div>
+                    </div>
+                    <div class="hrms-field">
+                        <p class="rep-dnd-hint">اختر المودل أولاً، ثم اسحب الحقل وأفلته بـ«أعمدة التقرير» (أو انقره). التبديل بين المودلات يحتفظ باختياراتك لكل مودل.</p>
+                        <div class="rep-dnd">
+                            <div class="rep-dnd-panel">
+                                <select name="datasetKey" id="builder-dataset" class="rep-model-select">
+                                    @foreach (var dataset in Model.Datasets)
+                                    {
+                                        <option value="@dataset.Key">@dataset.Label</option>
+                                    }
+                                </select>
+                                <div class="rep-field-search">
+                                    <span>&#128269;</span>
+                                    <input type="search" id="rep-field-search" placeholder="بحث" autocomplete="off" />
+                                </div>
+                                <div id="rep-available" class="rep-pool"></div>
+                            </div>
+                            <div class="rep-dnd-panel">
+                                <span class="rep-panel-title">أعمدة التقرير (بالترتيب)</span>
+                                <div id="rep-selected" class="rep-drop"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rep-builder-section">
+                    <div class="rep-builder-section-head">
+                        <span class="rep-builder-step">3</span>
+                        <div><h3>مرشحات التقرير</h3><p>حدد الحقول التي ستظهر في البحث المتقدم.</p></div>
+                    </div>
+                    <div class="hrms-field">
+                        <p class="rep-dnd-hint">اسحب الحقول التي تريدها كأداة بحث متقدم عند تشغيل التقرير — تظهر بدرج «بحث وتصفية».</p>
+                        <div class="rep-dnd">
+                            <div class="rep-dnd-panel">
+                                <div class="rep-field-search">
+                                    <span>&#128269;</span>
+                                    <input type="search" id="rep-filter-search" placeholder="بحث" autocomplete="off" />
+                                </div>
+                                <div id="rep-filter-available" class="rep-pool"></div>
+                            </div>
+                            <div class="rep-dnd-panel">
+                                <span class="rep-panel-title">مرشحات التقرير</span>
+                                <div id="rep-filter-selected" class="rep-drop"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <div class="hrms-field">
-                <label>إختر مرشح التقرير (اختياري)</label>
-                <p class="rep-dnd-hint">اسحب الحقول التي تريدها كأداة بحث متقدم عند تشغيل التقرير — تظهر بدرج «بحث وتصفية».</p>
-                <div class="rep-dnd">
-                    <div class="rep-dnd-panel">
-                        <div class="rep-field-search">
-                            <span>&#128269;</span>
-                            <input type="search" id="rep-filter-search" placeholder="بحث" autocomplete="off" />
-                        </div>
-                        <div id="rep-filter-available" class="rep-pool"></div>
+            <section class="rep-builder-section">
+                <div class="rep-builder-section-head">
+                    <span class="rep-builder-step">4</span>
+                    <div><h3>ترتيب النتائج</h3><p>إعدادات اختيارية لتجميع السجلات وترتيبها.</p></div>
+                </div>
+                <div class="hrms-form-grid rep-builder-ordering">
+                    <div class="hrms-field">
+                        <label>تجميع النتائج حسب (اختياري)</label>
+                        <select name="groupColumnKey" id="rep-group-column"><option value="">بدون تجميع</option></select>
                     </div>
-                    <div class="rep-dnd-panel">
-                        <span class="rep-panel-title">مرشحات التقرير</span>
-                        <div id="rep-filter-selected" class="rep-drop"></div>
+                    <div class="hrms-field">
+                        <label>ترتيب النتائج حسب (اختياري)</label>
+                        <select name="sortColumnKey" id="rep-sort-column"><option value="">الترتيب الأصلي</option></select>
+                    </div>
+                    <div class="hrms-field rep-builder-sort-direction">
+                        <label class="zyu-a4e017b7b0ef">
+                            <input type="checkbox" name="sortDescending" value="true" id="rep-sort-desc" />
+                            ترتيب تنازلي
+                        </label>
                     </div>
                 </div>
-            </div>
-
-            <div class="hrms-form-grid">
-                <div class="hrms-field">
-                    <label>تجميع النتائج حسب (اختياري)</label>
-                    <select name="groupColumnKey" id="rep-group-column"><option value="">بدون تجميع</option></select>
-                </div>
-                <div class="hrms-field">
-                    <label>ترتيب النتائج حسب (اختياري)</label>
-                    <select name="sortColumnKey" id="rep-sort-column"><option value="">الترتيب الأصلي</option></select>
-                </div>
-                <div class="hrms-field">
-                    <label class="zyu-a4e017b7b0ef">
-                        <input type="checkbox" name="sortDescending" value="true" id="rep-sort-desc" />
-                        ترتيب تنازلي
-                    </label>
-                </div>
-            </div>
+            </section>
 
             <input type="hidden" name="columnsCsv" id="rep-columns-csv" />
             <input type="hidden" name="filterColumnsCsv" id="rep-filters-csv" />
-            <button type="submit" class="hrms-btn-primary">حفظ التقرير</button>
+            <div class="rep-builder-actions">
+                <button type="button" class="hrms-btn-secondary" data-hrms-close>إلغاء</button>
+                <button type="submit" class="hrms-btn-primary">حفظ التقرير</button>
+            </div>
         </form>
     </div>
 </aside>
@@ -753,13 +786,12 @@
             document.getElementById('rep-group-column').value = '';
             document.getElementById('rep-sort-column').value = '';
             document.getElementById('rep-sort-desc').checked = false;
+            var essBox = document.getElementById('rep-share-ess');
+            if (essBox) essBox.checked = false;
             [...repSharedWith.options].forEach(function (o) { o.selected = false; });
             repColumnsPicker.clearMemory();
             repFiltersPicker.clearMemory();
             repFill();
-            document.getElementById('rep-group-column').value = r.groupColumnKey || '';
-            document.getElementById('rep-sort-column').value = r.sortColumnKey || '';
-            document.getElementById('rep-sort-desc').checked = !!r.sortDescending;
             repSyncVisibility();
         }
 
@@ -782,6 +814,9 @@
             repColumnsPicker.setMemory(r.datasetKey, r.columns);
             repFiltersPicker.setMemory(r.datasetKey, r.filterColumns);
             repFill();
+            document.getElementById('rep-group-column').value = r.groupColumnKey || '';
+            document.getElementById('rep-sort-column').value = r.sortColumnKey || '';
+            document.getElementById('rep-sort-desc').checked = !!r.sortDescending;
             repSyncVisibility();
         }
         window.repEdit = repEdit;

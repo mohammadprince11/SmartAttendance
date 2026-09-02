@@ -7,7 +7,7 @@
 
     var ignoredParents = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
     var translatedMarker = "data-zy-localized";
-    var attributes = ["placeholder", "title", "aria-label"];
+    var attributes = ["placeholder", "title", "aria-label", "data-sidebar-label", "data-ky-title", "value"];
     var catalog = Object.create(null);
     var composedKeys = [];
     var templateKeys = [];
@@ -95,6 +95,7 @@
 
         attributes.forEach(function (name) {
             if (!element.hasAttribute(name)) return;
+            if (name === "value" && !(element instanceof HTMLInputElement && /^(button|submit|reset)$/i.test(element.type))) return;
             var original = element.getAttribute(name);
             var translated = translateValue(original);
             if (translated !== original) element.setAttribute(name, translated);

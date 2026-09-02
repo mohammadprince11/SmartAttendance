@@ -8,7 +8,14 @@
 
 
 <div class="edr">
-    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    @if (!string.IsNullOrWhiteSpace(Model.InlineRequestError))
+    {
+        <div class="nxex-request-guard nxex-request-guard--inline" role="alert">
+            <strong>الطلب متوقف لحين إكمال ملف الموظف</strong>
+            <span>@Model.InlineRequestError</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(Model.StatusMessage))
     {
         <div class="edr-msg">@Model.StatusMessage</div>
     }
@@ -23,14 +30,16 @@
         }
         else
         {
-            <form method="post" enctype="multipart/form-data">
+            <form method="post" enctype="multipart/form-data" data-request-submit data-document-request>
                 <label class="edr-field">
                     نوع الوثيقة
-                    <select asp-for="TemplateId">
+                    <select asp-for="TemplateId" required data-request-required-label="نوع الوثيقة">
                         <option value="0">— اختر —</option>
                         @foreach (var template in Model.Available)
                         {
-                            <option value="@template.Id">
+                            <option value="@template.Id"
+                                    data-reason-required="@template.IsReasonRequired.ToString().ToLowerInvariant()"
+                                    data-attachment-required="@template.IsAttachmentRequired.ToString().ToLowerInvariant()">
                                 @template.Name@(template.IsReasonRequired ? " (السبب إلزامي)" : "")@(template.IsAttachmentRequired ? " (المرفق إلزامي)" : "")
                             </option>
                         }

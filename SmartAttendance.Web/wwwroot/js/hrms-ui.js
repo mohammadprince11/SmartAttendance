@@ -58,6 +58,7 @@
         if (!panel) return;
         ensureBackdrop().classList.add("open");
         panel.classList.add("open");
+        panel.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
         var focusable = panel.querySelector("input, select, textarea, button, [tabindex]");
         if (focusable) { try { focusable.focus(); } catch (e) { /* ignore */ } }
@@ -66,6 +67,7 @@
     function closeAll() {
         document.querySelectorAll(".hrms-slideover.open").forEach(function (p) {
             p.classList.remove("open");
+            p.setAttribute("aria-hidden", "true");
         });
         var backdrop = document.querySelector(".hrms-slideover-backdrop");
         if (backdrop) backdrop.classList.remove("open");

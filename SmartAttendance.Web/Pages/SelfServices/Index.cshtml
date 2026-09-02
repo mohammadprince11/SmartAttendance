@@ -18,7 +18,7 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.Message))
     {
-        <div class="hrms-alert success">@Model.Message</div>
+        <div class="hrms-alert @(Model.MessageIsError ? "danger" : "success")" role="alert">@Model.Message</div>
     }
 
     <form method="post" asp-page-handler="Create" class="hrms-form-card">
@@ -112,6 +112,7 @@
                         <th>التاريخ</th>
                         <th>الفترة</th>
                         <th>الوقت</th>
+                        <th>البصمات المسجلة</th>
                         <th>الحالة</th>
                         <th>المرحلة</th>
                     </tr>
@@ -127,6 +128,27 @@
                             <td>@request.RequestDate?.ToString("yyyy-MM-dd")</td>
                             <td>@request.FromDate?.ToString("yyyy-MM-dd") - @request.ToDate?.ToString("yyyy-MM-dd")</td>
                             <td>@request.StartTime - @request.EndTime</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(request.StartTime) || !string.IsNullOrWhiteSpace(request.EndTime) || request.ActualCheckIn.HasValue || request.ActualCheckOut.HasValue)
+                                {
+                                    @if (request.ActualCheckIn.HasValue)
+                                    {
+                                        <div>دخول: @request.ActualCheckIn.Value.ToString("yyyy-MM-dd HH:mm")</div>
+                                    }
+                                    @if (request.ActualCheckOut.HasValue)
+                                    {
+                                        <div>خروج: @request.ActualCheckOut.Value.ToString("yyyy-MM-dd HH:mm")</div>
+                                    }
+                                    @if (!request.ActualCheckIn.HasValue && !request.ActualCheckOut.HasValue)
+                                    {
+                                        <span>لا توجد بصمة</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
                             <td><span class="hrms-badge @request.Status.ToLower()">@request.Status</span></td>
                             <td>@request.CurrentStep</td>
                         </tr>
@@ -135,7 +157,7 @@
                     @if (!Model.Requests.Any())
                     {
                         <tr>
-                            <td colspan="9" class="hrms-empty">لا توجد طلبات خدمة ذاتية بهذا الفلتر.</td>
+                            <td colspan="10" class="hrms-empty">لا توجد طلبات خدمة ذاتية بهذا الفلتر.</td>
                         </tr>
                     }
                 </tbody>

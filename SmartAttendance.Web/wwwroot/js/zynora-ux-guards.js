@@ -37,6 +37,64 @@
         });
     }
 
+    // ===== 4) أسماء الحقول القديمة للقارئ الشاشي =====
+    // بعض شاشات التهيئة تبني الحقول داخل حلقات ولا تمنحها id/label. نستخرج
+    // الاسم من أقرب عنوان دلالي بدلاً من ترك عنصر تحكم مجهولاً.
+    function textOf(element) {
+        return element && (element.textContent || "").replace(/\s+/g, " ").trim();
+    }
+
+    function existingAccessibleName(control) {
+        if (control.hasAttribute("aria-label") || control.hasAttribute("aria-labelledby")) return true;
+        if (control.labels && control.labels.length && Array.prototype.some.call(control.labels, function (label) { return !!textOf(label); })) return true;
+        return false;
+    }
+
+    function deriveControlName(control) {
+        var placeholder = control.getAttribute("placeholder") || control.getAttribute("title");
+        if (placeholder) return placeholder.trim();
+
+        var field = control.closest(".zy-field, .form-group, .field, [class*='-field'], [class*='__field']");
+        if (field) {
+            var fieldLabel = field.querySelector("label, legend, .zy-label, [class*='-label'], [class*='__label']");
+            var fieldText = textOf(fieldLabel);
+            if (fieldText) return fieldText.slice(0, 180);
+        }
+
+        var cell = control.closest("td, th");
+        var row = control.closest("tr");
+        if (cell && row && cell.cellIndex >= 0) {
+            var table = row.closest("table");
+            var heading = table && table.querySelector("thead tr")?.children[cell.cellIndex];
+            var headingText = textOf(heading);
+            var rowText = textOf(cell);
+            if (headingText && rowText) return (headingText + " — " + rowText).slice(0, 180);
+            if (headingText) return headingText.slice(0, 180);
+        }
+
+        var context = control.closest("[class*='row'], [class*='item'], [class*='option'], [class*='setting']");
+        var contextText = textOf(context);
+        if (contextText) return contextText.slice(0, 180);
+
+        var technicalName = control.getAttribute("name") || control.id;
+        if (!technicalName) return "";
+        return technicalName
+            .replace(/^.*\./, "")
+            .replace(/[_-]+/g, " ")
+            .replace(/([a-z])([A-Z])/g, "$1 $2")
+            .trim();
+    }
+
+    function ensureAccessibleNames(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll("input:not([type='hidden']), select, textarea, button").forEach(function (control) {
+            if (existingAccessibleName(control)) return;
+            if (control.tagName === "BUTTON" && textOf(control)) return;
+            var name = deriveControlName(control);
+            if (name) control.setAttribute("aria-label", name);
+        });
+    }
+
     // ===== 2) حالة الإرسال =====
     var BUSY_TEXT = "جارٍ الحفظ…";
 
@@ -149,6 +207,7 @@
     // ===== التشغيل =====
     function init() {
         announceAlerts(document);
+        ensureAccessibleNames(document);
     }
 
     if (document.readyState === "loading") {
@@ -166,6 +225,7 @@
         announceTimer = window.setTimeout(function () {
             announceTimer = null;
             announceAlerts(document);
+            ensureAccessibleNames(document);
         }, 60);
     }).observe(document.documentElement, { childList: true, subtree: true });
 })();

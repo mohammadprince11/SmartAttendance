@@ -1,0 +1,73 @@
+@page
+@model SmartAttendance.Web.Pages.Settings.DataLanguagesModel
+@{
+    ViewData["Title"] = "لغات بيانات الشركة";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/zynora-administration.css" asp-append-version="true" />
+}
+
+<main class="zy-data-languages" dir="rtl">
+    <nav class="zy-data-languages__breadcrumb" aria-label="مسار الصفحة">
+        <a asp-page="/Settings/Index">الإعدادات</a><span>/</span><strong>لغات بيانات الشركة</strong>
+    </nav>
+
+    <header class="zy-data-languages__hero">
+        <div>
+            <span>ZYNORA MULTILINGUAL DATA</span>
+            <h1>لغات بيانات الشركة</h1>
+            <p>حدد لغة أساسية واحدة، وفعّل أي لغات إضافية تحتاجها لأسماء الموظفين والشركات والفروع والأقسام والمناصب والسياسات والمخالفات.</p>
+        </div>
+        <form method="get" class="zy-data-languages__company">
+            <label for="companyId">الشركة</label>
+            <select id="companyId" name="companyId" onchange="this.form.submit()">
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name · @company.Code</option>
+                }
+            </select>
+        </form>
+    </header>
+
+    @if (TempData["SuccessMessage"] is string success)
+    {
+        <div class="zy-data-languages__notice success">@success</div>
+    }
+    <div asp-validation-summary="All" class="zy-data-languages__notice error"></div>
+
+    <form method="post" asp-page-handler="Save" class="zy-data-languages__form">
+        <input type="hidden" asp-for="CompanyId" />
+        <section class="zy-data-languages__explain">
+            <strong>قاعدة الإدخال</strong>
+            <p>تكفي لغة أساسية واحدة، واللغات الإضافية اختيارية. عند تفعيل لغة إضافية تصبح قيمها مطلوبة في الحقول النصية القابلة للترجمة.</p>
+        </section>
+
+        <section class="zy-data-languages__grid" aria-label="اللغات المتاحة">
+            @foreach (var language in Model.AvailableLanguages)
+            {
+                var active = Model.ActiveCultureCodes.Contains(language.Code, StringComparer.OrdinalIgnoreCase);
+                var isDefault = string.Equals(Model.DefaultCultureCode, language.Code, StringComparison.OrdinalIgnoreCase);
+                <article class="zy-data-language-card @(active ? "is-active" : "")">
+                    <label class="zy-data-language-card__enable">
+                        <input type="checkbox" name="ActiveCultureCodes" value="@language.Code" checked="@active" />
+                        <span>تفعيل</span>
+                    </label>
+                    <div>
+                        <strong data-zy-no-localize>@language.NativeName</strong>
+                        <small>@language.EnglishName · @language.Code · @language.Direction.ToUpperInvariant()</small>
+                    </div>
+                    <label class="zy-data-language-card__default">
+                        <input type="radio" name="DefaultCultureCode" value="@language.Code" checked="@isDefault" />
+                        <span>اللغة الأساسية</span>
+                    </label>
+                </article>
+            }
+        </section>
+
+        <footer class="zy-data-languages__actions">
+            <a asp-page="/Settings/Dictionary">إضافة لغة إلى القاموس</a>
+            <button type="submit">حفظ إعدادات اللغات</button>
+        </footer>
+    </form>
+</main>

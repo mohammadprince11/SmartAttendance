@@ -157,6 +157,10 @@ public class ApplicationDbContext : DbContext, IDataProtectionKeyContext
 
     public DbSet<UserNotificationRecipient> UserNotificationRecipients => Set<UserNotificationRecipient>();
 
+    public DbSet<CompanyLanguage> CompanyLanguages => Set<CompanyLanguage>();
+
+    public DbSet<LocalizedEntityValue> LocalizedEntityValues => Set<LocalizedEntityValue>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -31,6 +31,8 @@ public class IndexModel : PageModel
 
     public string? Message { get; set; }
 
+    public bool MessageIsError { get; set; }
+
     public async Task OnGetAsync()
     {
         await LoadAsync();
@@ -46,6 +48,16 @@ public class IndexModel : PageModel
                 _dbContext, Input.EmployeeId, scope, HttpContext.RequestAborted))
         {
             return NotFound();
+        }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, Input.EmployeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            Message = profileEligibility.Message;
+            MessageIsError = true;
+            await LoadAsync();
+            return Page();
         }
 
         var requestId = await HrmsDatabase.ScalarAsync<int>(
@@ -133,12 +145,28 @@ SELECT TOP 100
     r.ToDate,
     CONVERT(varchar(5), r.StartTime, 108) AS StartTimeText,
     CONVERT(varchar(5), r.EndTime, 108) AS EndTimeText,
+    punches.ActualCheckIn,
+    punches.ActualCheckOut,
     r.Status,
     ISNULL(r.CurrentStep, '') AS CurrentStep,
     ISNULL(r.Reason, '') AS Reason,
     r.CreatedAt
 FROM SelfServiceRequests r
 INNER JOIN Employees e ON r.EmployeeId = e.Id
+OUTER APPLY
+(
+    SELECT
+        MIN(CASE
+                WHEN ar.CheckOut IS NULL OR ar.CheckOut <> ar.CheckIn
+                    THEN ar.CheckIn
+            END) AS ActualCheckIn,
+        MAX(ar.CheckOut) AS ActualCheckOut
+    FROM AttendanceRecords ar
+    WHERE ar.EmployeeId = r.EmployeeId
+      AND ISNULL(ar.IsDeleted, 0) = 0
+      AND ar.AttendanceDate >= CAST(COALESCE(r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
+      AND ar.AttendanceDate <= CAST(COALESCE(r.ToDate, r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
+) punches
 WHERE {companyPredicate}{ownClause}
 ORDER BY r.CreatedAt DESC;
 """,
@@ -160,6 +188,8 @@ ORDER BY r.CreatedAt DESC;
                 ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate"),
                 StartTime = HrmsDatabase.GetString(reader, "StartTimeText"),
                 EndTime = HrmsDatabase.GetString(reader, "EndTimeText"),
+                ActualCheckIn = HrmsDatabase.GetDateTime(reader, "ActualCheckIn"),
+                ActualCheckOut = HrmsDatabase.GetDateTime(reader, "ActualCheckOut"),
                 Status = HrmsDatabase.GetString(reader, "Status"),
                 CurrentStep = HrmsDatabase.GetString(reader, "CurrentStep"),
                 Reason = HrmsDatabase.GetString(reader, "Reason"),
@@ -226,6 +256,10 @@ ORDER BY r.CreatedAt DESC;
         public string StartTime { get; set; } = string.Empty;
 
         public string EndTime { get; set; } = string.Empty;
+
+        public DateTime? ActualCheckIn { get; set; }
+
+        public DateTime? ActualCheckOut { get; set; }
 
         public string Status { get; set; } = string.Empty;
 
