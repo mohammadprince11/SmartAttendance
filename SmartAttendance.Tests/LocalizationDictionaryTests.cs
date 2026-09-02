@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using SmartAttendance.Web.Infrastructure.Localization;
@@ -141,7 +141,8 @@ public sealed class LocalizationDictionaryTests
             var webRoot = Path.Combine(RepoRoot(), "SmartAttendance.Web");
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["LocalizationDictionary:Path"] = Path.Combine(directory, "dictionary.json")
+                ["LocalizationDictionary:Path"] = Path.Combine(directory, "dictionary.json"),
+                ["LocalizationDictionary:IncludeScannedSourceKeys"] = "true"
             }).Build();
             var service = new LocalizationDictionaryService(new TestEnvironment(webRoot), configuration);
 

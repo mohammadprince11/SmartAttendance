@@ -13,19 +13,19 @@ public static class SpreadsheetReader
 {
     private static readonly XNamespace S = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
-    public static List<string[]> Read(Stream stream, string fileName)
+    public static List<string[]> Read(Stream stream, string fileName, bool trimCells = true)
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         return ext switch
         {
-            ".csv" => ReadCsv(stream),
-            ".xlsx" => ReadXlsx(stream),
+            ".csv" => ReadCsv(stream, trimCells),
+            ".xlsx" => ReadXlsx(stream, trimCells),
             _ => throw new InvalidOperationException("صيغة غير مدعومة — ارفع ملف .xlsx أو .csv")
         };
     }
 
     // ---------------- CSV ----------------
-    private static List<string[]> ReadCsv(Stream stream)
+    private static List<string[]> ReadCsv(Stream stream, bool trimCells)
     {
         var rows = new List<string[]>();
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
@@ -34,12 +34,12 @@ public static class SpreadsheetReader
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
             var sep = line.Contains('\t') ? '\t' : (line.Contains(';') && !line.Contains(',') ? ';' : ',');
-            rows.Add(SplitCsv(line, sep));
+            rows.Add(SplitCsv(line, sep, trimCells));
         }
         return rows;
     }
 
-    private static string[] SplitCsv(string line, char sep)
+    private static string[] SplitCsv(string line, char sep, bool trimCells)
     {
         var result = new List<string>();
         var sb = new StringBuilder();
@@ -56,11 +56,11 @@ public static class SpreadsheetReader
             else sb.Append(c);
         }
         result.Add(sb.ToString());
-        return result.Select(x => x.Trim()).ToArray();
+        return trimCells ? result.Select(x => x.Trim()).ToArray() : result.ToArray();
     }
 
     // ---------------- XLSX ----------------
-    private static List<string[]> ReadXlsx(Stream stream)
+    private static List<string[]> ReadXlsx(Stream stream, bool trimCells)
     {
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
         ValidateArchive(archive);
@@ -95,7 +95,7 @@ public static class SpreadsheetReader
                 {
                     value = c.Element(S + "v")?.Value ?? "";
                 }
-                map[col] = value.Trim();
+                map[col] = trimCells ? value.Trim() : value;
                 if (col > maxCol) maxCol = col;
             }
             var arr = new string[maxCol + 1];

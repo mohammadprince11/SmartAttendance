@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.RegularExpressions;
 
 namespace SmartAttendance.Web.Infrastructure.Localization;
@@ -98,16 +98,16 @@ public static partial class LocalizationSourceTextScanner
         var visibleMarkup = ScriptOrStyleBlockRegex().Replace(source, string.Empty);
 
         foreach (Match match in LocalizerLiteralRegex().Matches(visibleMarkup))
-            Add(keys, DecodeQuotedLiteral(match.Groups[1].Value), requireArabic: false);
+            Add(keys, DecodeQuotedLiteral(match.Groups[1].Value), requireArabic: true);
 
         foreach (Match match in VisibleAttributeRegex().Matches(visibleMarkup))
-            Add(keys, NormalizeMarkupText(match.Groups[3].Value), requireArabic: false);
+            Add(keys, NormalizeMarkupText(match.Groups[3].Value), requireArabic: true);
 
         foreach (Match match in InputButtonValueRegex().Matches(visibleMarkup))
-            Add(keys, NormalizeMarkupText(match.Groups[2].Value), requireArabic: false);
+            Add(keys, NormalizeMarkupText(match.Groups[2].Value), requireArabic: true);
 
         foreach (Match match in TextNodeRegex().Matches(visibleMarkup))
-            Add(keys, NormalizeMarkupText(match.Groups[1].Value), requireArabic: false);
+            Add(keys, NormalizeMarkupText(match.Groups[1].Value), requireArabic: true);
     }
 
     private static void ScanCodeFile(string file, ISet<string> keys)

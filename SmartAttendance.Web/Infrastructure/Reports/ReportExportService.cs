@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Text;
 using System.Xml;
 
@@ -182,8 +182,34 @@ public static class ReportExportService
         return value.Length <= 31 ? value : value[..31];
     }
 
-    private static string Sanitize(string? value) => new((value ?? string.Empty)
-        .Where(character => XmlConvert.IsXmlChar(character)).ToArray());
+    private static string Sanitize(string? value)
+    {
+        value ??= string.Empty;
+        var output = new StringBuilder(value.Length);
+
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+
+            if (XmlConvert.IsXmlChar(character))
+            {
+                output.Append(character);
+                continue;
+            }
+
+            // Preserve valid supplementary Unicode scalar values represented
+            // as UTF-16 surrogate pairs.
+            if (char.IsHighSurrogate(character) &&
+                index + 1 < value.Length &&
+                char.IsLowSurrogate(value[index + 1]))
+            {
+                output.Append(character);
+                output.Append(value[++index]);
+            }
+        }
+
+        return output.ToString();
+    }
 
     private static void Text(ZipArchive zip, string path, string content)
     {

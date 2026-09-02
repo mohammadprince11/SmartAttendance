@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Globalization;
 using System.Resources;
 using System.Text.Json;
@@ -66,6 +66,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 
     private readonly string _statePath;
     private readonly Lazy<IReadOnlyCollection<string>> _scannedSourceKeys;
+    private readonly bool _includeScannedSourceKeys;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private DictionaryState? _state;
 
@@ -76,6 +77,10 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         _scannedSourceKeys = new Lazy<IReadOnlyCollection<string>>(
             () => LocalizationSourceTextScanner.Scan(environment.ContentRootPath),
             LazyThreadSafetyMode.ExecutionAndPublication);
+        _includeScannedSourceKeys = !string.Equals(
+            configuration["LocalizationDictionary:IncludeScannedSourceKeys"],
+            "false",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<IReadOnlyList<DictionaryLanguage>> GetLanguagesAsync(CancellationToken cancellationToken = default)
@@ -167,7 +172,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 
         var normalized = translations
             .Select(pair => new KeyValuePair<string, string>(
-                NormalizeCell(pair.Key, 4_000, "Key"),
+                NormalizeKey(pair.Key),
                 NormalizeCell(pair.Value, 12_000, "Translation", allowEmpty: true)))
             .ToArray();
 
@@ -199,8 +204,15 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 
             foreach (var (key, translation) in normalized)
             {
+                if (translation.Length == 0)
+                {
+                    values.Remove(key);
+                    machineTranslatedKeys.Remove(key);
+                    continue;
+                }
+
                 values[key] = translation;
-                if (machineGenerated && translation.Length > 0) machineTranslatedKeys.Add(key);
+                if (machineGenerated) machineTranslatedKeys.Add(key);
                 else machineTranslatedKeys.Remove(key);
             }
 
@@ -223,7 +235,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         if (stream.Length <= 0 || stream.Length > MaxUploadBytes)
             throw new InvalidOperationException("حجم الملف يجب أن يكون بين 1 بايت و8 ميغابايت.");
 
-        var rows = SpreadsheetReader.Read(stream, fileName);
+        var rows = SpreadsheetReader.Read(stream, fileName, trimCells: false);
         if (rows.Count < 2) throw new InvalidOperationException("ملف القاموس لا يحتوي صفوف بيانات.");
         if (rows.Count > MaxRows) throw new InvalidOperationException("ملف القاموس تجاوز الحد الأعلى للصفوف.");
 
@@ -243,7 +255,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         if (missing.Length > 0)
             throw new InvalidOperationException($"أعمدة الملف ناقصة: {string.Join("، ", missing.Select(header => ImportHeaderAliases[header][0]))}");
 
-        string Cell(string[] row, string name) => headers[name] < row.Length ? row[headers[name]].Trim() : string.Empty;
+        string RawCell(string[] row, string name) => headers[name] < row.Length ? row[headers[name]] : string.Empty;
+        string Cell(string[] row, string name) => RawCell(row, name).Trim();
         var parsed = rows.Skip(1)
             .Where(row => row.Any(cell => !string.IsNullOrWhiteSpace(cell)))
             .Select(row => new DictionaryEntryRow(
@@ -251,7 +264,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                 Cell(row, "NativeName"),
                 Cell(row, "EnglishName"),
                 Cell(row, "Direction"),
-                Cell(row, "Key"),
+                RawCell(row, "Key"),
                 Cell(row, "Translation")))
             .ToArray();
         if (parsed.Length == 0) throw new InvalidOperationException("ملف القاموس لا يحتوي صفوفاً قابلة للاستيراد.");
@@ -270,8 +283,11 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         if (direction is not ("rtl" or "ltr"))
             throw new InvalidOperationException("Direction يجب أن يكون rtl أو ltr.");
 
-        var duplicateKey = parsed.GroupBy(item => item.Key.Trim(), StringComparer.Ordinal)
-            .FirstOrDefault(group => group.Key.Length > 0 && group.Count() > 1);
+        var duplicateKey = parsed
+            .Select(item => NormalizeKey(item.Key, allowEmpty: true))
+            .Where(key => key.Length > 0)
+            .GroupBy(key => key, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Count() > 1);
         if (duplicateKey is not null)
             throw new InvalidOperationException($"المفتاح مكرر داخل الملف: {duplicateKey.Key}");
 
@@ -280,7 +296,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         {
             var state = await LoadStateUnsafeAsync(cancellationToken);
             var sourceKeys = GetSourceKeys(state);
-            var unknown = parsed.Select(item => item.Key.Trim())
+            var unknown = parsed
+                .Select(item => NormalizeKey(item.Key, allowEmpty: true))
                 .Where(key => key.Length > 0 && !sourceKeys.Contains(key, StringComparer.Ordinal))
                 .Take(5)
                 .ToArray();
@@ -303,10 +320,18 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
             var empty = 0;
             foreach (var item in parsed)
             {
-                var key = NormalizeCell(item.Key, 4_000, "Key", allowEmpty: true);
+                var key = NormalizeKey(item.Key, allowEmpty: true);
                 if (key.Length == 0) continue;
                 var value = NormalizeCell(item.Translation, 12_000, "Translation", allowEmpty: true);
-                if (value.Length == 0) empty++;
+                if (value.Length == 0)
+                {
+                    empty++;
+                    translations.Remove(key);
+                    machineTranslatedKeys.Remove(key);
+                    imported++;
+                    continue;
+                }
+
                 translations[key] = value;
                 machineTranslatedKeys.Remove(key);
                 imported++;
@@ -413,9 +438,12 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     {
         var keys = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var key in LoadCompiledCatalog("en-US").Keys) keys.Add(key);
-        foreach (var key in _scannedSourceKeys.Value) keys.Add(key);
-        foreach (var language in state.Translations.Values)
-            foreach (var key in language.Keys) keys.Add(key);
+
+        if (_includeScannedSourceKeys)
+        {
+            foreach (var key in _scannedSourceKeys.Value) keys.Add(key);
+        }
+
         return keys;
     }
 
@@ -444,6 +472,19 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         if (distinct.Length != 1)
             throw new InvalidOperationException($"يجب أن تكون قيمة {name} واحدة ومتطابقة في جميع الصفوف.");
         return distinct[0];
+    }
+
+    private static string NormalizeKey(string? value, bool allowEmpty = false)
+    {
+        value ??= string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            if (allowEmpty) return string.Empty;
+            throw new InvalidOperationException("Key Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† ÙØ§Ø±ØºØ§Ù‹.");
+        }
+        if (value.Length > 4_000)
+            throw new InvalidOperationException("Key ØªØ¬Ø§ÙˆØ² Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¹Ù„Ù‰ Ø§Ù„Ù…Ø³Ù…ÙˆØ­.");
+        return value;
     }
 
     private static string NormalizeCell(string? value, int maxLength, string name, bool allowEmpty = false)
