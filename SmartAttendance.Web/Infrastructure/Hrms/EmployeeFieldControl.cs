@@ -128,6 +128,29 @@ WHERE target.DisplayOrder = 0;
     public static async Task<Dictionary<string, FieldSetting>> GetSettingsAsync(ApplicationDbContext dbContext)
     {
         await EnsureAsync(dbContext);
+        return await ReadExistingSettingsAsync(dbContext);
+    }
+
+    /// <summary>
+    /// قراءة فقط لمسارات التشغيل الحساسة (مثل تقديم الطلب). لا تنشئ مخططاً ولا
+    /// تعدّله مع طلب المستخدم؛ إن لم تكن التهيئة موجودة تُطبّق الحقول المقفلة
+    /// الافتراضية فقط إلى أن تُنفّذ الهجرة/التهيئة الإدارية الصريحة.
+    /// </summary>
+    public static async Task<Dictionary<string, FieldSetting>> GetExistingSettingsAsync(
+        ApplicationDbContext dbContext)
+    {
+        var exists = await HrmsDatabase.ScalarAsync<int>(
+            dbContext,
+            "SELECT CASE WHEN OBJECT_ID('HrFieldControls', 'U') IS NULL THEN 0 ELSE 1 END;");
+
+        return exists == 0
+            ? new Dictionary<string, FieldSetting>(StringComparer.Ordinal)
+            : await ReadExistingSettingsAsync(dbContext);
+    }
+
+    private static async Task<Dictionary<string, FieldSetting>> ReadExistingSettingsAsync(
+        ApplicationDbContext dbContext)
+    {
         var rows = await HrmsDatabase.QueryAsync(
             dbContext,
             "SELECT FieldKey, IsRequired, IsVisible, CustomLabel, DisplayOrder FROM HrFieldControls;",

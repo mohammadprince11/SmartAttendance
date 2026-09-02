@@ -33,7 +33,8 @@ public class DocumentRequestModel : PageModel
         _malwareOptions = malwareOptions.Value;
     }
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData(Key = "EmployeePortal.DocumentRequest.StatusMessage")] public string? StatusMessage { get; set; }
+    public string? InlineRequestError { get; private set; }
 
     [BindProperty] public int TemplateId { get; set; }
     [BindProperty] public string? Reason { get; set; }
@@ -51,8 +52,7 @@ public class DocumentRequestModel : PageModel
             return Forbid();
         }
 
-        Available = await DocumentRequestStore.RequestableAsync(_db, employeeId, DateOnly.FromDateTime(DateTime.Today));
-        MyRequests = await DocumentRequestStore.LoadAsync(_db, employeeId);
+        await LoadAsync(employeeId);
         return Page();
     }
 
@@ -64,6 +64,16 @@ public class DocumentRequestModel : PageModel
         {
             StatusMessage = "تعذّر تحديد هويتك.";
             return RedirectToPage();
+        }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            StatusMessage = null;
+            InlineRequestError = profileEligibility.Message;
+            await LoadAsync(employeeId);
+            return Page();
         }
 
         // ⚠️ الأهلية تُعاد **بالخادم** لا يُوثق باختيار النموذج: نموذجٌ معدَّل يدوياً
@@ -124,6 +134,13 @@ public class DocumentRequestModel : PageModel
 
         StatusMessage = "أُرسل طلبك — ستُشعَر عند اعتماده.";
         return RedirectToPage();
+    }
+
+    private async Task LoadAsync(int employeeId)
+    {
+        Available = await DocumentRequestStore.RequestableAsync(
+            _db, employeeId, DateOnly.FromDateTime(DateTime.Today));
+        MyRequests = await DocumentRequestStore.LoadAsync(_db, employeeId);
     }
 
     public async Task<IActionResult> OnPostWithdrawAsync(int id)

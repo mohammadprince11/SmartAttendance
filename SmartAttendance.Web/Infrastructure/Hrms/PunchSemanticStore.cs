@@ -49,6 +49,9 @@ BEGIN
         IsSystem bit NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
         SortOrder int NOT NULL DEFAULT(0),
+        IsDeducted bit NOT NULL DEFAULT(1),
+        WindowFrom time(0) NULL,
+        WindowTo time(0) NULL,
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
     );
 END;

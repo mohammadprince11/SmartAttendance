@@ -26,8 +26,10 @@ public class DataChangeModel : PageModel
         _environment = environment;
     }
 
-    [TempData]
+    [TempData(Key = "EmployeePortal.DataChange.StatusMessage")]
     public string? StatusMessage { get; set; }
+
+    public string? InlineRequestError { get; private set; }
 
     public List<DataChangeRequestStore.ProposedField> Fields { get; private set; } = new();
     public Dictionary<string, List<DataChangeRequestStore.Option>> Options { get; private set; } = new();
@@ -79,6 +81,16 @@ public class DataChangeModel : PageModel
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
             return RedirectToPage();
+        }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            StatusMessage = null;
+            InlineRequestError = profileEligibility.Message;
+            await LoadAsync(employeeId);
+            return Page();
         }
 
         await DataChangeRequestStore.EnsureAsync(_dbContext);

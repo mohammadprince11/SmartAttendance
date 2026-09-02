@@ -212,6 +212,21 @@
         }
 
         if (trigger) {
+            var accessibleLabel = select.getAttribute("aria-label");
+            if (!accessibleLabel && select.id) {
+                var explicitLabel = Array.prototype.find.call(document.querySelectorAll("label[for]"), function (label) {
+                    return label.getAttribute("for") === select.id;
+                });
+                accessibleLabel = explicitLabel && explicitLabel.textContent;
+            }
+            if (!accessibleLabel) {
+                var containingLabel = select.closest("label");
+                accessibleLabel = containingLabel && containingLabel.textContent;
+            }
+            if (!accessibleLabel) accessibleLabel = select.getAttribute("title") || select.name || currentText;
+            accessibleLabel = (accessibleLabel || "").replace(/\s+/g, " ").trim();
+            if (accessibleLabel) trigger.setAttribute("aria-label", accessibleLabel);
+
             if (trigger.disabled !== !!select.disabled) {
                 trigger.disabled = !!select.disabled;
             }

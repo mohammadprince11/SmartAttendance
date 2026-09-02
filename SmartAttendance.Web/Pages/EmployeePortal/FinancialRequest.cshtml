@@ -9,7 +9,14 @@
 
 
 <section class="efr" dir="rtl">
-    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    @if (!string.IsNullOrWhiteSpace(Model.InlineRequestError))
+    {
+        <div class="nxex-request-guard nxex-request-guard--inline" role="alert">
+            <strong>الطلب متوقف لحين إكمال ملف الموظف</strong>
+            <span>@Model.InlineRequestError</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(Model.StatusMessage))
     {
         <div class="efr-alert">@Model.StatusMessage</div>
     }
@@ -23,7 +30,7 @@
         <div class="efr-card">
             <h2>طلب مالي جديد</h2>
             <p class="sub">قرض · سُلفة · بدل · استرداد — يمرّ طلبك بلجنة الموافقة ثم يُفعَّل أثره آلياً.</p>
-            <form method="post" id="efrForm">
+            <form method="post" id="efrForm" data-request-submit>
                 @{
                     var defKind = Model.Kinds.FirstOrDefault(k => k.Key == "Loan") ?? Model.Kinds.FirstOrDefault();
                 }

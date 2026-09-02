@@ -13,7 +13,7 @@
     var brandLogo = companyTheme.LogoPath;
 }
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -33,6 +33,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="~/brand/pwa/icon-192.png?v=2" />
 
     <link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-migrated-color-tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-design-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/nexora-employee-experience.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-employee-portal-shell.css" asp-append-version="true" />
@@ -106,7 +107,7 @@
         </div>
     </aside>
 
-    <main class="nxex-shell-main zy-scope zy-ui-contract">
+    <main class="nxex-shell-main zy-scope zy-ui-contract" data-zy-preserve>
         <div class="nxex-topbar">
             <div>
                 <strong>بوابة الموظف الذكية</strong>
@@ -123,6 +124,16 @@
         <div id="pwa-ios-hint" class="nxex-ios-hint" hidden>
             لتثبيت التطبيق على iPhone: اضغط زر المشاركة
             <span aria-hidden="true">􀈂</span> ثم «أضف إلى الشاشة الرئيسية».
+        </div>
+
+        <div id="nxex-request-eligibility-alert" class="nxex-request-guard" role="alert" hidden>
+            <div class="nxex-request-guard__icon" aria-hidden="true">!</div>
+            <div class="nxex-request-guard__body">
+                <strong>لا يمكن تقديم الطلب حالياً</strong>
+                <span data-request-eligibility-message></span>
+                <ul data-request-eligibility-fields hidden></ul>
+            </div>
+            <button type="button" class="nxex-request-guard__close" data-request-eligibility-close aria-label="إغلاق">✕</button>
         </div>
 
         @RenderBody()
@@ -174,19 +185,19 @@
             <div class="nxex-more-handle"></div>
             <h3>طلب جديد</h3>
             <div class="nxex-more-grid">
-                <a class="nxex-more-item" href="/EmployeePortal?open=leave">
+                <a class="nxex-more-item" href="/EmployeePortal?open=leave" data-request-entry>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V10l6-4 6 4v11M9 21v-5h6v5"/></svg>
                     <span>إجازة</span>
                 </a>
-                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/MissingPunch?embed=1" data-embed-title="نسيان بصمة">
+                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/MissingPunch?embed=1" data-embed-title="نسيان بصمة" data-request-entry>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3m0 0 2 2m-2-2-2 2M7 8a5 5 0 0 1 10 0c0 2-1 3-1 5"/><circle cx="12" cy="12" r="9"/></svg>
                     <span>نسيان بصمة</span>
                 </button>
-                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/DataChange?embed=1" data-embed-title="تعديل بياناتي">
+                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/DataChange?embed=1" data-embed-title="تعديل بياناتي" data-request-entry>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     <span>تعديل بياناتي</span>
                 </button>
-                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/FinancialRequest?embed=1" data-embed-title="طلب مالي">
+                <button type="button" class="nxex-more-item" data-embed-src="/EmployeePortal/FinancialRequest?embed=1" data-embed-title="طلب مالي" data-request-entry>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span>طلب مالي</span>
                 </button>
@@ -195,6 +206,11 @@
     }
 
     @* مودال التضمين العام: يعرض نموذج أي طلب داخل البوابة بمكانه (iframe) بلا انتقال *@
+    @{
+        var __zyRememberedSession = Context.User.HasClaim(
+            SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.RememberMeClaimType,
+            bool.TrueString);
+    }
     @if (!embed)
     {
         <div class="nxex-embed-backdrop" id="nxex-embed-backdrop" hidden></div>
@@ -284,7 +300,7 @@
     @* ===== حاجز إعارة الهاتف (طبقة العميل): خمول/مغادرة التطبيق ⟵ خروج تلقائي.
        القيم داينمك من إعدادات الحضور (مقروءة بذاكرة مؤقتة دقيقة)، والإنفاذ الحاسم
        للخمول سيرفري بتذكرة الكوكي — هذي الطبقة للاستجابة الفورية بالواجهة. *@
-    @if (!embed)
+    @if (!embed && !__zyRememberedSession)
     {
         var __zySessionDb = Context.RequestServices.GetRequiredService<SmartAttendance.Infrastructure.Persistence.ApplicationDbContext>();
         var __zySessionCache = Context.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();

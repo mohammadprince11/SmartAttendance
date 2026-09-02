@@ -1498,6 +1498,102 @@ BEGIN
 END;
 """),
 
+        // SQL Server compiles a whole batch before executing it.  Several older
+        // tenant-scope migrations added CompanyId and referenced it later in the
+        // same batch, which fails on databases that still have the legacy table
+        // shape (error 207) before the ALTER can run.  Each ALTER/index operation
+        // is deliberately compiled in its own dynamic batch.  Keeping this entry
+        // before the original scope migrations also makes those migrations
+        // idempotent on both legacy and already-upgraded databases.
+        new(
+            "20260824-01-company-scope-preflight",
+            """
+IF OBJECT_ID('BankFileTemplates','U') IS NOT NULL AND COL_LENGTH('BankFileTemplates','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE BankFileTemplates ADD CompanyId int NULL;';
+IF OBJECT_ID('BankFileTemplates','U') IS NOT NULL AND COL_LENGTH('BankFileTemplates','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('BankFileTemplates') AND name='IX_BankFileTemplates_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_BankFileTemplates_Company ON BankFileTemplates(CompanyId,IsActive,IsDefault);';
+
+IF OBJECT_ID('SalaryItems','U') IS NOT NULL AND COL_LENGTH('SalaryItems','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE SalaryItems ADD CompanyId int NULL;';
+IF OBJECT_ID('SalaryItems','U') IS NOT NULL AND COL_LENGTH('SalaryItems','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SalaryItems') AND name='IX_SalaryItems_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_SalaryItems_Company ON SalaryItems(CompanyId,IsActive,ItemType);';
+
+IF OBJECT_ID('PeopleReports','U') IS NOT NULL AND COL_LENGTH('PeopleReports','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE PeopleReports ADD CompanyId int NULL;';
+IF OBJECT_ID('PeopleReports','U') IS NOT NULL AND COL_LENGTH('PeopleReports','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PeopleReports') AND name='IX_PeopleReports_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_PeopleReports_Company ON PeopleReports(CompanyId,IsSystem,IsDeleted);';
+
+IF OBJECT_ID('PayrollTaxProfiles','U') IS NOT NULL AND COL_LENGTH('PayrollTaxProfiles','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE PayrollTaxProfiles ADD CompanyId int NULL;';
+IF OBJECT_ID('PayrollTaxProfiles','U') IS NOT NULL AND COL_LENGTH('PayrollTaxProfiles','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollTaxProfiles') AND name='IX_PayrollTaxProfiles_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_PayrollTaxProfiles_Company ON PayrollTaxProfiles(CompanyId,IsActive,SortOrder);';
+
+IF OBJECT_ID('PayrollGosiProfiles','U') IS NOT NULL AND COL_LENGTH('PayrollGosiProfiles','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE PayrollGosiProfiles ADD CompanyId int NULL;';
+IF OBJECT_ID('PayrollGosiProfiles','U') IS NOT NULL AND COL_LENGTH('PayrollGosiProfiles','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PayrollGosiProfiles') AND name='IX_PayrollGosiProfiles_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_PayrollGosiProfiles_Company ON PayrollGosiProfiles(CompanyId,IsActive,SortOrder);';
+
+IF OBJECT_ID('AttendanceSources','U') IS NOT NULL AND COL_LENGTH('AttendanceSources','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE AttendanceSources ADD CompanyId int NULL;';
+IF OBJECT_ID('AttendanceSources','U') IS NOT NULL AND COL_LENGTH('AttendanceSources','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('AttendanceSources') AND name='IX_AttendanceSources_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_AttendanceSources_Company ON AttendanceSources(CompanyId,IsSystem,IsActive);';
+
+IF OBJECT_ID('DashboardWidgets','U') IS NOT NULL AND COL_LENGTH('DashboardWidgets','CompanyId') IS NULL
+    EXEC sp_executesql N'ALTER TABLE DashboardWidgets ADD CompanyId int NULL;';
+IF OBJECT_ID('DashboardWidgets','U') IS NOT NULL AND COL_LENGTH('DashboardWidgets','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('DashboardWidgets') AND name='IX_DashboardWidgets_Company')
+    EXEC sp_executesql N'CREATE INDEX IX_DashboardWidgets_Company ON DashboardWidgets(CompanyId,SortOrder,Id);';
+
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplates','CompanyId') IS NULL
+BEGIN
+    EXEC sp_executesql N'ALTER TABLE ApprovalTemplates ADD CompanyId int NULL;';
+
+    EXEC sp_executesql N'
+DECLARE @TemplateId int,@CompanyId int,@CloneId int;
+DECLARE templates CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM ApprovalTemplates WHERE CompanyId IS NULL;
+OPEN templates; FETCH NEXT FROM templates INTO @TemplateId;
+WHILE @@FETCH_STATUS=0
+BEGIN
+    DECLARE companies CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM Companies WHERE IsDeleted=0;
+    OPEN companies; FETCH NEXT FROM companies INTO @CompanyId;
+    WHILE @@FETCH_STATUS=0
+    BEGIN
+        INSERT INTO ApprovalTemplates(CompanyId,RequestType,Name,NameEn,IsActive,Priority,HasConditions,CondBranchId,CondDepartmentId,CondWorkType,AutoRejectUnknownCommittee,CancelLimitDays,CommentRequiredOnReject,AttachmentRequiredOnRequest,EscalationDays,EscalationTo,NotifyJson,CreatedAt)
+        SELECT @CompanyId,RequestType,Name,NameEn,IsActive,Priority,HasConditions,CondBranchId,CondDepartmentId,CondWorkType,AutoRejectUnknownCommittee,CancelLimitDays,CommentRequiredOnReject,AttachmentRequiredOnRequest,EscalationDays,EscalationTo,NotifyJson,CreatedAt
+        FROM ApprovalTemplates WHERE Id=@TemplateId;
+        SET @CloneId=SCOPE_IDENTITY();
+        INSERT INTO ApprovalTemplateSteps(TemplateId,StepOrder,ApproverType,RoleName,UserName,DisplayName)
+          SELECT @CloneId,StepOrder,ApproverType,RoleName,UserName,DisplayName FROM ApprovalTemplateSteps WHERE TemplateId=@TemplateId;
+        INSERT INTO ApprovalTemplateWatchers(TemplateId,UserName)
+          SELECT @CloneId,UserName FROM ApprovalTemplateWatchers WHERE TemplateId=@TemplateId;
+        FETCH NEXT FROM companies INTO @CompanyId;
+    END
+    CLOSE companies; DEALLOCATE companies;
+    FETCH NEXT FROM templates INTO @TemplateId;
+END
+CLOSE templates; DEALLOCATE templates;
+
+DELETE s FROM ApprovalTemplateSteps s INNER JOIN ApprovalTemplates t ON t.Id=s.TemplateId WHERE t.CompanyId IS NULL;
+DELETE w FROM ApprovalTemplateWatchers w INNER JOIN ApprovalTemplates t ON t.Id=w.TemplateId WHERE t.CompanyId IS NULL;
+DELETE FROM ApprovalTemplates WHERE CompanyId IS NULL;';
+
+    EXEC sp_executesql N'ALTER TABLE ApprovalTemplates ALTER COLUMN CompanyId int NOT NULL;';
+END;
+
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplates','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE parent_object_id=OBJECT_ID('ApprovalTemplates') AND name='FK_ApprovalTemplates_Company')
+    EXEC sp_executesql N'ALTER TABLE ApprovalTemplates ADD CONSTRAINT FK_ApprovalTemplates_Company FOREIGN KEY(CompanyId) REFERENCES Companies(Id);';
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL AND COL_LENGTH('ApprovalTemplates','CompanyId') IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('ApprovalTemplates') AND name='IX_ApprovalTemplates_CompanyType')
+    EXEC sp_executesql N'CREATE INDEX IX_ApprovalTemplates_CompanyType ON ApprovalTemplates(CompanyId,RequestType,IsActive,Priority);';
+"""),
+
         new(
             "20260825-01-bank-template-company-scope",
             """
@@ -2388,6 +2484,162 @@ BEGIN
       (@TaxProfileId,0,250000,3),(@TaxProfileId,250000,500000,5),
       (@TaxProfileId,500000,1000000,10),(@TaxProfileId,1000000,NULL,15);
 END;
+"""),
+
+        // هجرة تصالحية بعد تدقيق المسارات الكامل (2026-08-30). بعض الهجرات
+        // القديمة كانت مشروطة بوجود جدول اختياري؛ إن لم يكن الجدول موجوداً وقت
+        // الإقلاع تُسجَّل الهجرة ثم ينشئه Store لاحقاً بنسخة أقدم من المخطط. هذه
+        // الهجرة تنشئ الكتالوجات المطلوبة مركزياً وتُكمل الجداول القديمة الموجودة.
+        new(
+            "20260830-01-runtime-route-schema-reconciliation",
+            """
+IF OBJECT_ID('EmployeeUpdateBatches','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeUpdateBatches','EffectiveDate') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD EffectiveDate date NULL;
+    IF COL_LENGTH('EmployeeUpdateBatches','IsRetroactive') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD IsRetroactive bit NULL;
+    IF COL_LENGTH('EmployeeUpdateBatches','AttachmentName') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD AttachmentName nvarchar(260) NULL;
+    IF COL_LENGTH('EmployeeUpdateBatches','AttachmentPath') IS NULL
+        ALTER TABLE EmployeeUpdateBatches ADD AttachmentPath nvarchar(500) NULL;
+END;
+
+IF OBJECT_ID('HrLookups','U') IS NOT NULL
+   AND COL_LENGTH('HrLookups','DefaultMonths') IS NULL
+    ALTER TABLE HrLookups ADD DefaultMonths int NULL;
+
+IF OBJECT_ID('DisciplinarySettings','U') IS NULL
+BEGIN
+    CREATE TABLE DisciplinarySettings
+    (
+        [Key] nvarchar(120) NOT NULL CONSTRAINT PK_DisciplinarySettings PRIMARY KEY,
+        [Value] nvarchar(max) NULL,
+        UpdatedAt datetime2 NOT NULL CONSTRAINT DF_DisciplinarySettings_UpdatedAt DEFAULT(SYSUTCDATETIME())
+    );
+END;
+
+IF OBJECT_ID('PunchSemantics','U') IS NULL
+BEGIN
+    CREATE TABLE PunchSemantics
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PunchSemantics PRIMARY KEY,
+        Name nvarchar(150) NOT NULL,
+        NameEn nvarchar(150) NULL,
+        IsSystem bit NOT NULL CONSTRAINT DF_PunchSemantics_System DEFAULT(0),
+        IsActive bit NOT NULL CONSTRAINT DF_PunchSemantics_Active DEFAULT(1),
+        SortOrder int NOT NULL CONSTRAINT DF_PunchSemantics_Sort DEFAULT(0),
+        IsDeducted bit NOT NULL CONSTRAINT DF_PunchSemantics_Deducted DEFAULT(1),
+        WindowFrom time(0) NULL,
+        WindowTo time(0) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PunchSemantics_Created DEFAULT(SYSUTCDATETIME())
+    );
+END;
+ELSE
+BEGIN
+    IF COL_LENGTH('PunchSemantics','IsDeducted') IS NULL
+        ALTER TABLE PunchSemantics ADD IsDeducted bit NOT NULL
+            CONSTRAINT DF_PunchSemantics_Deducted_Reconcile DEFAULT(1);
+    IF COL_LENGTH('PunchSemantics','WindowFrom') IS NULL
+        ALTER TABLE PunchSemantics ADD WindowFrom time(0) NULL;
+    IF COL_LENGTH('PunchSemantics','WindowTo') IS NULL
+        ALTER TABLE PunchSemantics ADD WindowTo time(0) NULL;
+END;
+
+IF NOT EXISTS (SELECT 1 FROM PunchSemantics WHERE IsSystem=1)
+BEGIN
+    EXEC sp_executesql N'
+    INSERT INTO PunchSemantics(Name,NameEn,IsSystem,IsActive,SortOrder,IsDeducted)
+    VALUES (N''حضور'',N''Check-In'',1,1,0,1),(N''انصراف'',N''Check-Out'',1,1,1,1);';
+END;
+
+IF OBJECT_ID('PeriodRules','U') IS NULL
+BEGIN
+    CREATE TABLE PeriodRules
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PeriodRules PRIMARY KEY,
+        Name nvarchar(200) NOT NULL,
+        PeriodType nvarchar(10) NOT NULL CONSTRAINT DF_PeriodRules_Type DEFAULT(N'Month'),
+        Metric nvarchar(30) NOT NULL CONSTRAINT DF_PeriodRules_Metric DEFAULT(N'LateHours'),
+        IsActive bit NOT NULL CONSTRAINT DF_PeriodRules_Active DEFAULT(1),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_PeriodRules_Created DEFAULT(SYSUTCDATETIME()),
+        CompanyId int NULL
+    );
+END;
+ELSE IF COL_LENGTH('PeriodRules','CompanyId') IS NULL
+    ALTER TABLE PeriodRules ADD CompanyId int NULL;
+
+IF OBJECT_ID('PeriodRuleSlices','U') IS NULL
+BEGIN
+    CREATE TABLE PeriodRuleSlices
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PeriodRuleSlices PRIMARY KEY,
+        RuleId int NOT NULL,
+        SliceFrom decimal(9,2) NOT NULL CONSTRAINT DF_PeriodRuleSlices_From DEFAULT(0),
+        SliceTo decimal(9,2) NULL,
+        ActionType nvarchar(20) NOT NULL CONSTRAINT DF_PeriodRuleSlices_Action DEFAULT(N'Violation'),
+        ActionText nvarchar(300) NOT NULL CONSTRAINT DF_PeriodRuleSlices_Text DEFAULT(N''),
+        ActionValue decimal(12,2) NOT NULL CONSTRAINT DF_PeriodRuleSlices_Value DEFAULT(0),
+        SortOrder int NOT NULL CONSTRAINT DF_PeriodRuleSlices_Sort DEFAULT(0)
+    );
+END;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PeriodRuleSlices') AND name='IX_PeriodRuleSlices_Rule')
+    CREATE INDEX IX_PeriodRuleSlices_Rule ON PeriodRuleSlices(RuleId);
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('PeriodRules') AND name='IX_PeriodRules_CompanyId')
+    EXEC sp_executesql N'CREATE INDEX IX_PeriodRules_CompanyId ON PeriodRules(CompanyId);';
+
+IF OBJECT_ID('SelfServiceRequests','U') IS NULL
+BEGIN
+    CREATE TABLE SelfServiceRequests
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_SelfServiceRequests PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        RequestType nvarchar(50) NOT NULL,
+        RequestDate date NULL,
+        FromDate date NULL,
+        ToDate date NULL,
+        StartTime time NULL,
+        EndTime time NULL,
+        Reason nvarchar(max) NULL,
+        Status nvarchar(30) NOT NULL CONSTRAINT DF_SelfServiceRequests_Status_Reconcile DEFAULT(N'Pending'),
+        CurrentStep nvarchar(80) NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_SelfServiceRequests_Created_Reconcile DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        ReviewedBy nvarchar(150) NULL,
+        ReviewNote nvarchar(max) NULL,
+        RequestSource nvarchar(20) NOT NULL CONSTRAINT DF_SelfServiceRequests_Source_Reconcile DEFAULT(N'Legacy')
+    );
+END;
+ELSE
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestDate') IS NULL ALTER TABLE SelfServiceRequests ADD RequestDate date NULL;
+    IF COL_LENGTH('SelfServiceRequests','FromDate') IS NULL ALTER TABLE SelfServiceRequests ADD FromDate date NULL;
+    IF COL_LENGTH('SelfServiceRequests','ToDate') IS NULL ALTER TABLE SelfServiceRequests ADD ToDate date NULL;
+    IF COL_LENGTH('SelfServiceRequests','StartTime') IS NULL ALTER TABLE SelfServiceRequests ADD StartTime time NULL;
+    IF COL_LENGTH('SelfServiceRequests','EndTime') IS NULL ALTER TABLE SelfServiceRequests ADD EndTime time NULL;
+    IF COL_LENGTH('SelfServiceRequests','Reason') IS NULL ALTER TABLE SelfServiceRequests ADD Reason nvarchar(max) NULL;
+    IF COL_LENGTH('SelfServiceRequests','Status') IS NULL ALTER TABLE SelfServiceRequests ADD Status nvarchar(30) NOT NULL CONSTRAINT DF_SelfServiceRequests_Status_Reconcile2 DEFAULT(N'Pending');
+    IF COL_LENGTH('SelfServiceRequests','CurrentStep') IS NULL ALTER TABLE SelfServiceRequests ADD CurrentStep nvarchar(80) NULL;
+    IF COL_LENGTH('SelfServiceRequests','CreatedAt') IS NULL ALTER TABLE SelfServiceRequests ADD CreatedAt datetime2 NOT NULL CONSTRAINT DF_SelfServiceRequests_Created_Reconcile2 DEFAULT(SYSUTCDATETIME());
+    IF COL_LENGTH('SelfServiceRequests','CreatedBy') IS NULL ALTER TABLE SelfServiceRequests ADD CreatedBy nvarchar(150) NULL;
+    IF COL_LENGTH('SelfServiceRequests','UpdatedAt') IS NULL ALTER TABLE SelfServiceRequests ADD UpdatedAt datetime2 NULL;
+    IF COL_LENGTH('SelfServiceRequests','ReviewedBy') IS NULL ALTER TABLE SelfServiceRequests ADD ReviewedBy nvarchar(150) NULL;
+    IF COL_LENGTH('SelfServiceRequests','ReviewNote') IS NULL ALTER TABLE SelfServiceRequests ADD ReviewNote nvarchar(max) NULL;
+    IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NULL ALTER TABLE SelfServiceRequests ADD RequestSource nvarchar(20) NOT NULL CONSTRAINT DF_SelfServiceRequests_Source_Reconcile2 DEFAULT(N'Legacy');
+END;
+
+EXEC sp_executesql N'
+UPDATE SelfServiceRequests
+SET RequestSource=N''Legacy''
+WHERE RequestSource IS NULL OR RequestSource NOT IN(N''SelfService'',N''Admin'',N''Legacy'');';
+
+IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('SelfServiceRequests') AND name='CK_SelfServiceRequests_RequestSource')
+    EXEC sp_executesql N'
+    ALTER TABLE SelfServiceRequests ADD CONSTRAINT CK_SelfServiceRequests_RequestSource
+        CHECK(RequestSource IN(N''SelfService'',N''Admin'',N''Legacy''));';
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SelfServiceRequests') AND name='IX_SelfServiceRequests_Source')
+    EXEC sp_executesql N'CREATE INDEX IX_SelfServiceRequests_Source ON SelfServiceRequests(RequestSource,Status,CreatedAt);';
 """),
     };
 

@@ -1826,3 +1826,125 @@ body.nxr-profile-settings-modal-active .nxr-profile-settings-section:hover {
     border-width: 0 !important;
 }
 /* NEXORA_FIX18F_PROFILE_SETTINGS_DEFAULT_CLOSED_STYLE_END */
+
+/* Light theme contract: this page predates the shared theme tokens and must
+   explicitly neutralize its dark-only gradients and foreground colors. */
+html[data-theme="light"] .nxr-profile-settings-page-v2 {
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-hero {
+    border-color: var(--border-default);
+    background:
+        radial-gradient(circle at top left, var(--color-primary-soft), transparent 42%),
+        linear-gradient(135deg, var(--surface-panel), var(--surface-raised));
+    box-shadow: var(--shadow);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-hero::after {
+    border-color: var(--border-strong);
+    background: var(--color-primary-soft);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-hero h1,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-card h2,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section h3,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-list-head h2,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-field-row b {
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-hero p,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-card p,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-guide-item p,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-field-row span,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-empty {
+    color: var(--text-muted);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-hero span,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-card-head span,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section header span,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-list-head span,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-field label,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-check span {
+    color: var(--color-primary-text);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-guide-item,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section {
+    border-color: var(--border-default) !important;
+    background: var(--surface-panel) !important;
+    background-image: none !important;
+    box-shadow: var(--shadow) !important;
+    color: var(--text-default) !important;
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-guide-item strong,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section header strong {
+    border-color: var(--border-strong);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-text);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-guide-item span {
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-list-head small,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-pills small {
+    border-color: var(--border-default);
+    background: var(--surface-raised);
+    color: var(--text-muted);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-card,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-field-row,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-empty {
+    border-color: var(--border-default);
+    background: var(--surface-panel);
+    background-image: none;
+    box-shadow: var(--shadow);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-field input,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-field select,
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-check {
+    border-color: var(--border-default);
+    background: var(--surface-input);
+    color: var(--text-default);
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section:hover {
+    border-color: var(--border-strong) !important;
+    box-shadow: var(--shadow-pop) !important;
+}
+
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section button[aria-expanded="true"],
+html[data-theme="light"] .nxr-profile-settings-page-v2 .nxr-profile-settings-section button[aria-expanded="false"] {
+    border-color: var(--border-strong) !important;
+    background: var(--color-primary-soft) !important;
+    color: var(--color-primary-text) !important;
+}
+
+html[data-theme="light"] .nxr-profile-settings-body-modal {
+    border-color: var(--border-default) !important;
+    background: var(--surface-panel) !important;
+    box-shadow: var(--shadow-pop) !important;
+    color: var(--text-default) !important;
+}
+
+html[data-theme="light"] .nxr-profile-settings-body-modal .nxr-profile-settings-edit-modal-head {
+    border-color: var(--border-default) !important;
+}
+
+html[data-theme="light"] .nxr-profile-settings-body-modal .nxr-profile-settings-edit-modal-head strong {
+    color: var(--text-default) !important;
+}
+
+html[data-theme="light"] .nxr-profile-settings-body-modal .nxr-profile-settings-modal-close,
+html[data-theme="light"] .nxr-profile-settings-body-modal .nxr-profile-settings-cancel-button {
+    border-color: var(--border-default) !important;
+    background: var(--surface-raised) !important;
+    color: var(--text-default) !important;
+}

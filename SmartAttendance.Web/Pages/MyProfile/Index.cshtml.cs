@@ -55,6 +55,9 @@ public class IndexModel : PageModel
     [TempData]
     public string? ErrorMessage { get; set; }
 
+    /// <summary>خطأ الطلب الحالي فقط؛ لا يُخزّن لكي لا يلاحق المستخدم بين الصفحات.</summary>
+    public string? InlineRequestError { get; set; }
+
     /// <summary>
     /// الحساب الحالي غير مرتبط بسجل موظف (مثل حساب admin النظامي) — ليست مشكلة
     /// صلاحية، فلا تُحوَّل لصفحة «لا صلاحية» المضلِّلة بل تُشرح الحالة بالصفحة.
@@ -155,6 +158,17 @@ END",
         if (employeeId <= 0)
         {
             return RedirectToPage("/AccessDenied");
+        }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            SuccessMessage = null;
+            ErrorMessage = null;
+            InlineRequestError = profileEligibility.Message;
+            await LoadAsync(employeeId);
+            return Page();
         }
 
         if (string.IsNullOrWhiteSpace(RequestInput.RequestType))

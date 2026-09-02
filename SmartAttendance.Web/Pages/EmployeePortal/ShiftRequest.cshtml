@@ -9,7 +9,14 @@
 
 
 <div class="esr">
-    @if (Model.StatusMessage is { } statusMessage)
+    @if (!string.IsNullOrWhiteSpace(Model.InlineRequestError))
+    {
+        <div class="nxex-request-guard nxex-request-guard--inline" role="alert">
+            <strong>الطلب متوقف لحين إكمال ملف الموظف</strong>
+            <span>@Model.InlineRequestError</span>
+        </div>
+    }
+    else if (Model.StatusMessage is { } statusMessage)
     {
         <div class="esr-msg">@statusMessage</div>
     }
@@ -28,7 +35,7 @@
         }
         else
         {
-            <form method="post">
+            <form method="post" data-request-submit>
                 <div class="esr-grid">
                     <label class="esr-field full">المناوبة المطلوبة
                         <select name="ShiftTypeId" required>

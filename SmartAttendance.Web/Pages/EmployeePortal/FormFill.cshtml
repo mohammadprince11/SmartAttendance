@@ -30,7 +30,7 @@
                 </div>
             }
 
-            <form method="post">
+            <form method="post" data-request-submit="@(!form.IsSurvey ? "true" : null)">
                 <input type="hidden" asp-for="SubmissionToken" />
                 @foreach (var (group, fields) in Model.Layout())
                 {
@@ -52,28 +52,28 @@
                                 @switch (field.ControlType)
                                 {
                                     case FormBuilder.ControlTextArea:
-                                        <textarea name="@name" rows="3"></textarea>
+                                        <textarea name="@name" rows="3" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label"></textarea>
                                         break;
                                     case FormBuilder.ControlNumber:
-                                        <input name="@name" type="number" step="any" />
+                                        <input name="@name" type="number" step="any" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label" />
                                         break;
                                     case FormBuilder.ControlDate:
-                                        <input name="@name" type="date" />
+                                        <input name="@name" type="date" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label" />
                                         break;
                                     case FormBuilder.ControlTime:
-                                        <input name="@name" type="time" />
+                                        <input name="@name" type="time" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label" />
                                         break;
                                     case FormBuilder.ControlFile:
-                                        <input name="@name" type="text" placeholder="رابط أو وصف المرفق" />
+                                        <input name="@name" type="text" placeholder="رابط أو وصف المرفق" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label" />
                                         break;
                                     case FormBuilder.ControlYesNo:
-                                        <select name="@name">
+                                        <select name="@name" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label">
                                             <option value="">—</option>
                                             <option>نعم</option><option>لا</option><option>بلا إجابة</option>
                                         </select>
                                         break;
                                     case FormBuilder.ControlSelect:
-                                        <select name="@name">
+                                        <select name="@name" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label">
                                             <option value="">—</option>
                                             @foreach (var option in field.OptionList)
                                             {
@@ -82,7 +82,7 @@
                                         </select>
                                         break;
                                     case FormBuilder.ControlMultiSelect:
-                                        <select name="@name" multiple size="4">
+                                        <select name="@name" multiple size="4" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label">
                                             @foreach (var option in field.OptionList)
                                             {
                                                 <option>@option</option>
@@ -94,14 +94,14 @@
                                             @for (var n = 1; n <= field.EffectiveScale; n++)
                                             {
                                                 <label>
-                                                    <input type="radio" name="@name" value="@n" />
+                                                    <input type="radio" name="@name" value="@n" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label" />
                                                     <span>@n</span>
                                                 </label>
                                             }
                                         </span>
                                         break;
                                     default:
-                                        <input name="@name" type="text" />
+                                        <input name="@name" type="text" required="@(field.IsRequired ? "required" : null)" data-request-required-label="@field.Label" />
                                         break;
                                 }
                             </label>

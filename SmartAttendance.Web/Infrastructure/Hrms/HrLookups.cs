@@ -47,6 +47,7 @@ BEGIN
         [Category] nvarchar(60) NOT NULL,
         [ArabicName] nvarchar(150) NOT NULL,
         [EnglishName] nvarchar(150) NULL,
+        [DefaultMonths] int NULL,
         [IsActive] bit NOT NULL CONSTRAINT DF_HrLookups_IsActive DEFAULT 1,
         [SortOrder] int NOT NULL CONSTRAINT DF_HrLookups_SortOrder DEFAULT 0,
         [CreatedAt] datetime2 NOT NULL CONSTRAINT DF_HrLookups_CreatedAt DEFAULT SYSUTCDATETIME()

@@ -188,3 +188,42 @@
         if (!mq.matches) closeAll(null);
     });
 })();
+
+// تنقّل الموبايل: القائمة الجانبية درج مستقل لا كتلةً تدفع محتوى الصفحة إلى أسفل.
+(function () {
+    "use strict";
+
+    var toggle = document.querySelector("[data-zy-mobile-nav-toggle]");
+    var sidebar = document.getElementById("zy-mobile-navigation");
+    var closeSurface = document.querySelector("[data-zy-mobile-nav-close]");
+    var mobile = window.matchMedia("(max-width: 980px)");
+    if (!toggle || !sidebar || !closeSurface) return;
+
+    function setOpen(open, returnFocus) {
+        document.body.classList.toggle("zy-mobile-nav-open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        closeSurface.tabIndex = open ? 0 : -1;
+        if (open) {
+            var active = sidebar.querySelector("[aria-current='page']") || sidebar.querySelector("a, summary");
+            if (active) window.setTimeout(function () { active.focus(); }, 180);
+        } else if (returnFocus) {
+            toggle.focus();
+        }
+    }
+
+    toggle.addEventListener("click", function () {
+        setOpen(!document.body.classList.contains("zy-mobile-nav-open"), false);
+    });
+    closeSurface.addEventListener("click", function () { setOpen(false, true); });
+    sidebar.addEventListener("click", function (event) {
+        if (mobile.matches && event.target.closest("a[href]")) setOpen(false, false);
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && document.body.classList.contains("zy-mobile-nav-open")) {
+            setOpen(false, true);
+        }
+    });
+    mobile.addEventListener("change", function (event) {
+        if (!event.matches) setOpen(false, false);
+    });
+})();

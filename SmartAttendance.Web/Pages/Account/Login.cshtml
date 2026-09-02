@@ -51,22 +51,12 @@
                     </option>
                 }
             </select>
-            <button type="button"
-                    id="login-theme-toggle"
-                    class="zy-theme-btn login-theme-toggle"
-                    data-nexora-hover="off"
-                    aria-label="@T["تبديل الوضع الفاتح والداكن"]"
-                    title="@T["الوضع الفاتح / الداكن"]">
-                <svg class="zy-tt-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                <svg class="zy-tt-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
         </form>
 
         <script>
         (function () {
             var languageForm = document.getElementById("login-language-form");
             var languageSelect = document.getElementById("login-culture");
-            var themeToggle = document.getElementById("login-theme-toggle");
             var isChangingLanguage = false;
 
             if (languageForm && languageSelect) {
@@ -78,30 +68,6 @@
                 });
             }
 
-            if (themeToggle) {
-                document.addEventListener("click", function (event) {
-                    var clickedThemeToggle = event.target.closest
-                        ? event.target.closest("#login-theme-toggle")
-                        : null;
-                    if (!clickedThemeToggle) return;
-                    event.preventDefault();
-
-                    if (window.ZynoraTheme && typeof window.ZynoraTheme.toggle === "function") {
-                        window.ZynoraTheme.toggle();
-                        return;
-                    }
-
-                    var root = document.documentElement;
-                    var nextTheme = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-                    root.setAttribute("data-theme-switching", "");
-                    root.setAttribute("data-theme", nextTheme);
-                    try { localStorage.setItem("ZY.Theme", nextTheme); } catch (e) { }
-
-                    var finishThemeSwitch = function () { root.removeAttribute("data-theme-switching"); };
-                    requestAnimationFrame(function () { requestAnimationFrame(finishThemeSwitch); });
-                    setTimeout(finishThemeSwitch, 200);
-                }, true);
-            }
         })();
         </script>
 

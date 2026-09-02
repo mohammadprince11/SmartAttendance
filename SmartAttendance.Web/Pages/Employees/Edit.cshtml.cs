@@ -24,6 +24,16 @@ public class EditModel : PageModel
         ".jpg", ".jpeg", ".png", ".webp"
     };
 
+    // تُدار ترجمات أسماء الموظف لاحقاً من شاشة البيانات متعددة اللغات، لذلك لا
+    // تظهر ولا تُفرض ضمن نموذج التعديل العام، مع إبقاء القيم المخزنة بلا تغيير.
+    private static readonly string[] DeferredTranslatedNameKeys =
+    {
+        nameof(EmployeeEditViewModel.FirstNameEn),
+        nameof(EmployeeEditViewModel.SecondNameEn),
+        nameof(EmployeeEditViewModel.ThirdNameEn),
+        nameof(EmployeeEditViewModel.LastNameEn)
+    };
+
     private readonly Infrastructure.Security.IProtectedFileService _protectedFiles;
 
     public EditModel(
@@ -117,6 +127,7 @@ public class EditModel : PageModel
         await LoadLookupsAsync();
         FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
         RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
+        RequiredFieldKeys.ExceptWith(DeferredTranslatedNameKeys);
 
         return Page();
     }
@@ -138,6 +149,7 @@ public class EditModel : PageModel
         await LoadLookupsAsync();
         FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
         RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
+        RequiredFieldKeys.ExceptWith(DeferredTranslatedNameKeys);
 
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
@@ -159,11 +171,28 @@ public class EditModel : PageModel
         var current = await _dbContext.Employees
             .AsNoTracking()
             .Where(x => x.Id == Employee.Id)
-            .Select(x => new { x.BranchId, x.DepartmentId, x.PositionId, x.DirectManagerId })
+            .Select(x => new
+            {
+                x.BranchId,
+                x.DepartmentId,
+                x.PositionId,
+                x.DirectManagerId,
+                x.FirstNameEn,
+                x.SecondNameEn,
+                x.ThirdNameEn,
+                x.LastNameEn
+            })
             .FirstOrDefaultAsync();
 
         if (current is not null)
         {
+            // الحقول الإنجليزية لم تعد جزءاً من هذا النموذج. نحفظ قيمها الحالية
+            // صراحةً كي لا يحوّل غيابها من الطلب إلى NULL عند تحديث باقي البيانات.
+            Employee.FirstNameEn = current.FirstNameEn;
+            Employee.SecondNameEn = current.SecondNameEn;
+            Employee.ThirdNameEn = current.ThirdNameEn;
+            Employee.LastNameEn = current.LastNameEn;
+
             var assignmentChanged =
                 current.BranchId != Employee.BranchId ||
                 current.DepartmentId != Employee.DepartmentId ||

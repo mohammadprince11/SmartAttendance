@@ -31,7 +31,7 @@
     <header class="zxd-head">
         <div>
             <h1>لوحة التحكم</h1>
-            <div class="zxd-date">@today.ToString("dddd، dd MMMM yyyy", new System.Globalization.CultureInfo("ar-IQ")) · @Model.SelectedCompanyName</div>
+            <div class="zxd-date">@today.ToString("dddd, dd MMMM yyyy", System.Globalization.CultureInfo.CurrentUICulture) · @Model.SelectedCompanyName</div>
         </div>
         <div class="zyu-7598b6eb4fe5">
             <form method="get" class="zxd-company">

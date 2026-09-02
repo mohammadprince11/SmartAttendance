@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Data.Common;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -358,12 +359,7 @@ END;
             configure?.Invoke(command);
             var value = await command.ExecuteScalarAsync();
 
-            if (value == null || value == DBNull.Value)
-            {
-                return default;
-            }
-
-            return (T)Convert.ChangeType(value, typeof(T));
+            return ConvertScalar<T>(value);
         }
         finally
         {
@@ -372,6 +368,24 @@ END;
                 await connection.CloseAsync();
             }
         }
+    }
+
+    private static T? ConvertScalar<T>(object? value)
+    {
+        if (value == null || value == DBNull.Value)
+        {
+            return default;
+        }
+
+        // Convert.ChangeType cannot target Nullable<T> directly. SQL providers
+        // return the underlying CLR value (for example Int32), so convert to the
+        // nullable's underlying type first; boxing/unboxing then restores T?.
+        var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        var converted = targetType.IsInstanceOfType(value)
+            ? value
+            : Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
+
+        return (T)converted;
     }
 
     public static void AddParameter(DbCommand command, string name, object? value)

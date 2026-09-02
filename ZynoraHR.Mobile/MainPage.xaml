@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="ZynoraHR.Mobile.MainPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="#081426">
+
+    <Grid>
+        <WebView x:Name="PortalWebView"
+                 Navigating="OnPortalNavigating"
+                 Navigated="OnPortalNavigated"
+                 BackgroundColor="#081426" />
+
+        <Grid x:Name="LoadingLayer" BackgroundColor="#081426">
+            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="18">
+                <Image Source="zynora_symbol.svg" WidthRequest="116" HeightRequest="116"
+                       SemanticProperties.Description="شعار زينورا" />
+                <Label Text="ZYNORA HR" TextColor="#F4F7FB" FontSize="24" FontAttributes="Bold"
+                       CharacterSpacing="3" HorizontalTextAlignment="Center" />
+                <ActivityIndicator IsRunning="True" Color="#18C7BD" WidthRequest="32" HeightRequest="32" />
+                <Label Text="جاري فتح بوابة الموظف..." TextColor="#9FB0C5" FontSize="14"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <Grid x:Name="OfflineLayer" IsVisible="False" BackgroundColor="#081426" Padding="32">
+            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center"
+                                 MaximumWidthRequest="420" Spacing="16">
+                <Border BackgroundColor="#10223A" Stroke="#26415F" StrokeShape="RoundRectangle 22" Padding="22">
+                    <Label Text="!" TextColor="#D4B36A" FontSize="34" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" />
+                </Border>
+                <Label Text="لا يوجد اتصال بالإنترنت" TextColor="#F4F7FB" FontSize="22"
+                       FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                <Label Text="تحقق من الاتصال ثم أعد المحاولة. لن تُرسل أي حركة حضور أثناء انقطاع الشبكة في هذه النسخة."
+                       TextColor="#9FB0C5" FontSize="14" LineHeight="1.45" HorizontalTextAlignment="Center" />
+                <Button Text="إعادة المحاولة" Clicked="OnRetryClicked" BackgroundColor="#4E789E"
+                        TextColor="#071322" CornerRadius="12" Padding="24,12" HorizontalOptions="Fill" />
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -18,7 +18,7 @@ public class FormFillModel : PageModel
 
     public FormFillModel(ApplicationDbContext db) => _db = db;
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData(Key = "EmployeePortal.FormFill.StatusMessage")] public string? StatusMessage { get; set; }
 
     [BindProperty(SupportsGet = true, Name = "form")] public int? FormId { get; set; }
     [BindProperty] public Guid SubmissionToken { get; set; }
@@ -61,6 +61,20 @@ public class FormFillModel : PageModel
         {
             StatusMessage = "هذا النموذج غير متاح لك.";
             return RedirectToPage();
+        }
+
+        // الاستبيان مشاركة وليس طلب خدمة ذاتية؛ أما النموذج المخصص الذي ينشئ طلباً
+        // فيمرّ بحاجز اكتمال الملف نفسه كبقية أنواع الطلبات.
+        if (!Current.IsSurvey)
+        {
+            var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+                _db, employeeId, HttpContext.RequestAborted);
+            if (!profileEligibility.IsEligible)
+            {
+                StatusMessage = null;
+                Errors = new List<string> { profileEligibility.Message ?? "ملف الموظف غير مكتمل." };
+                return Page();
+            }
         }
 
         var answers = new List<(int FieldId, string Label, string ControlType, string? Value, int SortOrder)>();

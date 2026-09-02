@@ -18,7 +18,8 @@ public class ShiftRequestModel : PageModel
 
     public ShiftRequestModel(ApplicationDbContext db) => _db = db;
 
-    [TempData] public string? StatusMessage { get; set; }
+    [TempData(Key = "EmployeePortal.ShiftRequest.StatusMessage")] public string? StatusMessage { get; set; }
+    public string? InlineRequestError { get; private set; }
 
     public List<(int Id, string Name)> Shifts { get; private set; } = new();
     public List<ShiftRequestStore.MyRow> MyRequests { get; private set; } = new();
@@ -27,11 +28,8 @@ public class ShiftRequestModel : PageModel
     public async Task<IActionResult> OnGetAsync()
     {
         if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "ShiftRequest")) return Forbid();
-        Shifts = await ShiftRequestStore.RequestableShiftsAsync(_db);
         var employeeId = await ResolveEmployeeIdAsync();
-        HasEmployee = employeeId > 0;
-        if (employeeId > 0)
-            MyRequests = await ShiftRequestStore.ListMineAsync(_db, employeeId);
+        await LoadAsync(employeeId);
         return Page();
     }
 
@@ -43,6 +41,16 @@ public class ShiftRequestModel : PageModel
         {
             StatusMessage = "لا يمكن إرسال الطلب لأن المستخدم غير مرتبط بموظف.";
             return RedirectToPage();
+        }
+
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            StatusMessage = null;
+            InlineRequestError = profileEligibility.Message;
+            await LoadAsync(employeeId);
+            return Page();
         }
 
         var form = Request.Form;
@@ -62,6 +70,14 @@ public class ShiftRequestModel : PageModel
             ? "تم إرسال طلب المناوبة وهو الآن قيد المراجعة."
             : "تعذّر إرسال الطلب — تأكد أن المناوبة متاحة للطلب.";
         return RedirectToPage();
+    }
+
+    private async Task LoadAsync(int employeeId)
+    {
+        Shifts = await ShiftRequestStore.RequestableShiftsAsync(_db);
+        HasEmployee = employeeId > 0;
+        if (HasEmployee)
+            MyRequests = await ShiftRequestStore.ListMineAsync(_db, employeeId);
     }
 
     private async Task<int> ResolveEmployeeIdAsync()

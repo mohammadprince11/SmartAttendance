@@ -76,7 +76,7 @@
             </div>
 
             <div class="nxr-form-grid nxr-create-grid nxr-basic-grid">
-                <div class="nxr-field">
+                <div class="nxr-field nxr-employee-code-priority">
                     <label asp-for="Employee.EmployeeNo">كود الموظف</label>
                     @if (Model.CodeSchemaActive)
                     {
@@ -92,41 +92,68 @@
                     <span asp-validation-for="Employee.EmployeeNo" class="text-danger"></span>
                 </div>
 
-                @* الاسم الكامل يتولّد تلقائياً من الاسم الرباعي — نفس نمط صفحة التعديل *@
+                <div class="nxr-field nxr-employee-company-first">
+                    <label asp-for="SelectedCompanyId">الشركة</label>
+                    <select asp-for="SelectedCompanyId" class="nxr-native-select" id="SelectedCompanyId">
+                        @foreach (var company in Model.CompanyOptions)
+                        {
+                            <option value="@company.Id" selected="@(company.Id == Model.SelectedCompanyId ? "selected" : null)">@company.Name</option>
+                        }
+                    </select>
+                    <small>تحدد الشركة لغات اسم الموظف، أما موقع العمل فيُختار لاحقاً ضمن المعلومات الوظيفية.</small>
+                    <span asp-validation-for="SelectedCompanyId" class="text-danger"></span>
+                </div>
+
+                @* الأعمدة القديمة تُملأ من اللغة الأساسية في السيرفر للتوافق فقط. *@
                 <input type="hidden" asp-for="Employee.FullName" />
-                <div class="nxr-field">
-                    <label asp-for="Employee.FirstName">الاسم الأول (عربي)</label>
-                    <input asp-for="Employee.FirstName" data-quad-name required />
-                    <span asp-validation-for="Employee.FirstName" class="text-danger"></span>
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.SecondName">الاسم الثاني (عربي)</label>
-                    <input asp-for="Employee.SecondName" data-quad-name />
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.ThirdName">الاسم الثالث (عربي)</label>
-                    <input asp-for="Employee.ThirdName" data-quad-name />
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.LastName">اللقب (عربي)</label>
-                    <input asp-for="Employee.LastName" data-quad-name required />
-                    <span asp-validation-for="Employee.LastName" class="text-danger"></span>
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.FirstNameEn">First Name</label>
-                    <input asp-for="Employee.FirstNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.SecondNameEn">Second Name</label>
-                    <input asp-for="Employee.SecondNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.ThirdNameEn">Third Name</label>
-                    <input asp-for="Employee.ThirdNameEn" dir="ltr" />
-                </div>
-                <div class="nxr-field">
-                    <label asp-for="Employee.LastNameEn">Last Name</label>
-                    <input asp-for="Employee.LastNameEn" dir="ltr" />
+                <input type="hidden" asp-for="Employee.FirstName" />
+                <input type="hidden" asp-for="Employee.SecondName" />
+                <input type="hidden" asp-for="Employee.ThirdName" />
+                <input type="hidden" asp-for="Employee.LastName" />
+                <input type="hidden" asp-for="Employee.FirstNameEn" />
+                <input type="hidden" asp-for="Employee.SecondNameEn" />
+                <input type="hidden" asp-for="Employee.ThirdNameEn" />
+                <input type="hidden" asp-for="Employee.LastNameEn" />
+
+                <div class="zy-employee-multilingual" data-employee-multilingual>
+                    @foreach (var companyId in Model.Branches.Select(item => item.CompanyId).Distinct())
+                    {
+                        var selectedCompany = Model.SelectedCompanyId == companyId;
+                        var indexes = Enumerable.Range(0, Model.EmployeeNameTranslations.Count)
+                            .Where(index => Model.EmployeeNameTranslations[index].CompanyId == companyId)
+                            .ToArray();
+                        <section class="zy-employee-language-company" data-language-company="@companyId" hidden="@(!selectedCompany)">
+                            @if (indexes.Length == 0)
+                            {
+                                <div class="zy-employee-language-missing">
+                                    يجب تفعيل لغة أساسية واحدة على الأقل لهذه الشركة قبل إنشاء موظف جديد.
+                                    <a asp-page="/Settings/DataLanguages" asp-route-companyId="@companyId">فتح إعدادات اللغات</a>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var index in indexes)
+                                {
+                                    var language = Model.EmployeeNameTranslations[index];
+                                    <fieldset class="zy-employee-language-card" dir="@language.Direction">
+                                        <legend>
+                                            <span data-zy-no-localize>@language.NativeName</span>
+                                            <small>@language.CultureCode @(language.IsDefault ? "· اللغة الأساسية" : "")</small>
+                                        </legend>
+                                        <input type="hidden" asp-for="EmployeeNameTranslations[index].CompanyId" disabled="@(!selectedCompany)" />
+                                        <input type="hidden" asp-for="EmployeeNameTranslations[index].CultureCode" disabled="@(!selectedCompany)" />
+                                        <div class="zy-employee-language-fields">
+                                            <label><span>الاسم الأول *</span><input asp-for="EmployeeNameTranslations[index].FirstName" dir="@language.Direction" required disabled="@(!selectedCompany)" /></label>
+                                            <label><span>الاسم الثاني</span><input asp-for="EmployeeNameTranslations[index].SecondName" dir="@language.Direction" disabled="@(!selectedCompany)" /></label>
+                                            <label><span>الاسم الثالث</span><input asp-for="EmployeeNameTranslations[index].ThirdName" dir="@language.Direction" disabled="@(!selectedCompany)" /></label>
+                                            <label><span>اللقب *</span><input asp-for="EmployeeNameTranslations[index].LastName" dir="@language.Direction" required disabled="@(!selectedCompany)" /></label>
+                                        </div>
+                                    </fieldset>
+                                }
+                            }
+                        </section>
+                    }
+                    <span asp-validation-for="EmployeeNameTranslations" class="text-danger"></span>
                 </div>
 
                 <div class="nxr-field">
@@ -268,9 +295,9 @@
 
             <div class="nxr-form-grid nxr-create-grid nxr-employment-grid">
                 <div class="nxr-field">
-                    <label asp-for="Employee.BranchId">&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</label>
+                    <label asp-for="Employee.BranchId">موقع العمل</label>
                     <select asp-for="Employee.BranchId" class="nxr-native-select" id="Employee_BranchId">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</option>
+                        <option value="">اختر موقع العمل</option>
                         @foreach (var branch in Model.Branches.OrderBy(x => x.Name))
                         {
                             <option value="@branch.Id"
@@ -516,13 +543,13 @@
             </div>
         </div>
 
-        <section class="nxr-card zyu-2bdf8e45fdfc">
+        <section class="nxr-card nxr-login-account-card zyu-2bdf8e45fdfc">
             <header class="nxr-card-head">
                 <h2>حساب الدخول</h2>
                 <p>يُنشأ للموظف حساب دخولٍ بدور «موظف» تلقائياً مع إضافته. كلمة المرور مطلوبة؛ اسم الدخول اختياري (افتراضياً = كود الموظف).</p>
             </header>
-            <div class="nxr-card-body">
-                <div class="nxr-form-grid">
+            <div class="nxr-card-body nxr-login-account-body">
+                <div class="nxr-form-grid two nxr-login-account-grid">
                     <div class="nxr-field">
                         <label asp-for="LoginUsername">اسم الدخول (اختياري)</label>
                         <input asp-for="LoginUsername" dir="ltr" autocomplete="off"
@@ -535,7 +562,7 @@
                                autocomplete="off" placeholder="8 أحرف على الأقل" />
                     </div>
                 </div>
-                <label class="zyu-72c74d31a983">
+                <label class="nxr-login-account-force zyu-72c74d31a983">
                     <input type="checkbox" asp-for="LoginForceChange" class="zyu-48bcc8a38351" />
                     إجبار الموظف على تغيير كلمة المرور عند أول دخول
                 </label>
@@ -552,11 +579,12 @@
     <!-- NEXORA_CREATE_ORGANIZATION_FILTER_START -->
     <script>
         (() => {
+            const company = document.getElementById("SelectedCompanyId");
             const workLocation = document.getElementById("Employee_BranchId");
             const department = document.getElementById("Employee_DepartmentId");
             const position = document.getElementById("Employee_PositionId");
 
-            if (!workLocation || !department || !position) {
+            if (!company || !workLocation || !department || !position) {
                 return;
             }
 
@@ -598,17 +626,29 @@
             }
 
             function filterOrganization() {
-                const selectedOption = workLocation.options[workLocation.selectedIndex];
-                const companyId = selectedOption?.dataset.companyId || "";
+                const companyId = company.value || "";
 
                 filterByCompany(department, companyId);
                 filterByCompany(position, companyId);
             }
 
+            function filterCompany() {
+                const companyId = company.value || "";
+
+                filterByCompany(workLocation, companyId);
+                document.querySelectorAll("[data-language-company]").forEach(section => {
+                    const active = companyId && section.dataset.languageCompany === companyId;
+                    section.hidden = !active;
+                    section.querySelectorAll("input").forEach(input => input.disabled = !active);
+                });
+            }
+
+            company.addEventListener("change", filterCompany);
             workLocation.addEventListener("change", filterOrganization);
-            filterOrganization();
+            filterCompany();
 
             window.NexoraCreateFilterOrganization = filterOrganization;
+            window.NexoraCreateFilterCompany = filterCompany;
         })();
     </script>
     <!-- NEXORA_CREATE_ORGANIZATION_FILTER_END -->
@@ -757,6 +797,21 @@
                     .forEach(function (it) { parent.insertBefore(it.box, anchor); });
                 parent.removeChild(anchor);
             });
+
+            // البيانات الأساسية تبدأ دائماً بكود الموظف ثم الشركة وحقول الاسم.
+            // استوديو الحقول يعيد ترتيب حقول Employee فقط، لذلك نثبت العناصر
+            // المرتبطة باللغات في المقدمة بعد انتهاء ترتيبه.
+            var basicGrid = document.querySelector(".nxr-basic-grid");
+            if (basicGrid) {
+                var priorityFields = [
+                    basicGrid.querySelector(".nxr-employee-code-priority"),
+                    basicGrid.querySelector(".nxr-employee-company-first"),
+                    basicGrid.querySelector("[data-employee-multilingual]")
+                ].filter(Boolean);
+                var priorityFragment = document.createDocumentFragment();
+                priorityFields.forEach(function (field) { priorityFragment.appendChild(field); });
+                basicGrid.prepend(priorityFragment);
+            }
         })();
     </script>
     <partial name="_ValidationScriptsPartial" />

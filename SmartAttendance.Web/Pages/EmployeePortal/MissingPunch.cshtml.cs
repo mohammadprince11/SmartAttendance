@@ -21,8 +21,10 @@ public class MissingPunchModel : PageModel
         _dbContext = dbContext;
     }
 
-    [TempData]
+    [TempData(Key = "EmployeePortal.MissingPunch.StatusMessage")]
     public string? StatusMessage { get; set; }
+
+    public string? InlineRequestError { get; private set; }
 
     public List<MissingPunchRequestStore.Request> MyRequests { get; private set; } = new();
 
@@ -30,11 +32,7 @@ public class MissingPunchModel : PageModel
     {
         if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "PunchCorrection")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
-        if (employeeId > 0)
-        {
-            MyRequests = await MissingPunchRequestStore.ListAsync(_dbContext, SmartAttendance.Web.Infrastructure.Security.CompanyScope.Unrestricted(),
-                new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
-        }
+        await LoadAsync(employeeId);
         return Page();
     }
 
@@ -67,6 +65,16 @@ public class MissingPunchModel : PageModel
             return RedirectToPage();
         }
 
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _dbContext, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            StatusMessage = null;
+            InlineRequestError = profileEligibility.Message;
+            await LoadAsync(employeeId);
+            return Page();
+        }
+
         if (!DateOnly.TryParse(MpDate, out var d) || !TimeOnly.TryParse(MpTime, out var t))
         {
             StatusMessage = "يرجى إدخال تاريخ ووقت البصمة المفقودة.";
@@ -92,6 +100,15 @@ public class MissingPunchModel : PageModel
             ? "تم إرسال طلب البصمة المفقودة وهو الآن قيد مراجعة الموارد البشرية."
             : message;
         return RedirectToPage();
+    }
+
+    private async Task LoadAsync(int employeeId)
+    {
+        if (employeeId <= 0) return;
+        MyRequests = await MissingPunchRequestStore.ListAsync(
+            _dbContext,
+            CompanyScope.Unrestricted(),
+            new MissingPunchRequestStore.Filter { EmployeeId = employeeId });
     }
 
     private async Task<int> ResolveEmployeeIdAsync()

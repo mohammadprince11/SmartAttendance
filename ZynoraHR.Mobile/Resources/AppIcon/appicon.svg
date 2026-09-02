@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>ZYNORA HR app icon</title>
+  <g fill="none" fill-rule="evenodd">
+    <path fill="#081426" d="M170 218h520l-112 126H58z"/>
+    <path fill="#18C7BD" d="M584 294h176L360 746H184z"/>
+    <path fill="#42DED3" opacity=".78" d="M584 294h88L272 746h-88z"/>
+    <path fill="#081426" d="M334 680h520L742 806H222z"/>
+    <rect x="150" y="720" width="74" height="74" rx="8" fill="#D4B36A"/>
+    <rect x="650" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="726" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="802" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="726" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="802" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="878" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="802" y="32" width="62" height="62" rx="6" fill="#18C7BD"/>
+    <rect x="878" y="32" width="62" height="62" rx="6" fill="#18C7BD"/>
+  </g>
+</svg>

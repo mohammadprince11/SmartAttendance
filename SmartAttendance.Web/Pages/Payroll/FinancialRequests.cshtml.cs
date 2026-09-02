@@ -88,6 +88,14 @@ public class FinancialRequestsModel : PageModel
             return RedirectToPage();
         }
 
+        var profileEligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, employeeId, HttpContext.RequestAborted);
+        if (!profileEligibility.IsEligible)
+        {
+            TempData["SuccessMessage"] = profileEligibility.Message;
+            return RedirectToPage();
+        }
+
         var requestId = await FinancialRequestStore.SubmitAsync(_db, detail, employeeId, CurrentUser, "Admin");
         TempData["SuccessMessage"] = requestId > 0
             ? $"تم إنشاء طلب {FinancialRequestStore.KindLabel(kind)} وإرساله للجنة الموافقة."

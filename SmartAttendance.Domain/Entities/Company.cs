@@ -31,4 +31,8 @@ public class Company : AuditableEntity
     public CompanyPayrollSetting? PayrollSettings { get; set; }
 
     public ICollection<PayrollCutoffPolicy> PayrollCutoffPolicies { get; set; } = new List<PayrollCutoffPolicy>();
+
+    public ICollection<CompanyLanguage> Languages { get; set; } = new List<CompanyLanguage>();
+
+    public ICollection<LocalizedEntityValue> LocalizedValues { get; set; } = new List<LocalizedEntityValue>();
 }

@@ -22,6 +22,7 @@ public sealed class EmployeePortalShellContractTests
         Assert.Contains("~/css/zynora-employee-portal-shell.css", layout);
         Assert.DoesNotContain("<style", layout, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("style=\"", layout, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("zy-ui-contract\" data-zy-preserve", layout, StringComparison.Ordinal);
     }
 
     [Fact]

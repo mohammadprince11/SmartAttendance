@@ -6,16 +6,23 @@
 @* جرس إشعارات بوابة الموظف — CSS مضمّن (لا ملف أصول) تفادياً لفخّ مانيفست الأصول. *@
 <link rel="stylesheet" href="~/css/pages/default-fe42d97482.css" asp-append-version="true" />
 
-<details class="emp-bell" id="empBell">
+<div class="emp-bell" id="empBell">
     @Html.AntiForgeryToken()
-    <summary aria-label="الإشعارات" title="الإشعارات">
+    <button type="button"
+            class="emp-bell-button"
+            id="empBellTrigger"
+            aria-label="الإشعارات"
+            title="الإشعارات"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="empBellPanel">
         <svg class="emp-bell-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.7 21a2 2 0 0 1-3.4 0" />
         </svg>
-        <span class="emp-bell-badge" id="empBellBadge" data-zy-style="@(unread > 0 ? "" : "display:none")">@(unread > 99 ? "99+" : unread.ToString())</span>
-    </summary>
-    <div class="emp-bell-panel">
+        <span class="emp-bell-badge" id="empBellBadge" hidden="@(unread > 0 ? null : "hidden")">@(unread > 99 ? "99+" : unread.ToString())</span>
+    </button>
+    <div class="emp-bell-panel" id="empBellPanel" role="dialog" aria-label="الإشعارات" hidden>
         <div class="emp-bell-head">
             <b>الإشعارات</b>
             <button type="button" class="emp-bell-all" id="empBellAll" @(unread > 0 ? "" : "disabled")>تعليم الكل كمقروء</button>
@@ -42,7 +49,7 @@
             }
         </div>
     </div>
-</details>
+</div>
 
 <script>
     (function () {
@@ -50,16 +57,51 @@
         if (!bell || bell.dataset.wired) return;
         bell.dataset.wired = "1";
         var badge = document.getElementById("empBellBadge");
+        var trigger = document.getElementById("empBellTrigger");
+        var panel = document.getElementById("empBellPanel");
         var all = document.getElementById("empBellAll");
         var list = document.getElementById("empBellList");
         var tokenEl = bell.querySelector('input[name="__RequestVerificationToken"]');
+        if (!trigger || !panel) return;
+        function positionPanel() {
+            if (panel.hidden) return;
+            var rect = trigger.getBoundingClientRect();
+            var width = panel.offsetWidth;
+            var height = panel.offsetHeight;
+            var rtl = document.documentElement.dir === "rtl";
+            var left = rtl ? rect.right - width : rect.left;
+            left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+            var top = rect.bottom + 8;
+            if (top + height > window.innerHeight - 12) top = Math.max(12, rect.top - height - 8);
+            panel.style.left = left + "px";
+            panel.style.top = top + "px";
+        }
+        function openPanel() {
+            panel.hidden = false;
+            bell.classList.add("is-open");
+            trigger.setAttribute("aria-expanded", "true");
+            positionPanel();
+        }
+        function closePanel(returnFocus) {
+            panel.hidden = true;
+            bell.classList.remove("is-open");
+            trigger.setAttribute("aria-expanded", "false");
+            if (returnFocus) trigger.focus();
+        }
+        trigger.addEventListener("click", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            if (panel.hidden) openPanel(); else closePanel(false);
+        });
         function token() { return tokenEl ? tokenEl.value : ""; }
         function unreadCount() { return list.querySelectorAll(".emp-bell-item:not(.is-read)").length; }
         function setBadge(n) {
-            if (n > 0) { badge.textContent = n > 99 ? "99+" : String(n); badge.style.display = ""; if (all) all.disabled = false; }
-            else { badge.style.display = "none"; if (all) all.disabled = true; }
+            if (n > 0) { badge.textContent = n > 99 ? "99+" : String(n); badge.hidden = false; if (all) all.disabled = false; }
+            else { badge.hidden = true; if (all) all.disabled = true; }
         }
-        document.addEventListener("click", function (e) { if (bell.open && !bell.contains(e.target)) bell.open = false; });
+        document.addEventListener("pointerdown", function (e) { if (!panel.hidden && !bell.contains(e.target)) closePanel(false); });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !panel.hidden) closePanel(true); });
+        window.addEventListener("resize", positionPanel);
+        window.addEventListener("scroll", positionPanel, true);
         function post(handler, body) {
             var data = new FormData();
             data.append("__RequestVerificationToken", token());
@@ -69,7 +111,9 @@
         }
         list.addEventListener("click", function (e) {
             var item = e.target.closest(".emp-bell-item");
-            if (!item || item.classList.contains("is-read")) return;
+            if (!item) return;
+            if (item.getAttribute("href") === "#") e.preventDefault();
+            if (item.classList.contains("is-read")) return;
             var id = item.dataset.id;
             if (!id) return;
             item.classList.add("is-read");
