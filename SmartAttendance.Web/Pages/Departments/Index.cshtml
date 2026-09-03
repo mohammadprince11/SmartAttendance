@@ -172,11 +172,15 @@
                                             تعديل
                                         </button>
 
-                                        <a asp-page="./Delete"
-                                           asp-route-id="@department.Id"
-                                           class="btn-table btn-delete">
+                                        <button type="button"
+                                                class="btn-table btn-delete"
+                                                data-department-delete-id="@department.Id"
+                                                data-department-delete-name="@department.Name"
+                                                data-department-delete-company="@department.CompanyName"
+                                                data-department-delete-status="@(department.IsActive ? "فعال" : "غير فعال")"
+                                                data-nx-setup-open="department-delete-modal">
                                             حذف
-                                        </a>
+                                        </button>
 
                                     </div>
 
@@ -502,6 +506,97 @@
 
 </div>
 
+
+<!-- ========================================================
+     DELETE MODAL
+     ======================================================== -->
+
+<div class="nx-setup-modal"
+     id="department-delete-modal"
+     style="background:rgba(4,10,20,.32)!important;backdrop-filter:blur(7px) saturate(115%)!important;-webkit-backdrop-filter:blur(7px) saturate(115%)!important;"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-department-delete-popup"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="department-delete-title">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close
+                aria-label="إغلاق">
+            &times;
+        </button>
+
+        <div class="nx-setup-modal__head">
+
+            <span>الأقسام</span>
+
+            <h2 id="department-delete-title">
+                حذف القسم
+            </h2>
+
+            <p>
+                تأكد من بيانات القسم قبل تنفيذ الحذف.
+            </p>
+
+        </div>
+
+        <form method="post"
+              asp-page="./Delete"
+              class="nx-setup-modal-form"
+              id="department-delete-popup-form">
+
+            <input type="hidden"
+                   name="id"
+                   id="deleteDepartmentId" />
+
+            <div class="zy-department-delete-warning">
+                <strong>هل تريد حذف هذا القسم؟</strong>
+                <span>
+                    لا يمكن التراجع عن هذه العملية بعد تنفيذ الحذف.
+                </span>
+            </div>
+
+            <div class="zy-department-delete-summary">
+
+                <div>
+                    <span>اسم القسم</span>
+                    <strong id="deleteDepartmentName">—</strong>
+                </div>
+
+                <div>
+                    <span>الشركة</span>
+                    <strong id="deleteDepartmentCompany">—</strong>
+                </div>
+
+                <div>
+                    <span>الحالة</span>
+                    <strong id="deleteDepartmentStatus">—</strong>
+                </div>
+
+            </div>
+
+            <div class="nx-setup-modal__actions">
+
+                <button type="button"
+                        class="nx-setup-btn nx-setup-btn-secondary"
+                        data-nx-setup-close>
+                    إلغاء
+                </button>
+
+                <button type="submit"
+                        class="nx-setup-btn zy-department-delete-confirm">
+                    حذف القسم
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 <script type="application/json"
         id="department-edit-payload-json">
 @Html.Raw(editPayloadJson)
@@ -831,6 +926,60 @@
             renderEditLanguages);
     }
 
+    // =====================================================
+    // DELETE
+    // =====================================================
+
+    const deleteId =
+        document.getElementById(
+            "deleteDepartmentId");
+
+    const deleteName =
+        document.getElementById(
+            "deleteDepartmentName");
+
+    const deleteCompany =
+        document.getElementById(
+            "deleteDepartmentCompany");
+
+    const deleteStatus =
+        document.getElementById(
+            "deleteDepartmentStatus");
+
+    document
+        .querySelectorAll(
+            "[data-department-delete-id]")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    if (deleteId) {
+                        deleteId.value =
+                            button.dataset
+                                .departmentDeleteId || "";
+                    }
+
+                    if (deleteName) {
+                        deleteName.textContent =
+                            button.dataset
+                                .departmentDeleteName || "—";
+                    }
+
+                    if (deleteCompany) {
+                        deleteCompany.textContent =
+                            button.dataset
+                                .departmentDeleteCompany || "—";
+                    }
+
+                    if (deleteStatus) {
+                        deleteStatus.textContent =
+                            button.dataset
+                                .departmentDeleteStatus || "—";
+                    }
+                });
+        });
     function escapeHtml(value) {
 
         return String(value ?? "")
@@ -845,3 +994,4 @@
 </script>
 
 }
+

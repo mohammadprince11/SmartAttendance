@@ -655,3 +655,143 @@ html body #department-edit-modal
 
 /* ZYNORA_DEPARTMENT_MODAL_COMPACT_V1_END */
 
+
+/* =========================================================
+   ZYNORA_DEPARTMENT_DELETE_MODAL_V1
+   ========================================================= */
+
+html body #department-delete-modal
+.zy-department-delete-popup {
+    width: min(560px, calc(100vw - 32px)) !important;
+    max-width: 560px !important;
+
+    background: rgb(16, 30, 49) !important;
+    background-image: none !important;
+
+    border: 1px solid rgba(114, 158, 201, .26) !important;
+
+    border-radius: 22px !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42) !important;
+
+    overflow: hidden !important;
+}
+
+html body #department-delete-modal
+.nx-setup-modal__head,
+
+html body #department-delete-modal
+.nx-setup-modal-form,
+
+html body #department-delete-modal
+.nx-setup-modal__actions {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+html body #department-delete-modal
+.nx-setup-modal__head {
+    border-bottom:
+        1px solid rgba(130,165,200,.10) !important;
+}
+
+html body #department-delete-modal
+.nx-setup-modal__actions {
+    border-top:
+        1px solid rgba(130,165,200,.12) !important;
+}
+
+.zy-department-delete-warning {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    padding: 16px 18px;
+    margin-bottom: 16px;
+
+    border-radius: 16px;
+
+    border:
+        1px solid rgba(248,113,113,.28);
+
+    background:
+        rgba(127,29,29,.16);
+}
+
+.zy-department-delete-warning strong {
+    color: #fecaca;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.zy-department-delete-warning span {
+    color: #fca5a5;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.zy-department-delete-summary {
+    display: grid;
+    gap: 10px;
+}
+
+.zy-department-delete-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+
+    min-height: 48px;
+    padding: 10px 14px;
+
+    border-radius: 14px;
+
+    border:
+        1px solid rgba(148,163,184,.14);
+
+    background:
+        rgba(3,12,24,.34);
+}
+
+.zy-department-delete-summary span {
+    color: #91a9c3;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.zy-department-delete-summary strong {
+    color: #f8fafc;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+html body
+#department-delete-modal
+.zy-department-delete-confirm {
+    min-height: 42px;
+    padding: 0 20px !important;
+
+    color: #fff !important;
+
+    background:
+        rgba(185,28,28,.88) !important;
+
+    border:
+        1px solid rgba(248,113,113,.42) !important;
+
+    border-radius: 12px !important;
+
+    font-weight: 900 !important;
+}
+
+html body
+#department-delete-modal
+.zy-department-delete-confirm:hover {
+    background:
+        rgba(220,38,38,.95) !important;
+}
+
+/* ZYNORA_DEPARTMENT_DELETE_MODAL_V1_END */
+
