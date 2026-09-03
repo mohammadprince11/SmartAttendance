@@ -278,22 +278,27 @@ public class CreateModel : PageModel
                 continue;
             }
 
-            // إنشاء الموظف يجمع الاسم باللغة الأساسية فقط. اللغات الإضافية
-            // تُستكمل لاحقاً من شاشة الترجمات المستقلة ولا تُحمّل هذا النموذج.
-            var primaryLanguage = languages.FirstOrDefault(item => item.IsDefault) ?? languages[0];
-            posted.TryGetValue((companyId, primaryLanguage.CultureCode), out var existing);
-            result.Add(new EmployeeNameTranslationInput
+            // يولد نموذج اسم الموظف من جميع لغات بيانات الشركة المفعلة.
+            // إضافة لغة جديدة للشركة لا تحتاج أي تعديل خاص بهذه الصفحة.
+            foreach (var language in languages)
             {
-                CompanyId = companyId,
-                CultureCode = primaryLanguage.CultureCode,
-                NativeName = primaryLanguage.NativeName,
-                Direction = primaryLanguage.Direction,
-                IsDefault = true,
-                FirstName = existing?.FirstName,
-                SecondName = existing?.SecondName,
-                ThirdName = existing?.ThirdName,
-                LastName = existing?.LastName
-            });
+                posted.TryGetValue(
+                    (companyId, language.CultureCode),
+                    out var existing);
+
+                result.Add(new EmployeeNameTranslationInput
+                {
+                    CompanyId = companyId,
+                    CultureCode = language.CultureCode,
+                    NativeName = language.NativeName,
+                    Direction = language.Direction,
+                    IsDefault = language.IsDefault,
+                    FirstName = existing?.FirstName,
+                    SecondName = existing?.SecondName,
+                    ThirdName = existing?.ThirdName,
+                    LastName = existing?.LastName
+                });
+            }
         }
 
         EmployeeNameTranslations = result;
@@ -357,10 +362,22 @@ public class CreateModel : PageModel
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(source.FirstName))
-            ModelState.AddModelError(nameof(EmployeeNameTranslations), "الاسم الأول مطلوب باللغة الأساسية.");
-        if (string.IsNullOrWhiteSpace(source.LastName))
-            ModelState.AddModelError(nameof(EmployeeNameTranslations), "اللقب مطلوب باللغة الأساسية.");
+        var requiredLanguageErrors =
+            await _dataLocalization.ValidateRequiredValuesAsync(
+                companyId.Value,
+                ["FirstName", "LastName"],
+                ToLocalizedNameValues(
+                    companyValues,
+                    includeFullName: false),
+                HttpContext.RequestAborted);
+
+        foreach (var error in requiredLanguageErrors)
+        {
+            ModelState.AddModelError(
+                nameof(EmployeeNameTranslations),
+                error);
+        }
+
         if (!ModelState.IsValid) return;
 
         Employee.FirstName = source.FirstName?.Trim();

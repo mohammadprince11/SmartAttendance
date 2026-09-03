@@ -135,10 +135,10 @@
                                 @foreach (var index in indexes)
                                 {
                                     var language = Model.EmployeeNameTranslations[index];
-                                    <fieldset class="zy-employee-language-card" dir="@language.Direction">
+                                    <fieldset class="zy-employee-language-card" dir="@language.Direction" lang="@language.CultureCode" data-culture="@language.CultureCode">
                                         <legend>
                                             <span data-zy-no-localize>@language.NativeName</span>
-                                            <small>@language.CultureCode @(language.IsDefault ? "· اللغة الأساسية" : "")</small>
+                                            <small>@language.CultureCode @(language.IsDefault ? "· اللغة الأساسية" : "· لغة إضافية")</small>
                                         </legend>
                                         <input type="hidden" asp-for="EmployeeNameTranslations[index].CompanyId" disabled="@(!selectedCompany)" />
                                         <input type="hidden" asp-for="EmployeeNameTranslations[index].CultureCode" disabled="@(!selectedCompany)" />

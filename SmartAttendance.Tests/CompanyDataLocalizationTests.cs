@@ -53,7 +53,7 @@ public sealed class CompanyDataLocalizationTests
     }
 
     [Fact]
-    public void EmployeeCreate_UsesOnlyTheSelectedCompanyPrimaryLanguage()
+    public void EmployeeCreate_UsesEveryActiveCompanyLanguage()
     {
         var root = FindRepositoryRoot();
         var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Employees", "Create.cshtml"));
@@ -62,9 +62,9 @@ public sealed class CompanyDataLocalizationTests
 
         Assert.Contains("data-language-company", page, StringComparison.Ordinal);
         Assert.Contains("EmployeeNameTranslations[index]", page, StringComparison.Ordinal);
-        Assert.Contains("var primaryLanguage = languages.FirstOrDefault(item => item.IsDefault) ?? languages[0]", model, StringComparison.Ordinal);
-        Assert.Contains("الاسم الأول مطلوب باللغة الأساسية", model, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var language in languages)", model, StringComparison.Ordinal);
+        Assert.Contains("foreach (var language in languages)", model, StringComparison.Ordinal);
+        Assert.Contains("ValidateRequiredValuesAsync", model, StringComparison.Ordinal);
+        Assert.Contains("data-culture=\"@language.CultureCode\"", page, StringComparison.Ordinal);
         Assert.Contains("SaveEmployeeNameTranslationsAsync", model, StringComparison.Ordinal);
         Assert.Contains("if (languages.Count == 0)", model, StringComparison.Ordinal);
         Assert.Contains("id=\"SelectedCompanyId\"", page, StringComparison.Ordinal);
