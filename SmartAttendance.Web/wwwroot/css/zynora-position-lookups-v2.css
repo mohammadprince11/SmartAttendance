@@ -1,0 +1,2398 @@
+﻿
+/* ==========================================================
+   ZYNORA POSITION LOOKUPS V2
+   Categories + Levels
+   ========================================================== */
+
+.zy-lookup-page {
+
+    --zl-surface-1: #0a283d;
+    --zl-surface-2: #061923;
+    --zl-surface-3: #071a29;
+    --zl-input: #071827;
+    --zl-input-hover: #092033;
+
+    --zl-border: rgba(113,160,200,.28);
+    --zl-border-soft: rgba(34,211,238,.14);
+
+    --zl-text: #f1f7fb;
+    --zl-text-soft: #d6e4ec;
+    --zl-muted: #8fa9ba;
+
+    --zl-cyan: #48c7d8;
+    --zl-gold: #f1c75b;
+    --zl-green: #79dab6;
+    --zl-red: #efa0a9;
+
+    width: 100%;
+    max-width: 1600px;
+
+    margin-inline: auto;
+
+    display: grid;
+    gap: 16px;
+}
+
+
+/* ==========================================================
+   HERO
+   ========================================================== */
+
+.zy-lookup-hero {
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+
+    align-items: center;
+
+    gap: 20px;
+
+    padding: 23px 25px;
+
+    border-radius: 22px;
+
+    background:
+        radial-gradient(
+            circle at 92% 3%,
+            rgba(34,211,238,.075),
+            transparent 31%
+        ),
+        linear-gradient(
+            135deg,
+            var(--zl-surface-1),
+            var(--zl-surface-2)
+        );
+
+    border:
+        1px solid var(--zl-border-soft);
+
+    box-shadow:
+        0 20px 52px rgba(0,0,0,.22);
+}
+
+
+.zy-lookup-eyebrow {
+
+    color:
+        var(--zl-gold);
+
+    font-size:
+        11px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-hero h1 {
+
+    margin:
+        4px 0 0;
+
+    color:
+        #fff;
+
+    font-size:
+        clamp(27px, 2.6vw, 38px);
+
+    font-weight:
+        950;
+
+    letter-spacing:
+        -.02em;
+}
+
+
+.zy-lookup-hero p {
+
+    max-width:
+        760px;
+
+    margin:
+        7px 0 0;
+
+    color:
+        var(--zl-muted);
+
+    line-height:
+        1.7;
+
+    font-size:
+        12px;
+
+    font-weight:
+        700;
+}
+
+
+.zy-lookup-hero__actions {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
+
+.zy-lookup-btn {
+
+    min-height:
+        39px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding-inline:
+        14px;
+
+    border-radius:
+        11px;
+
+    border:
+        1px solid transparent;
+
+    text-decoration:
+        none;
+
+    font-size:
+        11px;
+
+    font-weight:
+        900;
+
+    cursor:
+        pointer;
+
+    white-space:
+        nowrap;
+}
+
+
+.zy-lookup-btn--primary {
+
+    background:
+        linear-gradient(
+            135deg,
+            #48c7d8,
+            #42bfcf
+        );
+
+    color:
+        #03202c;
+
+    border-color:
+        rgba(68,199,216,.32);
+}
+
+
+.zy-lookup-btn--secondary {
+
+    background:
+        #092033;
+
+    color:
+        #d8e6ed;
+
+    border-color:
+        rgba(113,160,200,.24);
+}
+
+
+.zy-lookup-btn--secondary:hover {
+
+    background:
+        #0c2b41;
+
+    color:
+        #fff;
+
+    border-color:
+        rgba(70,200,220,.38);
+}
+
+
+.zy-lookup-btn--danger {
+
+    background:
+        rgba(150,35,44,.84);
+
+    color:
+        #fff;
+
+    border-color:
+        rgba(235,102,113,.40);
+}
+
+
+/* ==========================================================
+   KPI
+   ========================================================== */
+
+.zy-lookup-kpis {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0,1fr));
+
+    gap:
+        10px;
+}
+
+
+.zy-lookup-kpis article {
+
+    min-height:
+        78px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        12px;
+
+    padding:
+        12px 14px;
+
+    border-radius:
+        16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #09273a,
+            #061923
+        );
+
+    border:
+        1px solid rgba(34,211,238,.12);
+
+    box-shadow:
+        0 14px 35px rgba(0,0,0,.17);
+}
+
+
+.zy-lookup-kpi__index {
+
+    width:
+        34px;
+
+    height:
+        34px;
+
+    flex:
+        0 0 34px;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    border-radius:
+        10px;
+
+    background:
+        rgba(241,199,91,.07);
+
+    border:
+        1px solid rgba(241,199,91,.20);
+
+    color:
+        var(--zl-gold);
+
+    font-size:
+        9px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-kpis article > div {
+
+    display:
+        grid;
+
+    gap:
+        3px;
+}
+
+
+.zy-lookup-kpis article > div > span {
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        10px;
+
+    font-weight:
+        800;
+}
+
+
+.zy-lookup-kpis article strong {
+
+    color:
+        #fff;
+
+    font-size:
+        21px;
+
+    line-height:
+        1;
+
+    font-weight:
+        950;
+}
+
+
+/* ==========================================================
+   MAIN CARD
+   ========================================================== */
+
+.zy-lookup-card {
+
+    padding:
+        19px;
+
+    border-radius:
+        21px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #09283b,
+            #061923
+        );
+
+    border:
+        1px solid rgba(34,211,238,.14);
+
+    box-shadow:
+        0 20px 48px rgba(0,0,0,.19);
+}
+
+
+.zy-lookup-card__head {
+
+    display:
+        flex;
+
+    align-items:
+        flex-end;
+
+    justify-content:
+        space-between;
+
+    gap:
+        18px;
+
+    margin-bottom:
+        14px;
+
+    padding-bottom:
+        14px;
+
+    border-bottom:
+        1px solid rgba(113,160,200,.11);
+}
+
+
+.zy-lookup-card__eyebrow {
+
+    color:
+        var(--zl-gold);
+
+    font-size:
+        10px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-card__head h2 {
+
+    margin:
+        3px 0 0;
+
+    color:
+        #fff;
+
+    font-size:
+        20px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-card__head p {
+
+    margin:
+        5px 0 0;
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        10px;
+
+    font-weight:
+        700;
+}
+
+
+.zy-lookup-count {
+
+    min-width:
+        82px;
+
+    display:
+        flex;
+
+    align-items:
+        baseline;
+
+    justify-content:
+        center;
+
+    gap:
+        5px;
+
+    padding:
+        9px 12px;
+
+    border-radius:
+        13px;
+
+    background:
+        var(--zl-input);
+
+    border:
+        1px solid rgba(113,160,200,.20);
+}
+
+
+.zy-lookup-count strong {
+
+    color:
+        #fff;
+
+    font-size:
+        18px;
+}
+
+
+.zy-lookup-count span {
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        10px;
+}
+
+
+/* ==========================================================
+   FILTERS
+   ========================================================== */
+
+.zy-lookup-filters {
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(280px, 1fr)
+        minmax(180px, 250px);
+
+    gap:
+        9px;
+
+    margin-bottom:
+        13px;
+
+    padding:
+        11px;
+
+    border-radius:
+        15px;
+
+    background:
+        rgba(3,15,25,.48);
+
+    border:
+        1px solid rgba(113,160,200,.13);
+}
+
+
+.zy-lookup-filter {
+
+    display:
+        grid;
+
+    gap:
+        5px;
+}
+
+
+.zy-lookup-filter > span {
+
+    color:
+        #d5e3eb;
+
+    font-size:
+        10px;
+
+    font-weight:
+        850;
+}
+
+
+.zy-lookup-filter input,
+
+.zy-lookup-filter select {
+
+    width:
+        100%;
+
+    min-height:
+        40px;
+
+    padding-inline:
+        12px;
+
+    border-radius:
+        11px;
+
+    background:
+        var(--zl-input);
+
+    color:
+        var(--zl-text);
+
+    border:
+        1px solid rgba(113,160,200,.31);
+
+    outline:
+        none;
+}
+
+
+.zy-lookup-filter input::placeholder {
+
+    color:
+        #6c8598;
+}
+
+
+.zy-lookup-filter input:hover,
+
+.zy-lookup-filter select:hover {
+
+    background:
+        var(--zl-input-hover);
+}
+
+
+.zy-lookup-filter input:focus,
+
+.zy-lookup-filter select:focus {
+
+    background:
+        #0a273c;
+
+    border-color:
+        rgba(34,211,238,.62);
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.08);
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+.zy-lookup-table-wrap {
+
+    overflow-x:
+        auto;
+
+    border-radius:
+        15px;
+
+    background:
+        #051521;
+
+    border:
+        1px solid rgba(34,211,238,.12);
+}
+
+
+.zy-lookup-table {
+
+    width:
+        100%;
+
+    min-width:
+        760px;
+
+    table-layout:
+        fixed;
+
+    border-collapse:
+        separate;
+
+    border-spacing:
+        0;
+}
+
+
+.zy-lookup-table th,
+
+.zy-lookup-table td {
+
+    padding:
+        11px 12px;
+
+    text-align:
+        right;
+
+    vertical-align:
+        middle;
+
+    border-bottom:
+        1px solid rgba(113,160,200,.10);
+}
+
+
+.zy-lookup-table th {
+
+    background:
+        #061725;
+
+    color:
+        #dce8ef;
+
+    font-size:
+        10px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-table td {
+
+    background:
+        #061925;
+
+    color:
+        #d7e4ec;
+
+    font-size:
+        11px;
+
+    font-weight:
+        750;
+}
+
+
+.zy-lookup-table tbody tr:nth-child(even) td {
+
+    background:
+        #071d2a;
+}
+
+
+.zy-lookup-table tbody tr:hover td {
+
+    background:
+        #0a2a3d;
+}
+
+
+.zy-lookup-table th:nth-child(1),
+
+.zy-lookup-table td:nth-child(1) {
+
+    width:
+        6%;
+
+    text-align:
+        center;
+}
+
+
+.zy-lookup-table th:nth-child(2),
+
+.zy-lookup-table td:nth-child(2) {
+
+    width:
+        34%;
+}
+
+
+.zy-lookup-table th:nth-child(3),
+
+.zy-lookup-table td:nth-child(3) {
+
+    width:
+        18%;
+}
+
+
+.zy-lookup-table th:nth-child(4),
+
+.zy-lookup-table td:nth-child(4) {
+
+    width:
+        15%;
+
+    text-align:
+        center;
+}
+
+
+.zy-lookup-table th:nth-child(5),
+
+.zy-lookup-table td:nth-child(5) {
+
+    width:
+        27%;
+}
+
+
+.zy-lookup-sequence {
+
+    color:
+        var(--zl-muted) !important;
+}
+
+
+.zy-lookup-name {
+
+    display:
+        grid;
+
+    gap:
+        3px;
+}
+
+
+.zy-lookup-name strong {
+
+    color:
+        #f3f8fb;
+
+    font-size:
+        12px;
+}
+
+
+.zy-lookup-name span {
+
+    color:
+        #819cad;
+
+    font-size:
+        9px;
+}
+
+
+.zy-lookup-usage {
+
+    display:
+        inline-flex;
+
+    align-items:
+        baseline;
+
+    gap:
+        4px;
+}
+
+
+.zy-lookup-usage strong {
+
+    color:
+        var(--zl-gold);
+
+    font-size:
+        15px;
+}
+
+
+.zy-lookup-usage span {
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        9px;
+}
+
+
+/* ==========================================================
+   STATUS
+   ========================================================== */
+
+.zy-lookup-status {
+
+    min-width:
+        65px;
+
+    min-height:
+        26px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding-inline:
+        9px;
+
+    border-radius:
+        999px;
+
+    font-size:
+        9px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-status.is-active {
+
+    background:
+        rgba(17,72,58,.30);
+
+    color:
+        var(--zl-green);
+
+    border:
+        1px solid rgba(83,208,162,.16);
+}
+
+
+.zy-lookup-status.is-inactive {
+
+    background:
+        rgba(112,31,39,.22);
+
+    color:
+        var(--zl-red);
+
+    border:
+        1px solid rgba(224,103,113,.20);
+}
+
+
+/* ==========================================================
+   ROW ACTIONS
+   ========================================================== */
+
+.zy-lookup-actions {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        5px;
+
+    flex-wrap:
+        nowrap;
+}
+
+
+.zy-lookup-inline-form {
+
+    display:
+        inline-flex;
+
+    margin:
+        0;
+}
+
+
+.zy-lookup-action {
+
+    min-height:
+        30px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding-inline:
+        10px;
+
+    border-radius:
+        9px;
+
+    text-decoration:
+        none;
+
+    font-size:
+        9.5px;
+
+    font-weight:
+        900;
+
+    cursor:
+        pointer;
+
+    white-space:
+        nowrap;
+}
+
+
+.zy-lookup-action--edit {
+
+    background:
+        #0a2639;
+
+    color:
+        #d7ebf4;
+
+    border:
+        1px solid rgba(74,161,204,.25);
+}
+
+
+.zy-lookup-action--neutral {
+
+    background:
+        #10334b;
+
+    color:
+        #dce9f0;
+
+    border:
+        1px solid rgba(90,151,195,.25);
+}
+
+
+.zy-lookup-action--delete {
+
+    background:
+        rgba(104,29,35,.19);
+
+    color:
+        var(--zl-red);
+
+    border:
+        1px solid rgba(218,91,102,.31);
+}
+
+
+.zy-lookup-action:disabled {
+
+    opacity:
+        .38;
+
+    cursor:
+        not-allowed;
+}
+
+
+.zy-lookup-action--edit:hover,
+
+.zy-lookup-action--neutral:hover {
+
+    background:
+        #16415b;
+
+    color:
+        #fff;
+
+    border-color:
+        rgba(70,200,220,.39);
+}
+
+
+/* ==========================================================
+   EMPTY
+   ========================================================== */
+
+.zy-lookup-empty {
+
+    min-height:
+        160px;
+
+    display:
+        grid;
+
+    place-content:
+        center;
+
+    gap:
+        5px;
+
+    text-align:
+        center;
+
+    border-radius:
+        14px;
+
+    background:
+        rgba(3,15,25,.38);
+
+    border:
+        1px dashed rgba(113,160,200,.18);
+}
+
+
+.zy-lookup-empty strong {
+
+    color:
+        #e7f0f5;
+}
+
+
+.zy-lookup-empty span {
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        10px;
+}
+
+
+/* ==========================================================
+   ALERTS
+   ========================================================== */
+
+.zy-lookup-alert {
+
+    padding:
+        11px 14px;
+
+    border-radius:
+        13px;
+
+    font-size:
+        11px;
+
+    font-weight:
+        850;
+}
+
+
+.zy-lookup-alert--success {
+
+    background:
+        rgba(22,110,79,.16);
+
+    color:
+        #a7e7ca;
+
+    border:
+        1px solid rgba(83,208,162,.20);
+}
+
+
+.zy-lookup-alert--danger {
+
+    background:
+        rgba(112,31,39,.18);
+
+    color:
+        #f0adb3;
+
+    border:
+        1px solid rgba(224,103,113,.24);
+}
+
+
+/* ==========================================================
+   MODAL BACKDROP
+   ========================================================== */
+
+html body
+#lookup-editor-modal.nx-setup-modal,
+
+html body
+#lookup-delete-modal.nx-setup-modal {
+
+    background:
+        rgba(3,9,18,.30) !important;
+
+    backdrop-filter:
+        blur(8px)
+        saturate(112%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px)
+        saturate(112%) !important;
+}
+
+
+/* ==========================================================
+   MODAL PANELS
+   ========================================================== */
+
+html body
+.zy-lookup-editor {
+
+    width:
+        min(650px, calc(100vw - 30px)) !important;
+
+    max-width:
+        650px !important;
+
+    background:
+        #101e31 !important;
+
+    border:
+        1px solid rgba(113,160,200,.26) !important;
+
+    box-shadow:
+        0 28px 75px rgba(0,0,0,.44) !important;
+}
+
+
+html body
+.zy-lookup-delete {
+
+    width:
+        min(540px, calc(100vw - 30px)) !important;
+
+    max-width:
+        540px !important;
+
+    background:
+        #101e31 !important;
+
+    border:
+        1px solid rgba(113,160,200,.26) !important;
+
+    box-shadow:
+        0 28px 75px rgba(0,0,0,.44) !important;
+}
+
+
+html body
+.zy-lookup-editor
+.nx-setup-modal__head,
+
+html body
+.zy-lookup-delete
+.nx-setup-modal__head {
+
+    background:
+        transparent !important;
+
+    border-bottom:
+        1px solid rgba(113,160,200,.11) !important;
+}
+
+
+/* ==========================================================
+   EDITOR
+   ========================================================== */
+
+.zy-lookup-editor__form {
+
+    padding:
+        14px 16px 0;
+
+    display:
+        grid;
+
+    gap:
+        12px;
+}
+
+
+.zy-lookup-editor__section {
+
+    padding:
+        14px;
+
+    border-radius:
+        15px;
+
+    background:
+        #071a29;
+
+    border:
+        1px solid rgba(113,160,200,.14);
+}
+
+
+.zy-lookup-editor__section-head {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        10px;
+
+    margin-bottom:
+        13px;
+
+    padding-bottom:
+        11px;
+
+    border-bottom:
+        1px solid rgba(113,160,200,.10);
+}
+
+
+.zy-lookup-editor__section-head > span {
+
+    width:
+        31px;
+
+    height:
+        31px;
+
+    flex:
+        0 0 31px;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    border-radius:
+        10px;
+
+    background:
+        rgba(241,199,91,.07);
+
+    border:
+        1px solid rgba(241,199,91,.20);
+
+    color:
+        var(--zl-gold);
+
+    font-size:
+        9px;
+
+    font-weight:
+        950;
+}
+
+
+.zy-lookup-editor__section-head strong {
+
+    display:
+        block;
+
+    color:
+        #fff;
+
+    font-size:
+        13px;
+}
+
+
+.zy-lookup-editor__section-head small {
+
+    display:
+        block;
+
+    margin-top:
+        2px;
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        9px;
+}
+
+
+/* ==========================================================
+   FIELD
+   ========================================================== */
+
+.zy-lookup-field {
+
+    display:
+        grid;
+
+    gap:
+        6px;
+}
+
+
+.zy-lookup-field > span {
+
+    color:
+        var(--zl-text-soft);
+
+    font-size:
+        10.5px;
+
+    font-weight:
+        850;
+}
+
+
+.zy-lookup-field > span b {
+
+    color:
+        #ff8e9d;
+}
+
+
+.zy-lookup-field input {
+
+    width:
+        100%;
+
+    min-height:
+        43px;
+
+    padding-inline:
+        12px;
+
+    border-radius:
+        11px;
+
+    background:
+        var(--zl-input);
+
+    color:
+        var(--zl-text);
+
+    border:
+        1px solid rgba(113,160,200,.32);
+
+    outline:
+        none;
+}
+
+
+.zy-lookup-field input::placeholder {
+
+    color:
+        #6d8698;
+}
+
+
+.zy-lookup-field input:focus {
+
+    background:
+        #0a273c;
+
+    border-color:
+        rgba(34,211,238,.60);
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.08);
+}
+
+
+/* ==========================================================
+   CHECK
+   ========================================================== */
+
+.zy-lookup-check {
+
+    min-height:
+        42px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    margin-top:
+        10px;
+
+    padding-inline:
+        12px;
+
+    border-radius:
+        11px;
+
+    background:
+        #061827;
+
+    border:
+        1px solid rgba(113,160,200,.13);
+
+    color:
+        var(--zl-text-soft);
+
+    font-size:
+        10.5px;
+
+    font-weight:
+        850;
+}
+
+
+.zy-lookup-check input[type="checkbox"] {
+
+    accent-color:
+        #48c7d8;
+}
+
+
+/* ==========================================================
+   MODAL ERROR
+   ========================================================== */
+
+.zy-lookup-modal-error {
+
+    padding:
+        10px 12px;
+
+    border-radius:
+        11px;
+
+    background:
+        rgba(112,31,39,.18);
+
+    color:
+        #f0adb3;
+
+    border:
+        1px solid rgba(224,103,113,.24);
+
+    font-size:
+        10px;
+
+    font-weight:
+        800;
+}
+
+
+/* ==========================================================
+   DELETE
+   ========================================================== */
+
+.zy-lookup-delete form {
+
+    padding:
+        14px 16px 0;
+}
+
+
+.zy-lookup-delete__warning {
+
+    display:
+        grid;
+
+    gap:
+        4px;
+
+    padding:
+        13px 14px;
+
+    border-radius:
+        13px;
+
+    background:
+        rgba(112,31,39,.18);
+
+    border:
+        1px solid rgba(224,103,113,.24);
+}
+
+
+.zy-lookup-delete__warning strong {
+
+    color:
+        #f5bec3;
+}
+
+
+.zy-lookup-delete__warning span {
+
+    color:
+        #e698a0;
+
+    font-size:
+        10px;
+}
+
+
+.zy-lookup-delete__summary {
+
+    display:
+        grid;
+
+    gap:
+        8px;
+
+    margin-top:
+        10px;
+}
+
+
+.zy-lookup-delete__summary > div {
+
+    min-height:
+        43px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        14px;
+
+    padding-inline:
+        12px;
+
+    border-radius:
+        11px;
+
+    background:
+        #071827;
+
+    border:
+        1px solid rgba(113,160,200,.13);
+}
+
+
+.zy-lookup-delete__summary span {
+
+    color:
+        var(--zl-muted);
+
+    font-size:
+        10px;
+}
+
+
+.zy-lookup-delete__summary strong {
+
+    color:
+        #fff;
+}
+
+
+/* ==========================================================
+   MODAL FOOTERS
+   ========================================================== */
+
+html body
+.zy-lookup-editor
+.nx-setup-modal__actions,
+
+html body
+.zy-lookup-delete
+.nx-setup-modal__actions {
+
+    margin-top:
+        12px !important;
+
+    padding:
+        11px 0 13px !important;
+
+    background:
+        #101e31 !important;
+
+    border-top:
+        1px solid rgba(113,160,200,.11) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 1000px) {
+
+    .zy-lookup-kpis {
+
+        grid-template-columns:
+            repeat(2, minmax(0,1fr));
+    }
+
+}
+
+
+@media (max-width: 760px) {
+
+    .zy-lookup-hero {
+
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .zy-lookup-hero__actions {
+
+        justify-content:
+            stretch;
+
+        display:
+            grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0,1fr));
+    }
+
+
+    .zy-lookup-hero__actions
+    .zy-lookup-btn {
+
+        width:
+            100%;
+    }
+
+
+    .zy-lookup-filters {
+
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .zy-lookup-card__head {
+
+        align-items:
+            flex-start;
+    }
+
+}
+
+
+@media (max-width: 520px) {
+
+    .zy-lookup-kpis {
+
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .zy-lookup-hero__actions {
+
+        grid-template-columns:
+            1fr;
+    }
+
+}
+
+
+/* ==========================================================
+   ZYNORA_LOOKUP_MODAL_COLOR_FINAL_V3
+   Categories + Levels modal color normalization
+   ========================================================== */
+
+
+/* ==========================================================
+   BACKDROP
+   ========================================================== */
+
+html body
+#lookup-editor-modal.nx-setup-modal,
+html body
+#lookup-delete-modal.nx-setup-modal {
+
+    background:
+        rgba(3, 10, 19, .30) !important;
+
+    backdrop-filter:
+        blur(8px) saturate(112%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(112%) !important;
+}
+
+
+/* ==========================================================
+   COMPLETE MODAL PANEL
+   إزالة Slate الرمادي
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor,
+
+html body
+#lookup-delete-modal
+.zy-lookup-delete {
+
+    background:
+        linear-gradient(
+            145deg,
+            #0a2639 0%,
+            #081d2d 48%,
+            #071725 100%
+        ) !important;
+
+    background-color:
+        #081d2d !important;
+
+    background-image:
+        linear-gradient(
+            145deg,
+            #0a2639 0%,
+            #081d2d 48%,
+            #071725 100%
+        ) !important;
+
+    border:
+        1px solid rgba(60, 174, 210, .22) !important;
+
+    box-shadow:
+        0 30px 80px rgba(0,0,0,.44),
+        inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor
+.nx-setup-modal__head,
+
+html body
+#lookup-delete-modal
+.zy-lookup-delete
+.nx-setup-modal__head {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    border-bottom:
+        1px solid rgba(72, 154, 193, .14) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* eyebrow */
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__head > span,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__head > span {
+
+    color:
+        #91adbe !important;
+}
+
+
+/* title */
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__head h2,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__head h2 {
+
+    color:
+        #f3f8fb !important;
+}
+
+
+/* subtitle */
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__head p,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__head p {
+
+    color:
+        #9bb2c1 !important;
+}
+
+
+/* ==========================================================
+   CLOSE BUTTON
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__close,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__close {
+
+    background:
+        #4f7da3 !important;
+
+    color:
+        #071522 !important;
+
+    border:
+        1px solid rgba(115, 175, 219, .18) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__close:hover,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__close:hover {
+
+    background:
+        #6090b8 !important;
+}
+
+
+/* ==========================================================
+   FORM BODY
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor__form {
+
+    background:
+        transparent !important;
+}
+
+
+/* ==========================================================
+   INNER SECTION
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor__section {
+
+    background:
+        linear-gradient(
+            145deg,
+            #071d2c,
+            #061824
+        ) !important;
+
+    border:
+        1px solid rgba(43, 170, 205, .18) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.012) !important;
+}
+
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor__section-head {
+
+    border-bottom:
+        1px solid rgba(92, 150, 183, .12) !important;
+}
+
+
+/* 01 badge */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor__section-head > span {
+
+    background:
+        rgba(241, 199, 91, .075) !important;
+
+    color:
+        #f1c75b !important;
+
+    border:
+        1px solid rgba(241, 199, 91, .24) !important;
+}
+
+
+/* ==========================================================
+   INPUT
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-field input {
+
+    background:
+        #071827 !important;
+
+    color:
+        #f2f7fa !important;
+
+    border:
+        1px solid rgba(111, 158, 198, .38) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html body
+#lookup-editor-modal
+.zy-lookup-field input:hover {
+
+    background:
+        #081e2f !important;
+
+    border-color:
+        rgba(111, 171, 210, .45) !important;
+}
+
+
+html body
+#lookup-editor-modal
+.zy-lookup-field input:focus {
+
+    background:
+        #092438 !important;
+
+    border-color:
+        rgba(39, 197, 222, .60) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(39, 197, 222, .075) !important;
+}
+
+
+/* ==========================================================
+   ACTIVE ROW
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-check {
+
+    background:
+        #061827 !important;
+
+    color:
+        #d5e2e9 !important;
+
+    border:
+        1px solid rgba(78, 144, 180, .16) !important;
+}
+
+
+/* ==========================================================
+   FOOTER
+   المشكلة السوداء الظاهرة بالصورة
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor
+.nx-setup-modal__actions,
+
+html body
+#lookup-delete-modal
+.zy-lookup-delete
+.nx-setup-modal__actions {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    border-top:
+        1px solid rgba(72, 154, 193, .14) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* إذا توجد pseudo-elements من Legacy CSS */
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__actions::before,
+
+html body
+#lookup-editor-modal
+.nx-setup-modal__actions::after,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__actions::before,
+
+html body
+#lookup-delete-modal
+.nx-setup-modal__actions::after {
+
+    display:
+        none !important;
+
+    content:
+        none !important;
+}
+
+
+/* ==========================================================
+   PRIMARY SAVE BUTTON
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-btn--primary {
+
+    background:
+        #4f7da3 !important;
+
+    background-image:
+        none !important;
+
+    color:
+        #071522 !important;
+
+    border:
+        1px solid rgba(111, 171, 210, .22) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html body
+#lookup-editor-modal
+.zy-lookup-btn--primary:hover {
+
+    background:
+        #6090b8 !important;
+
+    color:
+        #04111c !important;
+}
+
+
+/* ==========================================================
+   CANCEL BUTTON
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-btn--secondary,
+
+html body
+#lookup-delete-modal
+.zy-lookup-btn--secondary {
+
+    background:
+        #081d2d !important;
+
+    color:
+        #e2ecf2 !important;
+
+    border:
+        1px solid rgba(111, 158, 198, .36) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html body
+#lookup-editor-modal
+.zy-lookup-btn--secondary:hover,
+
+html body
+#lookup-delete-modal
+.zy-lookup-btn--secondary:hover {
+
+    background:
+        #0b2a40 !important;
+
+    border-color:
+        rgba(57, 191, 218, .40) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* ==========================================================
+   DELETE POPUP BODY
+   ========================================================== */
+
+html body
+#lookup-delete-modal
+.zy-lookup-delete__summary > div {
+
+    background:
+        #071827 !important;
+
+    border-color:
+        rgba(111, 158, 198, .18) !important;
+}
+
+
+/* ==========================================================
+   FINAL LEGACY GUARD
+   أي Surface داخل هذين الـPopup لا يرجع رمادي
+   ========================================================== */
+
+html body
+#lookup-editor-modal
+.zy-lookup-editor > *,
+
+html body
+#lookup-delete-modal
+.zy-lookup-delete > * {
+
+    --surface-default:
+        #081d2d !important;
+
+    --surface-raised:
+        #0a2639 !important;
+}
+
+
+/* ZYNORA_LOOKUP_MODAL_COLOR_FINAL_V3_END */
+
+
+/* ==========================================================
+   ZYNORA_LOOKUP_ACTIVE_ALIGNMENT_V4
+   Align Active control exactly with Name input
+   Categories + Levels
+   ========================================================== */
+
+/* القسم الداخلي */
+html body
+#lookup-editor-modal
+.zy-lookup-editor__section {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) 170px !important;
+
+    column-gap:
+        12px !important;
+
+    row-gap:
+        10px !important;
+
+    align-items:
+        end !important;
+}
+
+
+/* Header يأخذ العرض الكامل */
+html body
+#lookup-editor-modal
+.zy-lookup-editor__section-head {
+
+    grid-column:
+        1 / -1 !important;
+
+    width:
+        100% !important;
+}
+
+
+/* حقل الاسم */
+html body
+#lookup-editor-modal
+.zy-lookup-field {
+
+    grid-column:
+        1 !important;
+
+    width:
+        100% !important;
+
+    margin:
+        0 !important;
+
+    align-self:
+        end !important;
+}
+
+
+/* TextBox */
+html body
+#lookup-editor-modal
+.zy-lookup-field input {
+
+    height:
+        43px !important;
+
+    min-height:
+        43px !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* فعالة */
+html body
+#lookup-editor-modal
+.zy-lookup-check {
+
+    grid-column:
+        2 !important;
+
+    align-self:
+        end !important;
+
+    width:
+        100% !important;
+
+    height:
+        43px !important;
+
+    min-height:
+        43px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 12px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        9px !important;
+
+    box-sizing:
+        border-box !important;
+}
+
+
+/* checkbox */
+html body
+#lookup-editor-modal
+.zy-lookup-check input[type="checkbox"] {
+
+    margin:
+        0 !important;
+
+    flex:
+        0 0 auto !important;
+}
+
+
+/* النص */
+html body
+#lookup-editor-modal
+.zy-lookup-check span {
+
+    margin:
+        0 !important;
+
+    line-height:
+        1 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Responsive */
+@media (max-width: 620px) {
+
+    html body
+    #lookup-editor-modal
+    .zy-lookup-editor__section {
+
+        grid-template-columns:
+            1fr !important;
+    }
+
+    html body
+    #lookup-editor-modal
+    .zy-lookup-field,
+
+    html body
+    #lookup-editor-modal
+    .zy-lookup-check {
+
+        grid-column:
+            1 !important;
+    }
+}
+
+
+/* ZYNORA_LOOKUP_ACTIVE_ALIGNMENT_V4_END */
+

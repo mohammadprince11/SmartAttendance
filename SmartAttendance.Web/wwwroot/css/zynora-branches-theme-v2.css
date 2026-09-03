@@ -1,0 +1,1031 @@
+﻿/* ==========================================================
+   ZYNORA BRANCHES THEME V2
+   VISUAL ONLY — NO FUNCTIONAL CHANGES
+   ========================================================== */
+
+:root {
+    --zb-card-start: rgba(13, 40, 60, .90);
+    --zb-card-end: rgba(6, 22, 34, .97);
+
+    --zb-input: #081a2a;
+    --zb-input-hover: #0a1f31;
+    --zb-input-focus: #0b2135;
+
+    --zb-border: rgba(126, 167, 210, .38);
+    --zb-border-soft: rgba(34, 211, 238, .13);
+
+    --zb-text: #f4f8fb;
+    --zb-label: #d9e6ee;
+    --zb-muted: #9fb8c9;
+    --zb-gold: #f5c96b;
+}
+
+
+/* ==========================================================
+   HERO / CARDS
+   ========================================================== */
+
+html:not([data-theme="light"]) .nexora-setup-hero,
+html:not([data-theme="light"]) .nexora-setup-card,
+html:not([data-theme="light"]) .form-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--zb-card-start),
+            var(--zb-card-end)
+        ) !important;
+
+    border:
+        1px solid var(--zb-border-soft) !important;
+
+    box-shadow:
+        0 22px 58px rgba(0,0,0,.25) !important;
+}
+
+
+/* hero */
+html:not([data-theme="light"]) .nexora-setup-hero h1,
+html:not([data-theme="light"]) .page-header h1 {
+
+    color: #ffffff !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-hero p,
+html:not([data-theme="light"]) .page-header p {
+
+    color: var(--zb-muted) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-kicker,
+html:not([data-theme="light"]) .nexora-setup-card-head > div > span {
+
+    color: var(--zb-gold) !important;
+}
+
+
+/* ==========================================================
+   SEARCH AREA
+   ========================================================== */
+
+html:not([data-theme="light"]) .nexora-setup-search {
+
+    background:
+        rgba(5,18,30,.42) !important;
+
+    border:
+        1px solid rgba(126,167,210,.14) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-search input {
+
+    background:
+        var(--zb-input) !important;
+
+    color:
+        var(--zb-text) !important;
+
+    border:
+        1px solid var(--zb-border) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-search input::placeholder {
+
+    color:
+        #71879a !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-search input:focus {
+
+    background:
+        var(--zb-input-focus) !important;
+
+    border-color:
+        rgba(34,211,238,.68) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+html:not([data-theme="light"]) .nexora-setup-table-wrap {
+
+    background:
+        rgba(4,16,27,.42) !important;
+
+    border:
+        1px solid rgba(126,167,210,.14) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-table {
+
+    background:
+        transparent !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-table thead {
+
+    background:
+        rgba(5,18,30,.72) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-table th {
+
+    color:
+        var(--zb-label) !important;
+
+    border-color:
+        rgba(126,167,210,.14) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-table td {
+
+    color:
+        var(--zb-label) !important;
+
+    border-color:
+        rgba(126,167,210,.11) !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-table tbody tr {
+
+    background:
+        transparent !important;
+}
+
+
+html:not([data-theme="light"]) .nexora-setup-table tbody tr:hover {
+
+    background:
+        rgba(34,211,238,.045) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-title {
+
+    color:
+        var(--zb-text) !important;
+}
+
+
+/* ==========================================================
+   STATUS
+   ========================================================== */
+
+html:not([data-theme="light"]) .nx-setup-status {
+
+    background:
+        #102235 !important;
+
+    border:
+        1px solid rgba(126,167,210,.20) !important;
+
+    color:
+        #d9e6ee !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-status.is-active {
+
+    color:
+        #73ffd8 !important;
+
+    border-color:
+        rgba(115,255,216,.20) !important;
+
+    background:
+        rgba(20,83,69,.18) !important;
+}
+
+
+/* ==========================================================
+   FORM FIELDS
+   ========================================================== */
+
+html:not([data-theme="light"]) .nx-setup-field > span,
+html:not([data-theme="light"]) .form-group > label {
+
+    color:
+        var(--zb-label) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-field input,
+html:not([data-theme="light"]) .nx-setup-field select,
+html:not([data-theme="light"]) .form-control {
+
+    background:
+        var(--zb-input) !important;
+
+    background-color:
+        var(--zb-input) !important;
+
+    color:
+        var(--zb-text) !important;
+
+    border:
+        1px solid var(--zb-border) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-field input:hover,
+html:not([data-theme="light"]) .nx-setup-field select:hover {
+
+    background:
+        var(--zb-input-hover) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-field input:focus,
+html:not([data-theme="light"]) .nx-setup-field select:focus {
+
+    background:
+        var(--zb-input-focus) !important;
+
+    border-color:
+        rgba(34,211,238,.68) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* ==========================================================
+   MODAL — VISUAL ONLY
+   ========================================================== */
+
+html:not([data-theme="light"]) .nx-setup-modal {
+
+    background:
+        rgba(4,10,20,.32) !important;
+
+    backdrop-filter:
+        blur(7px) saturate(115%) !important;
+
+    -webkit-backdrop-filter:
+        blur(7px) saturate(115%) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-modal__panel {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.96),
+            rgba(6,22,34,.99)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.16) !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-modal__head,
+html:not([data-theme="light"]) .nx-setup-modal-form,
+html:not([data-theme="light"]) .nx-setup-modal__actions {
+
+    background:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-modal__head {
+
+    border-bottom:
+        1px solid rgba(160,190,210,.12) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-modal__actions {
+
+    border-top:
+        1px solid rgba(160,190,210,.12) !important;
+}
+
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
+
+html:not([data-theme="light"]) .nx-setup-btn-primary,
+html:not([data-theme="light"]) .btn-primary {
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        ) !important;
+
+    color:
+        #03202c !important;
+
+    border-color:
+        rgba(34,211,238,.30) !important;
+
+    box-shadow:
+        0 10px 24px rgba(34,211,238,.10) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-btn-secondary,
+html:not([data-theme="light"]) .btn-secondary {
+
+    background:
+        #102235 !important;
+
+    color:
+        var(--zb-label) !important;
+
+    border-color:
+        rgba(126,167,210,.24) !important;
+}
+
+
+/* edit */
+html:not([data-theme="light"]) .btn-edit {
+
+    background:
+        #102235 !important;
+
+    color:
+        #cfe4f3 !important;
+
+    border-color:
+        rgba(126,167,210,.26) !important;
+}
+
+
+/* delete */
+html:not([data-theme="light"]) .btn-delete {
+
+    background:
+        rgba(127,29,29,.16) !important;
+
+    color:
+        #fca5a5 !important;
+
+    border-color:
+        rgba(248,113,113,.34) !important;
+}
+
+
+/* ==========================================================
+   EDIT PAGE
+   ========================================================== */
+
+html:not([data-theme="light"]) .nx-setup-form-page .nexora-setup-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--zb-card-start),
+            var(--zb-card-end)
+        ) !important;
+}
+
+
+html:not([data-theme="light"]) .nx-setup-check {
+
+    background:
+        rgba(4,16,27,.48) !important;
+
+    border:
+        1px solid rgba(126,167,210,.16) !important;
+
+    color:
+        var(--zb-label) !important;
+}
+
+
+/* ==========================================================
+   DELETE PAGE
+   ========================================================== */
+
+html:not([data-theme="light"]) .page-header {
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--zb-card-start),
+            var(--zb-card-end)
+        ) !important;
+
+    border:
+        1px solid var(--zb-border-soft) !important;
+
+    border-radius:
+        22px !important;
+
+    padding:
+        20px 22px !important;
+}
+
+
+html:not([data-theme="light"]) .alert-danger {
+
+    background:
+        rgba(127,29,29,.16) !important;
+
+    border:
+        1px solid rgba(248,113,113,.28) !important;
+
+    color:
+        #fecaca !important;
+}
+
+
+/* ==========================================================
+   PAGINATION / PAGE SIZE
+   ========================================================== */
+
+html:not([data-theme="light"]) .pagination a,
+html:not([data-theme="light"]) .pagination button {
+
+    background:
+        #102235 !important;
+
+    border-color:
+        rgba(126,167,210,.22) !important;
+
+    color:
+        #d9e6ee !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 760px) {
+
+    .nx-setup-modal__panel {
+        width:
+            calc(100vw - 24px) !important;
+    }
+}
+
+/* ==========================================================
+   ZYNORA_BRANCHES_VISUAL_CALIBRATION_V3
+   Visual only
+   ========================================================== */
+
+/* Hero أقرب إلى Employee Create */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-hero {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13, 40, 60, .94),
+            rgba(6, 22, 34, .98)
+        ) !important;
+
+    border-color:
+        rgba(34, 211, 238, .17) !important;
+
+    box-shadow:
+        0 20px 55px rgba(0,0,0,.24) !important;
+}
+
+
+/* Card الرئيسي */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(12, 37, 56, .92),
+            rgba(6, 21, 33, .98)
+        ) !important;
+
+    border-color:
+        rgba(34,211,238,.15) !important;
+
+    box-shadow:
+        0 20px 55px rgba(0,0,0,.22) !important;
+}
+
+
+/* Search area أخف */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-search {
+
+    background:
+        rgba(4,16,27,.34) !important;
+
+    border-color:
+        rgba(126,167,210,.15) !important;
+}
+
+
+/* Search input */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-search input {
+
+    background:
+        #081a2a !important;
+
+    border-color:
+        rgba(126,167,210,.34) !important;
+
+    color:
+        #f4f8fb !important;
+}
+
+
+/* Primary buttons — نفس Create */
+html:not([data-theme="light"])
+.nexora-setup-page
+.btn-primary,
+
+html:not([data-theme="light"])
+.nexora-setup-page
+.nx-setup-btn-primary {
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        ) !important;
+
+    color:
+        #03202c !important;
+
+    border-color:
+        rgba(34,211,238,.34) !important;
+
+    box-shadow:
+        0 9px 22px rgba(34,211,238,.10) !important;
+}
+
+
+/* Secondary buttons */
+html:not([data-theme="light"])
+.nexora-setup-page
+.btn-secondary,
+
+html:not([data-theme="light"])
+.nexora-setup-page
+.nx-setup-btn-secondary {
+
+    background:
+        #102235 !important;
+
+    color:
+        #d9e6ee !important;
+
+    border-color:
+        rgba(126,167,210,.24) !important;
+}
+
+
+/* Table container */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-table-wrap {
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(5,18,30,.48),
+            rgba(4,15,25,.62)
+        ) !important;
+
+    border-color:
+        rgba(126,167,210,.16) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.018) !important;
+}
+
+
+/* Table header */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-table thead {
+
+    background:
+        rgba(8,27,43,.74) !important;
+}
+
+
+/* Rows */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-table tbody tr {
+
+    background:
+        rgba(3,13,23,.16) !important;
+}
+
+
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-table tbody tr:hover {
+
+    background:
+        rgba(34,211,238,.055) !important;
+}
+
+
+/* Edit */
+html:not([data-theme="light"])
+.nexora-setup-page
+.btn-edit {
+
+    background:
+        #14293e !important;
+
+    color:
+        #d9e6ee !important;
+
+    border-color:
+        rgba(126,167,210,.28) !important;
+}
+
+
+/* Delete يبقى Red Accent محدود */
+html:not([data-theme="light"])
+.nexora-setup-page
+.btn-delete {
+
+    background:
+        rgba(127,29,29,.18) !important;
+
+    border-color:
+        rgba(248,113,113,.36) !important;
+
+    color:
+        #fca5a5 !important;
+}
+
+
+/* Gold فقط للعناوين الثانوية */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-kicker,
+
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-card-head > div > span {
+
+    color:
+        #f5c96b !important;
+}
+
+
+/* Main/secondary typography */
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-card-head strong {
+
+    color:
+        #f4f8fb !important;
+}
+
+
+html:not([data-theme="light"])
+.nexora-setup-page
+.nexora-setup-card-head small {
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ZYNORA_BRANCHES_VISUAL_CALIBRATION_V3_END */
+
+
+/* ==========================================================
+   ZYNORA_BRANCH_MODAL_EXACT_DEPARTMENT_STYLE_V1
+   Exact visual parity with Departments
+   ========================================================== */
+
+
+/* CREATE + EDIT = same dimensions as Department modal */
+html body #branch-create-modal
+.zy-branch-quick-create,
+
+html body #branch-edit-modal
+.zy-branch-edit-popup {
+
+    width:
+        min(820px, calc(100vw - 32px)) !important;
+
+    max-width:
+        820px !important;
+
+    background:
+        rgb(16,30,49) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(114,158,201,.26) !important;
+
+    border-radius:
+        22px !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42) !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* DELETE = same Department delete dimensions */
+html body #branch-delete-modal
+.zy-branch-delete-popup {
+
+    width:
+        min(560px, calc(100vw - 32px)) !important;
+
+    max-width:
+        560px !important;
+
+    background:
+        rgb(16,30,49) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(114,158,201,.26) !important;
+
+    border-radius:
+        22px !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42) !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* Head / Body / Footer all same surface */
+html body #branch-create-modal
+.nx-setup-modal__head,
+
+html body #branch-create-modal
+.nx-setup-modal-form,
+
+html body #branch-create-modal
+.nx-setup-modal__actions,
+
+html body #branch-edit-modal
+.nx-setup-modal__head,
+
+html body #branch-edit-modal
+.nx-setup-modal-form,
+
+html body #branch-edit-modal
+.nx-setup-modal__actions,
+
+html body #branch-delete-modal
+.nx-setup-modal__head,
+
+html body #branch-delete-modal
+.nx-setup-modal-form,
+
+html body #branch-delete-modal
+.nx-setup-modal__actions {
+
+    background:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* separators */
+html body #branch-create-modal
+.nx-setup-modal__head,
+
+html body #branch-edit-modal
+.nx-setup-modal__head,
+
+html body #branch-delete-modal
+.nx-setup-modal__head {
+
+    border-bottom:
+        1px solid rgba(130,165,200,.10) !important;
+}
+
+
+html body #branch-create-modal
+.nx-setup-modal__actions,
+
+html body #branch-edit-modal
+.nx-setup-modal__actions,
+
+html body #branch-delete-modal
+.nx-setup-modal__actions {
+
+    border-top:
+        1px solid rgba(130,165,200,.12) !important;
+}
+
+
+/* inputs same visual language */
+html body #branch-create-modal
+.nx-setup-field input,
+
+html body #branch-create-modal
+.nx-setup-field select,
+
+html body #branch-edit-modal
+.nx-setup-field input,
+
+html body #branch-edit-modal
+.nx-setup-field select {
+
+    background:
+        #081a2a !important;
+
+    color:
+        #f4f8fb !important;
+
+    border:
+        1px solid rgba(126,167,210,.38) !important;
+}
+
+
+/* focus */
+html body #branch-create-modal
+.nx-setup-field input:focus,
+
+html body #branch-create-modal
+.nx-setup-field select:focus,
+
+html body #branch-edit-modal
+.nx-setup-field input:focus,
+
+html body #branch-edit-modal
+.nx-setup-field select:focus {
+
+    background:
+        #0b2135 !important;
+
+    border-color:
+        rgba(34,211,238,.68) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* Mobile */
+@media (max-width: 760px) {
+
+    html body #branch-create-modal
+    .zy-branch-quick-create,
+
+    html body #branch-edit-modal
+    .zy-branch-edit-popup,
+
+    html body #branch-delete-modal
+    .zy-branch-delete-popup {
+
+        width:
+            calc(100vw - 24px) !important;
+
+        max-width:
+            none !important;
+    }
+}
+
+
+/* ZYNORA_BRANCH_MODAL_EXACT_DEPARTMENT_STYLE_V1_END */
+
+
+/* ZYNORA_BRANCH_REAL_BLUR_V2 */
+
+/* نفس خلفية مودل الأقسام:
+   النظام يبقى ظاهر خلف البوب */
+html body #branch-create-modal.nx-setup-modal,
+html body #branch-edit-modal.nx-setup-modal,
+html body #branch-delete-modal.nx-setup-modal {
+
+    background:
+        rgba(4, 10, 20, 0.28) !important;
+
+    background-color:
+        rgba(4, 10, 20, 0.28) !important;
+
+    background-image:
+        none !important;
+
+    backdrop-filter:
+        blur(8px) saturate(115%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(115%) !important;
+}
+
+
+/* إذا أكو overlay داخلي قديم لا يسمح له
+   بتحويل الخلفية إلى لون صلد */
+html body #branch-create-modal.nx-setup-modal::before,
+html body #branch-edit-modal.nx-setup-modal::before,
+html body #branch-delete-modal.nx-setup-modal::before {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+}
+
+
+/* Panel نفسه مثل الأقسام */
+html body #branch-create-modal .nx-setup-modal__panel,
+html body #branch-edit-modal .nx-setup-modal__panel,
+html body #branch-delete-modal .nx-setup-modal__panel {
+
+    background:
+        rgb(16, 30, 49) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(114, 158, 201, .26) !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42) !important;
+}
+
+
+/* لا Footer أسود منفصل */
+html body #branch-create-modal .nx-setup-modal__head,
+html body #branch-create-modal .nx-setup-modal-form,
+html body #branch-create-modal .nx-setup-modal__actions,
+
+html body #branch-edit-modal .nx-setup-modal__head,
+html body #branch-edit-modal .nx-setup-modal-form,
+html body #branch-edit-modal .nx-setup-modal__actions,
+
+html body #branch-delete-modal .nx-setup-modal__head,
+html body #branch-delete-modal .nx-setup-modal-form,
+html body #branch-delete-modal .nx-setup-modal__actions {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* ZYNORA_BRANCH_REAL_BLUR_V2_END */
+

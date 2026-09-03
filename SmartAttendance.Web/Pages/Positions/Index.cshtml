@@ -1,258 +1,268 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Positions.IndexModel
-@{
-    ViewData["Title"] = "المناصب الوظيفية";
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/nexora-setup-pages.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/zynora-positions-manager-v3.css"
+          asp-append-version="true" />
 }
 
-<link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
+@{
+    ViewData["Title"] = "المناصب الوظيفية";
 
-<div class="nxp-positions-page" dir="rtl">
+    var hasCompanies =
+        Model.Companies.Count > 0;
+
+    var isEditing =
+        Model.Input.Id > 0;
+
+    var autoOpenEditor = isEditing || !ViewData.ModelState.IsValid;
+}
+
+<div class="zy-pos-page"
+     dir="rtl">
+
     @if (TempData["SuccessMessage"] is string successMessage)
     {
-        <div class="nxp-alert nxp-alert--success">@successMessage</div>
+        <div class="zy-pos-alert zy-pos-alert--success">
+            @successMessage
+        </div>
     }
 
     @if (TempData["ErrorMessage"] is string errorMessage)
     {
-        <div class="nxp-alert nxp-alert--error">@errorMessage</div>
+        <div class="zy-pos-alert zy-pos-alert--danger">
+            @errorMessage
+        </div>
     }
 
-    <section class="nxp-admin-header" aria-labelledby="positionsAdminTitle">
-        <div class="nxp-admin-header__top">
-            <div class="nxp-admin-header__identity">
-                <span class="nxp-admin-header__eyebrow">إدارة الهيكل الوظيفي</span>
-                <h1 id="positionsAdminTitle">المناصب الوظيفية</h1>
-                <p>إدارة المسميات الوظيفية وتصنيفها وربطها بالموظفين ضمن شركة محددة.</p>
-            </div>
 
-            <nav class="nxp-admin-header__actions" aria-label="إجراءات إدارة المناصب">
-                <a asp-page="/Positions/Import" asp-route-companyId="@Model.CompanyId">استيراد Excel</a>
-                <a asp-page="/PositionCategories/Index">إدارة الفئات</a>
-                <a asp-page="/PositionLevels/Index">إدارة المستويات</a>
-            </nav>
+    <!-- =====================================================
+         HERO
+         ===================================================== -->
+
+    <section class="zy-pos-hero">
+
+        <div class="zy-pos-hero__content">
+
+            <span class="zy-pos-eyebrow">
+                الهيكل الوظيفي
+            </span>
+
+            <h1>
+                المناصب الوظيفية
+            </h1>
+
+            <p>
+                إدارة المسميات الوظيفية وتصنيفها ومتطلباتها
+                وربطها بالموظفين ضمن هيكل وظيفي موحد.
+            </p>
+
         </div>
 
-        @if (Model.Companies.Count > 0)
+
+        <div class="zy-pos-hero__actions">
+
+            <a asp-page="/Positions/Import"
+               asp-route-companyId="@Model.CompanyId"
+               class="zy-pos-btn zy-pos-btn--secondary">
+                استيراد Excel
+            </a>
+
+            <a asp-page="/PositionCategories/Index"
+               class="zy-pos-btn zy-pos-btn--secondary">
+                إدارة الفئات
+            </a>
+
+            <a asp-page="/PositionLevels/Index"
+               class="zy-pos-btn zy-pos-btn--secondary">
+                إدارة المستويات
+            </a>
+
+            <button type="button"
+                    class="zy-pos-btn zy-pos-btn--primary"
+                    data-position-create
+                    data-nx-setup-open="position-editor-modal"
+                    @(hasCompanies ? null : "disabled")>
+
+                + إضافة منصب
+
+            </button>
+
+        </div>
+
+
+        @if (hasCompanies)
         {
-            <form method="get" class="nxp-admin-header__company" aria-label="اختيار الشركة">
-                <label for="CompanyId">الشركة الحالية</label>
+            <form method="get"
+                  class="zy-pos-company-bar">
+
+                <div>
+                    <span>الشركة الحالية</span>
+
+                    <strong>
+                        @Model.SelectedCompanyName
+                    </strong>
+                </div>
+
                 <select asp-for="CompanyId">
                     @foreach (var company in Model.Companies)
                     {
-                        <option value="@company.Id">@company.Name</option>
+                        <option value="@company.Id">
+                            @company.Name
+                        </option>
                     }
                 </select>
-                <button type="submit" class="nxp-btn nxp-btn--ghost">تطبيق</button>
-            </form>
-        }
-    </section>
 
-    <section class="nxp-kpis" aria-label="ملخص المناصب الوظيفية">
-        <article>
-            <span>إجمالي المناصب</span>
-            <strong>@Model.TotalPositions</strong>
-        </article>
-        <article>
-            <span>المناصب الفعالة</span>
-            <strong>@Model.ActivePositions</strong>
-        </article>
-        <article>
-            <span>مناصب مرتبطة بموظفين</span>
-            <strong>@Model.LinkedPositions</strong>
-        </article>
-        <article>
-            <span>موظفون مثبتون على مناصب</span>
-            <strong>@Model.TotalLinkedEmployees</strong>
-        </article>
-    </section>
-
-    <section class="nxp-card nxp-form-card" id="positionFormArea">
-        <div class="nxp-card__head">
-            <div>
-                <h2>@(Model.Input.Id > 0 ? "تعديل منصب وظيفي" : "بيانات المنصب الوظيفي")</h2>
-                <p>نفس النموذج يستخدم للإضافة والتعديل. المنصب الجديد يكون فعال تلقائياً.</p>
-            </div>
-        </div>
-
-        <form method="post" asp-page-handler="Save" id="positionForm" class="nxp-form" autocomplete="off">
-            <input asp-for="Input.Id" type="hidden" />
-            <input asp-for="Input.CompanyId" type="hidden" />
-            <input asp-for="Input.OriginalArabicName" type="hidden" />
-
-            <label class="nxp-field nxp-field--wide">
-                <span>اسم المنصب <b>*</b></span>
-                <input asp-for="Input.ArabicName" required maxlength="200" placeholder="مثال: مشرف عمليات الموارد البشرية" />
-            </label>
-
-            <label class="nxp-field">
-                <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                <input value="@Model.SelectedCompanyName" readonly />
-            </label>
-
-            <label class="nxp-field">
-                <span>الفئة <a asp-page="/PositionCategories/Index">إدارة</a></span>
-                <select asp-for="Input.Category">
-                    <option value="">غير محدد</option>
-                    @foreach (var category in Model.Categories.Where(item => item.IsActive || item.Name == Model.Input.Category))
-                    {
-                        <option value="@category.Name">@category.Name</option>
-                    }
-                </select>
-            </label>
-
-            <label class="nxp-field">
-                <span>المستوى <a asp-page="/PositionLevels/Index">إدارة</a></span>
-                <select asp-for="Input.Level">
-                    <option value="">غير محدد</option>
-                    @foreach (var level in Model.Levels.Where(item => item.IsActive || item.Name == Model.Input.Level))
-                    {
-                        <option value="@level.Name">@level.Name</option>
-                    }
-                </select>
-            </label>
-
-            <label class="nxp-field nxp-field--reference">
-                <span>&#x0627;&#x0644;&#x0643;&#x0641;&#x0627;&#x0621;&#x0627;&#x062A; <button type="button" class="nxp-label-manage" data-nxp-reference-open="competencies">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
-                <select asp-for="Input.Competencies">
-                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
-                    @foreach (var item in Model.CompetencyOptions.Where(item => item.IsActive || item.Name == Model.Input.Competencies))
-                    {
-                        <option value="@item.Name">@item.Name</option>
-                    }
-                </select>
-            </label>
-
-            <label class="nxp-field nxp-field--reference">
-                <span>&#x0627;&#x0644;&#x062F;&#x0631;&#x062C;&#x0629; &#x0627;&#x0644;&#x0639;&#x0644;&#x0645;&#x064A;&#x0629; <button type="button" class="nxp-label-manage" data-nxp-reference-open="education">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
-                <select asp-for="Input.Education">
-                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
-                    @foreach (var item in Model.EducationOptions.Where(item => item.IsActive || item.Name == Model.Input.Education))
-                    {
-                        <option value="@item.Name">@item.Name</option>
-                    }
-                </select>
-            </label>
-
-            <label class="nxp-field nxp-field--reference">
-                <span>&#x0627;&#x0644;&#x062A;&#x062E;&#x0635;&#x0635; <button type="button" class="nxp-label-manage" data-nxp-reference-open="specializations">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
-                <select asp-for="Input.EducationSpecialization">
-                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
-                    @foreach (var item in Model.EducationSpecializationOptions.Where(item => item.IsActive || item.Name == Model.Input.EducationSpecialization))
-                    {
-                        <option value="@item.Name">@item.Name</option>
-                    }
-                </select>
-            </label>
-            @* NEXORA_FIX20G_SPECIALIZATION_FIELD *@
-
-            <label class="nxp-field nxp-field--reference">
-                <span>&#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0627;&#x062A; <button type="button" class="nxp-label-manage" data-nxp-reference-open="certifications">&#x0625;&#x062F;&#x0627;&#x0631;&#x0629;</button></span>
-                <select asp-for="Input.Certifications">
-                    <option value="">&#x063A;&#x064A;&#x0631; &#x0645;&#x062D;&#x062F;&#x062F;</option>
-                    @foreach (var item in Model.CertificationOptions.Where(item => item.IsActive || item.Name == Model.Input.Certifications))
-                    {
-                        <option value="@item.Name">@item.Name</option>
-                    }
-                </select>
-            </label>
-            @* NEXORA_FIX20D_REFERENCE_DROPDOWN_FIELDS *@
-
-            <div class="nxp-position-profile-launchers" data-nxp-profile-launchers>
-                <button type="button" class="nxp-profile-launcher" data-nxp-profile-open="job">
-                    <span>&#x0627;&#x0644;&#x0648;&#x0635;&#x0641; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;</span>
-                    <strong>&#x0627;&#x0644;&#x0647;&#x062F;&#x0641; &#x0648;&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645; &#x0648;KPI</strong>
+                <button type="submit"
+                        class="zy-pos-btn zy-pos-btn--secondary">
+                    تطبيق
                 </button>
 
-                </div>
+            </form>
+        }
 
-            <div class="nxp-profile-modal-backdrop" data-nxp-profile-backdrop hidden></div>
-
-            <section class="nxp-profile-modal" data-nxp-profile-modal="job" hidden aria-hidden="true">
-                <div class="nxp-profile-modal__card" dir="rtl">
-                    <header class="nxp-profile-modal__head">
-                        <div>
-                            <span>&#x0628;&#x0637;&#x0627;&#x0642;&#x0629; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</span>
-                            <h3>&#x0627;&#x0644;&#x0648;&#x0635;&#x0641; &#x0627;&#x0644;&#x0648;&#x0638;&#x064A;&#x0641;&#x064A;</h3>
-                        </div>
-                        <button type="button" data-nxp-profile-close>&times;</button>
-                    </header>
-
-                    <div class="nxp-profile-modal__body">
-                        <label class="nxp-field nxp-field--wide">
-                            <span>&#x0647;&#x062F;&#x0641; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</span>
-                            <textarea asp-for="Input.JobPurpose" rows="3" maxlength="2000" placeholder="&#x0645;&#x0627; &#x0627;&#x0644;&#x063A;&#x0631;&#x0636; &#x0645;&#x0646; &#x0647;&#x0630;&#x0627; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;&#x061F;"></textarea>
-                        </label>
-
-                        <label class="nxp-field nxp-field--wide">
-                            <span>&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645; &#x0648;&#x0627;&#x0644;&#x0645;&#x0633;&#x0624;&#x0648;&#x0644;&#x064A;&#x0627;&#x062A;</span>
-                            <textarea asp-for="Input.KeyResponsibilities" rows="5" maxlength="4000" placeholder="&#x0627;&#x0643;&#x062A;&#x0628; &#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;..."></textarea>
-                        </label>
-
-                        <label class="nxp-field">
-                            <span>&#x0627;&#x0644;&#x0645;&#x062A;&#x0637;&#x0644;&#x0628;&#x0627;&#x062A;</span>
-                            <textarea asp-for="Input.JobRequirements" rows="4" maxlength="3000" placeholder="&#x0627;&#x0644;&#x062E;&#x0628;&#x0631;&#x0629;&#x060C; &#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0629;&#x060C; &#x0627;&#x0644;&#x0644;&#x063A;&#x0627;&#x062A;..."></textarea>
-                        </label>
-
-                        <label class="nxp-field">
-                            <span>&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0631;&#x0627;&#x062A;</span>
-                            <textarea asp-for="Input.RequiredSkills" rows="4" maxlength="3000" placeholder="&#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0631;&#x0627;&#x062A; &#x0627;&#x0644;&#x0641;&#x0646;&#x064A;&#x0629; &#x0648;&#x0627;&#x0644;&#x0634;&#x062E;&#x0635;&#x064A;&#x0629;..."></textarea>
-                        </label>
-
-                        <label class="nxp-field nxp-field--wide">
-                            <span>KPI</span>
-                            <textarea asp-for="Input.JobKpis" rows="4" maxlength="3000" placeholder="&#x0645;&#x0624;&#x0634;&#x0631;&#x0627;&#x062A; &#x0627;&#x0644;&#x0623;&#x062F;&#x0627;&#x0621; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;..."></textarea>
-                        </label>
-                    </div>
-
-                    <footer class="nxp-profile-modal__footer" data-nxp-profile-footer="job">
-                        <button type="button" class="nxp-btn nxp-btn--ghost" data-nxp-profile-close>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</button>
-                        <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638; &#x0627;&#x0644;&#x0645;&#x0646;&#x0635;&#x0628;</button>
-                    </footer>
-                    @* NEXORA_FIX20F_JOB_MODAL_FOOTER *@</div>
-            </section>
-
-            @* NEXORA_FIX20C_V2_PROFILE_POPUPS_FIELDS *@
-
-            <label class="nxp-check">
-                <input type="hidden" name="Input.IsActive" value="false" />
-                <input asp-for="Input.IsActive" value="true" />
-                <span>المنصب فعال</span>
-            </label>
-
-            <div class="nxp-form-actions">
-                <button type="submit" class="nxp-btn nxp-btn--primary">حفظ المنصب</button>
-                <a asp-page="/Positions/Index" asp-route-companyId="@Model.CompanyId" class="nxp-btn nxp-btn--ghost">تفريغ النموذج</a>
-            </div>
-        </form>
     </section>
 
-    <section class="nxp-card">
-        <div class="nxp-card__head nxp-card__head--filters">
+
+    <!-- =====================================================
+         KPI
+         ===================================================== -->
+
+    <section class="zy-pos-kpis">
+
+        <article>
+            <div class="zy-pos-kpi-icon">01</div>
+
             <div>
-                <h2>قائمة المناصب</h2>
-                <p>الفلاتر تعمل مباشرة بدون زر بحث.</p>
+                <span>إجمالي المناصب</span>
+                <strong>@Model.TotalPositions</strong>
+            </div>
+        </article>
+
+
+        <article>
+            <div class="zy-pos-kpi-icon">02</div>
+
+            <div>
+                <span>المناصب الفعالة</span>
+                <strong>@Model.ActivePositions</strong>
+            </div>
+        </article>
+
+
+        <article>
+            <div class="zy-pos-kpi-icon">03</div>
+
+            <div>
+                <span>مرتبطة بموظفين</span>
+                <strong>@Model.LinkedPositions</strong>
+            </div>
+        </article>
+
+
+        <article>
+            <div class="zy-pos-kpi-icon">04</div>
+
+            <div>
+                <span>الموظفون المرتبطون</span>
+                <strong>@Model.TotalLinkedEmployees</strong>
+            </div>
+        </article>
+
+    </section>
+
+
+    <!-- =====================================================
+         POSITIONS REGISTRY
+         ===================================================== -->
+
+    <section class="zy-pos-card">
+
+        <header class="zy-pos-card__head">
+
+            <div>
+                
+
+                <h2>
+                    المناصب المعرفة داخل الشركة
+                </h2>
+
+                <p>
+                    البحث والتصفية تعمل مباشرة على السجل.
+                </p>
             </div>
 
-            <div class="nxp-filters nxp-filters--positions" aria-label="فلاتر المناصب">
-                <input id="positionSearch" type="search" placeholder="بحث مباشر عن منصب..." />
+            
+
+        </header>
+
+
+        <div class="zy-pos-filters">
+
+            <label class="zy-pos-filter zy-pos-filter--search">
+                <span>البحث</span>
+
+                <input id="positionSearch"
+                       type="search"
+                       placeholder="ابحث عن اسم المنصب..." />
+            </label>
+
+
+            <label class="zy-pos-filter">
+                <span>الفئة</span>
 
                 <select id="categoryFilter">
-                    <option value="all">كل الفئات</option>
+
+                    <option value="all">
+                        كل الفئات
+                    </option>
+
                     @foreach (var category in Model.Categories)
                     {
-                        <option value="@category.Name">@category.Name</option>
+                        <option value="@category.Name">
+                            @category.Name
+                        </option>
                     }
-                    <option value="none">بدون فئة</option>
+
+                    <option value="none">
+                        بدون فئة
+                    </option>
+
                 </select>
+            </label>
+
+
+            <label class="zy-pos-filter">
+                <span>المستوى</span>
 
                 <select id="levelFilter">
-                    <option value="all">كل المستويات</option>
+
+                    <option value="all">
+                        كل المستويات
+                    </option>
+
                     @foreach (var level in Model.Levels)
                     {
-                        <option value="@level.Name">@level.Name</option>
+                        <option value="@level.Name">
+                            @level.Name
+                        </option>
                     }
-                    <option value="none">بدون مستوى</option>
+
+                    <option value="none">
+                        بدون مستوى
+                    </option>
+
                 </select>
+            </label>
+
+
+            <label class="zy-pos-filter">
+                <span>الحالة</span>
 
                 <select id="statusFilter">
                     <option value="all">كل الحالات</option>
@@ -261,522 +271,2062 @@
                     <option value="linked">مرتبط بموظفين</option>
                     <option value="unlinked">غير مرتبط</option>
                 </select>
-            </div>
+
+            </label>
+
         </div>
+
 
         @if (!Model.Positions.Any())
         {
-            <div class="nxp-empty">لا توجد مناصب مسجلة حالياً.</div>
+            <div class="zy-pos-empty">
+                لا توجد مناصب مسجلة لهذه الشركة.
+            </div>
         }
         else
         {
-            <div class="nxp-table-wrap">
-                <table class="nxp-table" id="positionsTable">
+            <div class="zy-pos-table-wrap">
+
+                <table class="zy-pos-table"
+                       id="positionsTable">
+
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>المنصب</th>
-                            <th>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</th>
-                            <th>الفئة</th>
-                            <th>المستوى</th>
+                            <th>التصنيف</th>
                             <th>الموظفون</th>
                             <th>الحالة</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        @for (var i = 0; i < Model.Positions.Count; i++)
-                        {
-                            var position = Model.Positions[i];
-                            var canDelete = position.EmployeeCount == 0;
-                            <tr data-position-row
-                                data-search="@position.SearchText"
-                                data-category="@(string.IsNullOrWhiteSpace(position.Category) ? "none" : position.Category)"
-                                data-level="@(string.IsNullOrWhiteSpace(position.Level) ? "none" : position.Level)"
-                                data-status="@(position.IsActive ? "active" : "inactive")"
-                                data-linked="@(position.EmployeeCount > 0 ? "linked" : "unlinked")">
-                                <td data-position-sequence>@(i + 1)</td>
-                                <td>
-                                    <div class="nxp-position-name">
-                                        <strong>@position.ArabicName</strong>
-                                        @if (!string.IsNullOrWhiteSpace(position.Description))
-                                        {
-                                            <span>@position.Description</span>
-                                        }
-                                    </div>
-                                </td>
-                                <td>@position.CompanyName</td>
-                                <td>@(string.IsNullOrWhiteSpace(position.Category) ? "غير محدد" : position.Category)</td>
-                                <td>@(string.IsNullOrWhiteSpace(position.Level) ? "غير محدد" : position.Level)</td>
-                                <td>
-                                    <div class="nxp-employee-count">
-                                        <strong>@position.EmployeeCount</strong>
-                                        <span>موظف</span>
-                                    </div>
-                                    @if (position.EmployeeCount > 0)
+
+                    @for (var i = 0;
+                          i < Model.Positions.Count;
+                          i++)
+                    {
+                        var position =
+                            Model.Positions[i];
+
+                        var canDelete =
+                            position.EmployeeCount == 0;
+
+                        <tr data-position-row
+                            data-search="@position.SearchText"
+                            data-category="@(string.IsNullOrWhiteSpace(position.Category) ? "none" : position.Category)"
+                            data-level="@(string.IsNullOrWhiteSpace(position.Level) ? "none" : position.Level)"
+                            data-status="@(position.IsActive ? "active" : "inactive")"
+                            data-linked="@(position.EmployeeCount > 0 ? "linked" : "unlinked")">
+
+                            <td class="zy-pos-sequence"
+                                data-position-sequence>
+                                @(i + 1)
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-pos-name">
+
+                                    <strong>
+                                        @position.ArabicName
+                                    </strong>
+
+                                    <span>
+                                        @position.CompanyName
+                                    </span>
+
+                                    @if (!string.IsNullOrWhiteSpace(position.Description))
                                     {
-                                        <button type="button" class="nxp-link-btn" data-employees-button data-position-id="@position.Id">عرض الموظفين</button>
+                                        <small>
+                                            @position.Description
+                                        </small>
                                     }
-                                </td>
-                                <td>
-                                    <span class="nxp-status @(position.IsActive ? "is-active" : "is-inactive")">@(position.IsActive ? "فعال" : "غير فعال")</span>
-                                </td>
-                                <td>
-                                    <div class="nxp-actions">
-                                        <a class="nxp-icon-btn" asp-page="/Positions/Index" asp-route-companyId="@Model.CompanyId" asp-route-editId="@position.Id" asp-fragment="positionFormArea">تعديل</a>
 
-                                        <form method="post" asp-page-handler="Toggle" asp-route-id="@position.Id" class="nxp-inline-form">
-                                            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
-                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--muted">@(position.IsActive ? "إيقاف" : "تفعيل")</button>
-                                        </form>
+                                </div>
 
-                                        <form method="post" asp-page-handler="Delete" asp-route-id="@position.Id" class="nxp-inline-form">
-                                            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
-                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--danger" disabled="@(!canDelete)" title="@(canDelete ? "حذف المنصب" : "لا يمكن حذف منصب مرتبط بموظفين")">حذف</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-pos-classification">
+
+                                    <span>
+                                        @(string.IsNullOrWhiteSpace(position.Category)
+                                            ? "بدون فئة"
+                                            : position.Category)
+                                    </span>
+
+                                    <small>
+                                        @(string.IsNullOrWhiteSpace(position.Level)
+                                            ? "بدون مستوى"
+                                            : position.Level)
+                                    </small>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-pos-employees">
+
+                                    <strong>
+                                        @position.EmployeeCount
+                                    </strong>
+
+                                    <span>
+                                        موظف
+                                    </span>
+
+                                </div>
+
+                                @if (position.EmployeeCount > 0)
+                                {
+                                    <button type="button"
+                                            class="zy-pos-link"
+                                            data-employees-button
+                                            data-position-id="@position.Id">
+                                        عرض الموظفين
+                                    </button>
+                                }
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="zy-pos-status @(position.IsActive ? "is-active" : "is-inactive")">
+
+                                    @(position.IsActive
+                                        ? "فعال"
+                                        : "غير فعال")
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-pos-actions">
+
+                                    <a asp-page="/Positions/Index"
+                                       asp-route-companyId="@Model.CompanyId"
+                                       asp-route-editId="@position.Id"
+                                       class="zy-pos-action zy-pos-action--edit">
+
+                                        تعديل
+
+                                    </a>
+
+
+                                    <form method="post"
+                                          asp-page-handler="Toggle"
+                                          asp-route-id="@position.Id"
+                                          class="zy-pos-inline-form">
+
+                                        <input type="hidden"
+                                               name="CompanyId"
+                                               value="@Model.CompanyId" />
+
+                                        <button type="submit"
+                                                class="zy-pos-action zy-pos-action--neutral">
+
+                                            @(position.IsActive
+                                                ? "إيقاف"
+                                                : "تفعيل")
+
+                                        </button>
+
+                                    </form>
+
+
+                                    <button type="button"
+                                            class="zy-pos-action zy-pos-action--delete"
+                                            data-position-delete
+                                            data-position-delete-id="@position.Id"
+                                            data-position-delete-name="@position.ArabicName"
+                                            data-position-delete-employees="@position.EmployeeCount"
+                                            data-nx-setup-open="position-delete-modal"
+                                            disabled="@(!canDelete)"
+                                            title="@(canDelete
+                                                ? "حذف المنصب"
+                                                : "لا يمكن حذف منصب مرتبط بموظفين")">
+
+                                        حذف
+
+                                    </button>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+                    }
+
                     </tbody>
+
                 </table>
+
             </div>
 
-            <div class="nxp-pagination" id="positionsPager" hidden>
-                <div class="nxp-pagination__summary" id="positionsPageSummary"></div>
-                <div class="nxp-pagination__controls">
-                    <button type="button" class="nxp-pagination__button" id="positionsPrevPage">السابق</button>
-                    <span class="nxp-pagination__indicator" id="positionsPageIndicator"></span>
-                    <button type="button" class="nxp-pagination__button" id="positionsNextPage">التالي</button>
+
+            <div class="zy-pos-pagination"
+                 id="positionsPager"
+                 hidden>
+
+                <div id="positionsPageSummary"
+                     class="zy-pos-pagination__summary">
                 </div>
+
+                <div class="zy-pos-pagination__controls">
+
+                    <button type="button"
+                            id="positionsPrevPage">
+                        السابق
+                    </button>
+
+                    <span id="positionsPageIndicator">
+                    </span>
+
+                    <button type="button"
+                            id="positionsNextPage">
+                        التالي
+                    </button>
+
+                </div>
+
             </div>
         }
+
     </section>
+
 </div>
 
 
-<div class="nxp-reference-modal-backdrop" data-nxp-reference-backdrop hidden></div>
 
-<section class="nxp-reference-modal" data-nxp-reference-modal="competencies" hidden aria-hidden="true">
-    <div class="nxp-reference-modal__card" dir="rtl">
-        <header class="nxp-reference-modal__head">
-            <div>
-                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
-                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0643;&#x0641;&#x0627;&#x0621;&#x0627;&#x062A;</h3>
-            </div>
-            <button type="button" data-nxp-reference-close>&times;</button>
+<!-- =========================================================
+     ADD / EDIT MODAL
+     ========================================================= -->
+
+<div class="nx-setup-modal"
+     id="position-editor-modal"
+     data-auto-open="@(autoOpenEditor ? "true" : "false")"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-editor-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="position-editor-title">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close
+                aria-label="إغلاق">
+            &times;
+        </button>
+
+
+        <header class="nx-setup-modal__head">
+
+            <span>
+                المناصب الوظيفية
+            </span>
+
+            <h2 id="position-editor-title"
+                data-position-editor-title>
+
+                @(isEditing
+                    ? "تعديل المنصب الوظيفي"
+                    : "إضافة منصب وظيفي")
+
+            </h2>
+
+            <p>
+                أدخل البيانات الأساسية والتصنيف
+                ومتطلبات المنصب.
+            </p>
+
         </header>
 
-        <form method="post" asp-page-handler="SaveReference" asp-route-type="competencies" class="nxp-reference-modal__body">
-            <label class="nxp-field nxp-field--wide">
-                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0643;&#x0641;&#x0627;&#x0621;&#x0629;</span>
-                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0627;&#x0644;&#x0642;&#x064A;&#x0627;&#x062F;&#x0629;" />
-            </label>
-            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+
+        <form method="post"
+              asp-page-handler="Save"
+              id="positionEditorForm"
+              class="zy-pos-editor-form"
+              autocomplete="off">
+
+            <input asp-for="Input.Id"
+                   type="hidden" />
+
+            <input type="hidden"
+                   name="Input.CompanyId"
+                   value="@Model.CompanyId" />
+
+            <input asp-for="Input.OriginalArabicName"
+                   type="hidden" />
+
+
+            <div asp-validation-summary="All"
+                 class="zy-pos-validation">
+            </div>
+
+
+            <!-- BASIC -->
+
+            <section class="zy-pos-form-section">
+
+                <header>
+                    <div>
+                        <span>01</span>
+
+                        <div>
+                            <h3>البيانات الأساسية</h3>
+                            <p>المسمى والتصنيف والحالة.</p>
+                        </div>
+                    </div>
+                </header>
+
+
+                <div class="zy-pos-form-grid">
+
+                    <label class="zy-pos-field zy-pos-field--wide">
+
+                        <span>
+                            اسم المنصب
+                            <b>*</b>
+                        </span>
+
+                        <input asp-for="Input.ArabicName"
+                               required
+                               maxlength="200"
+                               placeholder="مثال: مشرف عمليات الموارد البشرية" />
+
+                    </label>
+
+
+                    <label class="zy-pos-field">
+
+                        <span>
+                            الشركة
+                        </span>
+
+                        <input value="@Model.SelectedCompanyName"
+                               readonly />
+
+                    </label>
+
+
+                    <div class="zy-pos-field zy-pos-reference-field">
+
+                        <label for="Input_Category">
+                            الفئة
+                        </label>
+
+                        <div class="zy-pos-reference-control">
+
+                            <select asp-for="Input.Category">
+
+                                <option value="">
+                                    غير محدد
+                                </option>
+
+                                @foreach (
+                                    var category in
+                                    Model.Categories.Where(
+                                        item =>
+                                            item.IsActive ||
+                                            item.Name ==
+                                            Model.Input.Category))
+                                {
+                                    <option value="@category.Name">
+                                        @category.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <a asp-page="/PositionCategories/Index"
+                               class="zy-pos-manage">
+                                إدارة
+                            </a>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="zy-pos-field zy-pos-reference-field">
+
+                        <label for="Input_Level">
+                            المستوى
+                        </label>
+
+                        <div class="zy-pos-reference-control">
+
+                            <select asp-for="Input.Level">
+
+                                <option value="">
+                                    غير محدد
+                                </option>
+
+                                @foreach (
+                                    var level in
+                                    Model.Levels.Where(
+                                        item =>
+                                            item.IsActive ||
+                                            item.Name ==
+                                            Model.Input.Level))
+                                {
+                                    <option value="@level.Name">
+                                        @level.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <a asp-page="/PositionLevels/Index"
+                               class="zy-pos-manage">
+                                إدارة
+                            </a>
+
+                        </div>
+
+                    </div>
+
+
+                    <label class="zy-pos-field zy-pos-field--wide">
+
+                        <span>
+                            وصف مختصر
+                        </span>
+
+                        <textarea asp-for="Input.Description"
+                                  rows="2"
+                                  maxlength="1000"
+                                  placeholder="ملخص مختصر عن طبيعة المنصب...">
+                        </textarea>
+
+                    </label>
+
+
+                    <label class="zy-pos-check">
+
+                        <input type="hidden"
+                               name="Input.IsActive"
+                               value="false" />
+
+                        <input asp-for="Input.IsActive"
+                               value="true" />
+
+                        <span>
+                            المنصب فعال
+                        </span>
+
+                    </label>
+
+                </div>
+
+            </section>
+
+
+            <!-- REQUIREMENTS -->
+
+            <section class="zy-pos-form-section">
+
+                <header>
+                    <div>
+                        <span>02</span>
+
+                        <div>
+                            <h3>متطلبات المنصب</h3>
+                            <p>
+                                المؤهلات والكفاءات المهنية المطلوبة.
+                            </p>
+                        </div>
+                    </div>
+                </header>
+
+
+                <div class="zy-pos-form-grid">
+
+                    <label class="zy-pos-field zy-pos-reference-field">
+
+                        <span>
+                            الكفاءات
+                        </span>
+
+                        <div class="zy-pos-reference-control">
+
+                            <select asp-for="Input.Competencies">
+
+                                <option value="">
+                                    غير محدد
+                                </option>
+
+                                @foreach (
+                                    var item in
+                                    Model.CompetencyOptions.Where(
+                                        item =>
+                                            item.IsActive ||
+                                            item.Name ==
+                                            Model.Input.Competencies))
+                                {
+                                    <option value="@item.Name">
+                                        @item.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <button type="button"
+                                    class="zy-pos-manage"
+                                    data-nx-setup-open="position-reference-competencies">
+                                إدارة
+                            </button>
+
+                        </div>
+
+                    </label>
+
+
+                    <label class="zy-pos-field zy-pos-reference-field">
+
+                        <span>
+                            الدرجة العلمية
+                        </span>
+
+                        <div class="zy-pos-reference-control">
+
+                            <select asp-for="Input.Education">
+
+                                <option value="">
+                                    غير محدد
+                                </option>
+
+                                @foreach (
+                                    var item in
+                                    Model.EducationOptions.Where(
+                                        item =>
+                                            item.IsActive ||
+                                            item.Name ==
+                                            Model.Input.Education))
+                                {
+                                    <option value="@item.Name">
+                                        @item.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <button type="button"
+                                    class="zy-pos-manage"
+                                    data-nx-setup-open="position-reference-education">
+                                إدارة
+                            </button>
+
+                        </div>
+
+                    </label>
+
+
+                    <label class="zy-pos-field zy-pos-reference-field">
+
+                        <span>
+                            التخصص
+                        </span>
+
+                        <div class="zy-pos-reference-control">
+
+                            <select asp-for="Input.EducationSpecialization">
+
+                                <option value="">
+                                    غير محدد
+                                </option>
+
+                                @foreach (
+                                    var item in
+                                    Model.EducationSpecializationOptions.Where(
+                                        item =>
+                                            item.IsActive ||
+                                            item.Name ==
+                                            Model.Input.EducationSpecialization))
+                                {
+                                    <option value="@item.Name">
+                                        @item.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <button type="button"
+                                    class="zy-pos-manage"
+                                    data-nx-setup-open="position-reference-specializations">
+                                إدارة
+                            </button>
+
+                        </div>
+
+                    </label>
+
+
+                    <label class="zy-pos-field zy-pos-reference-field">
+
+                        <span>
+                            الشهادات
+                        </span>
+
+                        <div class="zy-pos-reference-control">
+
+                            <select asp-for="Input.Certifications">
+
+                                <option value="">
+                                    غير محدد
+                                </option>
+
+                                @foreach (
+                                    var item in
+                                    Model.CertificationOptions.Where(
+                                        item =>
+                                            item.IsActive ||
+                                            item.Name ==
+                                            Model.Input.Certifications))
+                                {
+                                    <option value="@item.Name">
+                                        @item.Name
+                                    </option>
+                                }
+
+                            </select>
+
+                            <button type="button"
+                                    class="zy-pos-manage"
+                                    data-nx-setup-open="position-reference-certifications">
+                                إدارة
+                            </button>
+
+                        </div>
+
+                    </label>
+
+                </div>
+
+            </section>
+
+
+            <!-- JOB PROFILE -->
+
+                        <!-- ZYNORA_JOB_PROFILE_SECTION_V10 -->
+            <section class="zy-pos-job-section">
+
+                <header class="zy-pos-job-section__head">
+
+                    <div class="zy-pos-job-section__identity">
+
+                        <span class="zy-pos-job-section__step">
+                            03
+                        </span>
+
+                        <div>
+                            <h3>
+                                الوصف الوظيفي
+                            </h3>
+
+                            <p>
+                                الهدف، المهام، المتطلبات، المهارات ومؤشرات KPI الخاصة بالمنصب.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </header>
+
+
+                <div class="zy-pos-job-section__body">
+
+                    <div class="zy-pos-job-section__info">
+
+                        <strong>
+                            بطاقة المنصب الوظيفية
+                        </strong>
+
+                        <span>
+                            أدخل التفاصيل التشغيلية للمنصب ومؤشرات الأداء الرئيسية.
+                        </span>
+
+                    </div>
+
+
+                    <button type="button"
+                            class="zy-pos-job-section__action"
+                            data-nx-setup-open="position-job-profile-modal">
+
+                        فتح بطاقة المنصب
+
+                    </button>
+
+                </div>
+
+            </section>
+            <!-- ZYNORA_JOB_PROFILE_SECTION_V10_END -->
+
+
+            <footer class="nx-setup-modal__actions">
+
+                @if (isEditing)
+                {
+                    <a asp-page="/Positions/Index"
+                       asp-route-companyId="@Model.CompanyId"
+                       class="zy-pos-btn zy-pos-btn--secondary">
+
+                        إلغاء
+
+                    </a>
+                }
+                else
+                {
+                    <button type="button"
+                            class="zy-pos-btn zy-pos-btn--secondary"
+                            data-nx-setup-close>
+
+                        إلغاء
+
+                    </button>
+                }
+
+
+                <button type="submit"
+                        class="zy-pos-btn zy-pos-btn--primary">
+
+                    @(isEditing
+                        ? "حفظ التعديلات"
+                        : "حفظ المنصب")
+
+                </button>
+
+            </footer>
+
         </form>
 
-        <div class="nxp-reference-modal__list">
+    </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     JOB PROFILE
+     ========================================================= -->
+
+<div class="nx-setup-modal"
+     id="position-job-profile-modal"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-job-modal"
+         role="dialog"
+         aria-modal="true">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+
+        <header class="nx-setup-modal__head">
+
+            <span>
+                بطاقة المنصب
+            </span>
+
+            <h2>
+                الوصف الوظيفي
+            </h2>
+
+            <p>
+                تحديد الهدف والمسؤوليات
+                والمتطلبات ومؤشرات الأداء.
+            </p>
+
+        </header>
+
+
+        <div class="zy-pos-job-body">
+
+            <label class="zy-pos-field zy-pos-field--wide">
+
+                <span>هدف المنصب</span>
+
+                <textarea asp-for="Input.JobPurpose"
+                          form="positionEditorForm"
+                          rows="3"
+                          maxlength="2000"
+                          placeholder="ما الغرض من هذا المنصب؟">
+                </textarea>
+
+            </label>
+
+
+            <label class="zy-pos-field zy-pos-field--wide">
+
+                <span>
+                    المهام والمسؤوليات
+                </span>
+
+                <textarea asp-for="Input.KeyResponsibilities"
+                          form="positionEditorForm"
+                          rows="5"
+                          maxlength="4000"
+                          placeholder="اكتب المهام والمسؤوليات الرئيسية...">
+                </textarea>
+
+            </label>
+
+
+            <label class="zy-pos-field">
+
+                <span>
+                    المتطلبات
+                </span>
+
+                <textarea asp-for="Input.JobRequirements"
+                          form="positionEditorForm"
+                          rows="4"
+                          maxlength="3000"
+                          placeholder="الخبرة، المؤهل، اللغات...">
+                </textarea>
+
+            </label>
+
+
+            <label class="zy-pos-field">
+
+                <span>
+                    المهارات المطلوبة
+                </span>
+
+                <textarea asp-for="Input.RequiredSkills"
+                          form="positionEditorForm"
+                          rows="4"
+                          maxlength="3000"
+                          placeholder="المهارات الفنية والشخصية...">
+                </textarea>
+
+            </label>
+
+
+            <label class="zy-pos-field zy-pos-field--wide">
+
+                <span>
+                    KPI
+                </span>
+
+                <textarea asp-for="Input.JobKpis"
+                          form="positionEditorForm"
+                          rows="4"
+                          maxlength="3000"
+                          placeholder="مؤشرات الأداء الرئيسية للمنصب...">
+                </textarea>
+
+            </label>
+
+        </div>
+
+
+        <footer class="nx-setup-modal__actions">
+
+            <button type="button"
+                    class="zy-pos-btn zy-pos-btn--primary"
+                    data-nx-setup-close>
+
+                تم
+
+            </button>
+
+        </footer>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     DELETE
+     ========================================================= -->
+
+<div class="nx-setup-modal"
+     id="position-delete-modal"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-delete-modal"
+         role="dialog"
+         aria-modal="true">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+
+        <header class="nx-setup-modal__head">
+
+            <span>
+                المناصب الوظيفية
+            </span>
+
+            <h2>
+                حذف المنصب
+            </h2>
+
+            <p>
+                تأكد من بيانات المنصب قبل تنفيذ الحذف.
+            </p>
+
+        </header>
+
+
+        <form method="post"
+              asp-page-handler="Delete">
+
+            <input type="hidden"
+                   name="id"
+                   id="positionDeleteId" />
+
+            <input type="hidden"
+                   name="CompanyId"
+                   value="@Model.CompanyId" />
+
+
+            <div class="zy-pos-delete-warning">
+
+                <strong>
+                    هل تريد حذف هذا المنصب؟
+                </strong>
+
+                <span>
+                    لا يمكن التراجع عن هذه العملية بعد الحذف.
+                </span>
+
+            </div>
+
+
+            <div class="zy-pos-delete-summary">
+
+                <div>
+                    <span>المنصب</span>
+
+                    <strong id="positionDeleteName">
+                        —
+                    </strong>
+                </div>
+
+
+                <div>
+                    <span>الموظفون المرتبطون</span>
+
+                    <strong id="positionDeleteEmployees">
+                        0
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <footer class="nx-setup-modal__actions">
+
+                <button type="button"
+                        class="zy-pos-btn zy-pos-btn--secondary"
+                        data-nx-setup-close>
+
+                    إلغاء
+
+                </button>
+
+                <button type="submit"
+                        class="zy-pos-btn zy-pos-btn--danger">
+
+                    حذف المنصب
+
+                </button>
+
+            </footer>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     REFERENCE MODALS
+     ========================================================= -->
+
+<div class="nx-setup-modal"
+     id="position-reference-competencies"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-reference-modal">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+        <header class="nx-setup-modal__head">
+            <span>المراجع</span>
+            <h2>إدارة الكفاءات</h2>
+        </header>
+
+        <form method="post"
+              asp-page-handler="SaveReference"
+              asp-route-type="competencies"
+              class="zy-pos-reference-form">
+
+            <input type="hidden"
+                   name="CompanyId"
+                   value="@Model.CompanyId" />
+
+            <label class="zy-pos-field">
+                <span>إضافة كفاءة</span>
+
+                <input name="ReferenceInput.Name"
+                       maxlength="240"
+                       placeholder="مثال: القيادة" />
+            </label>
+
+            <button type="submit"
+                    class="zy-pos-btn zy-pos-btn--primary">
+                حفظ
+            </button>
+
+        </form>
+
+        <div class="zy-pos-reference-list">
             @foreach (var item in Model.CompetencyOptions)
             {
                 <span>@item.Name</span>
             }
         </div>
-    </div>
-</section>
 
-<section class="nxp-reference-modal" data-nxp-reference-modal="education" hidden aria-hidden="true">
-    <div class="nxp-reference-modal__card" dir="rtl">
-        <header class="nxp-reference-modal__head">
-            <div>
-                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
-                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062F;&#x0631;&#x062C;&#x0627;&#x062A; &#x0627;&#x0644;&#x0639;&#x0644;&#x0645;&#x064A;&#x0629;</h3>
-            </div>
-            <button type="button" data-nxp-reference-close>&times;</button>
+    </div>
+
+</div>
+
+
+<div class="nx-setup-modal"
+     id="position-reference-education"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-reference-modal">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+        <header class="nx-setup-modal__head">
+            <span>المراجع</span>
+            <h2>الدرجات العلمية</h2>
         </header>
 
-        <form method="post" asp-page-handler="SaveReference" asp-route-type="education" class="nxp-reference-modal__body">
-            <label class="nxp-field nxp-field--wide">
-                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x062F;&#x0631;&#x062C;&#x0629; &#x0639;&#x0644;&#x0645;&#x064A;&#x0629;</span>
-                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0628;&#x0643;&#x0627;&#x0644;&#x0648;&#x0631;&#x064A;&#x0648;&#x0633;" />
+        <form method="post"
+              asp-page-handler="SaveReference"
+              asp-route-type="education"
+              class="zy-pos-reference-form">
+
+            <input type="hidden"
+                   name="CompanyId"
+                   value="@Model.CompanyId" />
+
+            <label class="zy-pos-field">
+                <span>إضافة درجة علمية</span>
+
+                <input name="ReferenceInput.Name"
+                       maxlength="240"
+                       placeholder="مثال: بكالوريوس" />
             </label>
-            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+
+            <button type="submit"
+                    class="zy-pos-btn zy-pos-btn--primary">
+                حفظ
+            </button>
+
         </form>
 
-        <div class="nxp-reference-modal__list">
+        <div class="zy-pos-reference-list">
             @foreach (var item in Model.EducationOptions)
             {
                 <span>@item.Name</span>
             }
         </div>
+
     </div>
-</section>
+
+</div>
 
 
-<section class="nxp-reference-modal" data-nxp-reference-modal="specializations" hidden aria-hidden="true">
-    <div class="nxp-reference-modal__card" dir="rtl">
-        <header class="nxp-reference-modal__head">
-            <div>
-                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
-                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x062A;&#x062E;&#x0635;&#x0635;&#x0627;&#x062A;</h3>
-            </div>
-            <button type="button" data-nxp-reference-close>&times;</button>
+<div class="nx-setup-modal"
+     id="position-reference-specializations"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-reference-modal">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+        <header class="nx-setup-modal__head">
+            <span>المراجع</span>
+            <h2>التخصصات</h2>
         </header>
 
-        <form method="post" asp-page-handler="SaveReference" asp-route-type="specializations" class="nxp-reference-modal__body">
-            <label class="nxp-field nxp-field--wide">
-                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x062A;&#x062E;&#x0635;&#x0635;</span>
-                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: &#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0623;&#x0639;&#x0645;&#x0627;&#x0644;" />
+        <form method="post"
+              asp-page-handler="SaveReference"
+              asp-route-type="specializations"
+              class="zy-pos-reference-form">
+
+            <input type="hidden"
+                   name="CompanyId"
+                   value="@Model.CompanyId" />
+
+            <label class="zy-pos-field">
+                <span>إضافة تخصص</span>
+
+                <input name="ReferenceInput.Name"
+                       maxlength="240"
+                       placeholder="مثال: إدارة أعمال" />
             </label>
-            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+
+            <button type="submit"
+                    class="zy-pos-btn zy-pos-btn--primary">
+                حفظ
+            </button>
+
         </form>
 
-        <div class="nxp-reference-modal__list">
+        <div class="zy-pos-reference-list">
             @foreach (var item in Model.EducationSpecializationOptions)
             {
                 <span>@item.Name</span>
             }
         </div>
+
     </div>
-</section>
-@* NEXORA_FIX20G_SPECIALIZATION_MODAL *@
-<section class="nxp-reference-modal" data-nxp-reference-modal="certifications" hidden aria-hidden="true">
-    <div class="nxp-reference-modal__card" dir="rtl">
-        <header class="nxp-reference-modal__head">
-            <div>
-                <span>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x062C;&#x0639;</span>
-                <h3>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0627;&#x062A;</h3>
-            </div>
-            <button type="button" data-nxp-reference-close>&times;</button>
+
+</div>
+
+
+<div class="nx-setup-modal"
+     id="position-reference-certifications"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-reference-modal">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+        <header class="nx-setup-modal__head">
+            <span>المراجع</span>
+            <h2>الشهادات</h2>
         </header>
 
-        <form method="post" asp-page-handler="SaveReference" asp-route-type="certifications" class="nxp-reference-modal__body">
-            <label class="nxp-field nxp-field--wide">
-                <span>&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0634;&#x0647;&#x0627;&#x062F;&#x0629;</span>
-                <input name="ReferenceInput.Name" maxlength="240" placeholder="&#x0645;&#x062B;&#x0627;&#x0644;: PMP" />
+        <form method="post"
+              asp-page-handler="SaveReference"
+              asp-route-type="certifications"
+              class="zy-pos-reference-form">
+
+            <input type="hidden"
+                   name="CompanyId"
+                   value="@Model.CompanyId" />
+
+            <label class="zy-pos-field">
+                <span>إضافة شهادة</span>
+
+                <input name="ReferenceInput.Name"
+                       maxlength="240"
+                       placeholder="مثال: PMP" />
             </label>
-            <button type="submit" class="nxp-btn nxp-btn--primary">&#x062D;&#x0641;&#x0638;</button>
+
+            <button type="submit"
+                    class="zy-pos-btn zy-pos-btn--primary">
+                حفظ
+            </button>
+
         </form>
 
-        <div class="nxp-reference-modal__list">
+        <div class="zy-pos-reference-list">
             @foreach (var item in Model.CertificationOptions)
             {
                 <span>@item.Name</span>
             }
         </div>
-    </div>
-</section>
-@* NEXORA_FIX20D_REFERENCE_MANAGE_MODALS *@
 
-<div class="nxp-modal-backdrop" data-employees-backdrop hidden></div>
-<section class="nxp-modal" data-employees-modal hidden aria-hidden="true">
-    <div class="nxp-modal__card" dir="rtl">
-        <div class="nxp-modal__head">
-            <div>
-                <h2 data-employees-title>الموظفون المرتبطون</h2>
+    </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     EMPLOYEES
+     ========================================================= -->
+
+<button type="button"
+        id="positionEmployeesModalOpener"
+        data-nx-setup-open="position-employees-modal"
+        hidden>
+</button>
+
+<div class="nx-setup-modal"
+     id="position-employees-modal"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-pos-employees-modal">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close>
+            &times;
+        </button>
+
+        <header class="nx-setup-modal__head">
+
+            <span>
+                الموظفون
+            </span>
+
+            <h2 data-employees-title>
+                الموظفون المرتبطون
+            </h2>
+
+            <p>
+                الموظفون المثبتون على هذا المنصب.
+            </p>
+
+        </header>
+
+        <div class="zy-pos-employees-body">
+
+            <div class="zy-pos-loading"
+                 data-employees-loading
+                 hidden>
+
+                جاري تحميل البيانات...
+
             </div>
-            <button type="button" data-employees-close aria-label="إغلاق">×</button>
+
+            <div class="zy-pos-employees-list"
+                 data-employees-list>
+            </div>
+
         </div>
-        <div class="nxp-modal__body">
-            <div class="nxp-loading" data-employees-loading hidden>جاري تحميل البيانات...</div>
-            <div class="nxp-employee-list" data-employees-list></div>
-        </div>
+
     </div>
-</section>
+
+</div>
 
 
-<script>
-/* NEXORA_FIX20C_V2_PROFILE_POPUPS_SCRIPT */
-(() => {
-    const backdrop = document.querySelector('[data-nxp-profile-backdrop]');
-    const modals = Array.from(document.querySelectorAll('[data-nxp-profile-modal]'));
 
-    function closeAll() {
-        modals.forEach(modal => {
-            modal.hidden = true;
-            modal.setAttribute('aria-hidden', 'true');
-        });
-
-        if (backdrop) {
-            backdrop.hidden = true;
-        }
-
-        document.documentElement.classList.remove('nxp-profile-modal-open');
-        document.body.classList.remove('nxp-profile-modal-open');
-    }
-
-    function openModal(key) {
-        const modal = document.querySelector(`[data-nxp-profile-modal="${key}"]`);
-        if (!modal) return;
-
-        closeAll();
-        modal.hidden = false;
-        modal.setAttribute('aria-hidden', 'false');
-
-        if (backdrop) {
-            backdrop.hidden = false;
-        }
-
-        document.documentElement.classList.add('nxp-profile-modal-open');
-        document.body.classList.add('nxp-profile-modal-open');
-
-        const firstField = modal.querySelector('textarea, input, select, button');
-        window.setTimeout(() => firstField?.focus(), 80);
-    }
-
-    document.querySelectorAll('[data-nxp-profile-open]').forEach(button => {
-        button.addEventListener('click', () => openModal(button.dataset.nxpProfileOpen));
-    });
-
-    document.querySelectorAll('[data-nxp-profile-close]').forEach(button => {
-        button.addEventListener('click', closeAll);
-    });
-
-    backdrop?.addEventListener('click', closeAll);
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-            closeAll();
-        }
-    });
-})();
-</script>
-
-<script>
-/* NEXORA_FIX20D_REFERENCE_MODAL_SCRIPT */
-(() => {
-    const backdrop = document.querySelector('[data-nxp-reference-backdrop]');
-    const modals = Array.from(document.querySelectorAll('[data-nxp-reference-modal]'));
-
-    function closeAll() {
-        modals.forEach(modal => {
-            modal.hidden = true;
-            modal.setAttribute('aria-hidden', 'true');
-        });
-
-        if (backdrop) {
-            backdrop.hidden = true;
-        }
-
-        document.documentElement.classList.remove('nxp-reference-modal-open');
-        document.body.classList.remove('nxp-reference-modal-open');
-    }
-
-    function openModal(key) {
-        const modal = document.querySelector(`[data-nxp-reference-modal="${key}"]`);
-        if (!modal) return;
-
-        closeAll();
-        modal.hidden = false;
-        modal.setAttribute('aria-hidden', 'false');
-
-        if (backdrop) {
-            backdrop.hidden = false;
-        }
-
-        document.documentElement.classList.add('nxp-reference-modal-open');
-        document.body.classList.add('nxp-reference-modal-open');
-
-        const firstInput = modal.querySelector('input, button');
-        window.setTimeout(() => firstInput?.focus(), 80);
-    }
-
-    document.querySelectorAll('[data-nxp-reference-open]').forEach(button => {
-        button.addEventListener('click', event => {
-            event.preventDefault();
-            openModal(button.dataset.nxpReferenceOpen);
-        });
-    });
-
-    document.querySelectorAll('[data-nxp-reference-close]').forEach(button => {
-        button.addEventListener('click', closeAll);
-    });
-
-    backdrop?.addEventListener('click', closeAll);
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-            closeAll();
-        }
-    });
-})();
-</script>
 @section Scripts {
-    <script>
-        (() => {
-            const normalize = value => (value || '').toString().trim().toLowerCase();
-            const search = document.getElementById('positionSearch');
-            const category = document.getElementById('categoryFilter');
-            const level = document.getElementById('levelFilter');
-            const status = document.getElementById('statusFilter');
-            const rows = Array.from(document.querySelectorAll('[data-position-row]'));
-            const pager = document.getElementById('positionsPager');
-            const pageSummary = document.getElementById('positionsPageSummary');
-            const pageIndicator = document.getElementById('positionsPageIndicator');
-            const previousPageButton = document.getElementById('positionsPrevPage');
-            const nextPageButton = document.getElementById('positionsNextPage');
-            const pageSize = 25;
-            let currentPage = 1;
-            let filteredRows = [];
 
-            function renderPage() {
-                const totalItems = filteredRows.length;
-                const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+<script>
+(() => {
 
-                if (currentPage > totalPages) {
-                    currentPage = totalPages;
+    /* =====================================================
+       CREATE RESET
+       ===================================================== */
+
+    const editorForm =
+        document.getElementById("positionEditorForm");
+
+    const editorTitle =
+        document.querySelector("[data-position-editor-title]");
+
+    function setValue(name, value) {
+        const element =
+            document.querySelector(`[name="${name}"]`);
+
+        if (element) {
+            element.value = value;
+        }
+    }
+
+    function resetCreateForm() {
+
+        if (!editorForm)
+            return;
+
+        setValue("Input.Id", "0");
+        setValue("Input.OriginalArabicName", "");
+        setValue("Input.ArabicName", "");
+        setValue("Input.Description", "");
+        setValue("Input.Category", "");
+        setValue("Input.Level", "");
+        setValue("Input.Competencies", "");
+        setValue("Input.Education", "");
+        setValue("Input.EducationSpecialization", "");
+        setValue("Input.Certifications", "");
+        setValue("Input.JobPurpose", "");
+        setValue("Input.KeyResponsibilities", "");
+        setValue("Input.JobRequirements", "");
+        setValue("Input.RequiredSkills", "");
+        setValue("Input.JobKpis", "");
+
+        const active =
+            document.querySelector(
+                '[name="Input.IsActive"][type="checkbox"]'
+            );
+
+        if (active) {
+            active.checked = true;
+        }
+
+        if (editorTitle) {
+            editorTitle.textContent =
+                "إضافة منصب وظيفي";
+        }
+
+        if (window.NexoraSelect &&
+            typeof window.NexoraSelect.refreshAll === "function") {
+
+            window.setTimeout(
+                () => window.NexoraSelect.refreshAll(),
+                30
+            );
+        }
+    }
+
+    document
+        .querySelectorAll("[data-position-create]")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                resetCreateForm
+            );
+
+        });
+
+
+
+    /* =====================================================
+       DELETE
+       ===================================================== */
+
+    const deleteId =
+        document.getElementById("positionDeleteId");
+
+    const deleteName =
+        document.getElementById("positionDeleteName");
+
+    const deleteEmployees =
+        document.getElementById("positionDeleteEmployees");
+
+    document
+        .querySelectorAll("[data-position-delete]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                if (deleteId) {
+                    deleteId.value =
+                        button.dataset.positionDeleteId || "";
                 }
 
-                const startIndex = (currentPage - 1) * pageSize;
-                const endIndex = Math.min(startIndex + pageSize, totalItems);
+                if (deleteName) {
+                    deleteName.textContent =
+                        button.dataset.positionDeleteName || "—";
+                }
 
-                rows.forEach(row => {
-                    row.hidden = true;
-                });
+                if (deleteEmployees) {
+                    deleteEmployees.textContent =
+                        button.dataset.positionDeleteEmployees || "0";
+                }
 
-                filteredRows.slice(startIndex, endIndex).forEach((row, index) => {
+            });
+
+        });
+
+
+
+    /* =====================================================
+       FILTER + PAGINATION
+       ===================================================== */
+
+    const normalize =
+        value =>
+            (value || "")
+                .toString()
+                .trim()
+                .toLowerCase();
+
+    const search =
+        document.getElementById("positionSearch");
+
+    const category =
+        document.getElementById("categoryFilter");
+
+    const level =
+        document.getElementById("levelFilter");
+
+    const status =
+        document.getElementById("statusFilter");
+
+    const rows =
+        Array.from(
+            document.querySelectorAll(
+                "[data-position-row]"
+            )
+        );
+
+    const pager =
+        document.getElementById("positionsPager");
+
+    const pageSummary =
+        document.getElementById(
+            "positionsPageSummary"
+        );
+
+    const pageIndicator =
+        document.getElementById(
+            "positionsPageIndicator"
+        );
+
+    const previousPageButton =
+        document.getElementById(
+            "positionsPrevPage"
+        );
+
+    const nextPageButton =
+        document.getElementById(
+            "positionsNextPage"
+        );
+
+    const pageSize = 25;
+
+    let currentPage = 1;
+    let filteredRows = [];
+
+
+    function renderPage() {
+
+        const totalItems =
+            filteredRows.length;
+
+        const totalPages =
+            Math.max(
+                1,
+                Math.ceil(
+                    totalItems /
+                    pageSize
+                )
+            );
+
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        const startIndex =
+            (currentPage - 1) *
+            pageSize;
+
+        const endIndex =
+            Math.min(
+                startIndex + pageSize,
+                totalItems
+            );
+
+        rows.forEach(row => {
+            row.hidden = true;
+        });
+
+        filteredRows
+            .slice(
+                startIndex,
+                endIndex
+            )
+            .forEach(
+                (row, index) => {
+
                     row.hidden = false;
-                    const sequenceCell = row.querySelector('[data-position-sequence]');
 
-                    if (sequenceCell) {
-                        sequenceCell.textContent = (startIndex + index + 1).toString();
+                    const cell =
+                        row.querySelector(
+                            "[data-position-sequence]"
+                        );
+
+                    if (cell) {
+                        cell.textContent =
+                            (
+                                startIndex +
+                                index +
+                                1
+                            ).toString();
                     }
+
                 });
 
-                if (pager) {
-                    pager.hidden = totalItems <= pageSize;
-                }
+        if (pager) {
+            pager.hidden =
+                totalItems <= pageSize;
+        }
 
-                if (pageSummary) {
-                    pageSummary.textContent = totalItems === 0
-                        ? 'لا توجد نتائج مطابقة'
-                        : `عرض ${startIndex + 1}-${endIndex} من ${totalItems}`;
-                }
+        if (pageSummary) {
 
-                if (pageIndicator) {
-                    pageIndicator.textContent = `${currentPage} / ${totalPages}`;
-                }
+            pageSummary.textContent =
+                totalItems === 0
+                    ? "لا توجد نتائج مطابقة"
+                    : `عرض ${startIndex + 1}-${endIndex} من ${totalItems}`;
 
-                if (previousPageButton) {
-                    previousPageButton.disabled = currentPage <= 1;
-                }
+        }
 
-                if (nextPageButton) {
-                    nextPageButton.disabled = currentPage >= totalPages;
-                }
-            }
+        if (pageIndicator) {
+            pageIndicator.textContent =
+                `${currentPage} / ${totalPages}`;
+        }
 
-            function applyFilters(resetPage = true) {
-                const q = normalize(search?.value);
-                const categoryValue = category?.value || 'all';
-                const levelValue = level?.value || 'all';
-                const statusValue = status?.value || 'all';
+        if (previousPageButton) {
+            previousPageButton.disabled =
+                currentPage <= 1;
+        }
 
-                filteredRows = rows.filter(row => {
-                    const matchesSearch = !q || normalize(row.dataset.search).includes(q);
-                    const matchesCategory = categoryValue === 'all' || row.dataset.category === categoryValue;
-                    const matchesLevel = levelValue === 'all' || row.dataset.level === levelValue;
-                    const matchesStatus = statusValue === 'all'
-                        || row.dataset.status === statusValue
-                        || row.dataset.linked === statusValue;
+        if (nextPageButton) {
+            nextPageButton.disabled =
+                currentPage >= totalPages;
+        }
 
-                    return matchesSearch && matchesCategory && matchesLevel && matchesStatus;
-                });
+    }
 
-                if (resetPage) {
-                    currentPage = 1;
-                }
 
+    function applyFilters(resetPage = true) {
+
+        const q =
+            normalize(search?.value);
+
+        const categoryValue =
+            category?.value || "all";
+
+        const levelValue =
+            level?.value || "all";
+
+        const statusValue =
+            status?.value || "all";
+
+
+        filteredRows =
+            rows.filter(row => {
+
+                const matchesSearch =
+                    !q ||
+                    normalize(
+                        row.dataset.search
+                    ).includes(q);
+
+                const matchesCategory =
+                    categoryValue === "all" ||
+                    row.dataset.category ===
+                        categoryValue;
+
+                const matchesLevel =
+                    levelValue === "all" ||
+                    row.dataset.level ===
+                        levelValue;
+
+                const matchesStatus =
+                    statusValue === "all" ||
+                    row.dataset.status ===
+                        statusValue ||
+                    row.dataset.linked ===
+                        statusValue;
+
+                return (
+                    matchesSearch &&
+                    matchesCategory &&
+                    matchesLevel &&
+                    matchesStatus
+                );
+
+            });
+
+
+        if (resetPage) {
+            currentPage = 1;
+        }
+
+        renderPage();
+    }
+
+
+    [search, category, level, status]
+        .forEach(element => {
+
+            element?.addEventListener(
+                "input",
+                () => applyFilters(true)
+            );
+
+            element?.addEventListener(
+                "change",
+                () => applyFilters(true)
+            );
+
+        });
+
+
+    previousPageButton?.addEventListener(
+        "click",
+        () => {
+
+            if (currentPage > 1) {
+                currentPage--;
                 renderPage();
             }
 
-            [search, category, level, status].forEach(element => {
-                element?.addEventListener('input', () => applyFilters(true));
-                element?.addEventListener('change', () => applyFilters(true));
-            });
+        });
 
-            previousPageButton?.addEventListener('click', () => {
-                if (currentPage > 1) {
-                    currentPage -= 1;
-                    renderPage();
-                }
-            });
 
-            nextPageButton?.addEventListener('click', () => {
-                const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+    nextPageButton?.addEventListener(
+        "click",
+        () => {
 
-                if (currentPage < totalPages) {
-                    currentPage += 1;
-                    renderPage();
-                }
-            });
+            const totalPages =
+                Math.max(
+                    1,
+                    Math.ceil(
+                        filteredRows.length /
+                        pageSize
+                    )
+                );
 
-            applyFilters(true);
-
-            const modal = document.querySelector('[data-employees-modal]');
-            const backdrop = document.querySelector('[data-employees-backdrop]');
-            const closeButton = document.querySelector('[data-employees-close]');
-            const title = document.querySelector('[data-employees-title]');
-            const loading = document.querySelector('[data-employees-loading]');
-            const list = document.querySelector('[data-employees-list]');
-
-            function closeModal() {
-                modal.hidden = true;
-                backdrop.hidden = true;
-                modal.setAttribute('aria-hidden', 'true');
-                document.documentElement.classList.remove('nxp-modal-open');
-                document.body.classList.remove('nxp-modal-open');
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage();
             }
 
-            function openModal() {
-                modal.hidden = false;
-                backdrop.hidden = false;
-                modal.setAttribute('aria-hidden', 'false');
-                document.documentElement.classList.add('nxp-modal-open');
-                document.body.classList.add('nxp-modal-open');
-            }
+        });
 
-            closeButton?.addEventListener('click', closeModal);
-            backdrop?.addEventListener('click', closeModal);
+    applyFilters(true);
 
-            document.querySelectorAll('[data-employees-button]').forEach(button => {
-                button.addEventListener('click', async () => {
-                    const id = button.dataset.positionId;
-                    list.innerHTML = '';
-                    loading.hidden = false;
-                    openModal();
+
+
+    /* =====================================================
+       EMPLOYEES
+       ===================================================== */
+
+    const employeesOpener =
+        document.getElementById(
+            "positionEmployeesModalOpener"
+        );
+
+    const employeesTitle =
+        document.querySelector(
+            "[data-employees-title]"
+        );
+
+    const employeesLoading =
+        document.querySelector(
+            "[data-employees-loading]"
+        );
+
+    const employeesList =
+        document.querySelector(
+            "[data-employees-list]"
+        );
+
+
+    const escapeHtml = value =>
+        (value ?? "")
+            .toString()
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+
+    document
+        .querySelectorAll("[data-employees-button]")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    const id =
+                        button.dataset.positionId;
+
+                    employeesList.innerHTML = "";
+
+                    employeesLoading.hidden = false;
+
+                    employeesOpener?.click();
 
                     try {
-                        const response = await fetch(`/Positions?handler=Employees&id=${encodeURIComponent(id)}`, {
-                            headers: { 'Accept': 'application/json' }
-                        });
-                        const data = await response.json();
 
-                        loading.hidden = true;
+                        const response =
+                            await fetch(
+                                `/Positions?handler=Employees&id=${encodeURIComponent(id)}`,
+                                {
+                                    headers: {
+                                        "Accept":
+                                            "application/json"
+                                    }
+                                }
+                            );
+
+                        const data =
+                            await response.json();
+
+                        employeesLoading.hidden = true;
+
                         if (!data.ok) {
-                            list.innerHTML = `<div class="nxp-empty">${data.message || 'تعذر تحميل البيانات.'}</div>`;
+
+                            employeesList.innerHTML =
+                                `<div class="zy-pos-empty">${escapeHtml(data.message || "تعذر تحميل البيانات.")}</div>`;
+
                             return;
                         }
 
-                        title.textContent = `الموظفون المرتبطون - ${data.position}`;
+                        employeesTitle.textContent =
+                            `الموظفون المرتبطون - ${data.position}`;
 
-                        if (!data.employees || data.employees.length === 0) {
-                            list.innerHTML = '<div class="nxp-empty">لا يوجد موظفون مرتبطون بهذا المنصب.</div>';
+                        if (!data.employees ||
+                            data.employees.length === 0) {
+
+                            employeesList.innerHTML =
+                                '<div class="zy-pos-empty">لا يوجد موظفون مرتبطون بهذا المنصب.</div>';
+
                             return;
                         }
 
-                        list.innerHTML = data.employees.map(employee => `
-                            <article>
-                                <strong>${employee.name}</strong>
-                                <span>${employee.employeeNo || 'بدون رقم وظيفي'}</span>
-                                <small>${employee.status}</small>
-                            </article>
-                        `).join('');
-                    } catch (error) {
-                        loading.hidden = true;
-                        list.innerHTML = '<div class="nxp-empty">حدث خطأ أثناء تحميل الموظفين.</div>';
+                        employeesList.innerHTML =
+                            data.employees
+                                .map(employee => `
+                                    <article>
+                                        <a href="/Employees/Edit?id=${encodeURIComponent(employee.id)}" class="zy-pos-employee-link" title="فتح ملف الموظف">${escapeHtml(employee.name)}</a>
+                                        <span>${escapeHtml(employee.employeeNo || "بدون رقم وظيفي")}</span>
+                                        <small>${escapeHtml(employee.status)}</small>
+                                    </article>
+                                `)
+                                .join("");
+
                     }
+                    catch {
+
+                        employeesLoading.hidden = true;
+
+                        employeesList.innerHTML =
+                            '<div class="zy-pos-empty">حدث خطأ أثناء تحميل الموظفين.</div>';
+
+                    }
+
                 });
-            });
-        })();
-    </script>
+
+        });
+
+})();
+</script>
+
 }
+
+
+<!-- ZYNORA_POSITIONS_RETURN_STATE_FIX_V15 -->
+<script>
+(() => {
+
+    const returnKey =
+        "zynora.positions.return.clean";
+
+
+    /* =====================================================
+       معرفة هل الرابط يخرج من صفحة المناصب إلى صفحات الإدارة
+       ===================================================== */
+
+    function isExternalPositionsManagerLink(anchor) {
+
+        if (!anchor || !anchor.href)
+            return false;
+
+        try {
+
+            const url =
+                new URL(anchor.href, window.location.origin);
+
+            return (
+                url.pathname.startsWith("/Positions/Import") ||
+                url.pathname.startsWith("/PositionCategories") ||
+                url.pathname.startsWith("/PositionLevels")
+            );
+
+        }
+        catch {
+            return false;
+        }
+    }
+
+
+    /* =====================================================
+       إغلاق Popups المناصب بالقوة ولكن بدون تخريب وظائفها
+       ===================================================== */
+
+    function closePositionModals() {
+
+        const ids = [
+            "position-editor-modal",
+            "position-job-profile-modal",
+            "position-delete-modal",
+            "position-reference-competencies",
+            "position-reference-education",
+            "position-reference-specializations",
+            "position-reference-certifications",
+            "position-employees-modal"
+        ];
+
+        ids.forEach(id => {
+
+            const modal =
+                document.getElementById(id);
+
+            if (!modal)
+                return;
+
+            modal.classList.remove(
+                "is-open",
+                "open",
+                "active",
+                "show"
+            );
+
+            modal.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+        });
+
+
+        /* منع Auto Open من الحفظ داخل BFCache */
+        const editor =
+            document.getElementById(
+                "position-editor-modal"
+            );
+
+        if (editor) {
+            editor.setAttribute(
+                "data-auto-open",
+                "false"
+            );
+        }
+
+
+        /* تنظيف أي Scroll Lock */
+        document.documentElement.classList.remove(
+            "modal-open",
+            "nx-modal-open",
+            "nexora-modal-open",
+            "nx-setup-modal-open"
+        );
+
+        document.body.classList.remove(
+            "modal-open",
+            "nx-modal-open",
+            "nexora-modal-open",
+            "nx-setup-modal-open"
+        );
+
+        document.documentElement.style.removeProperty(
+            "overflow"
+        );
+
+        document.body.style.removeProperty(
+            "overflow"
+        );
+    }
+
+
+    /* =====================================================
+       عند الضغط على:
+       Import / Categories / Levels
+       ===================================================== */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const anchor =
+                event.target.closest("a");
+
+            if (!isExternalPositionsManagerLink(anchor))
+                return;
+
+            sessionStorage.setItem(
+                returnKey,
+                "1"
+            );
+
+            closePositionModals();
+
+        },
+        true
+    );
+
+
+    /* =====================================================
+       قبل تخزين الصفحة في Browser Back/Forward Cache
+       ===================================================== */
+
+    window.addEventListener(
+        "pagehide",
+        () => {
+
+            if (
+                sessionStorage.getItem(returnKey) === "1"
+            ) {
+                closePositionModals();
+            }
+
+        }
+    );
+
+
+    /* =====================================================
+       عند الرجوع Back إلى Positions
+       ===================================================== */
+
+    window.addEventListener(
+        "pageshow",
+        () => {
+
+            const shouldClean =
+                sessionStorage.getItem(returnKey) === "1";
+
+            if (!shouldClean)
+                return;
+
+
+            sessionStorage.removeItem(
+                returnKey
+            );
+
+
+            closePositionModals();
+
+
+            /*
+               إذا الصفحة القديمة كانت Edit:
+               /Positions?companyId=1&editId=1
+
+               نشيل editId حتى Refresh ما يعيد فتح Popup.
+            */
+
+            try {
+
+                const url =
+                    new URL(window.location.href);
+
+                if (url.searchParams.has("editId")) {
+
+                    url.searchParams.delete(
+                        "editId"
+                    );
+
+                    history.replaceState(
+                        history.state,
+                        "",
+                        url.pathname +
+                        url.search +
+                        url.hash
+                    );
+                }
+
+            }
+            catch {
+                /* no-op */
+            }
+
+
+            /*
+               بعض المتصفحات تعيد CSS state بعد pageshow،
+               لذلك نكرر التنظيف مرة واحدة بعد Frame.
+            */
+
+            requestAnimationFrame(
+                () => closePositionModals()
+            );
+
+        }
+    );
+
+})();
+</script>
+<!-- ZYNORA_POSITIONS_RETURN_STATE_FIX_V15_END -->
+
+
+<!-- ZYNORA_EMPLOYEE_LINK_NAV_FIX_V18 -->
+<script>
+(() => {
+
+    /*
+       فتح ملف الموظف من Popup الموظفين المرتبطين.
+       نستخدم Capture Mode حتى لا تمنع مكتبة الـModal الانتقال.
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const link =
+                event.target.closest(
+                    "#position-employees-modal .zy-pos-employee-link"
+                );
+
+            if (!link)
+                return;
+
+            const href =
+                link.getAttribute("href");
+
+            if (!href)
+                return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (typeof event.stopImmediatePropagation === "function") {
+                event.stopImmediatePropagation();
+            }
+
+            window.location.assign(href);
+
+        },
+        true
+    );
+
+})();
+</script>
+<!-- ZYNORA_EMPLOYEE_LINK_NAV_FIX_V18_END -->
+
+
+
+
+
+
+
+
+
+

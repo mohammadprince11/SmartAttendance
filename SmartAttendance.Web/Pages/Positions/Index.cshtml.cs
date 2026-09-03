@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
@@ -359,6 +359,7 @@ public class IndexModel : PageModel
             .OrderBy(employee => employee.FullName)
             .Select(employee => new
             {
+                id = employee.Id,
                 name = employee.FullName,
                 employeeNo = employee.EmployeeNo,
                 status = employee.IsActive
@@ -1011,3 +1012,4 @@ internal sealed class PositionIdentity
 
     public string Name { get; set; } = string.Empty;
 }
+
