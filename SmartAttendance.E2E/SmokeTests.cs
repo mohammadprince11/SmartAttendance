@@ -125,7 +125,13 @@ public class SmokeTests : PageTest
             Assert.That(response!.Status, Is.LessThan(400), $"HTTP {response.Status} for {surface.Path}");
             Assert.That(Page.Url, Does.Not.Contain("/Account/Login"), $"Unauthorized redirect for {surface.Path}");
             await Expect(Page.Locator("html")).ToHaveAttributeAsync("dir", "rtl");
-            await Expect(Page.Locator(surface.Evidence).First).ToBeVisibleAsync();
+            var visibleEvidence = string.Join(
+                ", ",
+                surface.Evidence
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(selector => selector + ":visible"));
+
+            await Expect(Page.Locator(visibleEvidence).First).ToBeVisibleAsync();
 
             var overflow = await Page.EvaluateAsync<bool>(
                 "document.documentElement.scrollWidth > document.documentElement.clientWidth + 2");
