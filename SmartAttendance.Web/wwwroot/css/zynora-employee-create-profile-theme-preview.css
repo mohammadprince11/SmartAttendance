@@ -1,0 +1,1350 @@
+﻿/* ==========================================================
+   ZYNORA EMPLOYEE CREATE — PROFILE SETTINGS THEME PREVIEW
+   Visual transfer only:
+   - colors
+   - gradients
+   - borders
+   - shadows
+   - focus states
+   NO layout/grid/spacing structural changes
+   ========================================================== */
+
+
+/* ==========================================================
+   01. PAGE HEADER / HERO
+   ========================================================== */
+
+.nxr-create-clean-page .nxr-create-clean-header {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13, 40, 60, .94),
+            rgba(6, 22, 34, .98)
+        ) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .18) !important;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, .28) !important;
+}
+
+
+/* ZYNORA HR mini badge */
+.nxr-create-clean-header .nxr-brand-mini {
+    color: #f5c96b !important;
+
+    border-color:
+        rgba(245, 201, 107, .28) !important;
+
+    background:
+        rgba(245, 201, 107, .07) !important;
+}
+
+
+/* Main title */
+.nxr-create-clean-header .nxr-title h1 {
+    color: #ffffff !important;
+}
+
+
+/* Header description */
+.nxr-create-clean-header .nxr-title p {
+    color: #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   02. MAIN CARDS
+   Exact visual family from EmployeeProfileSettings
+   ========================================================== */
+
+#employee-create-form .nxr-create-section,
+#employee-create-form .nxr-login-account-card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13, 40, 60, .94),
+            rgba(6, 22, 34, .98)
+        ),
+        rgba(7, 20, 32, .96) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .18) !important;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, .28) !important;
+}
+
+
+/* ==========================================================
+   03. SECTION HEADERS
+   ========================================================== */
+
+#employee-create-form
+.nxr-create-section
+.nxr-section-title,
+
+#employee-create-form
+.nxr-login-account-card
+.nxr-section-title {
+    border-bottom:
+        1px solid rgba(160, 190, 210, .12) !important;
+}
+
+
+/* Section titles */
+#employee-create-form
+.nxr-section-title h2 {
+    color: #ffffff !important;
+}
+
+
+/* Section descriptions */
+#employee-create-form
+.nxr-section-title p {
+    color: #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   04. GOLD LABEL SYSTEM
+   This is one of the strongest visual traits
+   of EmployeeProfileSettings
+   ========================================================== */
+
+#employee-create-form
+.nxr-field > label,
+
+#employee-create-form
+.nxr-login-account-body label,
+
+#employee-create-form
+.nxr-profile-dynamic-edit-section label {
+    color: #f5c96b !important;
+}
+
+
+/* Required star stays stronger */
+#employee-create-form
+.nx-req-star,
+
+#employee-create-form
+.text-danger {
+    color: #ff9bab !important;
+}
+
+
+/* ==========================================================
+   05. INPUTS / SELECTS / TEXTAREAS
+   ========================================================== */
+
+#employee-create-form
+.nxr-field input:not([type="checkbox"]):not([type="radio"]),
+
+#employee-create-form
+.nxr-field select,
+
+#employee-create-form
+.nxr-field textarea,
+
+#employee-create-form
+.nxr-login-account-body input:not([type="checkbox"]):not([type="radio"]),
+
+#employee-create-form
+.nxr-login-account-body select,
+
+#employee-create-form
+.nxr-login-account-body textarea {
+
+    background:
+        rgba(4, 18, 29, .75) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .25) !important;
+
+    color:
+        #ffffff !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Placeholder */
+#employee-create-form input::placeholder,
+#employee-create-form textarea::placeholder {
+    color:
+        rgba(159, 184, 201, .68) !important;
+
+    opacity: 1 !important;
+}
+
+
+/* ==========================================================
+   06. INPUT FOCUS
+   Exact cyan glow language
+   ========================================================== */
+
+#employee-create-form
+.nxr-field input:not([type="checkbox"]):focus,
+
+#employee-create-form
+.nxr-field textarea:focus,
+
+#employee-create-form
+.nxr-field select:focus,
+
+#employee-create-form
+.nxr-login-account-body input:not([type="checkbox"]):focus,
+
+#employee-create-form
+.nxr-login-account-body select:focus {
+
+    border-color:
+        rgba(34, 211, 238, .75) !important;
+
+    box-shadow:
+        0 0 0 4px rgba(34, 211, 238, .12) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* ==========================================================
+   07. ZYNORA CUSTOM SELECT SYSTEM
+   Important because native select is hidden
+   ========================================================== */
+
+#employee-create-form
+.nxcs-trigger {
+
+    background:
+        rgba(4, 18, 29, .75) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .25) !important;
+
+    color:
+        #ffffff !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#employee-create-form
+.nxcs-value {
+    color:
+        #ffffff !important;
+}
+
+
+#employee-create-form
+.nxcs-select.is-open
+.nxcs-trigger {
+
+    border-color:
+        rgba(34, 211, 238, .75) !important;
+
+    box-shadow:
+        0 0 0 4px rgba(34, 211, 238, .12) !important;
+}
+
+
+/*
+   Custom select panel is appended to BODY,
+   but this stylesheet is loaded only on Employees/Create.
+*/
+body .nxcs-panel {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13, 40, 60, .99),
+            rgba(6, 22, 34, .995)
+        ) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .24) !important;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, .42) !important;
+}
+
+
+body .nxcs-panel .nxcs-option {
+    color:
+        #d7e8f3 !important;
+
+    background:
+        transparent !important;
+}
+
+
+body .nxcs-panel .nxcs-option:hover,
+body .nxcs-panel .nxcs-option:focus {
+    color:
+        #ffffff !important;
+
+    background:
+        rgba(34, 211, 238, .10) !important;
+}
+
+
+body .nxcs-panel .nxcs-option.is-selected {
+    color:
+        #ffffff !important;
+
+    background:
+        rgba(34, 211, 238, .14) !important;
+}
+
+
+/* ==========================================================
+   08. CHIPS — GOLD LANGUAGE
+   ========================================================== */
+
+#employee-create-form
+.nxr-chip {
+
+    color:
+        #f5c96b !important;
+
+    border:
+        1px solid rgba(245, 201, 107, .28) !important;
+
+    background:
+        rgba(245, 201, 107, .07) !important;
+}
+
+
+/* ==========================================================
+   09. CHECKBOX / LOGIN FORCE CHANGE
+   ========================================================== */
+
+#employee-create-form
+input[type="checkbox"] {
+    accent-color:
+        rgb(34, 211, 238) !important;
+}
+
+
+#employee-create-form
+.nxr-login-account-force {
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   10. DOCUMENTS CARD CONTENT
+   ========================================================== */
+
+#employee-create-form
+.nxr-doc-clean-box {
+
+    background:
+        rgba(34, 211, 238, .045) !important;
+
+    border:
+        1px dashed rgba(34, 211, 238, .28) !important;
+}
+
+
+#employee-create-form
+.nxr-doc-clean-box strong {
+    color:
+        #ffffff !important;
+}
+
+
+#employee-create-form
+.nxr-doc-clean-box p {
+    color:
+        #9fb8c9 !important;
+}
+
+
+#employee-create-form
+.nxr-selected-documents {
+
+    background:
+        rgba(4, 18, 29, .58) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .16) !important;
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   11. PHOTO AREA
+   ========================================================== */
+
+#employee-create-form
+.nxr-photo-upload-wrap {
+
+    background:
+        rgba(34, 211, 238, .035) !important;
+
+    border-color:
+        rgba(34, 211, 238, .18) !important;
+}
+
+
+#employee-create-form
+.nxr-photo-drop {
+
+    background:
+        rgba(4, 18, 29, .65) !important;
+
+    border-color:
+        rgba(34, 211, 238, .30) !important;
+}
+
+
+#employee-create-form
+.nxr-photo-hint strong {
+    color:
+        #ffffff !important;
+}
+
+
+#employee-create-form
+.nxr-photo-hint span,
+
+#employee-create-form
+.nxr-photo-hint small {
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   12. DYNAMIC LANGUAGE CARDS
+   Keep their structure; transfer palette only
+   ========================================================== */
+
+#employee-create-form
+.nxr-employee-language-card,
+#employee-create-form
+[data-language-company] fieldset {
+
+    background:
+        rgba(6, 22, 34, .58) !important;
+
+    border-color:
+        rgba(34, 211, 238, .16) !important;
+}
+
+
+/* ==========================================================
+   13. PRIMARY BUTTONS
+   Profile Settings cyan action language
+   ========================================================== */
+
+.nxr-create-clean-page
+.nxr-btn.primary,
+
+#employee-create-form
+button[type="submit"]:not(.danger) {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgb(34, 211, 238),
+            #29d5d8
+        ) !important;
+
+    border-color:
+        rgba(34, 211, 238, .30) !important;
+
+    color:
+        #03202c !important;
+
+    box-shadow:
+        0 12px 30px rgba(34, 211, 238, .12) !important;
+}
+
+
+.nxr-create-clean-page
+.nxr-btn.primary:hover,
+
+#employee-create-form
+button[type="submit"]:not(.danger):hover {
+
+    filter:
+        brightness(1.06) !important;
+}
+
+
+/* ==========================================================
+   14. SECONDARY BUTTONS
+   ========================================================== */
+
+.nxr-create-clean-page
+.nxr-btn:not(.primary),
+
+#employee-create-form
+.nxr-documents-modal-open {
+
+    background:
+        rgba(11, 29, 45, .90) !important;
+
+    border-color:
+        rgba(160, 190, 210, .22) !important;
+
+    color:
+        #dff9ff !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   15. BOTTOM ACTION BAR
+   ========================================================== */
+
+#employee-create-form
+.nxr-create-submit-bar {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13, 40, 60, .82),
+            rgba(6, 22, 34, .92)
+        ) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .16) !important;
+
+    box-shadow:
+        0 18px 50px rgba(0, 0, 0, .22) !important;
+}
+
+
+/* ==========================================================
+   16. MUTED / HELPER TEXT
+   ========================================================== */
+
+#employee-create-form small,
+#employee-create-form .nxr-field small {
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   END PREVIEW
+   ========================================================== */
+
+/* ==========================================================
+   ZYNORA_CREATE_PROFILE_THEME_CALIBRATION_V2
+   Closer visual match to EmployeeProfileSettings
+   ========================================================== */
+
+
+/* 1. Cards: darker / calmer */
+#employee-create-form .nxr-create-section,
+#employee-create-form .nxr-login-account-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13, 40, 60, .90),
+            rgba(6, 22, 34, .97)
+        ) !important;
+
+    border-color:
+        rgba(34, 211, 238, .13) !important;
+
+    box-shadow:
+        0 22px 58px rgba(0, 0, 0, .25) !important;
+}
+
+
+/* 2. Header uses same family but slightly stronger */
+.nxr-create-clean-page .nxr-create-clean-header {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(14, 42, 62, .94),
+            rgba(6, 22, 34, .98)
+        ) !important;
+
+    border-color:
+        rgba(34, 211, 238, .15) !important;
+}
+
+
+/* 3. Normal field labels should NOT all be gold */
+#employee-create-form .nxr-field > label,
+#employee-create-form .nxr-login-account-body label {
+
+    color:
+        #d9e6ee !important;
+}
+
+
+/* 4. Keep gold only on priority fields */
+#employee-create-form
+.nxr-employee-code-priority > label,
+
+#employee-create-form
+label[for="SelectedCompanyId"],
+
+#employee-create-form
+label[for="Employee_HireDate"] {
+
+    color:
+        #f5c96b !important;
+}
+
+
+/* 5. Section chips keep the gold identity */
+#employee-create-form .nxr-chip {
+
+    color:
+        #f5c96b !important;
+
+    background:
+        rgba(245, 201, 107, .055) !important;
+
+    border-color:
+        rgba(245, 201, 107, .25) !important;
+}
+
+
+/* 6. Inputs darker, less turquoise */
+#employee-create-form
+.nxr-field input:not([type="checkbox"]):not([type="radio"]),
+
+#employee-create-form
+.nxr-field select,
+
+#employee-create-form
+.nxr-field textarea,
+
+#employee-create-form
+.nxr-login-account-body input:not([type="checkbox"]):not([type="radio"]) {
+
+    background:
+        rgba(4, 16, 27, .72) !important;
+
+    border-color:
+        rgba(93, 137, 169, .38) !important;
+}
+
+
+/* 7. Custom select same neutral state */
+#employee-create-form .nxcs-trigger {
+
+    background:
+        rgba(4, 16, 27, .72) !important;
+
+    border-color:
+        rgba(93, 137, 169, .38) !important;
+}
+
+
+/* Cyan is strongest only during interaction */
+#employee-create-form
+.nxr-field input:not([type="checkbox"]):focus,
+
+#employee-create-form
+.nxr-field textarea:focus,
+
+#employee-create-form
+.nxr-field select:focus,
+
+#employee-create-form
+.nxcs-select.is-open
+.nxcs-trigger {
+
+    border-color:
+        rgba(34, 211, 238, .68) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34, 211, 238, .10) !important;
+}
+
+
+/* 8. Language cards quieter */
+#employee-create-form
+.nxr-employee-language-card,
+
+#employee-create-form
+[data-language-company] fieldset {
+
+    background:
+        rgba(5, 18, 30, .46) !important;
+
+    border-color:
+        rgba(117, 151, 176, .18) !important;
+}
+
+
+/* 9. Photo area — currently too cyan */
+#employee-create-form
+.nxr-photo-upload-wrap {
+
+    background:
+        rgba(5, 18, 30, .50) !important;
+
+    border-color:
+        rgba(34, 211, 238, .13) !important;
+}
+
+
+#employee-create-form
+.nxr-photo-drop {
+
+    background:
+        rgba(4, 16, 27, .74) !important;
+
+    border-color:
+        rgba(34, 211, 238, .22) !important;
+}
+
+
+/* 10. Document area same calmer hierarchy */
+#employee-create-form
+.nxr-doc-clean-box {
+
+    background:
+        rgba(5, 18, 30, .48) !important;
+
+    border-color:
+        rgba(34, 211, 238, .18) !important;
+}
+
+
+/* 11. Primary cyan button slightly muted */
+.nxr-create-clean-page .nxr-btn.primary,
+#employee-create-form
+button[type="submit"]:not(.danger) {
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        ) !important;
+
+    box-shadow:
+        0 10px 24px rgba(34, 211, 238, .10) !important;
+}
+
+
+/* 12. Helper text matches Profile Settings */
+#employee-create-form small,
+#employee-create-form .nxr-section-title p,
+#employee-create-form .nxr-field small {
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ZYNORA_CREATE_PROFILE_THEME_CALIBRATION_V2_END */
+
+
+/* ZYNORA_CREATE_TEXT_COLORS_UNIFIED_V3 */
+
+/* =========================================================
+   جميع أسماء الحقول — لون موحد
+   ========================================================= */
+
+html body #employee-create-form label,
+html body #employee-create-form .nxr-field > label,
+html body #employee-create-form .nxr-login-account-body label,
+html body #employee-create-form .nxr-employee-code-priority > label,
+html body #employee-create-form label[for="SelectedCompanyId"],
+html body #employee-create-form label[for="Employee_HireDate"] {
+    color: #d9e6ee !important;
+}
+
+
+/* =========================================================
+   أسماء الحقول داخل بطاقات اللغات
+   ========================================================= */
+
+html body #employee-create-form
+.nxr-employee-language-card label,
+
+html body #employee-create-form
+[data-language-company] label {
+    color: #d9e6ee !important;
+}
+
+
+/* =========================================================
+   عناوين الأقسام
+   ========================================================= */
+
+html body #employee-create-form
+.nxr-section-title h2 {
+    color: #ffffff !important;
+}
+
+
+/* =========================================================
+   الوصف والنصوص المساعدة
+   ========================================================= */
+
+html body #employee-create-form
+.nxr-section-title p,
+
+html body #employee-create-form small,
+
+html body #employee-create-form
+.nxr-field small,
+
+html body #employee-create-form
+.nxr-login-account-force {
+    color: #9fb8c9 !important;
+}
+
+
+/* =========================================================
+   قيمة الحقول
+   ========================================================= */
+
+html body #employee-create-form input,
+html body #employee-create-form textarea,
+html body #employee-create-form select,
+html body #employee-create-form .nxcs-value {
+    color: #f4f8fb !important;
+}
+
+
+/* Placeholder */
+html body #employee-create-form input::placeholder,
+html body #employee-create-form textarea::placeholder {
+    color: #71879a !important;
+    opacity: 1 !important;
+}
+
+
+/* =========================================================
+   Required star فقط أحمر
+   ========================================================= */
+
+html body #employee-create-form .nx-req-star,
+html body #employee-create-form label .text-danger {
+    color: #ff8e9d !important;
+}
+
+
+/* =========================================================
+   Gold يبقى فقط للـBadges
+   ========================================================= */
+
+html body #employee-create-form .nxr-chip {
+    color: #f5c96b !important;
+}
+
+
+/* لغة البطاقة */
+html body #employee-create-form
+.nxr-employee-language-card legend,
+
+html body #employee-create-form
+[data-language-company] legend {
+    color: #f4f8fb !important;
+}
+
+
+/* ZYNORA_CREATE_TEXT_COLORS_UNIFIED_V3_END */
+
+
+/* ZYNORA_CREATE_INPUTS_UNIFIED_V1 */
+
+/* =========================================================
+   توحيد جميع الـ text boxes / selects / date inputs
+   ========================================================= */
+
+html body #employee-create-form input[type="text"],
+html body #employee-create-form input[type="email"],
+html body #employee-create-form input[type="tel"],
+html body #employee-create-form input[type="password"],
+html body #employee-create-form input[type="date"],
+html body #employee-create-form input[type="number"],
+html body #employee-create-form select,
+html body #employee-create-form textarea,
+html body #employee-create-form .form-control,
+html body #employee-create-form .form-select {
+    background: #081a2a !important;
+    background-color: #081a2a !important;
+    color: #f4f8fb !important;
+    border: 1px solid rgba(126, 167, 210, 0.38) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02) !important;
+}
+
+/* hover */
+html body #employee-create-form input[type="text"]:hover,
+html body #employee-create-form input[type="email"]:hover,
+html body #employee-create-form input[type="tel"]:hover,
+html body #employee-create-form input[type="password"]:hover,
+html body #employee-create-form input[type="date"]:hover,
+html body #employee-create-form input[type="number"]:hover,
+html body #employee-create-form select:hover,
+html body #employee-create-form textarea:hover,
+html body #employee-create-form .form-control:hover,
+html body #employee-create-form .form-select:hover {
+    background: #0a1f31 !important;
+    background-color: #0a1f31 !important;
+    border-color: rgba(61, 216, 255, 0.38) !important;
+}
+
+/* focus */
+html body #employee-create-form input[type="text"]:focus,
+html body #employee-create-form input[type="email"]:focus,
+html body #employee-create-form input[type="tel"]:focus,
+html body #employee-create-form input[type="password"]:focus,
+html body #employee-create-form input[type="date"]:focus,
+html body #employee-create-form input[type="number"]:focus,
+html body #employee-create-form select:focus,
+html body #employee-create-form textarea:focus,
+html body #employee-create-form .form-control:focus,
+html body #employee-create-form .form-select:focus {
+    background: #0b2135 !important;
+    background-color: #0b2135 !important;
+    color: #ffffff !important;
+    border-color: rgba(61, 216, 255, 0.75) !important;
+    box-shadow: 0 0 0 3px rgba(61, 216, 255, 0.14) !important;
+    outline: none !important;
+}
+
+/* placeholder */
+html body #employee-create-form input::placeholder,
+html body #employee-create-form textarea::placeholder {
+    color: #8ea5b8 !important;
+    opacity: 1 !important;
+}
+
+/* date input fixes */
+html body #employee-create-form input[type="date"]::-webkit-datetime-edit,
+html body #employee-create-form input[type="date"]::-webkit-datetime-edit-text,
+html body #employee-create-form input[type="date"]::-webkit-datetime-edit-month-field,
+html body #employee-create-form input[type="date"]::-webkit-datetime-edit-day-field,
+html body #employee-create-form input[type="date"]::-webkit-datetime-edit-year-field {
+    color: #f4f8fb !important;
+}
+
+html body #employee-create-form input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: brightness(1.2) opacity(.85) !important;
+}
+
+/* autofill fixes */
+html body #employee-create-form input:-webkit-autofill,
+html body #employee-create-form input:-webkit-autofill:hover,
+html body #employee-create-form input:-webkit-autofill:focus,
+html body #employee-create-form textarea:-webkit-autofill,
+html body #employee-create-form select:-webkit-autofill {
+    -webkit-text-fill-color: #f4f8fb !important;
+    -webkit-box-shadow: 0 0 0 1000px #081a2a inset !important;
+    box-shadow: 0 0 0 1000px #081a2a inset !important;
+    transition: background-color 99999s ease-in-out 0s !important;
+}
+
+/* disabled/read-only still aligned */
+html body #employee-create-form input[readonly],
+html body #employee-create-form input:disabled,
+html body #employee-create-form select:disabled,
+html body #employee-create-form textarea:disabled {
+    background: #102235 !important;
+    background-color: #102235 !important;
+    color: #d9e6ee !important;
+    opacity: 1 !important;
+}
+
+/* ZYNORA_CREATE_INPUTS_UNIFIED_V1_END */
+
+
+/* ZYNORA_CREATE_NEXORA_CALENDAR_V2 */
+
+/* =========================================================
+   NEXORA Calendar V18
+   Employee Create visual alignment
+   ========================================================= */
+
+/* الحقل المغلق */
+html body #employee-create-form .nxcal__button {
+    background: #081a2a !important;
+    background-image: none !important;
+
+    border:
+        1px solid rgba(126, 167, 210, .38) !important;
+
+    color: #f4f8fb !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+
+/* النص داخل حقل التاريخ */
+html body #employee-create-form .nxcal__value {
+    color: #f4f8fb !important;
+}
+
+
+/* أيقونة التقويم */
+html body #employee-create-form .nxcal__icon {
+    background:
+        rgba(126, 167, 210, .10) !important;
+
+    border-color:
+        rgba(126, 167, 210, .30) !important;
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* hover / open / focus */
+html body #employee-create-form .nxcal__button:hover,
+html body #employee-create-form .nxcal.is-open .nxcal__button,
+html body #employee-create-form .nxcal__button:focus-visible {
+
+    background:
+        #0b2135 !important;
+
+    border-color:
+        rgba(34, 211, 238, .68) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34, 211, 238, .10) !important;
+}
+
+
+/* =========================================================
+   Calendar popup
+   ========================================================= */
+
+html body #employee-create-form .nxcal__panel {
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(13, 40, 60, .98),
+            rgba(6, 22, 34, .995)
+        ) !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .16) !important;
+
+    box-shadow:
+        0 26px 70px rgba(0, 0, 0, .42),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+
+
+/* =========================================================
+   Month navigation
+   ========================================================= */
+
+html body #employee-create-form .nxcal__nav {
+
+    background:
+        #102235 !important;
+
+    border:
+        1px solid rgba(126, 167, 210, .26) !important;
+
+    color:
+        #d9e6ee !important;
+}
+
+
+html body #employee-create-form .nxcal__nav:hover {
+
+    background:
+        rgba(34, 211, 238, .10) !important;
+
+    border-color:
+        rgba(34, 211, 238, .42) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* شهر / سنة */
+html body #employee-create-form .nxcal__period-button {
+
+    background:
+        #102235 !important;
+
+    border:
+        1px solid rgba(126, 167, 210, .26) !important;
+
+    color:
+        #f4f8fb !important;
+}
+
+
+html body #employee-create-form .nxcal__period-button:hover,
+html body #employee-create-form .nxcal__period-button:focus-visible,
+html body #employee-create-form .nxcal__period-button[aria-expanded="true"] {
+
+    background:
+        rgba(34, 211, 238, .10) !important;
+
+    border-color:
+        rgba(34, 211, 238, .45) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* =========================================================
+   Week names
+   ========================================================= */
+
+html body #employee-create-form .nxcal__weekday {
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* =========================================================
+   Normal days
+   ========================================================= */
+
+html body #employee-create-form .nxcal__day {
+
+    background:
+        #102235 !important;
+
+    border:
+        1px solid rgba(126, 167, 210, .16) !important;
+
+    color:
+        #e9f3fb !important;
+}
+
+
+/* Hover */
+html body #employee-create-form .nxcal__day:hover {
+
+    background:
+        rgba(34, 211, 238, .10) !important;
+
+    border-color:
+        rgba(34, 211, 238, .30) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* أيام الشهر السابق / التالي */
+html body #employee-create-form .nxcal__day.is-muted {
+
+    background:
+        #0b1928 !important;
+
+    color:
+        #61778a !important;
+
+    opacity:
+        .72 !important;
+}
+
+
+/* اليوم الحالي */
+html body #employee-create-form .nxcal__day.is-today {
+
+    background:
+        rgba(245, 201, 107, .06) !important;
+
+    border-color:
+        rgba(245, 201, 107, .48) !important;
+
+    color:
+        #f5c96b !important;
+}
+
+
+/* التاريخ المختار */
+html body #employee-create-form .nxcal__day.is-selected {
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        ) !important;
+
+    border-color:
+        rgba(34, 211, 238, .80) !important;
+
+    color:
+        #03202c !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34, 211, 238, .10) !important;
+}
+
+
+/* =========================================================
+   Footer
+   ========================================================= */
+
+html body #employee-create-form .nxcal__foot {
+
+    border-top:
+        1px solid rgba(160, 190, 210, .12) !important;
+}
+
+
+/* اليوم / مسح */
+html body #employee-create-form .nxcal__action {
+
+    background:
+        #102235 !important;
+
+    border:
+        1px solid rgba(126, 167, 210, .24) !important;
+
+    color:
+        #d9e6ee !important;
+}
+
+
+html body #employee-create-form .nxcal__action:hover {
+
+    background:
+        rgba(34, 211, 238, .10) !important;
+
+    border-color:
+        rgba(34, 211, 238, .38) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* =========================================================
+   Month / Year chooser
+   ========================================================= */
+
+html body #employee-create-form .nxcal__chooser {
+
+    background:
+        rgba(6, 22, 34, .99) !important;
+
+    color:
+        #f4f8fb !important;
+}
+
+
+html body #employee-create-form .nxcal__chooser-title,
+html body #employee-create-form .nxcal__year-range-label {
+
+    color:
+        #d9e6ee !important;
+}
+
+
+/* ZYNORA_CREATE_NEXORA_CALENDAR_V2_END */
+
+
+/* ZYNORA_CREATE_CALENDAR_SIZE_V1 */
+
+/* نفس حجم Calendar صفحة Edit */
+html:not([data-theme="light"])
+#employee-create-form
+.nxcal__panel {
+
+    width:
+        min(360px, calc(100vw - 32px)) !important;
+
+    min-width:
+        340px !important;
+
+    padding:
+        15px !important;
+}
+
+
+/* مساحة اختيار الشهر / السنة */
+html:not([data-theme="light"])
+#employee-create-form
+.nxcal__chooser {
+
+    width:
+        100% !important;
+
+    min-height:
+        215px !important;
+}
+
+
+/* أزرار الأشهر */
+html:not([data-theme="light"])
+#employee-create-form
+.nxcal__chooser button {
+
+    min-width:
+        0 !important;
+
+    padding-inline:
+        8px !important;
+
+    white-space:
+        normal !important;
+
+    line-height:
+        1.25 !important;
+}
+
+
+/* عنوان اختيار الشهر / السنة */
+html:not([data-theme="light"])
+#employee-create-form
+.nxcal__chooser-title,
+
+html:not([data-theme="light"])
+#employee-create-form
+.nxcal__year-range-label {
+
+    width:
+        100% !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* Mobile */
+@media (max-width: 420px) {
+
+    html:not([data-theme="light"])
+    #employee-create-form
+    .nxcal__panel {
+
+        width:
+            calc(100vw - 24px) !important;
+
+        min-width:
+            0 !important;
+    }
+
+}
+
+/* ZYNORA_CREATE_CALENDAR_SIZE_V1_END */
+

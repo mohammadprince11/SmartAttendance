@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.CreateModel
 @using SmartAttendance.Web.Infrastructure.Theming
 @inject IThemeContextService ThemeContextService
@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="~/css/nexora-employee-create-stable.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-create-profile-theme-preview.css" asp-append-version="true" />
 
 <div class="nxr-page nxr-create-clean-page" dir="rtl">
     <section class="nxr-topline nxr-create-clean-header">
@@ -303,12 +304,67 @@
                     </select>
                 </div>
                 <div class="nxr-field">
-                    <label asp-for="Employee.MotherCountry">البلد الأم</label>
-                    <input asp-for="Employee.MotherCountry" />
+                    <label asp-for="Employee.MotherCountry">@T["البلد الأم"]</label>
+
+                    <select asp-for="Employee.MotherCountry"
+                            class="nxr-native-select"
+                            id="Employee_MotherCountry">
+
+                        <option value="">@T["اختر البلد الأم"]</option>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCountry) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCountry(Model.Employee.MotherCountry))
+                        {
+                            <option value="@Model.Employee.MotherCountry">
+                                @Model.Employee.MotherCountry
+                            </option>
+                        }
+
+                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Countries)
+                        {
+                            <option value="@country.Value">
+                                @T[country.Label]
+                            </option>
+                        }
+
+                    </select>
+
+                    <span asp-validation-for="Employee.MotherCountry"
+                          class="text-danger"></span>
                 </div>
+
                 <div class="nxr-field">
-                    <label asp-for="Employee.MotherCity">المدينة الأم</label>
-                    <input asp-for="Employee.MotherCity" />
+                    <label asp-for="Employee.MotherCity">@T["المدينة الأم"]</label>
+
+                    <select asp-for="Employee.MotherCity"
+                            class="nxr-native-select"
+                            id="Employee_MotherCity">
+
+                        <option value="">@T["اختر المدينة الأم"]</option>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCity) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCity(
+                                 Model.Employee.MotherCountry,
+                                 Model.Employee.MotherCity))
+                        {
+                            <option value="@Model.Employee.MotherCity"
+                                    data-country="@Model.Employee.MotherCountry">
+                                @Model.Employee.MotherCity
+                            </option>
+                        }
+
+                        @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Cities)
+                        {
+                            <option value="@city.Value"
+                                    data-country="@city.CountryValue">
+                                @T[city.Label]
+                            </option>
+                        }
+
+                    </select>
+
+                    <span asp-validation-for="Employee.MotherCity"
+                          class="text-danger"></span>
                 </div>
             </div>
         </section>
@@ -572,12 +628,15 @@
             </div>
         </div>
 
-        <section class="nxr-card nxr-login-account-card zyu-2bdf8e45fdfc">
-            <header class="nxr-card-head">
-                <h2>حساب الدخول</h2>
-                <p>يُنشأ للموظف حساب دخولٍ بدور «موظف» تلقائياً مع إضافته. كلمة المرور مطلوبة؛ اسم الدخول اختياري (افتراضياً = كود الموظف).</p>
-            </header>
-            <div class="nxr-card-body nxr-login-account-body">
+        <section class="nxr-card nxr-form-section nxr-create-section nxr-login-account-card">
+            <div class="nxr-section-title">
+    <div>
+        <h2>حساب الدخول</h2>
+        <p>يُنشأ للموظف حساب دخولٍ بدور «موظف» تلقائياً مع إضافته. كلمة المرور مطلوبة؛ اسم الدخول اختياري (افتراضياً = كود الموظف).</p>
+    </div>
+    <span class="nxr-chip">مطلوب</span>
+</div>
+            <div class="nxr-login-account-body">
                 <div class="nxr-form-grid two nxr-login-account-grid">
                     <div class="nxr-field">
                         <label asp-for="LoginUsername">اسم الدخول (اختياري)</label>
@@ -605,6 +664,8 @@
 </form>
 </div>
 @section Scripts {
+    <script src="~/js/nexora-employee-mother-location.js"
+            asp-append-version="true"></script>
     <!-- NEXORA_CREATE_ORGANIZATION_FILTER_START -->
     <script>
         (() => {
@@ -847,3 +908,7 @@
     <script src="~/js/nexora-employee-create-documents-final.js" asp-append-version="true"></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 }
+
+
+
+

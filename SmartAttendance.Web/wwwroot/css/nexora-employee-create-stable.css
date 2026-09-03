@@ -1,4 +1,4 @@
-
+﻿
 /* NEXORA Employee Create Stable - loaded last on Employees/Create */
 
 .nxr-create-clean-page {
@@ -161,3 +161,36 @@
         flex-direction: column !important;
     }
 }
+
+
+
+
+/* ZYNORA_LOGIN_ACCOUNT_LAYOUT_FINAL_V2 */
+
+.nxr-create-clean-form .nxr-login-account-card {
+    margin: 0 !important;
+    transform: none !important;
+}
+
+.nxr-login-account-card .nxr-login-account-body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.nxr-login-account-card .nxr-login-account-grid {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.nxr-login-account-card .nxr-login-account-force {
+    margin: 10px 0 0 !important;
+}
+
+/* منع أي Card قديم من إضافة فراغ داخلي */
+.nxr-login-account-card > .nxr-section-title + .nxr-login-account-body {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* ZYNORA_LOGIN_ACCOUNT_LAYOUT_FINAL_V2_END */
+

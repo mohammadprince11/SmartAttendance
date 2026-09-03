@@ -1,0 +1,1204 @@
+﻿
+/* ==========================================================
+   ZYNORA EMPLOYEE EDIT — PROFILE THEME V2
+   Matches Employees/Create approved visual language.
+   Layout / grid / business logic are intentionally untouched.
+   ========================================================== */
+
+
+/* ==========================================================
+   DESIGN TOKENS — EDIT PAGE ONLY
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2 {
+
+    --ze-card-start: rgba(13, 40, 60, .90);
+    --ze-card-end: rgba(6, 22, 34, .97);
+
+    --ze-input: #081a2a;
+    --ze-input-hover: #0a1f31;
+    --ze-input-focus: #0b2135;
+
+    --ze-border: rgba(126, 167, 210, .38);
+    --ze-border-soft: rgba(34, 211, 238, .13);
+    --ze-cyan: rgba(34, 211, 238, .68);
+
+    --ze-text: #f4f8fb;
+    --ze-label: #d9e6ee;
+    --ze-muted: #9fb8c9;
+
+    --ze-gold: #f5c96b;
+    --ze-danger: #ff8e9d;
+}
+
+
+/* ==========================================================
+   01. PAGE / HERO / CARDS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-hero,
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-summary,
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--ze-card-start),
+            var(--ze-card-end)
+        ) !important;
+
+    border:
+        1px solid var(--ze-border-soft) !important;
+
+    box-shadow:
+        0 22px 58px rgba(0,0,0,.25) !important;
+}
+
+
+/* ==========================================================
+   02. HERO
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-hero > div:first-child > span {
+
+    color: var(--ze-gold) !important;
+
+    background:
+        rgba(245, 201, 107, .055) !important;
+
+    border-color:
+        rgba(245, 201, 107, .25) !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-hero h1 {
+
+    color:
+        #ffffff !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-hero p {
+
+    color:
+        var(--ze-muted) !important;
+}
+
+
+/* ==========================================================
+   03. EMPLOYEE SUMMARY
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-summary h2 {
+
+    color:
+        #ffffff !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-summary p span {
+
+    background:
+        rgba(5, 18, 30, .48) !important;
+
+    border-color:
+        rgba(126, 167, 210, .18) !important;
+
+    color:
+        var(--ze-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-summary p strong {
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-summary img {
+
+    border-color:
+        rgba(34, 211, 238, .22) !important;
+
+    box-shadow:
+        0 12px 30px rgba(0,0,0,.22) !important;
+}
+
+
+/* ==========================================================
+   04. CARD HEADINGS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card-head {
+
+    border-bottom:
+        1px solid rgba(160,190,210,.12) !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card-head > div > span {
+
+    color:
+        var(--ze-gold) !important;
+
+    background:
+        rgba(245,201,107,.055) !important;
+
+    border-color:
+        rgba(245,201,107,.25) !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card-head h2 {
+
+    color:
+        #ffffff !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card-head p {
+
+    color:
+        var(--ze-muted) !important;
+}
+
+
+/* ==========================================================
+   05. ALL LABELS — UNIFIED
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field label,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-status-near-photo > label,
+
+html:not([data-theme="light"])
+#employee-edit-form
+label {
+
+    color:
+        var(--ze-label) !important;
+}
+
+
+/* Required / validation only */
+html:not([data-theme="light"])
+#employee-edit-form
+.text-danger,
+
+html:not([data-theme="light"])
+#employee-edit-form
+[data-valmsg-for] {
+
+    color:
+        var(--ze-danger) !important;
+}
+
+
+/* ==========================================================
+   06. INPUTS / SELECTS / TEXTAREA
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form
+input:not([type="checkbox"])
+     :not([type="radio"])
+     :not([type="file"]),
+
+html:not([data-theme="light"])
+#employee-edit-form
+select,
+
+html:not([data-theme="light"])
+#employee-edit-form
+textarea,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-search-input {
+
+    background:
+        var(--ze-input) !important;
+
+    background-color:
+        var(--ze-input) !important;
+
+    color:
+        var(--ze-text) !important;
+
+    border:
+        1px solid var(--ze-border) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+
+/*
+   Stronger selectors for existing Edit fields.
+*/
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field select,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-status-near-photo select {
+
+    background:
+        var(--ze-input) !important;
+
+    background-color:
+        var(--ze-input) !important;
+
+    color:
+        var(--ze-text) !important;
+
+    border-color:
+        var(--ze-border) !important;
+}
+
+
+/* Placeholder */
+html:not([data-theme="light"])
+#employee-edit-form input::placeholder,
+
+html:not([data-theme="light"])
+#employee-edit-form textarea::placeholder {
+
+    color:
+        #8ea5b8 !important;
+
+    opacity:
+        1 !important;
+}
+
+
+/* Hover */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field input:not([type="file"]):hover,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field select:hover,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-search-input:hover {
+
+    background:
+        var(--ze-input-hover) !important;
+
+    border-color:
+        rgba(61,216,255,.38) !important;
+}
+
+
+/* Focus */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field input:not([type="file"]):focus,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-field select:focus,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-search-input:focus,
+
+html:not([data-theme="light"])
+#employee-edit-form
+textarea:focus {
+
+    background:
+        var(--ze-input-focus) !important;
+
+    border-color:
+        var(--ze-cyan) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* ==========================================================
+   07. PHOTO / SIGNATURE AREA
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-photo-status-row {
+
+    background:
+        rgba(5,18,30,.48) !important;
+
+    border-color:
+        rgba(34,211,238,.13) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-photo-box {
+
+    background:
+        var(--ze-input) !important;
+
+    border-color:
+        rgba(34,211,238,.22) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-photo-info strong,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-heading strong {
+
+    color:
+        #ffffff !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-photo-info span,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-photo-info small,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-heading span,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-card small {
+
+    color:
+        var(--ze-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-card,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-picker {
+
+    background:
+        rgba(5,18,30,.48) !important;
+
+    border-color:
+        rgba(34,211,238,.16) !important;
+}
+
+
+/* ==========================================================
+   08. SEARCHABLE MANAGER
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-searchable-wrapper {
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-search-dropdown {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.99),
+            rgba(6,22,34,.995)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.18) !important;
+
+    box-shadow:
+        0 24px 70px rgba(0,0,0,.42) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-option {
+
+    color:
+        var(--ze-label) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-option:hover {
+
+    background:
+        rgba(34,211,238,.10) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* ==========================================================
+   09. DYNAMIC LANGUAGE CARDS
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-employee-language-card,
+
+html:not([data-theme="light"])
+#employee-edit-form
+[data-language-company] fieldset,
+
+html:not([data-theme="light"])
+#employee-edit-form
+fieldset {
+
+    background:
+        rgba(5,18,30,.46) !important;
+
+    border-color:
+        rgba(117,151,176,.18) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form legend {
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+/* ==========================================================
+   10. NEXORA CUSTOM SELECT
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcs-trigger,
+html:not([data-theme="light"])
+#employee-edit-form .nxos__button,
+html:not([data-theme="light"])
+#employee-edit-form .nxos__trigger {
+
+    background:
+        var(--ze-input) !important;
+
+    border-color:
+        var(--ze-border) !important;
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcs-value,
+
+html:not([data-theme="light"])
+#employee-edit-form .nxos__value {
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxcs-select.is-open .nxcs-trigger {
+
+    border-color:
+        var(--ze-cyan) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+}
+
+
+/*
+   Some dropdown panels are appended directly to BODY.
+   :has scopes them to Employees/Edit only.
+*/
+html:not([data-theme="light"])
+body:has(.zynora-profile-theme-v2)
+.nxcs-panel {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.99),
+            rgba(6,22,34,.995)
+        ) !important;
+
+    border-color:
+        rgba(34,211,238,.18) !important;
+
+    box-shadow:
+        0 24px 70px rgba(0,0,0,.42) !important;
+}
+
+
+html:not([data-theme="light"])
+body:has(.zynora-profile-theme-v2)
+.nxcs-option {
+
+    color:
+        var(--ze-label, #d9e6ee) !important;
+}
+
+
+html:not([data-theme="light"])
+body:has(.zynora-profile-theme-v2)
+.nxcs-option:hover,
+
+html:not([data-theme="light"])
+body:has(.zynora-profile-theme-v2)
+.nxcs-option.is-selected {
+
+    background:
+        rgba(34,211,238,.10) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* ==========================================================
+   11. NEXORA CALENDAR V18
+   Exact same visual family as Create
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__button {
+
+    background:
+        var(--ze-input) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid var(--ze-border) !important;
+
+    color:
+        var(--ze-text) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__value {
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__icon {
+
+    background:
+        rgba(126,167,210,.10) !important;
+
+    border-color:
+        rgba(126,167,210,.30) !important;
+
+    color:
+        var(--ze-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal.is-open .nxcal__button,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__button:hover,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__button:focus-visible {
+
+    background:
+        var(--ze-input-focus) !important;
+
+    border-color:
+        var(--ze-cyan) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__panel {
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(13,40,60,.98),
+            rgba(6,22,34,.995)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.16) !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__nav,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__period-button,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__day,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__action {
+
+    background:
+        #102235 !important;
+
+    border-color:
+        rgba(126,167,210,.22) !important;
+
+    color:
+        var(--ze-text) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__weekday {
+
+    color:
+        var(--ze-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__day:hover,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__nav:hover,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__action:hover,
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__period-button:hover {
+
+    background:
+        rgba(34,211,238,.10) !important;
+
+    border-color:
+        rgba(34,211,238,.35) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__day.is-muted {
+
+    background:
+        #0b1928 !important;
+
+    color:
+        #61778a !important;
+
+    opacity:
+        .72 !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__day.is-today {
+
+    background:
+        rgba(245,201,107,.06) !important;
+
+    border-color:
+        rgba(245,201,107,.48) !important;
+
+    color:
+        var(--ze-gold) !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form .nxcal__day.is-selected {
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        ) !important;
+
+    border-color:
+        rgba(34,211,238,.80) !important;
+
+    color:
+        #03202c !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.10) !important;
+}
+
+
+/* ==========================================================
+   12. BUTTONS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-btn.primary,
+
+html:not([data-theme="light"])
+#employee-edit-form
+button[type="submit"]:not(.danger) {
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        ) !important;
+
+    border-color:
+        rgba(34,211,238,.30) !important;
+
+    color:
+        #03202c !important;
+
+    box-shadow:
+        0 10px 24px rgba(34,211,238,.10) !important;
+}
+
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-btn.secondary,
+
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-btn.ghost {
+
+    background:
+        #102235 !important;
+
+    border-color:
+        rgba(126,167,210,.24) !important;
+
+    color:
+        var(--ze-label) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   13. CHECKBOX / RADIO
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form input[type="checkbox"],
+
+html:not([data-theme="light"])
+#employee-edit-form input[type="radio"] {
+
+    accent-color:
+        rgb(34,211,238) !important;
+}
+
+
+/* ==========================================================
+   14. AUTOFILL
+   ========================================================== */
+
+html:not([data-theme="light"])
+#employee-edit-form input:-webkit-autofill,
+
+html:not([data-theme="light"])
+#employee-edit-form input:-webkit-autofill:hover,
+
+html:not([data-theme="light"])
+#employee-edit-form input:-webkit-autofill:focus {
+
+    -webkit-text-fill-color:
+        var(--ze-text) !important;
+
+    -webkit-box-shadow:
+        0 0 0 1000px #081a2a inset !important;
+
+    box-shadow:
+        0 0 0 1000px #081a2a inset !important;
+}
+
+
+/* ==========================================================
+   END — EMPLOYEE EDIT PROFILE THEME V2
+   ========================================================== */
+
+
+/* ZYNORA_EDIT_CARD_HEAD_COLOR_FIX_V1 */
+
+/* الهيدر لا يكون Card مستقل بل جزء من نفس Gradient */
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card-head {
+
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+
+    box-shadow: none !important;
+
+    border:
+        0 !important;
+
+    border-bottom:
+        1px solid rgba(160, 190, 210, .12) !important;
+
+    border-radius:
+        0 !important;
+}
+
+
+/* منع أي container داخلي من إعطاء لون Slate */
+html:not([data-theme="light"])
+.zynora-profile-theme-v2
+.nxr-edit-final-card-head > div {
+
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+
+/* ZYNORA_EDIT_CARD_HEAD_COLOR_FIX_V1_END */
+
+
+/* ZYNORA_EDIT_SIGNATURE_END_LAYOUT_V1 */
+
+
+/* =========================================================
+   أعلى الصفحة:
+   بعد إزالة التوقيع يبقى صورة + معلومات + حالة فقط
+   ========================================================= */
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-photo-status-row {
+
+    grid-template-columns:
+        104px
+        minmax(240px, 1fr)
+        minmax(180px, 230px) !important;
+}
+
+
+/* =========================================================
+   مكان التوقيع الجديد — نهاية الصفحة
+   ========================================================= */
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section {
+
+    width: 100% !important;
+
+    display: flex !important;
+
+    justify-content: flex-start !important;
+
+    padding-top: 18px !important;
+
+    margin-top: 18px !important;
+
+    border-top:
+        1px solid rgba(160,190,210,.12) !important;
+}
+
+
+/*
+   البطاقة تقريباً نصف حجمها السابق،
+   ولا تمتد على عرض الصفحة.
+*/
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-card {
+
+    width: min(50%, 520px) !important;
+
+    min-width: 360px !important;
+    max-width: 520px !important;
+
+    padding: 11px 12px !important;
+
+    gap: 7px !important;
+
+    border-radius: 15px !important;
+
+    background:
+        rgba(5,18,30,.48) !important;
+
+    border:
+        1px solid rgba(34,211,238,.16) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* عنوان التوقيع أصغر وأهدأ */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-heading strong {
+
+    font-size: 14px !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-heading span,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-card > small {
+
+    font-size: 11px !important;
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* أيقونة أصغر */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-icon {
+
+    width: 31px !important;
+    height: 31px !important;
+
+    flex-basis: 31px !important;
+
+    font-size: 15px !important;
+}
+
+
+/* اختيار الملف Compact */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-picker {
+
+    min-height: 38px !important;
+
+    padding: 4px !important;
+}
+
+
+/* معاينة التوقيع الحالي */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-preview {
+
+    max-height: 95px !important;
+
+    overflow: hidden !important;
+}
+
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxr-edit-signature-end-section
+.nxr-edit-signature-preview img {
+
+    width: 100% !important;
+
+    max-height: 70px !important;
+
+    object-fit: contain !important;
+}
+
+
+/* =========================================================
+   Mobile
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+    html:not([data-theme="light"])
+    #employee-edit-form
+    .nxr-edit-signature-end-section
+    .nxr-edit-signature-card {
+
+        width: 100% !important;
+
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+}
+
+
+/* ZYNORA_EDIT_SIGNATURE_END_LAYOUT_V1_END */
+
+
+/* ZYNORA_EDIT_CALENDAR_SIZE_V1 */
+
+/* تكبير الكلاندر بشكل متوازن */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxcal__panel {
+
+    width:
+        min(360px, calc(100vw - 32px)) !important;
+
+    min-width:
+        340px !important;
+
+    padding:
+        15px !important;
+}
+
+
+/* مساحة اختيار الشهر / السنة */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxcal__chooser {
+
+    width:
+        100% !important;
+
+    min-height:
+        215px !important;
+}
+
+
+/* أزرار الأشهر حتى النص ما ينضغط */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxcal__chooser button {
+
+    min-width:
+        0 !important;
+
+    padding-inline:
+        8px !important;
+
+    white-space:
+        normal !important;
+
+    line-height:
+        1.25 !important;
+}
+
+
+/* عنوان اختيار الشهر والسنة */
+html:not([data-theme="light"])
+#employee-edit-form
+.nxcal__chooser-title,
+
+html:not([data-theme="light"])
+#employee-edit-form
+.nxcal__year-range-label {
+
+    width:
+        100% !important;
+
+    white-space:
+        nowrap !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* Mobile */
+@media (max-width: 420px) {
+
+    html:not([data-theme="light"])
+    #employee-edit-form
+    .nxcal__panel {
+
+        width:
+            calc(100vw - 24px) !important;
+
+        min-width:
+            0 !important;
+    }
+
+}
+
+/* ZYNORA_EDIT_CALENDAR_SIZE_V1_END */
+

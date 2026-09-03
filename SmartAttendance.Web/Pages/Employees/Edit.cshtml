@@ -13,9 +13,10 @@
 <link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-edit-profile-theme-preview.css" asp-append-version="true" />
 
 
-<div class="nxr-edit-final-page" dir="rtl">
+<div class="nxr-edit-final-page zynora-profile-theme-v2" dir="rtl">
     <section class="nxr-edit-final-hero">
         <div>
             <span>Employee Data</span>
@@ -45,7 +46,7 @@
         </div>
     </section>
 
-    <form method="post" enctype="multipart/form-data" class="nxr-edit-final-form">
+    <form id="employee-edit-form" method="post" enctype="multipart/form-data" class="nxr-edit-final-form">
         <input type="hidden" asp-for="Employee.Id" />
 
         <section class="nxr-edit-final-card">
@@ -67,30 +68,7 @@
                     <span>اختر صورة PNG أو JPG أو WEBP.</span>
                     <small>Max 5MB</small>
                 </div>
-                @* التوقيع يغذّي رمز {Employee-Signature-Url} بمنشئ الوثائق.
-                   يُخزَّن بالمخزن المحميّ لا بمسار عام — أثرٌ قانونيّ لا يُكشف بلا مصادقة. *@
-                <div class="nxr-edit-signature-card" id="employee-signature">
-                    <div class="nxr-edit-signature-heading">
-                        <span class="nxr-edit-signature-icon" aria-hidden="true">✒</span>
-                        <div>
-                            <strong>توقيع الموظف</strong>
-                            <span>يُستخدم تلقائياً في الوثائق المولّدة.</span>
-                        </div>
-                    </div>
-                    <label class="nxr-edit-signature-picker" for="EmployeeSignature">
-                        <input asp-for="EmployeeSignature" class="nxr-edit-signature-input" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="employee-signature-help" />
-                        <span class="nxr-edit-signature-picker-action">اختيار صورة التوقيع</span>
-                        <span class="nxr-edit-signature-file-name" data-signature-file-name>لم يتم اختيار ملف</span>
-                    </label>
-                    <small id="employee-signature-help">PNG أو JPG أو WEBP · الحد الأقصى 2MB</small>
-                    @if (!string.IsNullOrWhiteSpace(Model.CurrentSignatureUrl))
-                    {
-                        <figure class="nxr-edit-signature-preview">
-                            <img src="@Model.CurrentSignatureUrl" alt="التوقيع الحالي للموظف" class="zyu-dbe95fd5b2ba" />
-                            <figcaption>التوقيع الحالي</figcaption>
-                        </figure>
-                    }
-                </div>
+
                 @* منسدلة بسيطة بدل مربّع اختيار بتسمية طويلة: «فعال داخل النظام»
                    كان يلتفّ ثلاثة أسطر داخل صندوقٍ عرضه 106px وسط حقولٍ بسطرٍ
                    واحد. والحالة قيمةٌ من اثنتين، فالمنسدلة تعبّر عنها أوضح
@@ -261,12 +239,67 @@
                     </select>
                 </div>
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.MotherCountry">البلد الأم</label>
-                    <input asp-for="Employee.MotherCountry" />
+                    <label asp-for="Employee.MotherCountry">@T["البلد الأم"]</label>
+
+                    <select asp-for="Employee.MotherCountry"
+                            class="nxr-native-select"
+                            id="Employee_MotherCountry">
+
+                        <option value="">@T["اختر البلد الأم"]</option>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCountry) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCountry(Model.Employee.MotherCountry))
+                        {
+                            <option value="@Model.Employee.MotherCountry">
+                                @Model.Employee.MotherCountry
+                            </option>
+                        }
+
+                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Countries)
+                        {
+                            <option value="@country.Value">
+                                @T[country.Label]
+                            </option>
+                        }
+
+                    </select>
+
+                    <span asp-validation-for="Employee.MotherCountry"
+                          class="text-danger"></span>
                 </div>
+
                 <div class="nxr-edit-field">
-                    <label asp-for="Employee.MotherCity">المدينة الأم</label>
-                    <input asp-for="Employee.MotherCity" />
+                    <label asp-for="Employee.MotherCity">@T["المدينة الأم"]</label>
+
+                    <select asp-for="Employee.MotherCity"
+                            class="nxr-native-select"
+                            id="Employee_MotherCity">
+
+                        <option value="">@T["اختر المدينة الأم"]</option>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCity) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCity(
+                                 Model.Employee.MotherCountry,
+                                 Model.Employee.MotherCity))
+                        {
+                            <option value="@Model.Employee.MotherCity"
+                                    data-country="@Model.Employee.MotherCountry">
+                                @Model.Employee.MotherCity
+                            </option>
+                        }
+
+                        @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Cities)
+                        {
+                            <option value="@city.Value"
+                                    data-country="@city.CountryValue">
+                                @T[city.Label]
+                            </option>
+                        }
+
+                    </select>
+
+                    <span asp-validation-for="Employee.MotherCity"
+                          class="text-danger"></span>
                 </div>
 
                 @* ---------- الاتصال والتوظيف ---------- *@
@@ -345,6 +378,35 @@
                 </div>
             </section>
         }
+
+        <!-- ZYNORA_EDIT_SIGNATURE_END_SECTION_V1 -->
+        <div class="nxr-edit-signature-end-section">
+@* التوقيع يغذّي رمز {Employee-Signature-Url} بمنشئ الوثائق.
+                   يُخزَّن بالمخزن المحميّ لا بمسار عام — أثرٌ قانونيّ لا يُكشف بلا مصادقة. *@
+                <div class="nxr-edit-signature-card" id="employee-signature">
+                    <div class="nxr-edit-signature-heading">
+                        <span class="nxr-edit-signature-icon" aria-hidden="true">✒</span>
+                        <div>
+                            <strong>توقيع الموظف</strong>
+                            <span>يُستخدم تلقائياً في الوثائق المولّدة.</span>
+                        </div>
+                    </div>
+                    <label class="nxr-edit-signature-picker" for="EmployeeSignature">
+                        <input asp-for="EmployeeSignature" class="nxr-edit-signature-input" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="employee-signature-help" />
+                        <span class="nxr-edit-signature-picker-action">اختيار صورة التوقيع</span>
+                        <span class="nxr-edit-signature-file-name" data-signature-file-name>لم يتم اختيار ملف</span>
+                    </label>
+                    <small id="employee-signature-help">PNG أو JPG أو WEBP · الحد الأقصى 2MB</small>
+                    @if (!string.IsNullOrWhiteSpace(Model.CurrentSignatureUrl))
+                    {
+                        <figure class="nxr-edit-signature-preview">
+                            <img src="@Model.CurrentSignatureUrl" alt="التوقيع الحالي للموظف" class="zyu-dbe95fd5b2ba" />
+                            <figcaption>التوقيع الحالي</figcaption>
+                        </figure>
+                    }
+                </div>
+        </div>
+        <!-- ZYNORA_EDIT_SIGNATURE_END_SECTION_V1_END -->
         <div class="nxr-edit-final-actions">
                 <button type="submit" class="nxr-edit-btn primary">حفظ التعديل</button>
                 <a asp-page="./Profile" asp-route-id="@Model.Employee.Id" class="nxr-edit-btn secondary">إلغاء والعودة للملف</a>
@@ -354,6 +416,8 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/nexora-employee-mother-location.js"
+            asp-append-version="true"></script>
     <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
 
     <script>
@@ -554,3 +618,6 @@
     </script>
     <partial name="_ValidationScriptsPartial" />
 }
+
+
+
