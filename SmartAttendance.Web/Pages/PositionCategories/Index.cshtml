@@ -1,155 +1,901 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.PositionCategories.IndexModel
 @using SmartAttendance.Web.Infrastructure.Theming
 @inject IThemeContextService ThemeContextService
+
 @{
     ViewData["Title"] = "فئات المناصب";
-    var brandTheme = await ThemeContextService.GetCurrentAsync(default);
-    var brandEyebrow = string.IsNullOrWhiteSpace(brandTheme.DisplayName) ? "ZYNORA HR" : brandTheme.DisplayName!;
+
+    var brandTheme =
+        await ThemeContextService.GetCurrentAsync(default);
+
+    var brandName =
+        string.IsNullOrWhiteSpace(brandTheme.DisplayName)
+            ? "ZYNORA HR"
+            : brandTheme.DisplayName!;
+
+    var successMessage =
+        TempData["SuccessMessage"] as string;
+
+    var errorMessage =
+        TempData["ErrorMessage"] as string;
+
+    var isEditing =
+        Model.Input.Id > 0;
+
+    var autoOpenEditor =
+        isEditing ||
+        !string.IsNullOrWhiteSpace(Model.Input.Name) ||
+        !string.IsNullOrWhiteSpace(errorMessage);
+
+    var totalItems =
+        Model.Items.Count;
+
+    var activeItems =
+        Model.Items.Count(item => item.IsActive);
+
+    var usedItems =
+        Model.Items.Count(item => item.UsageCount > 0);
+
+    var totalUsage =
+        Model.Items.Sum(item => item.UsageCount);
 }
 
-<link rel="stylesheet" href="~/css/positions.css" asp-append-version="true" />
+<link rel="stylesheet"
+      href="~/css/nexora-setup-pages.css"
+      asp-append-version="true" />
 
-<div class="nxp-positions-page" dir="rtl">
-    @if (TempData["SuccessMessage"] is string successMessage)
+<link rel="stylesheet"
+      href="~/css/zynora-position-lookups-v2.css"
+      asp-append-version="true" />
+
+
+<div class="zy-lookup-page"
+     dir="rtl">
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
     {
-        <div class="nxp-alert nxp-alert--success">@successMessage</div>
+        <div class="zy-lookup-alert zy-lookup-alert--success">
+            @successMessage
+        </div>
     }
 
-    @if (TempData["ErrorMessage"] is string errorMessage)
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <div class="nxp-alert nxp-alert--error">@errorMessage</div>
+        <div class="zy-lookup-alert zy-lookup-alert--danger">
+            @errorMessage
+        </div>
     }
 
-    <section class="nxp-hero">
-        <div class="nxp-hero__content">
-            <p class="nxp-eyebrow">@brandEyebrow</p>
-            <h1>فئات المناصب</h1>
-            <span>إدارة فئات المناصب المستخدمة داخل صفحة المناصب الوظيفية.</span>
+
+    <!-- =====================================================
+         HERO
+         ===================================================== -->
+
+    <section class="zy-lookup-hero">
+
+        <div class="zy-lookup-hero__content">
+
+            <span class="zy-lookup-eyebrow">
+                @brandName
+            </span>
+
+            <h1>
+                فئات المناصب
+            </h1>
+
+            <p>
+                تنظيم وتصنيف المناصب الوظيفية ضمن فئات واضحة وموحدة داخل ZYNORA HR.
+            </p>
+
         </div>
-        <div class="nxp-hero__links">
-            <a asp-page="/Positions/Index">الرجوع للمناصب</a>
-            <a asp-page="/PositionLevels/Index">إدارة المستويات</a>
+
+
+        <div class="zy-lookup-hero__actions">
+
+            <a asp-page="/Positions/Index"
+               class="zy-lookup-btn zy-lookup-btn--secondary">
+
+                الرجوع للمناصب
+
+            </a>
+
+
+            <a asp-page="/PositionLevels/Index"
+               class="zy-lookup-btn zy-lookup-btn--secondary">
+
+                إدارة المستويات
+
+            </a>
+
+
+            <button type="button"
+                    class="zy-lookup-btn zy-lookup-btn--primary"
+                    data-nx-setup-open="lookup-editor-modal">
+
+                + إضافة فئة
+
+            </button>
+
         </div>
+
     </section>
 
-    <section class="nxp-card nxp-form-card" id="categoryFormArea">
-        <div class="nxp-card__head">
+
+
+    <!-- =====================================================
+         KPI
+         ===================================================== -->
+
+    <section class="zy-lookup-kpis">
+
+        <article>
+
+            <span class="zy-lookup-kpi__index">
+                01
+            </span>
+
             <div>
-                <h2>@(Model.Input.Id > 0 ? "تعديل فئة" : "بيانات الفئة")</h2>
-                <p>لا يمكن حذف فئة مستخدمة داخل أي منصب.</p>
+                <span>إجمالي الفئات</span>
+                <strong>@totalItems</strong>
             </div>
-        </div>
 
-        <form method="post" asp-page-handler="Save" class="nxp-form nxp-form--compact" autocomplete="off">
-            <input asp-for="Input.Id" type="hidden" />
-            <input asp-for="Input.OriginalName" type="hidden" />
+        </article>
 
-            <label class="nxp-field nxp-field--wide">
-                <span>اسم الفئة <b>*</b></span>
-                <input asp-for="Input.Name" required maxlength="120" placeholder="مثال: إداري" />
-            </label>
 
-            <label class="nxp-check">
-                <input type="hidden" name="Input.IsActive" value="false" />
-                <input asp-for="Input.IsActive" value="true" />
-                <span>الفئة فعالة</span>
-            </label>
+        <article>
 
-            <div class="nxp-form-actions">
-                <button type="submit" class="nxp-btn nxp-btn--primary">حفظ الفئة</button>
-                <a asp-page="/PositionCategories/Index" class="nxp-btn nxp-btn--ghost">تفريغ النموذج</a>
+            <span class="zy-lookup-kpi__index">
+                02
+            </span>
+
+            <div>
+                <span>الفعالة</span>
+                <strong>@activeItems</strong>
             </div>
-        </form>
+
+        </article>
+
+
+        <article>
+
+            <span class="zy-lookup-kpi__index">
+                03
+            </span>
+
+            <div>
+                <span>المستخدمة في المناصب</span>
+                <strong>@usedItems</strong>
+            </div>
+
+        </article>
+
+
+        <article>
+
+            <span class="zy-lookup-kpi__index">
+                04
+            </span>
+
+            <div>
+                <span>إجمالي الارتباطات</span>
+                <strong>@totalUsage</strong>
+            </div>
+
+        </article>
+
     </section>
 
-    <section class="nxp-card">
-        <div class="nxp-card__head nxp-card__head--filters">
+
+
+    <!-- =====================================================
+         REGISTRY
+         ===================================================== -->
+
+    <section class="zy-lookup-card">
+
+        <header class="zy-lookup-card__head">
+
             <div>
-                <h2>قائمة الفئات</h2>
-                <p>الفلاتر تعمل مباشرة بدون زر بحث.</p>
+
+                <span class="zy-lookup-card__eyebrow">
+                    سجل البيانات
+                </span>
+
+                <h2>
+                    الفئات المعرفة داخل النظام
+                </h2>
+
+                <p>
+                    ابحث وصفِّ النتائج مباشرة بدون إعادة تحميل الصفحة.
+                </p>
+
             </div>
-            <div class="nxp-filters nxp-filters--simple">
-                <input id="lookupSearch" type="search" placeholder="بحث مباشر..." />
+
+
+            <div class="zy-lookup-count">
+
+                <strong>
+                    @totalItems
+                </strong>
+
+                <span>
+                    فئة
+                </span>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- FILTERS -->
+
+        <div class="zy-lookup-filters">
+
+            <label class="zy-lookup-filter zy-lookup-filter--search">
+
+                <span>
+                    البحث
+                </span>
+
+                <input id="lookupSearch"
+                       type="search"
+                       autocomplete="off"
+                       placeholder="ابحث عن اسم الفئة..." />
+
+            </label>
+
+
+            <label class="zy-lookup-filter">
+
+                <span>
+                    الحالة
+                </span>
+
                 <select id="lookupStatus">
-                    <option value="all">كل الحالات</option>
-                    <option value="active">فعال</option>
-                    <option value="inactive">غير فعال</option>
-                    <option value="used">مستخدمة</option>
-                    <option value="unused">غير مستخدمة</option>
+
+                    <option value="all">
+                        كل الحالات
+                    </option>
+
+                    <option value="active">
+                        فعال
+                    </option>
+
+                    <option value="inactive">
+                        غير فعال
+                    </option>
+
+                    <option value="used">
+                        مستخدم
+                    </option>
+
+                    <option value="unused">
+                        غير مستخدم
+                    </option>
+
                 </select>
-            </div>
+
+            </label>
+
         </div>
+
+
 
         @if (!Model.Items.Any())
         {
-            <div class="nxp-empty">لا توجد فئات مسجلة حالياً.</div>
+            <div class="zy-lookup-empty">
+
+                <strong>
+                    لا توجد بيانات
+                </strong>
+
+                <span>
+                    لا توجد فئات مسجلة حالياً.
+                </span>
+
+            </div>
         }
         else
         {
-            <div class="nxp-table-wrap">
-                <table class="nxp-table nxp-table--lookup">
+            <div class="zy-lookup-table-wrap">
+
+                <table class="zy-lookup-table">
+
                     <thead>
+
                         <tr>
+
                             <th>#</th>
-                            <th>الفئة</th>
-                            <th>المناصب المستخدمة</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
+
+                            <th>
+                                الفئة
+                            </th>
+
+                            <th>
+                                المناصب المستخدمة
+                            </th>
+
+                            <th>
+                                الحالة
+                            </th>
+
+                            <th>
+                                الإجراءات
+                            </th>
+
                         </tr>
+
                     </thead>
+
+
                     <tbody>
-                        @for (var i = 0; i < Model.Items.Count; i++)
-                        {
-                            var item = Model.Items[i];
-                            var canDelete = item.UsageCount == 0;
-                            <tr data-lookup-row data-search="@item.SearchText" data-status="@(item.IsActive ? "active" : "inactive")" data-used="@(item.UsageCount > 0 ? "used" : "unused")">
-                                <td>@(i + 1)</td>
-                                <td><strong>@item.Name</strong></td>
-                                <td>@item.UsageCount</td>
-                                <td><span class="nxp-status @(item.IsActive ? "is-active" : "is-inactive")">@(item.IsActive ? "فعال" : "غير فعال")</span></td>
-                                <td>
-                                    <div class="nxp-actions">
-                                        <a class="nxp-icon-btn" asp-page="/PositionCategories/Index" asp-route-editId="@item.Id" asp-fragment="categoryFormArea">تعديل</a>
-                                        <form method="post" asp-page-handler="Toggle" asp-route-id="@item.Id" class="nxp-inline-form">
-                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--muted">@(item.IsActive ? "إيقاف" : "تفعيل")</button>
-                                        </form>
-                                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="nxp-inline-form">
-                                            <button type="submit" class="nxp-icon-btn nxp-icon-btn--danger" disabled="@(!canDelete)" title="@(canDelete ? "حذف الفئة" : "لا يمكن حذف فئة مستخدمة بمنصب")">حذف</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
+
+                    @for (var i = 0;
+                          i < Model.Items.Count;
+                          i++)
+                    {
+                        var item =
+                            Model.Items[i];
+
+                        var canDelete =
+                            item.UsageCount == 0;
+
+                        <tr data-lookup-row
+                            data-search="@item.SearchText"
+                            data-status="@(item.IsActive ? "active" : "inactive")"
+                            data-used="@(item.UsageCount > 0 ? "used" : "unused")">
+
+                            <td class="zy-lookup-sequence">
+
+                                @(i + 1)
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-lookup-name">
+
+                                    <strong>
+                                        @item.Name
+                                    </strong>
+
+                                    <span>
+                                        تصنيف وظيفي
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-lookup-usage">
+
+                                    <strong>
+                                        @item.UsageCount
+                                    </strong>
+
+                                    <span>
+                                        منصب
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="zy-lookup-status @(item.IsActive ? "is-active" : "is-inactive")">
+
+                                    @(item.IsActive
+                                        ? "فعال"
+                                        : "غير فعال")
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="zy-lookup-actions">
+
+
+                                    <!-- EDIT -->
+
+                                    <a asp-page="/PositionCategories/Index"
+                                       asp-route-editId="@item.Id"
+                                       class="zy-lookup-action zy-lookup-action--edit">
+
+                                        تعديل
+
+                                    </a>
+
+
+
+                                    <!-- TOGGLE -->
+
+                                    <form method="post"
+                                          asp-page-handler="Toggle"
+                                          asp-route-id="@item.Id"
+                                          class="zy-lookup-inline-form">
+
+                                        <button type="submit"
+                                                class="zy-lookup-action zy-lookup-action--neutral">
+
+                                            @(item.IsActive
+                                                ? "إيقاف"
+                                                : "تفعيل")
+
+                                        </button>
+
+                                    </form>
+
+
+
+                                    <!-- DELETE -->
+
+                                    <button type="button"
+                                            class="zy-lookup-action zy-lookup-action--delete"
+                                            data-lookup-delete
+                                            data-delete-id="@item.Id"
+                                            data-delete-name="@item.Name"
+                                            data-delete-usage="@item.UsageCount"
+                                            data-nx-setup-open="lookup-delete-modal"
+                                            disabled="@(!canDelete)"
+                                            title="@(canDelete
+                                                ? "حذف الفئة"
+                                                : "لا يمكن حذف فئة مستخدمة بمنصب")">
+
+                                        حذف
+
+                                    </button>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+                    }
+
                     </tbody>
+
                 </table>
+
             </div>
         }
+
     </section>
+
 </div>
 
-@section Scripts {
-    <script>
-        (() => {
-            const normalize = value => (value || '').toString().trim().toLowerCase();
-            const search = document.getElementById('lookupSearch');
-            const status = document.getElementById('lookupStatus');
-            const rows = Array.from(document.querySelectorAll('[data-lookup-row]'));
 
-            function applyFilters() {
-                const q = normalize(search?.value);
-                const statusValue = status?.value || 'all';
 
-                rows.forEach(row => {
-                    const matchesSearch = !q || normalize(row.dataset.search).includes(q);
-                    const matchesStatus = statusValue === 'all' || row.dataset.status === statusValue || row.dataset.used === statusValue;
-                    row.hidden = !(matchesSearch && matchesStatus);
-                });
+<!-- =========================================================
+     ADD / EDIT MODAL
+     ========================================================= -->
+
+<div class="nx-setup-modal"
+     id="lookup-editor-modal"
+     data-auto-open="@(autoOpenEditor ? "true" : "false")"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-lookup-editor"
+         role="dialog"
+         aria-modal="true">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close
+                aria-label="إغلاق">
+
+            &times;
+
+        </button>
+
+
+        <header class="nx-setup-modal__head">
+
+            <span>
+                فئات المناصب
+            </span>
+
+            <h2>
+                @(isEditing
+                    ? "تعديل الفئة"
+                    : "إضافة فئة")
+            </h2>
+
+            <p>
+                أنشئ أو عدّل تصنيفاً وظيفياً مستخدماً في المناصب.
+            </p>
+
+        </header>
+
+
+
+        <form method="post"
+              asp-page-handler="Save"
+              class="zy-lookup-editor__form"
+              autocomplete="off">
+
+            <input asp-for="Input.Id"
+                   type="hidden" />
+
+            <input asp-for="Input.OriginalName"
+                   type="hidden" />
+
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="zy-lookup-modal-error">
+
+                    @errorMessage
+
+                </div>
             }
 
-            search?.addEventListener('input', applyFilters);
-            status?.addEventListener('change', applyFilters);
-            applyFilters();
-        })();
-    </script>
+
+            <section class="zy-lookup-editor__section">
+
+                <div class="zy-lookup-editor__section-head">
+
+                    <span>
+                        01
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            البيانات الأساسية
+                        </strong>
+
+                        <small>
+                            استخدم اسماً واضحاً ومختصراً للفئة.
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <label class="zy-lookup-field">
+
+                    <span>
+                        اسم الفئة
+                        <b>*</b>
+                    </span>
+
+                    <input asp-for="Input.Name"
+                           required
+                           maxlength="120"
+                           placeholder="مثال: قيادية" />
+
+                </label>
+
+
+                <label class="zy-lookup-check">
+
+                    <input type="hidden"
+                           name="Input.IsActive"
+                           value="false" />
+
+                    <input asp-for="Input.IsActive"
+                           value="true" />
+
+                    <span>
+                        الفئة فعالة
+                    </span>
+
+                </label>
+
+            </section>
+
+
+            <footer class="nx-setup-modal__actions">
+
+                @if (isEditing)
+                {
+                    <a asp-page="/PositionCategories/Index"
+                       class="zy-lookup-btn zy-lookup-btn--secondary">
+
+                        إلغاء
+
+                    </a>
+                }
+                else
+                {
+                    <button type="button"
+                            class="zy-lookup-btn zy-lookup-btn--secondary"
+                            data-nx-setup-close>
+
+                        إلغاء
+
+                    </button>
+                }
+
+
+                <button type="submit"
+                        class="zy-lookup-btn zy-lookup-btn--primary">
+
+                    @(isEditing
+                        ? "حفظ التعديلات"
+                        : "حفظ الفئة")
+
+                </button>
+
+            </footer>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     DELETE MODAL
+     ========================================================= -->
+
+<div class="nx-setup-modal"
+     id="lookup-delete-modal"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-lookup-delete"
+         role="dialog"
+         aria-modal="true">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close
+                aria-label="إغلاق">
+
+            &times;
+
+        </button>
+
+
+        <header class="nx-setup-modal__head">
+
+            <span>
+                فئات المناصب
+            </span>
+
+            <h2>
+                حذف الفئة
+            </h2>
+
+            <p>
+                تأكد من البيانات قبل تنفيذ الحذف.
+            </p>
+
+        </header>
+
+
+        <form method="post"
+              asp-page-handler="Delete">
+
+            <input type="hidden"
+                   name="id"
+                   id="lookupDeleteId" />
+
+
+            <div class="zy-lookup-delete__warning">
+
+                <strong>
+                    هل تريد تنفيذ الحذف؟
+                </strong>
+
+                <span>
+                    لا يمكن التراجع عن هذه العملية بعد الحذف.
+                </span>
+
+            </div>
+
+
+            <div class="zy-lookup-delete__summary">
+
+                <div>
+
+                    <span>
+                        اسم الفئة
+                    </span>
+
+                    <strong id="lookupDeleteName">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        المناصب المرتبطة
+                    </span>
+
+                    <strong id="lookupDeleteUsage">
+                        0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <footer class="nx-setup-modal__actions">
+
+                <button type="button"
+                        class="zy-lookup-btn zy-lookup-btn--secondary"
+                        data-nx-setup-close>
+
+                    إلغاء
+
+                </button>
+
+
+                <button type="submit"
+                        class="zy-lookup-btn zy-lookup-btn--danger">
+
+                    حذف الفئة
+
+                </button>
+
+            </footer>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+@section Scripts {
+
+<script>
+(() => {
+
+    /* =====================================================
+       FILTER
+       ===================================================== */
+
+    const normalize =
+        value =>
+            (value || "")
+                .toString()
+                .trim()
+                .toLowerCase();
+
+
+    const search =
+        document.getElementById(
+            "lookupSearch"
+        );
+
+    const status =
+        document.getElementById(
+            "lookupStatus"
+        );
+
+    const rows =
+        Array.from(
+            document.querySelectorAll(
+                "[data-lookup-row]"
+            )
+        );
+
+
+    function applyFilters() {
+
+        const query =
+            normalize(search?.value);
+
+        const statusValue =
+            status?.value || "all";
+
+
+        rows.forEach(row => {
+
+            const matchesSearch =
+                !query ||
+                normalize(
+                    row.dataset.search
+                ).includes(query);
+
+
+            const matchesStatus =
+                statusValue === "all" ||
+                row.dataset.status ===
+                    statusValue ||
+                row.dataset.used ===
+                    statusValue;
+
+
+            row.hidden =
+                !(
+                    matchesSearch &&
+                    matchesStatus
+                );
+
+        });
+
+    }
+
+
+    search?.addEventListener(
+        "input",
+        applyFilters
+    );
+
+
+    status?.addEventListener(
+        "change",
+        applyFilters
+    );
+
+
+    applyFilters();
+
+
+
+    /* =====================================================
+       DELETE POPUP
+       ===================================================== */
+
+    const deleteId =
+        document.getElementById(
+            "lookupDeleteId"
+        );
+
+    const deleteName =
+        document.getElementById(
+            "lookupDeleteName"
+        );
+
+    const deleteUsage =
+        document.getElementById(
+            "lookupDeleteUsage"
+        );
+
+
+    document
+        .querySelectorAll(
+            "[data-lookup-delete]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    if (deleteId) {
+                        deleteId.value =
+                            button.dataset.deleteId || "";
+                    }
+
+                    if (deleteName) {
+                        deleteName.textContent =
+                            button.dataset.deleteName || "—";
+                    }
+
+                    if (deleteUsage) {
+                        deleteUsage.textContent =
+                            button.dataset.deleteUsage || "0";
+                    }
+
+                }
+            );
+
+        });
+
+})();
+</script>
+
 }

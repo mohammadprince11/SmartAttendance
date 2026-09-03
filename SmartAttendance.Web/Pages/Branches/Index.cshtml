@@ -1,12 +1,19 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Branches.IndexModel
 
 @section Styles {
     <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-branches-theme-v2.css" asp-append-version="true" />
 }
 
 @{
     ViewData["Title"] = "مواقع العمل والفروع";
+
+    var companies =
+        Model.Companies.ToList();
+
+    var firstCompanyId =
+        companies.FirstOrDefault()?.Id;
 }
 
 <div class="nexora-setup-page" data-setup-page="branches">
@@ -84,8 +91,26 @@
                                 </td>
                                 <td>
                                     <div class="nx-setup-row-actions">
-                                        <a asp-page="./Edit" asp-route-id="@branch.Id" class="btn-table btn-edit">&#x062A;&#x0639;&#x062F;&#x064A;&#x0644;</a>
-                                        <a asp-page="./Delete" asp-route-id="@branch.Id" class="btn-table btn-delete">&#x062D;&#x0630;&#x0641;</a>
+                                        <button type="button"
+        class="btn-table btn-edit"
+        data-branch-edit-id="@branch.Id"
+        data-branch-edit-company-id="@branch.CompanyId"
+        data-branch-edit-name="@branch.Name"
+        data-branch-edit-address="@branch.Address"
+        data-branch-edit-active="@(branch.IsActive ? "true" : "false")"
+        data-nx-setup-open="branch-edit-modal">
+    تعديل
+</button>
+                                        <button type="button"
+        class="btn-table btn-delete"
+        data-branch-delete-id="@branch.Id"
+        data-branch-delete-name="@branch.Name"
+        data-branch-delete-company="@branch.CompanyName"
+        data-branch-delete-address="@branch.Address"
+        data-branch-delete-status="@(branch.IsActive ? "فعال" : "غير فعال")"
+        data-nx-setup-open="branch-delete-modal">
+    حذف
+</button>
                                     </div>
                                 </td>
                             </tr>
@@ -153,3 +178,374 @@
         </form>
     </div>
 </div>
+
+
+<!-- ========================================================
+     ZYNORA_BRANCH_MODAL_PARITY_V1
+     Same interaction/design model as Departments
+     ======================================================== -->
+
+
+<!-- ========================================================
+     EDIT MODAL
+     ======================================================== -->
+
+<div class="nx-setup-modal"
+     id="branch-edit-modal"
+     style="background:rgba(4,10,20,.32)!important;backdrop-filter:blur(7px) saturate(115%)!important;-webkit-backdrop-filter:blur(7px) saturate(115%)!important;"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-department-edit-popup zy-branch-edit-popup"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="branch-edit-title">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close
+                aria-label="إغلاق">
+            &times;
+        </button>
+
+        <div class="nx-setup-modal__head">
+
+            <span>مواقع العمل</span>
+
+            <h2 id="branch-edit-title">
+                تعديل موقع العمل
+            </h2>
+
+            <p>
+                حدّث بيانات موقع العمل والشركة والحالة.
+            </p>
+
+        </div>
+
+        <form method="post"
+              asp-page="./Edit"
+              class="nx-setup-modal-form"
+              id="branch-edit-popup-form">
+
+            <input type="hidden"
+                   name="Branch.Id"
+                   id="editBranchId" />
+
+            <div class="nx-setup-form-grid">
+
+                <label class="nx-setup-field">
+
+                    <span>الشركة</span>
+
+                    <select name="Branch.CompanyId"
+                            id="editBranchCompanyId"
+                            required>
+
+                        @foreach (var company in companies)
+                        {
+                            <option value="@company.Id">
+                                @company.Name
+                            </option>
+                        }
+
+                    </select>
+
+                </label>
+
+
+                <label class="nx-setup-field">
+
+                    <span>اسم موقع العمل</span>
+
+                    <input type="text"
+                           name="Branch.Name"
+                           id="editBranchName"
+                           autocomplete="off"
+                           required />
+
+                </label>
+
+
+                <label class="nx-setup-field nx-setup-field-wide">
+
+                    <span>العنوان</span>
+
+                    <input type="text"
+                           name="Branch.Address"
+                           id="editBranchAddress"
+                           autocomplete="off" />
+
+                </label>
+
+
+                <!-- نفس Style حالة القسم -->
+                <label class="nx-setup-check zy-department-edit-active">
+
+                    <input type="hidden"
+                           name="Branch.IsActive"
+                           value="false" />
+
+                    <input type="checkbox"
+                           name="Branch.IsActive"
+                           id="editBranchIsActive"
+                           value="true" />
+
+                    <span>موقع العمل فعال</span>
+
+                </label>
+
+            </div>
+
+
+            <div class="nx-setup-modal__actions">
+
+                <button type="button"
+                        class="nx-setup-btn nx-setup-btn-secondary"
+                        data-nx-setup-close>
+                    إلغاء
+                </button>
+
+                <button type="submit"
+                        class="nx-setup-btn nx-setup-btn-primary">
+                    حفظ التعديلات
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<!-- ========================================================
+     DELETE MODAL
+     ======================================================== -->
+
+<div class="nx-setup-modal"
+     id="branch-delete-modal"
+     style="background:rgba(4,10,20,.32)!important;backdrop-filter:blur(7px) saturate(115%)!important;-webkit-backdrop-filter:blur(7px) saturate(115%)!important;"
+     aria-hidden="true">
+
+    <div class="nx-setup-modal__panel zy-department-delete-popup zy-branch-delete-popup"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="branch-delete-title">
+
+        <button type="button"
+                class="nx-setup-modal__close"
+                data-nx-setup-close
+                aria-label="إغلاق">
+            &times;
+        </button>
+
+
+        <div class="nx-setup-modal__head">
+
+            <span>مواقع العمل</span>
+
+            <h2 id="branch-delete-title">
+                حذف موقع العمل
+            </h2>
+
+            <p>
+                تأكد من بيانات موقع العمل قبل تنفيذ الحذف.
+            </p>
+
+        </div>
+
+
+        <form method="post"
+              asp-page="./Delete"
+              class="nx-setup-modal-form"
+              id="branch-delete-popup-form">
+
+            <input type="hidden"
+                   name="id"
+                   id="deleteBranchId" />
+
+
+            <!-- نفس Warning الأقسام -->
+            <div class="zy-department-delete-warning">
+
+                <strong>
+                    هل تريد حذف موقع العمل؟
+                </strong>
+
+                <span>
+                    لا يمكن التراجع عن هذه العملية بعد تنفيذ الحذف.
+                </span>
+
+            </div>
+
+
+            <!-- نفس Summary الأقسام -->
+            <div class="zy-department-delete-summary">
+
+                <div>
+                    <span>اسم موقع العمل</span>
+                    <strong id="deleteBranchName">—</strong>
+                </div>
+
+                <div>
+                    <span>الشركة</span>
+                    <strong id="deleteBranchCompany">—</strong>
+                </div>
+
+                <div>
+                    <span>العنوان</span>
+                    <strong id="deleteBranchAddress">—</strong>
+                </div>
+
+                <div>
+                    <span>الحالة</span>
+                    <strong id="deleteBranchStatus">—</strong>
+                </div>
+
+            </div>
+
+
+            <div class="nx-setup-modal__actions">
+
+                <button type="button"
+                        class="nx-setup-btn nx-setup-btn-secondary"
+                        data-nx-setup-close>
+                    إلغاء
+                </button>
+
+                <button type="submit"
+                        class="nx-setup-btn zy-department-delete-confirm">
+                    حذف موقع العمل
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+(() => {
+
+    /* =====================================================
+       EDIT — same model as Departments
+       ===================================================== */
+
+    const editId =
+        document.getElementById("editBranchId");
+
+    const editCompany =
+        document.getElementById("editBranchCompanyId");
+
+    const editName =
+        document.getElementById("editBranchName");
+
+    const editAddress =
+        document.getElementById("editBranchAddress");
+
+    const editActive =
+        document.getElementById("editBranchIsActive");
+
+
+    document
+        .querySelectorAll("[data-branch-edit-id]")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    if (editId)
+                        editId.value =
+                            button.dataset.branchEditId || "";
+
+                    if (editCompany)
+                        editCompany.value =
+                            button.dataset.branchEditCompanyId || "";
+
+                    if (editName)
+                        editName.value =
+                            button.dataset.branchEditName || "";
+
+                    if (editAddress)
+                        editAddress.value =
+                            button.dataset.branchEditAddress || "";
+
+                    if (editActive)
+                        editActive.checked =
+                            button.dataset.branchEditActive === "true";
+
+
+                    if (window.NexoraSelect &&
+                        typeof window.NexoraSelect.refresh === "function" &&
+                        editCompany) {
+
+                        window.NexoraSelect.refresh(editCompany);
+                    }
+
+                });
+        });
+
+
+
+    /* =====================================================
+       DELETE — same model as Departments
+       ===================================================== */
+
+    const deleteId =
+        document.getElementById("deleteBranchId");
+
+    const deleteName =
+        document.getElementById("deleteBranchName");
+
+    const deleteCompany =
+        document.getElementById("deleteBranchCompany");
+
+    const deleteAddress =
+        document.getElementById("deleteBranchAddress");
+
+    const deleteStatus =
+        document.getElementById("deleteBranchStatus");
+
+
+    document
+        .querySelectorAll("[data-branch-delete-id]")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    if (deleteId)
+                        deleteId.value =
+                            button.dataset.branchDeleteId || "";
+
+                    if (deleteName)
+                        deleteName.textContent =
+                            button.dataset.branchDeleteName || "—";
+
+                    if (deleteCompany)
+                        deleteCompany.textContent =
+                            button.dataset.branchDeleteCompany || "—";
+
+                    if (deleteAddress)
+                        deleteAddress.textContent =
+                            button.dataset.branchDeleteAddress || "—";
+
+                    if (deleteStatus)
+                        deleteStatus.textContent =
+                            button.dataset.branchDeleteStatus || "—";
+
+                });
+        });
+
+})();
+</script>
+
+<!-- ZYNORA_BRANCH_MODAL_PARITY_V1_END -->
+
+

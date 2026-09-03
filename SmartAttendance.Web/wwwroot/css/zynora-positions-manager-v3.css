@@ -1,0 +1,6856 @@
+﻿/* ==========================================================
+   ZYNORA POSITIONS MANAGER V3
+   ========================================================== */
+
+.zy-pos-page {
+    --pos-card-1: rgba(13,40,60,.94);
+    --pos-card-2: rgba(6,22,34,.98);
+    --pos-input: #081a2a;
+    --pos-input-hover: #0a1f31;
+    --pos-input-focus: #0b2135;
+    --pos-text: #f4f8fb;
+    --pos-label: #d9e6ee;
+    --pos-muted: #9fb8c9;
+    --pos-border: rgba(126,167,210,.32);
+    --pos-cyan: #24c9d5;
+    --pos-gold: #f5c96b;
+
+    display: grid;
+    gap: 18px;
+}
+
+
+/* HERO */
+
+.zy-pos-hero {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+    gap: 22px;
+
+    padding: 25px 28px;
+
+    border-radius: 24px;
+
+    border:
+        1px solid
+        rgba(34,211,238,.16);
+
+    background:
+        radial-gradient(
+            circle at 92% 5%,
+            rgba(34,211,238,.09),
+            transparent 31%
+        ),
+        linear-gradient(
+            135deg,
+            var(--pos-card-1),
+            var(--pos-card-2)
+        );
+
+    box-shadow:
+        0 22px 58px
+        rgba(0,0,0,.25);
+}
+
+.zy-pos-hero__content h1 {
+    margin: 3px 0 0;
+    color: #fff;
+    font-size: clamp(28px,3vw,42px);
+    font-weight: 950;
+}
+
+.zy-pos-hero__content p {
+    max-width: 760px;
+    margin: 8px 0 0;
+    color: var(--pos-muted);
+    line-height: 1.75;
+    font-weight: 700;
+}
+
+.zy-pos-eyebrow {
+    color: var(--pos-gold);
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.zy-pos-hero__actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.zy-pos-company-bar {
+    grid-column: 1 / -1;
+
+    display: grid;
+    grid-template-columns:
+        minmax(190px,1fr)
+        minmax(260px,440px)
+        auto;
+    align-items: center;
+    gap: 12px;
+
+    margin-top: 3px;
+    padding-top: 16px;
+
+    border-top:
+        1px solid
+        rgba(160,190,210,.11);
+}
+
+.zy-pos-company-bar > div {
+    display: grid;
+    gap: 3px;
+}
+
+.zy-pos-company-bar span {
+    color: var(--pos-muted);
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.zy-pos-company-bar strong {
+    color: var(--pos-text);
+    font-weight: 950;
+}
+
+.zy-pos-company-bar select {
+    min-height: 43px;
+    width: 100%;
+    border-radius: 13px;
+
+    border:
+        1px solid var(--pos-border);
+
+    background:
+        var(--pos-input);
+
+    color:
+        var(--pos-text);
+
+    padding-inline: 13px;
+}
+
+
+/* BUTTONS */
+
+.zy-pos-btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding-inline: 15px;
+
+    border-radius: 12px;
+    border: 1px solid transparent;
+
+    text-decoration: none;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.zy-pos-btn--primary {
+    color: #03202c;
+
+    background:
+        linear-gradient(
+            135deg,
+            #24c9d5,
+            #37cdd1
+        );
+
+    border-color:
+        rgba(34,211,238,.34);
+
+    box-shadow:
+        0 10px 24px
+        rgba(34,211,238,.10);
+}
+
+.zy-pos-btn--secondary {
+    color: var(--pos-label);
+
+    background:
+        #102235;
+
+    border-color:
+        rgba(126,167,210,.24);
+}
+
+.zy-pos-btn--danger {
+    color: #fff;
+
+    background:
+        rgba(185,28,28,.88);
+
+    border-color:
+        rgba(248,113,113,.42);
+}
+
+.zy-pos-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+
+/* KPI */
+
+.zy-pos-kpis {
+    display: grid;
+    grid-template-columns:
+        repeat(4,minmax(0,1fr));
+    gap: 12px;
+}
+
+.zy-pos-kpis article {
+    min-height: 88px;
+
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    padding: 14px 16px;
+
+    border-radius: 18px;
+
+    border:
+        1px solid
+        rgba(34,211,238,.12);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.82),
+            rgba(6,22,34,.96)
+        );
+
+    box-shadow:
+        0 15px 38px
+        rgba(0,0,0,.18);
+}
+
+.zy-pos-kpi-icon {
+    width: 38px;
+    height: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    color: var(--pos-gold);
+
+    background:
+        rgba(245,201,107,.06);
+
+    border:
+        1px solid
+        rgba(245,201,107,.22);
+
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.zy-pos-kpis article > div:last-child {
+    display: grid;
+    gap: 3px;
+}
+
+.zy-pos-kpis span {
+    color: var(--pos-muted);
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.zy-pos-kpis strong {
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 950;
+}
+
+
+/* MAIN CARD */
+
+.zy-pos-card {
+    padding: 22px;
+
+    border-radius: 24px;
+
+    border:
+        1px solid
+        rgba(34,211,238,.14);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--pos-card-1),
+            var(--pos-card-2)
+        );
+
+    box-shadow:
+        0 22px 58px
+        rgba(0,0,0,.22);
+}
+
+.zy-pos-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 18px;
+
+    padding-bottom: 17px;
+    margin-bottom: 17px;
+
+    border-bottom:
+        1px solid
+        rgba(160,190,210,.11);
+}
+
+.zy-pos-card__head h2 {
+    margin: 3px 0 0;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 950;
+}
+
+.zy-pos-card__head p {
+    margin: 5px 0 0;
+    color: var(--pos-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.zy-pos-card__eyebrow {
+    color: var(--pos-gold);
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.zy-pos-count {
+    min-width: 85px;
+
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 5px;
+
+    padding: 9px 13px;
+
+    border-radius: 14px;
+
+    background:
+        rgba(4,16,27,.55);
+
+    border:
+        1px solid
+        rgba(126,167,210,.16);
+}
+
+.zy-pos-count strong {
+    color: #fff;
+    font-size: 18px;
+}
+
+.zy-pos-count span {
+    color: var(--pos-muted);
+    font-size: 11px;
+}
+
+
+/* FILTERS */
+
+.zy-pos-filters {
+    display: grid;
+    grid-template-columns:
+        minmax(270px,1fr)
+        repeat(3,minmax(145px,190px));
+
+    gap: 10px;
+
+    padding: 13px;
+    margin-bottom: 15px;
+
+    border-radius: 17px;
+
+    background:
+        rgba(4,16,27,.42);
+
+    border:
+        1px solid
+        rgba(126,167,210,.14);
+}
+
+.zy-pos-filter {
+    display: grid;
+    gap: 6px;
+}
+
+.zy-pos-filter > span {
+    color: var(--pos-label);
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.zy-pos-filter input,
+.zy-pos-filter select {
+    width: 100%;
+    min-height: 42px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid var(--pos-border);
+
+    background:
+        var(--pos-input);
+
+    color:
+        var(--pos-text);
+
+    padding-inline: 12px;
+
+    outline: none;
+}
+
+.zy-pos-filter input:focus,
+.zy-pos-filter select:focus {
+    background:
+        var(--pos-input-focus);
+
+    border-color:
+        rgba(34,211,238,.68);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(34,211,238,.10);
+}
+
+.zy-pos-filter input::placeholder {
+    color: #71879a;
+}
+
+
+/* TABLE */
+
+.zy-pos-table-wrap {
+    overflow-x: auto;
+
+    border-radius: 17px;
+
+    border:
+        1px solid
+        rgba(126,167,210,.14);
+
+    background:
+        rgba(4,16,27,.38);
+}
+
+.zy-pos-table {
+    width: 100%;
+    min-width: 900px;
+    table-layout: fixed;
+
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.zy-pos-table th,
+.zy-pos-table td {
+    padding: 12px 13px;
+
+    text-align: right;
+    vertical-align: middle;
+
+    border-bottom:
+        1px solid
+        rgba(126,167,210,.10);
+}
+
+.zy-pos-table th {
+    background:
+        rgba(5,18,30,.76);
+
+    color:
+        var(--pos-label);
+
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.zy-pos-table td {
+    color: var(--pos-label);
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.zy-pos-table tbody tr:hover td {
+    background:
+        rgba(34,211,238,.045);
+}
+
+.zy-pos-table th:nth-child(1),
+.zy-pos-table td:nth-child(1) {
+    width: 5%;
+    text-align: center;
+}
+
+.zy-pos-table th:nth-child(2),
+.zy-pos-table td:nth-child(2) {
+    width: 29%;
+}
+
+.zy-pos-table th:nth-child(3),
+.zy-pos-table td:nth-child(3) {
+    width: 20%;
+}
+
+.zy-pos-table th:nth-child(4),
+.zy-pos-table td:nth-child(4) {
+    width: 13%;
+}
+
+.zy-pos-table th:nth-child(5),
+.zy-pos-table td:nth-child(5) {
+    width: 11%;
+    text-align: center;
+}
+
+.zy-pos-table th:nth-child(6),
+.zy-pos-table td:nth-child(6) {
+    width: 22%;
+}
+
+.zy-pos-sequence {
+    color: var(--pos-muted) !important;
+}
+
+.zy-pos-name {
+    display: grid;
+    gap: 3px;
+}
+
+.zy-pos-name strong {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.zy-pos-name span,
+.zy-pos-name small {
+    color: var(--pos-muted);
+    font-size: 10px;
+}
+
+.zy-pos-name small {
+    max-width: 360px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zy-pos-classification {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.zy-pos-classification span,
+.zy-pos-classification small {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 27px;
+
+    padding-inline: 9px;
+
+    border-radius: 999px;
+
+    background:
+        #102235;
+
+    border:
+        1px solid
+        rgba(126,167,210,.18);
+
+    color:
+        var(--pos-label);
+
+    font-size: 10px;
+    font-weight: 850;
+}
+
+.zy-pos-employees {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.zy-pos-employees strong {
+    color: var(--pos-gold);
+    font-size: 16px;
+}
+
+.zy-pos-employees span {
+    color: var(--pos-muted);
+    font-size: 10px;
+}
+
+.zy-pos-link {
+    display: block;
+
+    margin-top: 4px;
+    padding: 0;
+
+    border: 0;
+    background: transparent;
+
+    color: var(--pos-cyan);
+
+    font-size: 10px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.zy-pos-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 68px;
+    min-height: 27px;
+
+    border-radius: 999px;
+
+    padding-inline: 9px;
+
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.zy-pos-status.is-active {
+    color: #73ffd8;
+
+    background:
+        rgba(20,83,69,.18);
+
+    border:
+        1px solid
+        rgba(115,255,216,.20);
+}
+
+.zy-pos-status.is-inactive {
+    color: #fca5a5;
+
+    background:
+        rgba(127,29,29,.16);
+
+    border:
+        1px solid
+        rgba(248,113,113,.26);
+}
+
+
+/* ROW ACTIONS */
+
+.zy-pos-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.zy-pos-inline-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.zy-pos-action {
+    min-height: 31px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding-inline: 10px;
+
+    border-radius: 10px;
+
+    text-decoration: none;
+
+    font-size: 10px;
+    font-weight: 900;
+
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.zy-pos-action--edit {
+    color: #d9e6ee;
+
+    background:
+        #14293e;
+
+    border:
+        1px solid
+        rgba(126,167,210,.27);
+}
+
+.zy-pos-action--neutral {
+    color: #d9e6ee;
+
+    background:
+        #102235;
+
+    border:
+        1px solid
+        rgba(126,167,210,.20);
+}
+
+.zy-pos-action--delete {
+    color: #fca5a5;
+
+    background:
+        rgba(127,29,29,.17);
+
+    border:
+        1px solid
+        rgba(248,113,113,.30);
+}
+
+.zy-pos-action:disabled {
+    opacity: .38;
+    cursor: not-allowed;
+}
+
+
+/* PAGINATION */
+
+.zy-pos-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-top: 13px;
+}
+
+.zy-pos-pagination[hidden] {
+    display: none !important;
+}
+
+.zy-pos-pagination__summary,
+.zy-pos-pagination__controls span {
+    color: var(--pos-muted);
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.zy-pos-pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zy-pos-pagination button {
+    min-height: 32px;
+
+    padding-inline: 12px;
+
+    border-radius: 10px;
+
+    border:
+        1px solid
+        rgba(126,167,210,.20);
+
+    background:
+        #102235;
+
+    color:
+        var(--pos-label);
+
+    font-weight: 850;
+}
+
+.zy-pos-pagination button:disabled {
+    opacity: .40;
+}
+
+
+/* ALERT */
+
+.zy-pos-alert {
+    padding: 12px 15px;
+
+    border-radius: 14px;
+
+    font-weight: 850;
+}
+
+.zy-pos-alert--success {
+    color: #bbf7d0;
+
+    background:
+        rgba(22,163,74,.12);
+
+    border:
+        1px solid
+        rgba(34,197,94,.24);
+}
+
+.zy-pos-alert--danger {
+    color: #fecaca;
+
+    background:
+        rgba(127,29,29,.16);
+
+    border:
+        1px solid
+        rgba(248,113,113,.28);
+}
+
+.zy-pos-empty,
+.zy-pos-loading {
+    padding: 35px 20px;
+
+    text-align: center;
+
+    color: var(--pos-muted);
+    font-weight: 850;
+}
+
+
+/* ==========================================================
+   MODAL BACKDROP
+   ========================================================== */
+
+html body #position-editor-modal.nx-setup-modal,
+html body #position-job-profile-modal.nx-setup-modal,
+html body #position-delete-modal.nx-setup-modal,
+html body #position-reference-competencies.nx-setup-modal,
+html body #position-reference-education.nx-setup-modal,
+html body #position-reference-specializations.nx-setup-modal,
+html body #position-reference-certifications.nx-setup-modal,
+html body #position-employees-modal.nx-setup-modal {
+    background:
+        rgba(4,10,20,.28) !important;
+
+    backdrop-filter:
+        blur(8px)
+        saturate(115%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px)
+        saturate(115%) !important;
+}
+
+
+/* PANELS */
+
+.zy-pos-editor-modal,
+.zy-pos-job-modal,
+.zy-pos-delete-modal,
+.zy-pos-reference-modal,
+.zy-pos-employees-modal {
+    background:
+        rgb(16,30,49) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid
+        rgba(114,158,201,.26) !important;
+
+    box-shadow:
+        0 26px 70px
+        rgba(0,0,0,.42) !important;
+}
+
+.zy-pos-editor-modal {
+    width:
+        min(980px,calc(100vw - 34px)) !important;
+
+    max-width:
+        980px !important;
+}
+
+.zy-pos-job-modal {
+    width:
+        min(880px,calc(100vw - 34px)) !important;
+
+    max-width:
+        880px !important;
+}
+
+.zy-pos-delete-modal {
+    width:
+        min(560px,calc(100vw - 34px)) !important;
+
+    max-width:
+        560px !important;
+}
+
+.zy-pos-reference-modal {
+    width:
+        min(570px,calc(100vw - 34px)) !important;
+
+    max-width:
+        570px !important;
+}
+
+.zy-pos-employees-modal {
+    width:
+        min(620px,calc(100vw - 34px)) !important;
+
+    max-width:
+        620px !important;
+}
+
+.zy-pos-editor-modal
+.nx-setup-modal__head,
+.zy-pos-job-modal
+.nx-setup-modal__head,
+.zy-pos-delete-modal
+.nx-setup-modal__head,
+.zy-pos-reference-modal
+.nx-setup-modal__head,
+.zy-pos-employees-modal
+.nx-setup-modal__head {
+    background: transparent !important;
+
+    border-bottom:
+        1px solid
+        rgba(160,190,210,.11);
+}
+
+
+/* EDITOR */
+
+.zy-pos-editor-form {
+    display: grid;
+    gap: 14px;
+
+    padding: 15px 17px 0;
+}
+
+.zy-pos-validation:empty,
+.zy-pos-validation.validation-summary-valid {
+    display: none;
+}
+
+.zy-pos-validation {
+    color: #fca5a5;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.zy-pos-form-section {
+    padding: 14px;
+
+    border-radius: 17px;
+
+    background:
+        rgba(4,16,27,.38);
+
+    border:
+        1px solid
+        rgba(126,167,210,.13);
+}
+
+.zy-pos-form-section > header {
+    margin-bottom: 13px;
+    padding-bottom: 11px;
+
+    border-bottom:
+        1px solid
+        rgba(160,190,210,.09);
+}
+
+.zy-pos-form-section > header > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.zy-pos-form-section > header > div > span,
+.zy-pos-profile-launcher > div > span {
+    width: 31px;
+    height: 31px;
+
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 31px;
+
+    border-radius: 10px;
+
+    color: var(--pos-gold);
+
+    background:
+        rgba(245,201,107,.06);
+
+    border:
+        1px solid
+        rgba(245,201,107,.20);
+
+    font-size: 9px;
+    font-weight: 950;
+}
+
+.zy-pos-form-section h3 {
+    margin: 0;
+
+    color: #fff;
+
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.zy-pos-form-section p {
+    margin: 3px 0 0;
+
+    color: var(--pos-muted);
+
+    font-size: 10px;
+}
+
+.zy-pos-form-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2,minmax(0,1fr));
+
+    gap: 11px;
+}
+
+.zy-pos-field {
+    display: grid;
+    gap: 6px;
+}
+
+.zy-pos-field--wide {
+    grid-column: 1 / -1;
+}
+
+.zy-pos-field > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    color: var(--pos-label);
+
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.zy-pos-field > span b {
+    color: #ff8e9d;
+}
+
+.zy-pos-field > span a,
+.zy-pos-manage {
+    color: var(--pos-gold);
+
+    border: 0;
+    background: transparent;
+
+    text-decoration: none;
+
+    font-size: 10px;
+    font-weight: 900;
+
+    cursor: pointer;
+}
+
+.zy-pos-field input,
+.zy-pos-field select,
+.zy-pos-field textarea {
+    width: 100%;
+
+    min-height: 42px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid
+        rgba(126,167,210,.34);
+
+    background:
+        var(--pos-input);
+
+    color:
+        var(--pos-text);
+
+    padding-inline: 12px;
+
+    outline: none;
+}
+
+.zy-pos-field textarea {
+    padding-block: 10px;
+    resize: vertical;
+    line-height: 1.65;
+}
+
+.zy-pos-field input:focus,
+.zy-pos-field select:focus,
+.zy-pos-field textarea:focus {
+    background:
+        var(--pos-input-focus);
+
+    border-color:
+        rgba(34,211,238,.68);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(34,211,238,.10);
+}
+
+.zy-pos-field input[readonly] {
+    background: #102235;
+    color: #d9e6ee;
+}
+
+.zy-pos-field input::placeholder,
+.zy-pos-field textarea::placeholder {
+    color: #71879a;
+}
+
+.zy-pos-check {
+    grid-column: 1 / -1;
+
+    min-height: 43px;
+
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    padding-inline: 12px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(4,16,27,.55);
+
+    border:
+        1px solid
+        rgba(126,167,210,.14);
+
+    color:
+        var(--pos-label);
+
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.zy-pos-check input[type="checkbox"] {
+    accent-color: #24c9d5;
+}
+
+
+/* JOB PROFILE */
+
+.zy-pos-profile-launcher {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+
+    padding: 13px 14px;
+
+    border-radius: 16px;
+
+    border:
+        1px solid
+        rgba(34,211,238,.17);
+
+    background:
+        rgba(4,16,27,.48);
+
+    color:
+        var(--pos-text);
+
+    cursor: pointer;
+}
+
+.zy-pos-profile-launcher > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.zy-pos-profile-launcher strong {
+    display: block;
+    color: #fff;
+    font-size: 12px;
+}
+
+.zy-pos-profile-launcher small {
+    display: block;
+    margin-top: 2px;
+    color: var(--pos-muted);
+    font-size: 10px;
+}
+
+.zy-pos-profile-launcher > b {
+    color: var(--pos-cyan);
+    font-size: 10px;
+}
+
+
+/* JOB MODAL */
+
+.zy-pos-job-body {
+    display: grid;
+    grid-template-columns:
+        repeat(2,minmax(0,1fr));
+
+    gap: 11px;
+
+    padding: 15px 17px;
+}
+
+
+/* REFERENCES */
+
+.zy-pos-reference-form {
+    display: grid;
+    grid-template-columns:
+        minmax(0,1fr)
+        auto;
+
+    align-items: end;
+    gap: 10px;
+
+    padding: 15px;
+}
+
+.zy-pos-reference-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+
+    max-height: 230px;
+    overflow-y: auto;
+
+    padding: 0 15px 15px;
+}
+
+.zy-pos-reference-list span {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 29px;
+
+    padding-inline: 10px;
+
+    border-radius: 999px;
+
+    color: var(--pos-label);
+
+    background:
+        #102235;
+
+    border:
+        1px solid
+        rgba(126,167,210,.16);
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
+
+/* DELETE */
+
+.zy-pos-delete-modal form {
+    padding: 15px 17px 0;
+}
+
+.zy-pos-delete-warning {
+    display: grid;
+    gap: 5px;
+
+    padding: 14px 15px;
+
+    border-radius: 14px;
+
+    background:
+        rgba(127,29,29,.16);
+
+    border:
+        1px solid
+        rgba(248,113,113,.28);
+}
+
+.zy-pos-delete-warning strong {
+    color: #fecaca;
+}
+
+.zy-pos-delete-warning span {
+    color: #fca5a5;
+    font-size: 11px;
+}
+
+.zy-pos-delete-summary {
+    display: grid;
+    gap: 8px;
+
+    margin-top: 11px;
+}
+
+.zy-pos-delete-summary > div {
+    min-height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+
+    padding-inline: 12px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(4,16,27,.55);
+
+    border:
+        1px solid
+        rgba(126,167,210,.14);
+}
+
+.zy-pos-delete-summary span {
+    color: var(--pos-muted);
+    font-size: 11px;
+}
+
+.zy-pos-delete-summary strong {
+    color: #fff;
+}
+
+
+/* EMPLOYEES */
+
+.zy-pos-employees-body {
+    padding: 15px;
+}
+
+.zy-pos-employees-list {
+    display: grid;
+    gap: 8px;
+}
+
+.zy-pos-employees-list article {
+    display: grid;
+    gap: 3px;
+
+    padding: 11px 12px;
+
+    border-radius: 13px;
+
+    background:
+        rgba(4,16,27,.52);
+
+    border:
+        1px solid
+        rgba(126,167,210,.13);
+}
+
+.zy-pos-employees-list strong {
+    color: #fff;
+}
+
+.zy-pos-employees-list span,
+.zy-pos-employees-list small {
+    color: var(--pos-muted);
+    font-size: 10px;
+}
+
+
+/* MODAL FOOTER */
+
+.zy-pos-editor-modal
+.nx-setup-modal__actions,
+.zy-pos-job-modal
+.nx-setup-modal__actions,
+.zy-pos-delete-modal
+.nx-setup-modal__actions {
+    margin-top: 14px;
+
+    background:
+        transparent !important;
+
+    border-top:
+        1px solid
+        rgba(160,190,210,.11) !important;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1100px) {
+
+    .zy-pos-kpis {
+        grid-template-columns:
+            repeat(2,minmax(0,1fr));
+    }
+
+    .zy-pos-filters {
+        grid-template-columns:
+            repeat(2,minmax(0,1fr));
+    }
+}
+
+@media (max-width: 760px) {
+
+    .zy-pos-hero {
+        grid-template-columns: 1fr;
+        padding: 18px;
+    }
+
+    .zy-pos-hero__actions {
+        display: grid;
+        grid-template-columns:
+            repeat(2,minmax(0,1fr));
+    }
+
+    .zy-pos-company-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .zy-pos-kpis,
+    .zy-pos-filters,
+    .zy-pos-form-grid,
+    .zy-pos-job-body {
+        grid-template-columns: 1fr;
+    }
+
+    .zy-pos-field--wide {
+        grid-column: auto;
+    }
+
+    .zy-pos-card {
+        padding: 15px;
+    }
+
+    .zy-pos-card__head {
+        align-items: flex-start;
+    }
+
+    .zy-pos-reference-form {
+        grid-template-columns: 1fr;
+    }
+
+    .zy-pos-editor-modal,
+    .zy-pos-job-modal,
+    .zy-pos-delete-modal,
+    .zy-pos-reference-modal,
+    .zy-pos-employees-modal {
+        width:
+            calc(100vw - 22px) !important;
+
+        max-width:
+            none !important;
+    }
+}
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_EDITOR_COMPACT_V4
+   Final compact calibration
+   ========================================================== */
+
+
+/* حجم البوب */
+html body
+#position-editor-modal
+.zy-pos-editor-modal {
+
+    width:
+        min(900px, calc(100vw - 34px)) !important;
+
+    max-width:
+        900px !important;
+
+    max-height:
+        calc(100dvh - 34px) !important;
+
+    display:
+        grid !important;
+
+    grid-template-rows:
+        auto minmax(0, 1fr) !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* Header أصغر */
+html body
+#position-editor-modal
+.nx-setup-modal__head {
+
+    padding:
+        16px 20px 13px !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__head h2 {
+
+    margin-top:
+        3px !important;
+
+    font-size:
+        18px !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__head p {
+
+    margin-top:
+        4px !important;
+
+    font-size:
+        11px !important;
+}
+
+
+/* جسم الفورم scroll داخلي */
+html body
+#position-editor-modal
+.zy-pos-editor-form {
+
+    min-height:
+        0 !important;
+
+    overflow-y:
+        auto !important;
+
+    padding:
+        13px 16px 0 !important;
+
+    gap:
+        11px !important;
+}
+
+
+/* السكشنات أصغر */
+html body
+#position-editor-modal
+.zy-pos-form-section {
+
+    padding:
+        12px !important;
+
+    border-radius:
+        15px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-form-section > header {
+
+    margin-bottom:
+        10px !important;
+
+    padding-bottom:
+        9px !important;
+}
+
+
+/* رقم السكشن */
+html body
+#position-editor-modal
+.zy-pos-form-section > header > div > span,
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher > div > span {
+
+    width:
+        28px !important;
+
+    height:
+        28px !important;
+
+    flex-basis:
+        28px !important;
+
+    border-radius:
+        9px !important;
+}
+
+
+/* Grid */
+html body
+#position-editor-modal
+.zy-pos-form-grid {
+
+    gap:
+        9px 10px !important;
+}
+
+
+/* Inputs */
+html body
+#position-editor-modal
+.zy-pos-field input,
+
+html body
+#position-editor-modal
+.zy-pos-field select {
+
+    min-height:
+        39px !important;
+
+    border-radius:
+        11px !important;
+}
+
+
+/* الوصف المختصر */
+html body
+#position-editor-modal
+textarea[name="Input.Description"] {
+
+    min-height:
+        66px !important;
+
+    height:
+        66px !important;
+
+    resize:
+        vertical !important;
+}
+
+
+/* Active row */
+html body
+#position-editor-modal
+.zy-pos-check {
+
+    min-height:
+        39px !important;
+}
+
+
+/* أزرار إدارة المرجع */
+html body
+#position-editor-modal
+.zy-pos-manage {
+
+    min-height:
+        25px !important;
+
+    padding:
+        0 9px !important;
+
+    border-radius:
+        8px !important;
+
+    border:
+        1px solid rgba(245,201,107,.25) !important;
+
+    background:
+        rgba(245,201,107,.06) !important;
+
+    color:
+        #f5c96b !important;
+
+    line-height:
+        1 !important;
+}
+
+
+/* الوصف الوظيفي يصير Compact */
+html body
+#position-editor-modal
+.zy-pos-profile-launcher {
+
+    min-height:
+        48px !important;
+
+    padding:
+        9px 12px !important;
+
+    border-radius:
+        13px !important;
+}
+
+
+/* ==========================================================
+   Footer
+   إزالة الشريط الأسود نهائياً
+   ========================================================== */
+
+html body
+#position-editor-modal
+.nx-setup-modal__actions {
+
+    position:
+        sticky !important;
+
+    bottom:
+        0 !important;
+
+    z-index:
+        5 !important;
+
+    margin-top:
+        1px !important;
+
+    padding:
+        11px 0 13px !important;
+
+    background:
+        rgb(16, 30, 49) !important;
+
+    background-image:
+        none !important;
+
+    border-top:
+        1px solid rgba(160,190,210,.11) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Buttons footer */
+html body
+#position-editor-modal
+.nx-setup-modal__actions
+.zy-pos-btn {
+
+    min-width:
+        110px !important;
+
+    min-height:
+        39px !important;
+}
+
+
+/* Scrollbar */
+html body
+#position-editor-modal
+.zy-pos-editor-form::-webkit-scrollbar {
+
+    width:
+        7px;
+}
+
+html body
+#position-editor-modal
+.zy-pos-editor-form::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(126,167,210,.22);
+
+    border-radius:
+        999px;
+}
+
+
+/* Mobile */
+@media (max-width: 760px) {
+
+    html body
+    #position-editor-modal
+    .zy-pos-editor-modal {
+
+        width:
+            calc(100vw - 20px) !important;
+
+        max-height:
+            calc(100dvh - 20px) !important;
+    }
+
+}
+
+
+/* ZYNORA_POSITIONS_EDITOR_COMPACT_V4_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_EDITOR_COMPACT_V4
+   Final compact calibration
+   ========================================================== */
+
+
+/* حجم البوب */
+html body
+#position-editor-modal
+.zy-pos-editor-modal {
+
+    width:
+        min(900px, calc(100vw - 34px)) !important;
+
+    max-width:
+        900px !important;
+
+    max-height:
+        calc(100dvh - 34px) !important;
+
+    display:
+        grid !important;
+
+    grid-template-rows:
+        auto minmax(0, 1fr) !important;
+
+    overflow:
+        hidden !important;
+}
+
+
+/* Header أصغر */
+html body
+#position-editor-modal
+.nx-setup-modal__head {
+
+    padding:
+        16px 20px 13px !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__head h2 {
+
+    margin-top:
+        3px !important;
+
+    font-size:
+        18px !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__head p {
+
+    margin-top:
+        4px !important;
+
+    font-size:
+        11px !important;
+}
+
+
+/* جسم الفورم scroll داخلي */
+html body
+#position-editor-modal
+.zy-pos-editor-form {
+
+    min-height:
+        0 !important;
+
+    overflow-y:
+        auto !important;
+
+    padding:
+        13px 16px 0 !important;
+
+    gap:
+        11px !important;
+}
+
+
+/* السكشنات أصغر */
+html body
+#position-editor-modal
+.zy-pos-form-section {
+
+    padding:
+        12px !important;
+
+    border-radius:
+        15px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-form-section > header {
+
+    margin-bottom:
+        10px !important;
+
+    padding-bottom:
+        9px !important;
+}
+
+
+/* رقم السكشن */
+html body
+#position-editor-modal
+.zy-pos-form-section > header > div > span,
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher > div > span {
+
+    width:
+        28px !important;
+
+    height:
+        28px !important;
+
+    flex-basis:
+        28px !important;
+
+    border-radius:
+        9px !important;
+}
+
+
+/* Grid */
+html body
+#position-editor-modal
+.zy-pos-form-grid {
+
+    gap:
+        9px 10px !important;
+}
+
+
+/* Inputs */
+html body
+#position-editor-modal
+.zy-pos-field input,
+
+html body
+#position-editor-modal
+.zy-pos-field select {
+
+    min-height:
+        39px !important;
+
+    border-radius:
+        11px !important;
+}
+
+
+/* الوصف المختصر */
+html body
+#position-editor-modal
+textarea[name="Input.Description"] {
+
+    min-height:
+        66px !important;
+
+    height:
+        66px !important;
+
+    resize:
+        vertical !important;
+}
+
+
+/* Active row */
+html body
+#position-editor-modal
+.zy-pos-check {
+
+    min-height:
+        39px !important;
+}
+
+
+/* أزرار إدارة المرجع */
+html body
+#position-editor-modal
+.zy-pos-manage {
+
+    min-height:
+        25px !important;
+
+    padding:
+        0 9px !important;
+
+    border-radius:
+        8px !important;
+
+    border:
+        1px solid rgba(245,201,107,.25) !important;
+
+    background:
+        rgba(245,201,107,.06) !important;
+
+    color:
+        #f5c96b !important;
+
+    line-height:
+        1 !important;
+}
+
+
+/* الوصف الوظيفي يصير Compact */
+html body
+#position-editor-modal
+.zy-pos-profile-launcher {
+
+    min-height:
+        48px !important;
+
+    padding:
+        9px 12px !important;
+
+    border-radius:
+        13px !important;
+}
+
+
+/* ==========================================================
+   Footer
+   إزالة الشريط الأسود نهائياً
+   ========================================================== */
+
+html body
+#position-editor-modal
+.nx-setup-modal__actions {
+
+    position:
+        sticky !important;
+
+    bottom:
+        0 !important;
+
+    z-index:
+        5 !important;
+
+    margin-top:
+        1px !important;
+
+    padding:
+        11px 0 13px !important;
+
+    background:
+        rgb(16, 30, 49) !important;
+
+    background-image:
+        none !important;
+
+    border-top:
+        1px solid rgba(160,190,210,.11) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Buttons footer */
+html body
+#position-editor-modal
+.nx-setup-modal__actions
+.zy-pos-btn {
+
+    min-width:
+        110px !important;
+
+    min-height:
+        39px !important;
+}
+
+
+/* Scrollbar */
+html body
+#position-editor-modal
+.zy-pos-editor-form::-webkit-scrollbar {
+
+    width:
+        7px;
+}
+
+html body
+#position-editor-modal
+.zy-pos-editor-form::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(126,167,210,.22);
+
+    border-radius:
+        999px;
+}
+
+
+/* Mobile */
+@media (max-width: 760px) {
+
+    html body
+    #position-editor-modal
+    .zy-pos-editor-modal {
+
+        width:
+            calc(100vw - 20px) !important;
+
+        max-height:
+            calc(100dvh - 20px) !important;
+    }
+
+}
+
+
+/* ZYNORA_POSITIONS_EDITOR_COMPACT_V4_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_FINAL_PAGE_POLISH_V5
+   Final visual calibration for the complete Positions Manager
+   ========================================================== */
+
+
+/* ==========================================================
+   01. PAGE FRAME
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page {
+
+    width: 100% !important;
+    max-width: 1600px !important;
+
+    margin-inline: auto !important;
+
+    gap: 16px !important;
+}
+
+
+/* ==========================================================
+   02. HERO
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-hero {
+
+    padding:
+        22px 24px !important;
+
+    gap:
+        18px !important;
+
+    border-radius:
+        22px !important;
+
+    background:
+        radial-gradient(
+            circle at 92% 4%,
+            rgba(34,211,238,.075),
+            transparent 30%
+        ),
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.94),
+            rgba(6,22,34,.985)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.15) !important;
+
+    box-shadow:
+        0 20px 50px rgba(0,0,0,.22) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__content h1 {
+
+    font-size:
+        clamp(27px, 2.5vw, 38px) !important;
+
+    letter-spacing:
+        -.02em !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__content p {
+
+    max-width:
+        720px !important;
+
+    margin-top:
+        6px !important;
+
+    line-height:
+        1.65 !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__actions {
+
+    gap:
+        7px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__actions
+.zy-pos-btn {
+
+    min-height:
+        38px !important;
+
+    padding-inline:
+        13px !important;
+}
+
+
+/* Company bar */
+
+html:not([data-theme="light"])
+.zy-pos-company-bar {
+
+    grid-template-columns:
+        minmax(210px, 1fr)
+        minmax(280px, 410px)
+        auto !important;
+
+    padding-top:
+        13px !important;
+
+    gap:
+        10px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-company-bar select {
+
+    min-height:
+        40px !important;
+
+    background:
+        #081a2a !important;
+
+    border-color:
+        rgba(126,167,210,.34) !important;
+}
+
+
+/* ==========================================================
+   03. KPI CARDS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-kpis {
+
+    gap:
+        10px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpis article {
+
+    min-height:
+        78px !important;
+
+    padding:
+        12px 14px !important;
+
+    border-radius:
+        16px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.82),
+            rgba(6,22,34,.96)
+        ) !important;
+
+    border-color:
+        rgba(34,211,238,.115) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpi-icon {
+
+    width:
+        34px !important;
+
+    height:
+        34px !important;
+
+    border-radius:
+        10px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpis strong {
+
+    font-size:
+        21px !important;
+}
+
+
+/* ==========================================================
+   04. REGISTRY CARD
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-card {
+
+    padding:
+        19px !important;
+
+    border-radius:
+        21px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(13,40,60,.92),
+            rgba(6,22,34,.985)
+        ) !important;
+
+    box-shadow:
+        0 20px 50px rgba(0,0,0,.20) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head {
+
+    margin-bottom:
+        14px !important;
+
+    padding-bottom:
+        14px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head h2 {
+
+    font-size:
+        20px !important;
+}
+
+
+/* ==========================================================
+   05. FILTER BAR
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filters {
+
+    grid-template-columns:
+        minmax(300px, 1.3fr)
+        repeat(3, minmax(145px, .55fr)) !important;
+
+    padding:
+        11px !important;
+
+    gap:
+        9px !important;
+
+    margin-bottom:
+        13px !important;
+
+    border-radius:
+        15px !important;
+
+    background:
+        rgba(4,16,27,.38) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter {
+
+    gap:
+        5px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter input,
+
+html:not([data-theme="light"])
+.zy-pos-filter select {
+
+    min-height:
+        39px !important;
+
+    border-radius:
+        11px !important;
+
+    background:
+        #081a2a !important;
+}
+
+
+/* ==========================================================
+   06. TABLE
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-table-wrap {
+
+    border-radius:
+        15px !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(5,18,30,.46),
+            rgba(4,15,25,.60)
+        ) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table th {
+
+    height:
+        42px !important;
+
+    padding:
+        9px 11px !important;
+
+    background:
+        rgba(5,18,30,.74) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table td {
+
+    padding:
+        10px 11px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-name strong {
+
+    font-size:
+        12.5px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-name span,
+
+html:not([data-theme="light"])
+.zy-pos-name small {
+
+    font-size:
+        9.5px !important;
+}
+
+
+/* Classification */
+
+html:not([data-theme="light"])
+.zy-pos-classification span,
+
+html:not([data-theme="light"])
+.zy-pos-classification small {
+
+    min-height:
+        25px !important;
+
+    padding-inline:
+        8px !important;
+}
+
+
+/* actions */
+
+html:not([data-theme="light"])
+.zy-pos-actions {
+
+    gap:
+        5px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action {
+
+    min-height:
+        29px !important;
+
+    padding-inline:
+        9px !important;
+
+    border-radius:
+        9px !important;
+}
+
+
+/* ==========================================================
+   07. EDITOR MODAL - COMPLETE REBALANCE
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-editor-modal {
+
+    width:
+        min(920px, calc(100vw - 32px)) !important;
+
+    max-width:
+        920px !important;
+
+    max-height:
+        calc(100dvh - 30px) !important;
+
+    display:
+        grid !important;
+
+    grid-template-rows:
+        auto minmax(0, 1fr) !important;
+
+    overflow:
+        hidden !important;
+
+    background:
+        rgb(16,30,49) !important;
+
+    border:
+        1px solid rgba(114,158,201,.27) !important;
+
+    border-radius:
+        22px !important;
+
+    box-shadow:
+        0 28px 75px rgba(0,0,0,.44) !important;
+}
+
+
+/* modal header */
+
+html body
+#position-editor-modal
+.nx-setup-modal__head {
+
+    padding:
+        16px 20px 13px !important;
+
+    background:
+        transparent !important;
+
+    border-bottom:
+        1px solid rgba(160,190,210,.11) !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__head h2 {
+
+    margin:
+        3px 0 0 !important;
+
+    font-size:
+        18px !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__head p {
+
+    margin-top:
+        4px !important;
+
+    font-size:
+        10.5px !important;
+}
+
+
+/* Close button */
+
+html body
+#position-editor-modal
+.nx-setup-modal__close {
+
+    width:
+        38px !important;
+
+    height:
+        38px !important;
+
+    border-radius:
+        11px !important;
+}
+
+
+/* body */
+
+html body
+#position-editor-modal
+.zy-pos-editor-form {
+
+    min-height:
+        0 !important;
+
+    overflow-y:
+        auto !important;
+
+    padding:
+        12px 15px 0 !important;
+
+    gap:
+        10px !important;
+}
+
+
+/* ==========================================================
+   08. SECTION CARDS
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-form-section {
+
+    padding:
+        12px 13px !important;
+
+    border-radius:
+        15px !important;
+
+    background:
+        rgba(4,16,27,.36) !important;
+
+    border:
+        1px solid rgba(126,167,210,.13) !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-form-section > header {
+
+    margin-bottom:
+        10px !important;
+
+    padding-bottom:
+        9px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-form-section h3 {
+
+    font-size:
+        13px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-form-section p {
+
+    font-size:
+        9.5px !important;
+}
+
+
+/* Section number */
+
+html body
+#position-editor-modal
+.zy-pos-form-section > header > div > span,
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher > div > span {
+
+    width:
+        28px !important;
+
+    height:
+        28px !important;
+
+    flex:
+        0 0 28px !important;
+
+    border-radius:
+        9px !important;
+}
+
+
+/* ==========================================================
+   09. BASIC DATA GRID
+   ========================================================== */
+
+/*
+   الاسم Full Width
+   بعدها: الشركة + الفئة + المستوى بسطر واحد
+*/
+
+html body
+#position-editor-modal
+.zy-pos-form-section:first-of-type
+.zy-pos-form-grid {
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+
+    gap:
+        9px 10px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-form-section:first-of-type
+.zy-pos-field--wide {
+
+    grid-column:
+        1 / -1 !important;
+}
+
+
+/* Description */
+
+html body
+#position-editor-modal
+textarea[name="Input.Description"] {
+
+    height:
+        62px !important;
+
+    min-height:
+        62px !important;
+
+    max-height:
+        115px !important;
+}
+
+
+/* Active */
+
+html body
+#position-editor-modal
+.zy-pos-check {
+
+    min-height:
+        38px !important;
+
+    border-radius:
+        11px !important;
+}
+
+
+/* ==========================================================
+   10. REQUIREMENTS GRID
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+.zy-pos-form-grid {
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+
+    gap:
+        10px 12px !important;
+}
+
+
+/* ==========================================================
+   11. FIELD LABELS
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-field {
+
+    gap:
+        5px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-field > span {
+
+    min-height:
+        25px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        7px !important;
+
+    font-size:
+        10.5px !important;
+}
+
+
+/* ==========================================================
+   12. MANAGEMENT BUTTONS
+   Fix floating "إدارة"
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-manage {
+
+    margin-inline-start:
+        auto !important;
+
+    min-width:
+        48px !important;
+
+    min-height:
+        25px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    padding:
+        0 9px !important;
+
+    border-radius:
+        8px !important;
+
+    border:
+        1px solid rgba(245,201,107,.24) !important;
+
+    background:
+        rgba(245,201,107,.055) !important;
+
+    color:
+        #f5c96b !important;
+
+    font-size:
+        10px !important;
+
+    line-height:
+        1 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-manage:hover {
+
+    background:
+        rgba(245,201,107,.10) !important;
+
+    border-color:
+        rgba(245,201,107,.38) !important;
+}
+
+
+/* ==========================================================
+   13. INPUTS
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-field input,
+
+html body
+#position-editor-modal
+.zy-pos-field select {
+
+    min-height:
+        39px !important;
+
+    border-radius:
+        11px !important;
+
+    background:
+        #081a2a !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-field textarea {
+
+    border-radius:
+        11px !important;
+
+    background:
+        #081a2a !important;
+}
+
+
+/* ==========================================================
+   14. JOB PROFILE LAUNCHER
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher {
+
+    min-height:
+        48px !important;
+
+    padding:
+        8px 11px !important;
+
+    border-radius:
+        13px !important;
+
+    background:
+        rgba(4,16,27,.46) !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher strong {
+
+    font-size:
+        11.5px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher small {
+
+    font-size:
+        9px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher > b {
+
+    font-size:
+        9.5px !important;
+}
+
+
+/* ==========================================================
+   15. EDITOR FOOTER
+   ========================================================== */
+
+html body
+#position-editor-modal
+.nx-setup-modal__actions {
+
+    position:
+        sticky !important;
+
+    bottom:
+        0 !important;
+
+    z-index:
+        8 !important;
+
+    margin-top:
+        2px !important;
+
+    padding:
+        10px 0 12px !important;
+
+    background:
+        rgb(16,30,49) !important;
+
+    background-image:
+        none !important;
+
+    border-top:
+        1px solid rgba(160,190,210,.11) !important;
+
+    box-shadow:
+        0 -10px 22px rgba(16,30,49,.94) !important;
+}
+
+
+html body
+#position-editor-modal
+.nx-setup-modal__actions
+.zy-pos-btn {
+
+    min-width:
+        108px !important;
+
+    min-height:
+        38px !important;
+}
+
+
+/* ==========================================================
+   16. JOB DESCRIPTION MODAL
+   ========================================================== */
+
+html body
+#position-job-profile-modal
+.zy-pos-job-modal {
+
+    width:
+        min(820px, calc(100vw - 32px)) !important;
+
+    max-width:
+        820px !important;
+
+    background:
+        rgb(16,30,49) !important;
+}
+
+
+html body
+#position-job-profile-modal
+.zy-pos-job-body {
+
+    gap:
+        10px !important;
+
+    padding:
+        13px 15px !important;
+}
+
+
+html body
+#position-job-profile-modal
+.zy-pos-field textarea {
+
+    background:
+        #081a2a !important;
+
+    border-color:
+        rgba(126,167,210,.34) !important;
+
+    border-radius:
+        11px !important;
+}
+
+
+/* ==========================================================
+   17. REFERENCE MODALS
+   ========================================================== */
+
+html body
+.zy-pos-reference-modal {
+
+    width:
+        min(540px, calc(100vw - 30px)) !important;
+
+    max-width:
+        540px !important;
+
+    background:
+        rgb(16,30,49) !important;
+}
+
+
+html body
+.zy-pos-reference-form {
+
+    padding:
+        13px 14px !important;
+}
+
+
+html body
+.zy-pos-reference-list {
+
+    max-height:
+        190px !important;
+
+    padding:
+        0 14px 14px !important;
+}
+
+
+/* ==========================================================
+   18. DELETE MODAL
+   ========================================================== */
+
+html body
+#position-delete-modal
+.zy-pos-delete-modal {
+
+    width:
+        min(530px, calc(100vw - 30px)) !important;
+
+    max-width:
+        530px !important;
+
+    background:
+        rgb(16,30,49) !important;
+}
+
+
+/* ==========================================================
+   19. EMPLOYEES MODAL
+   ========================================================== */
+
+html body
+#position-employees-modal
+.zy-pos-employees-modal {
+
+    width:
+        min(590px, calc(100vw - 30px)) !important;
+
+    max-width:
+        590px !important;
+
+    background:
+        rgb(16,30,49) !important;
+}
+
+
+/* ==========================================================
+   20. ALL MODAL BACKDROPS
+   ========================================================== */
+
+html body
+#position-editor-modal.nx-setup-modal,
+
+html body
+#position-job-profile-modal.nx-setup-modal,
+
+html body
+#position-delete-modal.nx-setup-modal,
+
+html body
+#position-reference-competencies.nx-setup-modal,
+
+html body
+#position-reference-education.nx-setup-modal,
+
+html body
+#position-reference-specializations.nx-setup-modal,
+
+html body
+#position-reference-certifications.nx-setup-modal,
+
+html body
+#position-employees-modal.nx-setup-modal {
+
+    background:
+        rgba(4,10,20,.28) !important;
+
+    background-image:
+        none !important;
+
+    backdrop-filter:
+        blur(8px) saturate(115%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(115%) !important;
+}
+
+
+/* ==========================================================
+   21. SCROLLBAR
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-editor-form::-webkit-scrollbar {
+
+    width:
+        6px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-editor-form::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(126,167,210,.22) !important;
+
+    border-radius:
+        999px !important;
+}
+
+
+/* ==========================================================
+   22. RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 1100px) {
+
+    html:not([data-theme="light"])
+    .zy-pos-filters {
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+
+
+    html body
+    #position-editor-modal
+    .zy-pos-form-section:first-of-type
+    .zy-pos-form-grid {
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+
+@media (max-width: 760px) {
+
+    html:not([data-theme="light"])
+    .zy-pos-page {
+
+        gap:
+            12px !important;
+    }
+
+
+    html:not([data-theme="light"])
+    .zy-pos-kpis {
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+
+
+    html:not([data-theme="light"])
+    .zy-pos-filters {
+
+        grid-template-columns:
+            1fr !important;
+    }
+
+
+    html body
+    #position-editor-modal
+    .zy-pos-form-section:first-of-type
+    .zy-pos-form-grid,
+
+    html body
+    #position-editor-modal
+    .zy-pos-form-section:nth-of-type(2)
+    .zy-pos-form-grid {
+
+        grid-template-columns:
+            1fr !important;
+    }
+
+
+    html body
+    #position-editor-modal
+    .zy-pos-field--wide {
+
+        grid-column:
+            auto !important;
+    }
+
+
+    html body
+    #position-editor-modal
+    .zy-pos-editor-modal {
+
+        width:
+            calc(100vw - 18px) !important;
+
+        max-height:
+            calc(100dvh - 18px) !important;
+    }
+
+
+    html:not([data-theme="light"])
+    .zy-pos-hero__actions {
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+
+/* ZYNORA_POSITIONS_FINAL_PAGE_POLISH_V5_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_FINAL_SCALE_V6
+   Increase readability without making modal oversized
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-editor-modal {
+
+    width:
+        min(1040px, calc(100vw - 36px)) !important;
+
+    max-width:
+        1040px !important;
+}
+
+
+/* Header */
+html body
+#position-editor-modal
+.nx-setup-modal__head {
+
+    padding:
+        18px 22px 15px !important;
+}
+
+html body
+#position-editor-modal
+.nx-setup-modal__head h2 {
+
+    font-size:
+        20px !important;
+}
+
+html body
+#position-editor-modal
+.nx-setup-modal__head p {
+
+    font-size:
+        11px !important;
+}
+
+
+/* Body */
+html body
+#position-editor-modal
+.zy-pos-editor-form {
+
+    padding:
+        14px 17px 0 !important;
+
+    gap:
+        12px !important;
+}
+
+
+/* Sections */
+html body
+#position-editor-modal
+.zy-pos-form-section {
+
+    padding:
+        14px 15px !important;
+
+    border-radius:
+        16px !important;
+}
+
+html body
+#position-editor-modal
+.zy-pos-form-section h3 {
+
+    font-size:
+        14px !important;
+}
+
+html body
+#position-editor-modal
+.zy-pos-form-section p {
+
+    font-size:
+        10px !important;
+}
+
+
+/* Section numbers */
+html body
+#position-editor-modal
+.zy-pos-form-section > header > div > span,
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher > div > span {
+
+    width:
+        31px !important;
+
+    height:
+        31px !important;
+
+    flex-basis:
+        31px !important;
+}
+
+
+/* Labels */
+html body
+#position-editor-modal
+.zy-pos-field > span {
+
+    min-height:
+        27px !important;
+
+    font-size:
+        11.5px !important;
+}
+
+
+/* Inputs */
+html body
+#position-editor-modal
+.zy-pos-field input,
+
+html body
+#position-editor-modal
+.zy-pos-field select {
+
+    min-height:
+        43px !important;
+
+    font-size:
+        13px !important;
+}
+
+
+/* Description */
+html body
+#position-editor-modal
+textarea[name="Input.Description"] {
+
+    height:
+        70px !important;
+
+    min-height:
+        70px !important;
+
+    font-size:
+        12px !important;
+}
+
+
+/* Management buttons */
+html body
+#position-editor-modal
+.zy-pos-manage {
+
+    min-width:
+        52px !important;
+
+    min-height:
+        28px !important;
+
+    font-size:
+        10.5px !important;
+}
+
+
+/* Active field */
+html body
+#position-editor-modal
+.zy-pos-check {
+
+    min-height:
+        41px !important;
+
+    font-size:
+        11.5px !important;
+}
+
+
+/* Job profile */
+html body
+#position-editor-modal
+.zy-pos-profile-launcher {
+
+    min-height:
+        53px !important;
+
+    padding:
+        10px 13px !important;
+}
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher strong {
+
+    font-size:
+        12.5px !important;
+}
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher small {
+
+    font-size:
+        9.8px !important;
+}
+
+
+/* Footer */
+html body
+#position-editor-modal
+.nx-setup-modal__actions {
+
+    padding:
+        12px 0 14px !important;
+}
+
+html body
+#position-editor-modal
+.nx-setup-modal__actions
+.zy-pos-btn {
+
+    min-width:
+        118px !important;
+
+    min-height:
+        41px !important;
+}
+
+
+/* ZYNORA_POSITIONS_FINAL_SCALE_V6_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_MANAGE_BUTTONS_FIX_V7
+   Fix all "إدارة" buttons
+   ========================================================== */
+
+/*
+   عنوان الحقل + زر إدارة يبقون بجانب بعض
+   بدل دفع الزر إلى نهاية الحقل
+*/
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+.zy-pos-field > span {
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        7px !important;
+
+    min-height:
+        28px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* جميع أزرار إدارة */
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+.zy-pos-manage {
+
+    position:
+        static !important;
+
+    float:
+        none !important;
+
+    flex:
+        0 0 auto !important;
+
+    margin:
+        0 !important;
+
+    margin-inline-start:
+        3px !important;
+
+    width:
+        auto !important;
+
+    min-width:
+        52px !important;
+
+    height:
+        27px !important;
+
+    min-height:
+        27px !important;
+
+    padding:
+        0 10px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    border-radius:
+        8px !important;
+
+    border:
+        1px solid rgba(245,201,107,.27) !important;
+
+    background:
+        rgba(245,201,107,.065) !important;
+
+    color:
+        #f5c96b !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        1 !important;
+
+    box-shadow:
+        none !important;
+
+    outline:
+        none !important;
+
+    transform:
+        none !important;
+
+    vertical-align:
+        middle !important;
+}
+
+
+/* Hover موحد */
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+.zy-pos-manage:hover {
+
+    background:
+        rgba(245,201,107,.11) !important;
+
+    border-color:
+        rgba(245,201,107,.43) !important;
+
+    color:
+        #ffd979 !important;
+
+    transform:
+        none !important;
+}
+
+
+/* Focus موحد - بدون الإطار السماوي الكبير */
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+.zy-pos-manage:focus,
+
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+.zy-pos-manage:focus-visible {
+
+    outline:
+        none !important;
+
+    border-color:
+        rgba(245,201,107,.58) !important;
+
+    box-shadow:
+        0 0 0 2px rgba(245,201,107,.10) !important;
+
+    background:
+        rgba(245,201,107,.10) !important;
+}
+
+
+/* منع أي inherited button style من تكبير الزر */
+html body
+#position-editor-modal
+.zy-pos-form-section:nth-of-type(2)
+button.zy-pos-manage {
+
+    max-width:
+        max-content !important;
+
+    align-self:
+        center !important;
+}
+
+
+/* ZYNORA_POSITIONS_MANAGE_BUTTONS_FIX_V7_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITION_REFERENCE_CONTROL_V8
+   Dropdown + Manage button on same row
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-reference-field {
+
+    min-width: 0 !important;
+}
+
+
+/* عنوان الحقل يرجع طبيعي */
+html body
+#position-editor-modal
+.zy-pos-reference-field > span {
+
+    min-height:
+        22px !important;
+
+    display:
+        block !important;
+
+    margin:
+        0 !important;
+
+    color:
+        #d9e6ee !important;
+
+    font-size:
+        11px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+/* Dropdown + إدارة */
+html body
+#position-editor-modal
+.zy-pos-reference-control {
+
+    width:
+        100% !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) 62px !important;
+
+    align-items:
+        stretch !important;
+
+    gap:
+        7px !important;
+}
+
+
+/* Dropdown */
+html body
+#position-editor-modal
+.zy-pos-reference-control select {
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        42px !important;
+
+    height:
+        42px !important;
+
+    margin:
+        0 !important;
+
+    border-radius:
+        11px !important;
+
+    background:
+        #081a2a !important;
+
+    color:
+        #f4f8fb !important;
+
+    border:
+        1px solid rgba(126,167,210,.34) !important;
+}
+
+
+/* زر إدارة */
+html body
+#position-editor-modal
+.zy-pos-reference-control
+.zy-pos-manage {
+
+    position:
+        static !important;
+
+    width:
+        62px !important;
+
+    min-width:
+        62px !important;
+
+    max-width:
+        62px !important;
+
+    height:
+        42px !important;
+
+    min-height:
+        42px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    align-self:
+        stretch !important;
+
+    border-radius:
+        11px !important;
+
+    border:
+        1px solid rgba(245,201,107,.28) !important;
+
+    background:
+        rgba(245,201,107,.07) !important;
+
+    color:
+        #f5c96b !important;
+
+    font-size:
+        10.5px !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        1 !important;
+
+    box-shadow:
+        none !important;
+
+    transform:
+        none !important;
+}
+
+
+/* Hover */
+html body
+#position-editor-modal
+.zy-pos-reference-control
+.zy-pos-manage:hover {
+
+    background:
+        rgba(245,201,107,.12) !important;
+
+    border-color:
+        rgba(245,201,107,.44) !important;
+
+    color:
+        #ffdc83 !important;
+}
+
+
+/* Focus */
+html body
+#position-editor-modal
+.zy-pos-reference-control
+.zy-pos-manage:focus-visible {
+
+    outline:
+        none !important;
+
+    box-shadow:
+        0 0 0 2px rgba(245,201,107,.11) !important;
+}
+
+
+/* Mobile */
+@media (max-width: 520px) {
+
+    html body
+    #position-editor-modal
+    .zy-pos-reference-control {
+
+        grid-template-columns:
+            minmax(0, 1fr) 58px !important;
+    }
+
+    html body
+    #position-editor-modal
+    .zy-pos-reference-control
+    .zy-pos-manage {
+
+        width:
+            58px !important;
+
+        min-width:
+            58px !important;
+
+        max-width:
+            58px !important;
+    }
+}
+
+
+/* ZYNORA_POSITION_REFERENCE_CONTROL_V8_END */
+
+
+/* ==========================================================
+   ZYNORA_CATEGORY_LEVEL_CONTROL_FIX_V9
+   Category / Level same layout as reference dropdowns
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-reference-field > label,
+
+html body
+#position-editor-modal
+.zy-pos-reference-field > span {
+
+    display:
+        block !important;
+
+    min-height:
+        22px !important;
+
+    margin:
+        0 !important;
+
+    color:
+        #d9e6ee !important;
+
+    font-size:
+        11px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+/* Dropdown + Manage */
+html body
+#position-editor-modal
+.zy-pos-reference-control {
+
+    width:
+        100% !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) 62px !important;
+
+    align-items:
+        stretch !important;
+
+    gap:
+        7px !important;
+}
+
+
+/* Select */
+html body
+#position-editor-modal
+.zy-pos-reference-control select {
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    height:
+        42px !important;
+
+    min-height:
+        42px !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* Manage button/link */
+html body
+#position-editor-modal
+.zy-pos-reference-control
+.zy-pos-manage {
+
+    width:
+        62px !important;
+
+    min-width:
+        62px !important;
+
+    max-width:
+        62px !important;
+
+    height:
+        42px !important;
+
+    min-height:
+        42px !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    border-radius:
+        11px !important;
+
+    border:
+        1px solid rgba(245,201,107,.28) !important;
+
+    background:
+        rgba(245,201,107,.07) !important;
+
+    color:
+        #f5c96b !important;
+
+    text-decoration:
+        none !important;
+
+    font-size:
+        10.5px !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        1 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Hover */
+html body
+#position-editor-modal
+.zy-pos-reference-control
+.zy-pos-manage:hover {
+
+    background:
+        rgba(245,201,107,.12) !important;
+
+    border-color:
+        rgba(245,201,107,.44) !important;
+
+    color:
+        #ffdc83 !important;
+}
+
+
+/* ZYNORA_CATEGORY_LEVEL_CONTROL_FIX_V9_END */
+
+
+/* ==========================================================
+   ZYNORA_JOB_PROFILE_SECTION_V10
+   Full-width professional Job Profile section
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-job-section {
+
+    width: 100% !important;
+
+    display: grid !important;
+
+    gap: 0 !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+
+    border-radius: 16px !important;
+
+    overflow: hidden !important;
+
+    background:
+        rgba(4, 16, 27, .42) !important;
+
+    border:
+        1px solid rgba(126, 167, 210, .16) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.018) !important;
+}
+
+
+/* Header */
+
+html body
+#position-editor-modal
+.zy-pos-job-section__head {
+
+    width: 100% !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+
+    justify-content: space-between !important;
+
+    padding:
+        12px 14px !important;
+
+    margin: 0 !important;
+
+    background:
+        rgba(7, 24, 39, .54) !important;
+
+    border-bottom:
+        1px solid rgba(160, 190, 210, .10) !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__identity {
+
+    display: flex !important;
+
+    align-items: center !important;
+
+    gap: 11px !important;
+}
+
+
+/* 03 */
+
+html body
+#position-editor-modal
+.zy-pos-job-section__step {
+
+    width: 31px !important;
+
+    height: 31px !important;
+
+    min-width: 31px !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    border-radius: 10px !important;
+
+    background:
+        rgba(245, 201, 107, .07) !important;
+
+    border:
+        1px solid rgba(245, 201, 107, .24) !important;
+
+    color:
+        #f5c96b !important;
+
+    font-size:
+        9px !important;
+
+    font-weight:
+        950 !important;
+}
+
+
+/* Title */
+
+html body
+#position-editor-modal
+.zy-pos-job-section__identity h3 {
+
+    margin: 0 !important;
+
+    color:
+        #ffffff !important;
+
+    font-size:
+        13.5px !important;
+
+    font-weight:
+        950 !important;
+
+    line-height:
+        1.3 !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__identity p {
+
+    margin:
+        3px 0 0 !important;
+
+    color:
+        #9fb8c9 !important;
+
+    font-size:
+        9.5px !important;
+
+    font-weight:
+        700 !important;
+
+    line-height:
+        1.5 !important;
+}
+
+
+/* Body */
+
+html body
+#position-editor-modal
+.zy-pos-job-section__body {
+
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) auto !important;
+
+    align-items: center !important;
+
+    gap:
+        16px !important;
+
+    padding:
+        13px 14px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__info {
+
+    min-width: 0 !important;
+
+    display: grid !important;
+
+    gap:
+        4px !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__info strong {
+
+    color:
+        #eaf3f9 !important;
+
+    font-size:
+        11.5px !important;
+
+    font-weight:
+        900 !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__info span {
+
+    color:
+        #8ea8ba !important;
+
+    font-size:
+        9.5px !important;
+
+    font-weight:
+        700 !important;
+}
+
+
+/* Main action */
+
+html body
+#position-editor-modal
+.zy-pos-job-section__action {
+
+    min-width:
+        165px !important;
+
+    height:
+        40px !important;
+
+    min-height:
+        40px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    padding:
+        0 16px !important;
+
+    margin:
+        0 !important;
+
+    border-radius:
+        11px !important;
+
+    border:
+        1px solid rgba(34, 211, 238, .28) !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(21, 75, 99, .78),
+            rgba(15, 56, 82, .92)
+        ) !important;
+
+    color:
+        #e8f8ff !important;
+
+    font-size:
+        10.5px !important;
+
+    font-weight:
+        900 !important;
+
+    white-space:
+        nowrap !important;
+
+    cursor:
+        pointer !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.025),
+        0 7px 18px rgba(0,0,0,.12) !important;
+
+    transition:
+        border-color .18s ease,
+        background .18s ease,
+        transform .18s ease !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__action:hover {
+
+    border-color:
+        rgba(34, 211, 238, .48) !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(25, 91, 116, .86),
+            rgba(17, 67, 94, .96)
+        ) !important;
+
+    transform:
+        translateY(-1px) !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__action:focus-visible {
+
+    outline:
+        none !important;
+
+    border-color:
+        rgba(34, 211, 238, .68) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34, 211, 238, .10) !important;
+}
+
+
+/* Remove any remaining legacy launcher styling */
+
+html body
+#position-editor-modal
+.zy-pos-profile-launcher {
+
+    display:
+        none !important;
+}
+
+
+/* Mobile */
+
+@media (max-width: 640px) {
+
+    html body
+    #position-editor-modal
+    .zy-pos-job-section__body {
+
+        grid-template-columns:
+            1fr !important;
+    }
+
+
+    html body
+    #position-editor-modal
+    .zy-pos-job-section__action {
+
+        width:
+            100% !important;
+
+        min-width:
+            0 !important;
+    }
+
+}
+
+
+/* ZYNORA_JOB_PROFILE_SECTION_V10_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITION_HIDDEN_OPENER_FIX_V11
+   Prevent programmatic employees-modal opener from appearing
+   ========================================================== */
+
+html body
+#positionEmployeesModalOpener {
+
+    display: none !important;
+
+    visibility: hidden !important;
+
+    opacity: 0 !important;
+
+    position: absolute !important;
+
+    width: 0 !important;
+
+    height: 0 !important;
+
+    min-width: 0 !important;
+
+    min-height: 0 !important;
+
+    padding: 0 !important;
+
+    margin: 0 !important;
+
+    border: 0 !important;
+
+    pointer-events: none !important;
+
+    overflow: hidden !important;
+}
+
+/* ZYNORA_POSITION_HIDDEN_OPENER_FIX_V11_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_SURFACE_AUDIT_V12
+   Remove mismatched slate/gray surfaces from Positions page
+   ========================================================== */
+
+
+/* ==========================================================
+   سجل المناصب - Header
+   المشكلة الظاهرة بالصورة
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-card
+.zy-pos-card__head {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* منع أي Legacy style من صناعة مستطيل رمادي */
+html:not([data-theme="light"])
+.zy-pos-card__head::before,
+
+html:not([data-theme="light"])
+.zy-pos-card__head::after {
+
+    display:
+        none !important;
+}
+
+
+/* العنوان */
+html:not([data-theme="light"])
+.zy-pos-card__head h2 {
+
+    color:
+        #f4f8fb !important;
+}
+
+
+/* الوصف */
+html:not([data-theme="light"])
+.zy-pos-card__head p {
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* سجل المناصب */
+html:not([data-theme="light"])
+.zy-pos-card__eyebrow {
+
+    color:
+        #f5c96b !important;
+}
+
+
+/* ==========================================================
+   عداد المناصب
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-count {
+
+    background:
+        #081a2a !important;
+
+    background-color:
+        #081a2a !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(126,167,210,.20) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-count strong {
+
+    color:
+        #f4f8fb !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-count span {
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+/* ==========================================================
+   Filter bar
+   توحيد الخلفية وعدم استخدام Slate
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filters {
+
+    background:
+        rgba(4,16,27,.48) !important;
+
+    background-color:
+        rgba(4,16,27,.48) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(126,167,210,.14) !important;
+}
+
+
+/* ==========================================================
+   Table outer surface
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-table-wrap {
+
+    background:
+        rgba(4,16,27,.52) !important;
+
+    background-color:
+        rgba(4,16,27,.52) !important;
+
+    border-color:
+        rgba(126,167,210,.14) !important;
+}
+
+
+/* Table header */
+html:not([data-theme="light"])
+.zy-pos-table thead,
+
+html:not([data-theme="light"])
+.zy-pos-table thead tr,
+
+html:not([data-theme="light"])
+.zy-pos-table thead th {
+
+    background:
+        #071827 !important;
+
+    background-color:
+        #071827 !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Rows */
+html:not([data-theme="light"])
+.zy-pos-table tbody tr,
+
+html:not([data-theme="light"])
+.zy-pos-table tbody td {
+
+    background-color:
+        transparent !important;
+}
+
+
+/* ==========================================================
+   KPI cards
+   إذا Legacy Bridge غيّر ألوانها
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-kpis article {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(11,37,56,.94),
+            rgba(5,21,33,.98)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.13) !important;
+}
+
+
+/* ==========================================================
+   Company bar
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-company-bar {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* ==========================================================
+   Main registry card
+   المرجع النهائي لكل المنطقة
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(11,37,56,.94),
+            rgba(5,21,33,.985)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.15) !important;
+}
+
+
+/* ==========================================================
+   إزالة Slate من أي nested surface داخل صفحة Positions
+   بدون لمس inputs / buttons
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-card > header,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-card > section {
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_SURFACE_AUDIT_V12_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_TABLE_COLOR_FIX_V13
+   Remove slate colors from positions registry
+   ========================================================== */
+
+
+/* جسم الجدول */
+html:not([data-theme="light"])
+.zy-pos-table tbody tr {
+
+    background:
+        transparent !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody td {
+
+    background:
+        rgba(5, 20, 32, .78) !important;
+
+    background-color:
+        rgba(5, 20, 32, .78) !important;
+
+    color:
+        #d9e6ee !important;
+
+    border-bottom:
+        1px solid rgba(126,167,210,.105) !important;
+}
+
+
+/* اختلاف بسيط جداً بين الصفوف */
+html:not([data-theme="light"])
+.zy-pos-table tbody tr:nth-child(even) td {
+
+    background:
+        rgba(6, 23, 36, .86) !important;
+}
+
+
+/* Hover */
+html:not([data-theme="light"])
+.zy-pos-table tbody tr:hover td {
+
+    background:
+        rgba(9, 35, 51, .94) !important;
+}
+
+
+/* Header */
+html:not([data-theme="light"])
+.zy-pos-table thead th {
+
+    background:
+        #061725 !important;
+
+    color:
+        #dce9f1 !important;
+
+    border-bottom:
+        1px solid rgba(34,211,238,.13) !important;
+}
+
+
+/* اسم المنصب */
+html:not([data-theme="light"])
+.zy-pos-name strong {
+
+    color:
+        #f4f8fb !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-name span,
+
+html:not([data-theme="light"])
+.zy-pos-name small {
+
+    color:
+        #8faabd !important;
+}
+
+
+/* Chips الخاصة بالتصنيف */
+html:not([data-theme="light"])
+.zy-pos-classification span,
+
+html:not([data-theme="light"])
+.zy-pos-classification small {
+
+    background:
+        #0a2032 !important;
+
+    color:
+        #d7e7f1 !important;
+
+    border:
+        1px solid rgba(66,153,204,.22) !important;
+}
+
+
+/* الموظفين */
+html:not([data-theme="light"])
+.zy-pos-employees strong {
+
+    color:
+        #f5c96b !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-employees span {
+
+    color:
+        #9fb8c9 !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-link {
+
+    color:
+        #8edff0 !important;
+}
+
+
+/* ==========================================================
+   Action buttons
+   ========================================================== */
+
+/* تعديل */
+html:not([data-theme="light"])
+.zy-pos-action--edit {
+
+    background:
+        #0b263a !important;
+
+    color:
+        #d9eef7 !important;
+
+    border:
+        1px solid rgba(69,160,210,.26) !important;
+}
+
+
+/* إيقاف / تفعيل */
+html:not([data-theme="light"])
+.zy-pos-action--neutral {
+
+    background:
+        #12314a !important;
+
+    color:
+        #dceaf2 !important;
+
+    border:
+        1px solid rgba(91,151,200,.25) !important;
+}
+
+
+/* Hover للأزرار العادية */
+html:not([data-theme="light"])
+.zy-pos-action--edit:hover,
+
+html:not([data-theme="light"])
+.zy-pos-action--neutral:hover {
+
+    background:
+        #17415d !important;
+
+    border-color:
+        rgba(74,199,224,.42) !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* الحذف يبقى Red Accent فقط */
+html:not([data-theme="light"])
+.zy-pos-action--delete {
+
+    background:
+        rgba(100, 27, 32, .20) !important;
+
+    color:
+        #f3a2aa !important;
+
+    border:
+        1px solid rgba(225,91,101,.34) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action--delete:hover:not(:disabled) {
+
+    background:
+        rgba(142,34,42,.30) !important;
+
+    border-color:
+        rgba(239,100,110,.52) !important;
+
+    color:
+        #ffd0d4 !important;
+}
+
+
+/* الحالة الفعالة تبقى Green Accent لكن أغمق */
+html:not([data-theme="light"])
+.zy-pos-status.is-active {
+
+    background:
+        rgba(17,72,58,.28) !important;
+
+    color:
+        #79e6bd !important;
+
+    border:
+        1px solid rgba(91,218,172,.16) !important;
+}
+
+
+/* Table outer container */
+html:not([data-theme="light"])
+.zy-pos-table-wrap {
+
+    background:
+        #051521 !important;
+
+    border:
+        1px solid rgba(34,211,238,.13) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.015) !important;
+}
+
+
+/* ZYNORA_POSITIONS_TABLE_COLOR_FIX_V13_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_COMPLETE_COLOR_AUDIT_V14
+   Complete color normalization for Positions Manager
+   ========================================================== */
+
+
+/* ==========================================================
+   DESIGN TOKENS
+   ========================================================== */
+
+html:not([data-theme="light"]) .zy-pos-page {
+
+    --zy-bg-deep:          #04111d;
+    --zy-bg-page:          #061522;
+
+    --zy-surface-1:        #071a29;
+    --zy-surface-2:        #082033;
+    --zy-surface-3:        #0a2539;
+
+    --zy-input:            #071827;
+    --zy-input-hover:      #092033;
+    --zy-input-focus:      #0a273c;
+
+    --zy-border:           rgba(113, 160, 200, .28);
+    --zy-border-soft:      rgba(52, 178, 212, .14);
+    --zy-border-focus:     rgba(34, 211, 238, .62);
+
+    --zy-text:             #f1f7fb;
+    --zy-text-soft:        #d4e2eb;
+    --zy-muted:            #8fa9ba;
+
+    --zy-cyan:             #46c8dc;
+    --zy-cyan-soft:        rgba(70, 200, 220, .10);
+
+    --zy-gold:             #f1c75b;
+    --zy-gold-soft:        rgba(241, 199, 91, .08);
+
+    --zy-green:            #76d9b3;
+    --zy-red:              #ef9aa3;
+}
+
+
+/* ==========================================================
+   PAGE / HERO
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-hero {
+
+    background:
+        radial-gradient(
+            circle at 92% 4%,
+            rgba(34,211,238,.075),
+            transparent 31%
+        ),
+        linear-gradient(
+            135deg,
+            #0a283d,
+            #061925 72%
+        ) !important;
+
+    border:
+        1px solid var(--zy-border-soft) !important;
+
+    box-shadow:
+        0 20px 52px rgba(0,0,0,.22) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero h1 {
+
+    color:
+        var(--zy-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero p {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-eyebrow {
+
+    color:
+        var(--zy-gold) !important;
+}
+
+
+/* ==========================================================
+   HERO ACTIONS / PAGE TABS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-hero__actions
+.zy-pos-btn--secondary,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nav-tabs .nav-link,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-tab,
+
+html:not([data-theme="light"])
+.zy-pos-page
+[role="tab"] {
+
+    background:
+        #092033 !important;
+
+    color:
+        #cfe0ea !important;
+
+    border:
+        1px solid rgba(113,160,200,.24) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__actions
+.zy-pos-btn--secondary:hover,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nav-tabs .nav-link:hover,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-tab:hover,
+
+html:not([data-theme="light"])
+.zy-pos-page
+[role="tab"]:hover {
+
+    background:
+        #0c2a40 !important;
+
+    color:
+        #ffffff !important;
+
+    border-color:
+        rgba(70,200,220,.36) !important;
+}
+
+
+/* Active tabs */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nav-tabs .nav-link.active,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-tab.is-active,
+
+html:not([data-theme="light"])
+.zy-pos-page
+[role="tab"][aria-selected="true"] {
+
+    background:
+        rgba(70,200,220,.12) !important;
+
+    color:
+        #bfeff5 !important;
+
+    border-color:
+        rgba(70,200,220,.40) !important;
+}
+
+
+/* ==========================================================
+   COMPANY BAR
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-company-bar {
+
+    background:
+        transparent !important;
+
+    border-color:
+        rgba(113,160,200,.11) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-company-bar span {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-company-bar strong {
+
+    color:
+        var(--zy-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-company-bar select {
+
+    background:
+        var(--zy-input) !important;
+
+    color:
+        var(--zy-text) !important;
+
+    border-color:
+        var(--zy-border) !important;
+}
+
+
+/* ==========================================================
+   KPI CARDS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-kpis article {
+
+    background:
+        linear-gradient(
+            135deg,
+            #09273a,
+            #061923
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.12) !important;
+
+    box-shadow:
+        0 14px 35px rgba(0,0,0,.17) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpis article span {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpis article strong {
+
+    color:
+        var(--zy-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpi-icon {
+
+    background:
+        var(--zy-gold-soft) !important;
+
+    border-color:
+        rgba(241,199,91,.20) !important;
+
+    color:
+        var(--zy-gold) !important;
+}
+
+
+/* ==========================================================
+   MAIN REGISTRY CARD
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-card {
+
+    background:
+        linear-gradient(
+            135deg,
+            #09283b,
+            #061923
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.14) !important;
+
+    box-shadow:
+        0 20px 48px rgba(0,0,0,.19) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head {
+
+    background:
+        transparent !important;
+
+    border-color:
+        rgba(113,160,200,.11) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head h2 {
+
+    color:
+        var(--zy-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head p {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__eyebrow {
+
+    color:
+        var(--zy-gold) !important;
+}
+
+
+/* Counter */
+
+html:not([data-theme="light"])
+.zy-pos-count {
+
+    background:
+        #071827 !important;
+
+    color:
+        var(--zy-text) !important;
+
+    border:
+        1px solid rgba(113,160,200,.20) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-count strong {
+
+    color:
+        var(--zy-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-count span {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+/* ==========================================================
+   FILTER BAR
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filters {
+
+    background:
+        rgba(3,15,25,.48) !important;
+
+    border:
+        1px solid rgba(113,160,200,.13) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter > span {
+
+    color:
+        #d5e3eb !important;
+}
+
+
+/* ==========================================================
+   SEARCH FIELD
+   التصحيح الظاهر بالصورة
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filter--search input,
+
+html:not([data-theme="light"])
+.zy-pos-filter input[type="search"],
+
+html:not([data-theme="light"])
+#positionSearch {
+
+    background:
+        #071827 !important;
+
+    background-color:
+        #071827 !important;
+
+    background-image:
+        none !important;
+
+    color:
+        #f1f7fb !important;
+
+    border:
+        1px solid rgba(113,160,200,.34) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.015) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter--search input::placeholder,
+
+html:not([data-theme="light"])
+#positionSearch::placeholder {
+
+    color:
+        #698297 !important;
+
+    opacity:
+        1 !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter--search input:hover,
+
+html:not([data-theme="light"])
+#positionSearch:hover {
+
+    background:
+        #092033 !important;
+
+    border-color:
+        rgba(113,160,200,.43) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter--search input:focus,
+
+html:not([data-theme="light"])
+#positionSearch:focus {
+
+    background:
+        #0a273c !important;
+
+    border-color:
+        rgba(34,211,238,.62) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.085) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* Remove browser search decorations */
+
+html:not([data-theme="light"])
+#positionSearch::-webkit-search-cancel-button {
+
+    filter:
+        brightness(1.3) !important;
+}
+
+
+/* ==========================================================
+   ALL FILTER SELECTS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filter select,
+
+html:not([data-theme="light"])
+#categoryFilter,
+
+html:not([data-theme="light"])
+#levelFilter,
+
+html:not([data-theme="light"])
+#statusFilter {
+
+    background:
+        #071827 !important;
+
+    background-color:
+        #071827 !important;
+
+    color:
+        var(--zy-text) !important;
+
+    border:
+        1px solid rgba(113,160,200,.31) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter select:hover {
+
+    background:
+        #092033 !important;
+
+    border-color:
+        rgba(113,160,200,.42) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter select:focus {
+
+    background:
+        #0a273c !important;
+
+    border-color:
+        var(--zy-border-focus) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.08) !important;
+}
+
+
+/* ==========================================================
+   CUSTOM SELECT WRAPPERS
+   حتى إذا NexoraSelect غطى الـ select الأصلي
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select__trigger,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select__trigger {
+
+    background:
+        #071827 !important;
+
+    color:
+        var(--zy-text) !important;
+
+    border-color:
+        rgba(113,160,200,.31) !important;
+}
+
+
+/* Dropdown menu */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select__menu,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select__menu {
+
+    background:
+        #071827 !important;
+
+    border:
+        1px solid rgba(113,160,200,.26) !important;
+
+    box-shadow:
+        0 18px 45px rgba(0,0,0,.36) !important;
+}
+
+
+/* option hover */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select__option:hover,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select__option:hover {
+
+    background:
+        #0b2b40 !important;
+
+    color:
+        #ffffff !important;
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-table-wrap {
+
+    background:
+        #051521 !important;
+
+    border:
+        1px solid rgba(34,211,238,.12) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table thead th {
+
+    background:
+        #061725 !important;
+
+    color:
+        #dce8ef !important;
+
+    border-color:
+        rgba(113,160,200,.12) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody td {
+
+    background:
+        #061925 !important;
+
+    color:
+        #d7e4ec !important;
+
+    border-color:
+        rgba(113,160,200,.10) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody tr:nth-child(even) td {
+
+    background:
+        #071d2a !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody tr:hover td {
+
+    background:
+        #0a2a3d !important;
+}
+
+
+/* ==========================================================
+   POSITION TEXT
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-name strong {
+
+    color:
+        #f3f8fb !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-name span,
+
+html:not([data-theme="light"])
+.zy-pos-name small {
+
+    color:
+        #88a2b4 !important;
+}
+
+
+/* ==========================================================
+   CATEGORY / LEVEL CHIPS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-classification span,
+
+html:not([data-theme="light"])
+.zy-pos-classification small {
+
+    background:
+        #092336 !important;
+
+    color:
+        #d6e6ef !important;
+
+    border:
+        1px solid rgba(68,158,205,.20) !important;
+}
+
+
+/* ==========================================================
+   EMPLOYEE COUNT
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-employees strong {
+
+    color:
+        var(--zy-gold) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-employees span {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-link {
+
+    color:
+        #78d8e8 !important;
+}
+
+
+/* ==========================================================
+   STATUS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-status.is-active {
+
+    background:
+        rgba(17,72,58,.30) !important;
+
+    color:
+        #78dab5 !important;
+
+    border:
+        1px solid rgba(83,208,162,.16) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-status.is-inactive {
+
+    background:
+        rgba(112,31,39,.22) !important;
+
+    color:
+        #efa3aa !important;
+
+    border:
+        1px solid rgba(224,103,113,.20) !important;
+}
+
+
+/* ==========================================================
+   ACTION BUTTONS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-action--edit {
+
+    background:
+        #0a2639 !important;
+
+    color:
+        #d7ebf4 !important;
+
+    border:
+        1px solid rgba(74,161,204,.25) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action--neutral {
+
+    background:
+        #10334b !important;
+
+    color:
+        #dce9f0 !important;
+
+    border:
+        1px solid rgba(90,151,195,.25) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action--delete {
+
+    background:
+        rgba(104,29,35,.19) !important;
+
+    color:
+        #eca0a8 !important;
+
+    border:
+        1px solid rgba(218,91,102,.31) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action--edit:hover,
+
+html:not([data-theme="light"])
+.zy-pos-action--neutral:hover {
+
+    background:
+        #16415b !important;
+
+    color:
+        #ffffff !important;
+
+    border-color:
+        rgba(70,200,220,.39) !important;
+}
+
+
+/* ==========================================================
+   PRIMARY BUTTON
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-btn--primary {
+
+    background:
+        linear-gradient(
+            135deg,
+            #48c7d8,
+            #42bfcf
+        ) !important;
+
+    color:
+        #03202c !important;
+
+    border:
+        1px solid rgba(68,199,216,.32) !important;
+}
+
+
+/* ==========================================================
+   SECONDARY BUTTON
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-btn--secondary {
+
+    background:
+        #0a2335 !important;
+
+    color:
+        #d8e6ed !important;
+
+    border:
+        1px solid rgba(113,160,200,.24) !important;
+}
+
+
+/* ==========================================================
+   PAGINATION
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-pagination button {
+
+    background:
+        #092033 !important;
+
+    color:
+        #d6e4eb !important;
+
+    border-color:
+        rgba(113,160,200,.22) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-pagination button:hover:not(:disabled) {
+
+    background:
+        #0c2b41 !important;
+
+    color:
+        #fff !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-pagination__summary,
+
+html:not([data-theme="light"])
+.zy-pos-pagination__controls span {
+
+    color:
+        var(--zy-muted) !important;
+}
+
+
+/* ==========================================================
+   EDITOR + ALL MODALS
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-editor-modal,
+
+html body
+#position-job-profile-modal
+.zy-pos-job-modal,
+
+html body
+#position-delete-modal
+.zy-pos-delete-modal,
+
+html body
+.zy-pos-reference-modal,
+
+html body
+#position-employees-modal
+.zy-pos-employees-modal {
+
+    background:
+        #101e31 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(113,160,200,.26) !important;
+}
+
+
+/* Modal headings */
+
+html body
+#position-editor-modal
+.nx-setup-modal__head,
+
+html body
+#position-job-profile-modal
+.nx-setup-modal__head,
+
+html body
+#position-delete-modal
+.nx-setup-modal__head,
+
+html body
+.zy-pos-reference-modal
+.nx-setup-modal__head,
+
+html body
+#position-employees-modal
+.nx-setup-modal__head {
+
+    background:
+        transparent !important;
+
+    border-color:
+        rgba(113,160,200,.11) !important;
+}
+
+
+/* ==========================================================
+   ALL MODAL INPUTS
+   ========================================================== */
+
+html body
+#position-editor-modal
+input,
+
+html body
+#position-editor-modal
+select,
+
+html body
+#position-editor-modal
+textarea,
+
+html body
+#position-job-profile-modal
+textarea,
+
+html body
+.zy-pos-reference-modal
+input {
+
+    background:
+        #071827 !important;
+
+    color:
+        #f1f7fb !important;
+
+    border-color:
+        rgba(113,160,200,.32) !important;
+}
+
+
+html body
+#position-editor-modal
+input:focus,
+
+html body
+#position-editor-modal
+select:focus,
+
+html body
+#position-editor-modal
+textarea:focus,
+
+html body
+#position-job-profile-modal
+textarea:focus,
+
+html body
+.zy-pos-reference-modal
+input:focus {
+
+    background:
+        #0a273c !important;
+
+    border-color:
+        rgba(34,211,238,.60) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(34,211,238,.08) !important;
+}
+
+
+/* ==========================================================
+   JOB DESCRIPTION SECTION
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-job-section {
+
+    background:
+        #071a29 !important;
+
+    border-color:
+        rgba(113,160,200,.16) !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__head {
+
+    background:
+        #081e2f !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-job-section__action {
+
+    background:
+        linear-gradient(
+            135deg,
+            #0e4c68,
+            #0d3c57
+        ) !important;
+
+    color:
+        #e5f7fb !important;
+
+    border-color:
+        rgba(70,200,220,.28) !important;
+}
+
+
+/* ==========================================================
+   REFERENCE CONTROL
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-reference-control select {
+
+    background:
+        #071827 !important;
+
+    color:
+        var(--zy-text) !important;
+}
+
+
+html body
+#position-editor-modal
+.zy-pos-reference-control
+.zy-pos-manage {
+
+    background:
+        rgba(241,199,91,.07) !important;
+
+    color:
+        var(--zy-gold) !important;
+
+    border-color:
+        rgba(241,199,91,.26) !important;
+}
+
+
+/* ==========================================================
+   FOOTERS
+   إزالة أي Footer أسود منفصل
+   ========================================================== */
+
+html body
+#position-editor-modal
+.nx-setup-modal__actions,
+
+html body
+#position-job-profile-modal
+.nx-setup-modal__actions,
+
+html body
+#position-delete-modal
+.nx-setup-modal__actions {
+
+    background:
+        #101e31 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(113,160,200,.11) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   BACKDROP
+   ========================================================== */
+
+html body
+#position-editor-modal.nx-setup-modal,
+
+html body
+#position-job-profile-modal.nx-setup-modal,
+
+html body
+#position-delete-modal.nx-setup-modal,
+
+html body
+#position-reference-competencies.nx-setup-modal,
+
+html body
+#position-reference-education.nx-setup-modal,
+
+html body
+#position-reference-specializations.nx-setup-modal,
+
+html body
+#position-reference-certifications.nx-setup-modal,
+
+html body
+#position-employees-modal.nx-setup-modal {
+
+    background:
+        rgba(3,9,18,.30) !important;
+
+    backdrop-filter:
+        blur(8px) saturate(112%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(112%) !important;
+}
+
+
+/* ==========================================================
+   ALERTS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-alert--success {
+
+    background:
+        rgba(22,110,79,.16) !important;
+
+    color:
+        #a7e7ca !important;
+
+    border-color:
+        rgba(83,208,162,.20) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-alert--danger {
+
+    background:
+        rgba(112,31,39,.18) !important;
+
+    color:
+        #f0adb3 !important;
+
+    border-color:
+        rgba(224,103,113,.24) !important;
+}
+
+
+/* ==========================================================
+   FINAL LEGACY COLOR GUARD
+   منع Slate القديم من الرجوع لهذه المناطق
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-filters,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-table-wrap,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-card__head,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-count {
+
+    background-image:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_COMPLETE_COLOR_AUDIT_V14_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITION_EMPLOYEES_MODAL_V15
+   Linked employees popup final design
+   ========================================================== */
+
+
+/* Panel */
+html body
+#position-employees-modal
+.zy-pos-employees-modal {
+
+    width:
+        min(620px, calc(100vw - 30px)) !important;
+
+    max-width:
+        620px !important;
+
+    background:
+        linear-gradient(
+            145deg,
+            #0a2639 0%,
+            #081d2d 50%,
+            #071725 100%
+        ) !important;
+
+    border:
+        1px solid rgba(60,174,210,.22) !important;
+
+    border-radius:
+        21px !important;
+
+    box-shadow:
+        0 30px 80px rgba(0,0,0,.44) !important;
+}
+
+
+/* Header */
+html body
+#position-employees-modal
+.nx-setup-modal__head {
+
+    padding:
+        17px 20px 14px !important;
+
+    background:
+        transparent !important;
+
+    border-bottom:
+        1px solid rgba(72,154,193,.14) !important;
+}
+
+
+html body
+#position-employees-modal
+.nx-setup-modal__head > span {
+
+    color:
+        #91adbe !important;
+}
+
+
+html body
+#position-employees-modal
+.nx-setup-modal__head h2 {
+
+    color:
+        #f3f8fb !important;
+
+    font-size:
+        18px !important;
+}
+
+
+html body
+#position-employees-modal
+.nx-setup-modal__head p {
+
+    color:
+        #9bb2c1 !important;
+
+    font-size:
+        10.5px !important;
+}
+
+
+/* Close */
+html body
+#position-employees-modal
+.nx-setup-modal__close {
+
+    width:
+        38px !important;
+
+    height:
+        38px !important;
+
+    border-radius:
+        11px !important;
+
+    background:
+        #4f7da3 !important;
+
+    color:
+        #071522 !important;
+
+    border:
+        0 !important;
+}
+
+
+/* Body */
+html body
+#position-employees-modal
+.zy-pos-employees-body {
+
+    padding:
+        15px 17px 17px !important;
+
+    background:
+        transparent !important;
+}
+
+
+/* Employee list */
+html body
+#position-employees-modal
+.zy-pos-employees-list {
+
+    display:
+        grid !important;
+
+    gap:
+        8px !important;
+}
+
+
+/* Employee card */
+html body
+#position-employees-modal
+.zy-pos-employees-list article {
+
+    min-height:
+        66px !important;
+
+    padding:
+        11px 13px !important;
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr) auto !important;
+
+    grid-template-areas:
+        "name status"
+        "code status" !important;
+
+    align-items:
+        center !important;
+
+    column-gap:
+        14px !important;
+
+    row-gap:
+        3px !important;
+
+    border-radius:
+        13px !important;
+
+    background:
+        #071827 !important;
+
+    border:
+        1px solid rgba(113,160,200,.17) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.012) !important;
+}
+
+
+html body
+#position-employees-modal
+.zy-pos-employees-list article:hover {
+
+    background:
+        #092033 !important;
+
+    border-color:
+        rgba(70,200,220,.25) !important;
+}
+
+
+/* Name */
+html body
+#position-employees-modal
+.zy-pos-employees-list article strong {
+
+    grid-area:
+        name !important;
+
+    color:
+        #f3f8fb !important;
+
+    font-size:
+        12.5px !important;
+
+    font-weight:
+        900 !important;
+}
+
+
+/* Employee code */
+html body
+#position-employees-modal
+.zy-pos-employees-list article span {
+
+    grid-area:
+        code !important;
+
+    color:
+        #91aabd !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        750 !important;
+}
+
+
+/* Status */
+html body
+#position-employees-modal
+.zy-pos-employees-list article small {
+
+    grid-area:
+        status !important;
+
+    min-width:
+        58px !important;
+
+    min-height:
+        27px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    padding:
+        0 9px !important;
+
+    border-radius:
+        999px !important;
+
+    background:
+        rgba(17,72,58,.30) !important;
+
+    color:
+        #79dab6 !important;
+
+    border:
+        1px solid rgba(83,208,162,.16) !important;
+
+    font-size:
+        9px !important;
+
+    font-weight:
+        900 !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* Loading */
+html body
+#position-employees-modal
+.zy-pos-loading {
+
+    min-height:
+        90px !important;
+
+    display:
+        grid !important;
+
+    place-items:
+        center !important;
+
+    color:
+        #91aabd !important;
+}
+
+
+/* Backdrop */
+html body
+#position-employees-modal.nx-setup-modal {
+
+    background:
+        rgba(3,9,18,.30) !important;
+
+    backdrop-filter:
+        blur(8px) saturate(112%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(112%) !important;
+}
+
+
+/* Mobile */
+@media (max-width: 560px) {
+
+    html body
+    #position-employees-modal
+    .zy-pos-employees-list article {
+
+        grid-template-columns:
+            1fr !important;
+
+        grid-template-areas:
+            "name"
+            "code"
+            "status" !important;
+    }
+
+    html body
+    #position-employees-modal
+    .zy-pos-employees-list article small {
+
+        justify-self:
+            start !important;
+    }
+}
+
+
+/* ZYNORA_POSITION_EMPLOYEES_MODAL_V15_END */
+
+
+/* ==========================================================
+   ZYNORA_EMPLOYEES_LOADING_FIX_V16
+   Hide loading indicator after data arrives
+   ========================================================== */
+
+/* أهم تصحيح:
+   hidden لازم يتغلب على display:grid السابق */
+html body
+#position-employees-modal
+.zy-pos-loading[hidden] {
+
+    display:
+        none !important;
+
+    visibility:
+        hidden !important;
+
+    opacity:
+        0 !important;
+}
+
+
+/* يظهر فقط أثناء التحميل */
+html body
+#position-employees-modal
+.zy-pos-loading:not([hidden]) {
+
+    min-height:
+        80px !important;
+
+    display:
+        grid !important;
+
+    place-items:
+        center !important;
+
+    color:
+        #91aabd !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        800 !important;
+}
+
+
+/* جسم البوب يتكيف مع عدد الموظفين */
+html body
+#position-employees-modal
+.zy-pos-employees-body {
+
+    min-height:
+        0 !important;
+
+    padding:
+        14px 17px 17px !important;
+}
+
+
+/* لا فراغ قبل أول موظف */
+html body
+#position-employees-modal
+.zy-pos-employees-list {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+/* موظف واحد = بطاقة مرتبة بدون مساحة زائدة */
+html body
+#position-employees-modal
+.zy-pos-employees-list article:only-child {
+
+    margin:
+        0 !important;
+}
+
+
+/* ZYNORA_EMPLOYEES_LOADING_FIX_V16_END */
+
+
+/* ==========================================================
+   ZYNORA_EMPLOYEE_PROFILE_LINK_V17
+   Click employee name to open employee file
+   ========================================================== */
+
+html body
+#position-employees-modal
+.zy-pos-employees-list
+.zy-pos-employee-link {
+
+    grid-area:
+        name !important;
+
+    width:
+        fit-content !important;
+
+    max-width:
+        100% !important;
+
+    color:
+        #f3f8fb !important;
+
+    text-decoration:
+        none !important;
+
+    font-size:
+        12.5px !important;
+
+    font-weight:
+        900 !important;
+
+    line-height:
+        1.45 !important;
+
+    cursor:
+        pointer !important;
+
+    transition:
+        color .16s ease !important;
+}
+
+
+html body
+#position-employees-modal
+.zy-pos-employees-list
+.zy-pos-employee-link:hover {
+
+    color:
+        #72dceb !important;
+
+    text-decoration:
+        underline !important;
+
+    text-underline-offset:
+        3px !important;
+}
+
+
+html body
+#position-employees-modal
+.zy-pos-employees-list
+.zy-pos-employee-link:focus-visible {
+
+    outline:
+        2px solid rgba(70,200,220,.45) !important;
+
+    outline-offset:
+        3px !important;
+
+    border-radius:
+        4px !important;
+}
+
+
+/* ZYNORA_EMPLOYEE_PROFILE_LINK_V17_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_REGISTRY_HEADER_V20
+   More breathing room after removing eyebrow/count
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-card__head {
+
+    width:
+        100% !important;
+
+    min-height:
+        86px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    padding:
+        18px 22px !important;
+
+    margin:
+        0 0 14px 0 !important;
+
+    box-sizing:
+        border-box !important;
+
+    border-radius:
+        16px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(8, 32, 48, .72),
+            rgba(5, 23, 35, .72)
+        ) !important;
+
+    border:
+        1px solid rgba(34,211,238,.11) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head > div {
+
+    width:
+        100% !important;
+
+    max-width:
+        none !important;
+
+    padding-inline:
+        4px !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head h2 {
+
+    margin:
+        0 !important;
+
+    font-size:
+        21px !important;
+
+    line-height:
+        1.35 !important;
+
+    color:
+        #f4f8fb !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head p {
+
+    margin:
+        5px 0 0 !important;
+
+    font-size:
+        10.5px !important;
+
+    line-height:
+        1.6 !important;
+
+    color:
+        #91aabd !important;
+}
+
+
+/* ZYNORA_POSITIONS_REGISTRY_HEADER_V20_END */
+
