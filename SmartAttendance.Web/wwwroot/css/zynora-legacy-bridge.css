@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    جسر الصفحات القديمة — Design System v1
    ----------------------------------------------------------------------------
    لماذا ملف منفصل بدل تعديل الملفات القديمة:
@@ -514,3 +514,144 @@
     color: var(--color-danger) !important;
     border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent) !important;
 }
+
+/* =========================================================
+   ZYNORA_MODAL_GLASS_BACKDROP_FINAL_V1
+   Keep system visible behind modal with real blur
+   ========================================================= */
+
+html body .nx-setup-modal.nx-setup-modal {
+    background:
+        rgba(5, 12, 24, 0.40) !important;
+
+    backdrop-filter:
+        blur(8px)
+        saturate(115%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px)
+        saturate(115%) !important;
+}
+
+/* البوب نفسه يبقى واضح */
+html body
+.nx-setup-modal
+.nx-setup-modal__panel.nx-setup-modal__panel {
+
+    background:
+        rgba(17, 30, 50, 0.96) !important;
+
+    border:
+        1px solid
+        rgba(126, 167, 210, 0.25) !important;
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+/* الفورم لا يغطي البوب بلون ثاني */
+html body
+.nx-setup-modal
+.nx-setup-modal-form.nx-setup-modal-form {
+
+    background:
+        transparent !important;
+}
+
+/* Footer يبقى مندمج */
+html body
+.nx-setup-modal
+.nx-setup-modal__actions {
+
+    background:
+        rgba(17, 30, 50, 0.92) !important;
+}
+
+
+/* ZYNORA_DEPARTMENT_MODAL_SURFACE_FINAL_V1 */
+
+/* اللون الوحيد للبوب */
+html body #department-create-modal
+.zy-department-quick-create,
+
+html body #department-edit-modal
+.zy-department-edit-popup {
+    background: rgb(16, 30, 49) !important;
+    background-image: none !important;
+
+    border: 1px solid rgba(114, 158, 201, .26) !important;
+
+    box-shadow:
+        0 26px 70px rgba(0,0,0,.42) !important;
+
+    overflow: hidden !important;
+}
+
+/* إزالة ألوان الهيدر القديمة */
+html body #department-create-modal
+.nx-setup-modal__head,
+
+html body #department-edit-modal
+.nx-setup-modal__head {
+    background: transparent !important;
+    background-image: none !important;
+
+    box-shadow: none !important;
+
+    border-bottom:
+        1px solid rgba(130, 165, 200, .10) !important;
+}
+
+/* جسم الفورم نفس لون البوب */
+html body #department-create-modal
+.nx-setup-modal-form,
+
+html body #department-edit-modal
+.nx-setup-modal-form {
+    background: transparent !important;
+    background-image: none !important;
+}
+
+/* إزالة الشريط الأسود أسفل البوب */
+html body #department-create-modal
+.nx-setup-modal__actions,
+
+html body #department-edit-modal
+.nx-setup-modal__actions {
+    background: transparent !important;
+    background-image: none !important;
+
+    box-shadow: none !important;
+
+    border-top:
+        1px solid rgba(130, 165, 200, .12) !important;
+}
+
+/* أي container داخلي قديم لا يضيف لون جديد */
+html body #department-create-modal
+.nx-setup-modal__panel > *,
+
+html body #department-edit-modal
+.nx-setup-modal__panel > * {
+    --nx-modal-surface:
+        transparent;
+}
+
+/* ZYNORA_DEPARTMENT_MODAL_SURFACE_FINAL_V1_END */
+
+
+/* ZYNORA_DEPARTMENT_MODAL_COMPACT_V1 */
+
+html body #department-create-modal
+.zy-department-quick-create,
+
+html body #department-edit-modal
+.zy-department-edit-popup {
+
+    width: min(780px, calc(100vw - 32px)) !important;
+    max-width: 780px !important;
+}
+
+/* ZYNORA_DEPARTMENT_MODAL_COMPACT_V1_END */
+

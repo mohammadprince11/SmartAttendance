@@ -2,7 +2,100 @@
 @model SmartAttendance.Web.Pages.Departments.EditModel
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet"
+          href="~/css/nexora-setup-pages.css"
+          asp-append-version="true" />
+
+    <style>
+        .zy-department-edit-languages {
+            margin-top: 18px;
+        }
+
+        .zy-department-edit-language-company {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(
+                        min(100%, 340px),
+                        1fr
+                    )
+                );
+            gap: 12px;
+        }
+
+        .zy-department-edit-language-company[hidden] {
+            display: none !important;
+        }
+
+        .zy-department-edit-language-card {
+            min-width: 0;
+            margin: 0;
+            padding: 15px;
+
+            border:
+                1px solid
+                var(--border-default);
+
+            border-radius: 14px;
+
+            background:
+                var(--surface-raised);
+        }
+
+        .zy-department-edit-language-card legend {
+            max-width: 100%;
+            padding-inline: 8px;
+
+            font-weight: 800;
+        }
+
+        .zy-department-edit-language-card legend small {
+            margin-inline-start: 7px;
+
+            color:
+                var(--text-muted);
+
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .zy-department-edit-language-field {
+            display: grid;
+            gap: 7px;
+        }
+
+        .zy-department-edit-language-field > span {
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .zy-department-edit-language-field input {
+            width: 100%;
+        }
+
+        .zy-department-edit-language-missing {
+            grid-column: 1 / -1;
+
+            padding: 14px;
+
+            border:
+                1px solid
+                var(--border-default);
+
+            border-radius: 12px;
+
+            color:
+                var(--text-muted);
+        }
+
+        .zy-department-edit-language-missing a {
+            margin-inline-start: 6px;
+
+            color:
+                var(--color-primary);
+        }
+    </style>
 }
 
 @{
@@ -10,53 +103,252 @@
 }
 
 <div class="nexora-setup-page nx-setup-form-page">
+
     <section class="nexora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</span>
-            <h1>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0642;&#x0633;&#x0645;</h1>
-            <p>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0648;&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0627;&#x0644;&#x062A;&#x0627;&#x0628;&#x0639; &#x0644;&#x0647;.</p>
+            <span class="nexora-setup-kicker">
+                الأقسام
+            </span>
+
+            <h1>تعديل قسم</h1>
+
+            <p>
+                عدّل اسم القسم حسب لغات بيانات الشركة
+                المفعلة حالياً.
+            </p>
         </div>
-        <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0631;&#x062C;&#x0648;&#x0639;</a>
+
+        <a asp-page="./Index"
+           class="btn-secondary nx-setup-btn nx-setup-btn-secondary">
+            الرجوع
+        </a>
     </section>
 
-    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    @if (!string.IsNullOrWhiteSpace(
+            Model.ErrorMessage))
     {
-        <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
+        <div class="alert-danger nx-setup-alert-danger">
+            @Model.ErrorMessage
+        </div>
     }
 
     <section class="nexora-setup-card">
-        <form method="post" class="nx-setup-modal-form">
-            <input type="hidden" asp-for="Department.Id" />
+
+        <form method="post"
+              id="department-edit-form"
+              class="nx-setup-modal-form">
+
+            <input type="hidden"
+                   asp-for="Department.Id" />
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger">
+            </div>
 
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field">
-                    <span>&#x0627;&#x0633;&#x0645; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</span>
-                    <input asp-for="Department.Name" />
-                    <span asp-validation-for="Department.Name" class="text-danger"></span>
-                </label>
 
                 <label class="nx-setup-field">
-                    <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                    <select asp-for="Department.CompanyId" data-nexora-select="true">
-                        <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</option>
-                        @foreach (var company in Model.Companies)
+                    <span>الشركة</span>
+
+                    <select asp-for="Department.CompanyId"
+                            data-nexora-select="true">
+
+                        <option value="">
+                            اختر الشركة
+                        </option>
+
+                        @foreach (var company in
+                            Model.Companies)
                         {
-                            <option value="@company.Id">@company.Name</option>
+                            <option value="@company.Id">
+                                @company.Name
+                            </option>
                         }
                     </select>
-                    <span asp-validation-for="Department.CompanyId" class="text-danger"></span>
+
+                    <span asp-validation-for="Department.CompanyId"
+                          class="text-danger">
+                    </span>
                 </label>
 
                 <label class="nx-setup-check">
                     <input asp-for="Department.IsActive" />
-                    <span>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x0641;&#x0639;&#x0627;&#x0644;</span>
+                    <span>القسم فعال</span>
                 </label>
+
+            </div>
+
+            <div class="zy-department-edit-languages"
+                 data-department-edit-multilingual>
+
+                @foreach (var company in Model.Companies)
+                {
+                    var selectedCompany =
+                        Model.Department.CompanyId ==
+                        company.Id;
+
+                    var indexes =
+                        Enumerable.Range(
+                            0,
+                            Model.DepartmentNameTranslations.Count)
+                        .Where(index =>
+                            Model.DepartmentNameTranslations[index]
+                                .CompanyId ==
+                            company.Id)
+                        .ToArray();
+
+                    <section class="zy-department-edit-language-company"
+                             data-department-edit-language-company="@company.Id"
+                             hidden="@(!selectedCompany)">
+
+                        @if (indexes.Length == 0)
+                        {
+                            <div class="zy-department-edit-language-missing">
+
+                                لا توجد لغة بيانات ظاهرة ومفعلة لهذه الشركة.
+
+                                <a asp-page="/Settings/DataLanguages"
+                                   asp-route-companyId="@company.Id">
+                                    إدارة لغات بيانات الشركة
+                                </a>
+
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var index in indexes)
+                            {
+                                var language =
+                                    Model.DepartmentNameTranslations[index];
+
+                                <fieldset class="zy-department-edit-language-card"
+                                          dir="@language.Direction"
+                                          lang="@language.CultureCode"
+                                          data-culture="@language.CultureCode">
+
+                                    <legend>
+                                        <span data-zy-no-localize>
+                                            @language.NativeName
+                                        </span>
+
+                                        <small>
+                                            @language.CultureCode
+
+                                            @(language.IsDefault
+                                                ? "· اللغة الأساسية"
+                                                : "· لغة إضافية")
+
+                                            @(language.IsRequired
+                                                ? "· مطلوبة"
+                                                : "· اختيارية")
+                                        </small>
+                                    </legend>
+
+                                    <input type="hidden"
+                                           asp-for="DepartmentNameTranslations[index].CompanyId" />
+
+                                    <input type="hidden"
+                                           asp-for="DepartmentNameTranslations[index].CultureCode" />
+
+                                    <label class="zy-department-edit-language-field">
+
+                                        <span>
+                                            اسم القسم
+                                            @(language.IsRequired
+                                                ? "*"
+                                                : "")
+                                        </span>
+
+                                        <input asp-for="DepartmentNameTranslations[index].Name"
+                                               dir="@language.Direction"
+                                               data-required="@(language.IsRequired ? "true" : "false")"
+                                               autocomplete="off" />
+
+                                    </label>
+
+                                </fieldset>
+                            }
+                        }
+
+                    </section>
+                }
+
+                <span asp-validation-for="DepartmentNameTranslations"
+                      class="text-danger">
+                </span>
+
             </div>
 
             <div class="nx-setup-modal__actions">
-                <a asp-page="./Index" class="nx-setup-btn nx-setup-btn-secondary">&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</a>
-                <button type="submit" class="nx-setup-btn nx-setup-btn-primary">&#x062D;&#x0641;&#x0638;</button>
+
+                <a asp-page="./Index"
+                   class="nx-setup-btn nx-setup-btn-secondary">
+                    إلغاء
+                </a>
+
+                <button type="submit"
+                        class="nx-setup-btn nx-setup-btn-primary">
+                    حفظ التعديلات
+                </button>
+
             </div>
+
         </form>
+
     </section>
+
 </div>
+
+@section Scripts {
+
+<script>
+(function () {
+    const companySelect =
+        document.getElementById(
+            "Department_CompanyId");
+
+    const sections =
+        Array.from(
+            document.querySelectorAll(
+                "[data-department-edit-language-company]"));
+
+    if (!companySelect) {
+        return;
+    }
+
+    function syncDepartmentLanguages() {
+
+        const companyId =
+            companySelect.value;
+
+        sections.forEach(section => {
+
+            const active =
+                section.dataset
+                    .departmentEditLanguageCompany ===
+                companyId;
+
+            section.hidden = !active;
+
+            section
+                .querySelectorAll(
+                    "[data-required]")
+                .forEach(input => {
+
+                    input.required =
+                        active &&
+                        input.dataset.required ===
+                            "true";
+                });
+        });
+    }
+
+    companySelect.addEventListener(
+        "change",
+        syncDepartmentLanguages);
+
+    syncDepartmentLanguages();
+})();
+</script>
+
+}
