@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -51,16 +51,6 @@ public sealed class DictionaryModel : PageModel
     public bool AutomaticTranslationEnabled =>
         _autoTranslation.IsConfigured;
 
-    public bool SelectedIsSource =>
-        SelectedLanguage is not null &&
-        string.Equals(
-            SelectedLanguage.Code,
-            ZynoraSupportedCultures.DefaultCode,
-            StringComparison.OrdinalIgnoreCase);
-
-    public int VisibleLanguageCount =>
-        Languages.Count(item => !item.IsHidden);
-
     public int TotalPages =>
         Math.Max(
             1,
@@ -97,7 +87,7 @@ public sealed class DictionaryModel : PageModel
 
         MissingEntries =
             rows.Count(item =>
-                !SelectedIsSource &&
+                !SelectedLanguage.IsDefault &&
                 string.IsNullOrWhiteSpace(
                     item.Translation));
 
@@ -123,7 +113,7 @@ public sealed class DictionaryModel : PageModel
         }
 
         if (MissingOnly &&
-            !SelectedIsSource)
+            !SelectedLanguage.IsDefault)
         {
             filtered = filtered.Where(item =>
                 string.IsNullOrWhiteSpace(
@@ -168,7 +158,7 @@ public sealed class DictionaryModel : PageModel
                     HttpContext.RequestAborted);
 
             TempData["SuccessMessage"] =
-                $"تمت إضافة اللغة {language?.Code ?? cultureCode} وأصبحت متاحة في قائمة تغيير اللغة.";
+                $"تمت إضافة اللغة {language?.Code ?? cultureCode} بحالة مخفية. أكمل ترجمتها ثم اضغط إظهار.";
 
             return RedirectToPage(
                 new
@@ -189,21 +179,10 @@ public sealed class DictionaryModel : PageModel
 
     public async Task<IActionResult> OnPostSetVisibilityAsync(
         string culture,
-        string action)
+        bool hidden)
     {
         try
         {
-            var normalizedAction =
-                action?.Trim().ToLowerInvariant();
-
-            var hidden = normalizedAction switch
-            {
-                "hide" => true,
-                "show" => false,
-                _ => throw new InvalidOperationException(
-                    "إجراء اللغة غير صحيح.")
-            };
-
             await _dictionary.SetLanguageHiddenAsync(
                 culture,
                 hidden,
@@ -211,7 +190,7 @@ public sealed class DictionaryModel : PageModel
 
             TempData["SuccessMessage"] =
                 hidden
-                    ? $"تم إخفاء اللغة {culture}."
+                    ? $"تم إخفاء اللغة {culture}. بياناتها وترجماتها لم تُحذف."
                     : $"تم إظهار اللغة {culture}.";
 
             return RedirectToPage(
@@ -226,6 +205,7 @@ public sealed class DictionaryModel : PageModel
                 new { culture });
         }
     }
+
     public async Task<IActionResult> OnPostDeleteLanguageAsync(
         string culture)
     {
@@ -244,10 +224,34 @@ public sealed class DictionaryModel : PageModel
                 return RedirectToPage();
             }
 
-            /*
-             * البيانات المترجمة الفعلية أهم من مجرد إعداد الشركة.
-             * إذا توجد قيم محفوظة بهذه اللغة، لا نحذفها تلقائياً.
-             */
+            if (language.IsDefault)
+            {
+                TempData["ErrorMessage"] =
+                    "لا يمكن حذف العربية لأنها لغة المصدر.";
+
+                return RedirectToPage();
+            }
+
+            if (!language.IsHidden)
+            {
+                TempData["ErrorMessage"] =
+                    "أخفِ اللغة أولاً قبل حذفها نهائياً.";
+
+                return RedirectToPage(
+                    new { culture = language.Code });
+            }
+
+            var activeCompanyUsage =
+                await _db.CompanyLanguages
+                    .AsNoTracking()
+                    .AnyAsync(
+                        item =>
+                            !item.IsDeleted &&
+                            item.IsActive &&
+                            item.CultureCode ==
+                                language.Code,
+                        HttpContext.RequestAborted);
+
             var localizedDataUsage =
                 await _db.LocalizedEntityValues
                     .AsNoTracking()
@@ -258,67 +262,14 @@ public sealed class DictionaryModel : PageModel
                                 language.Code,
                         HttpContext.RequestAborted);
 
-            if (localizedDataUsage)
+            if (activeCompanyUsage ||
+                localizedDataUsage)
             {
                 TempData["ErrorMessage"] =
-                    "لا يمكن حذف اللغة لأنها تحتوي بيانات مترجمة محفوظة. يمكنك إخفاؤها بدلاً من ذلك.";
+                    "لا يمكن حذف اللغة لأنها مستخدمة حالياً في إعدادات شركة أو في بيانات مترجمة. استخدم الإخفاء بدلاً من الحذف.";
 
                 return RedirectToPage(
                     new { culture = language.Code });
-            }
-
-            /*
-             * إذا كانت اللغة أساسية لبيانات أي شركة،
-             * يجب اختيار لغة أساسية بديلة أولاً.
-             */
-            var isCompanyDefault =
-                await _db.CompanyLanguages
-                    .AsNoTracking()
-                    .AnyAsync(
-                        item =>
-                            !item.IsDeleted &&
-                            item.CultureCode ==
-                                language.Code &&
-                            item.IsDefault,
-                        HttpContext.RequestAborted);
-
-            if (isCompanyDefault)
-            {
-                TempData["ErrorMessage"] =
-                    "لا يمكن حذف اللغة لأنها اللغة الأساسية لبيانات شركة. اختر لغة أساسية أخرى للشركة أولاً.";
-
-                return RedirectToPage(
-                    new { culture = language.Code });
-            }
-
-            /*
-             * مجرد ارتباط CompanyLanguages غير أساسي
-             * لا يجب أن يمنع حذف اللغة.
-             * ننظفه تلقائياً.
-             */
-            var companyLanguages =
-                await _db.CompanyLanguages
-                    .Where(item =>
-                        !item.IsDeleted &&
-                        item.CultureCode ==
-                            language.Code)
-                    .ToListAsync(
-                        HttpContext.RequestAborted);
-
-            foreach (var item in companyLanguages)
-            {
-                item.IsActive = false;
-                item.IsRequired = false;
-                item.IsDefault = false;
-                item.IsDeleted = true;
-                item.UpdatedAt =
-                    DateTime.UtcNow;
-            }
-
-            if (companyLanguages.Count > 0)
-            {
-                await _db.SaveChangesAsync(
-                    HttpContext.RequestAborted);
             }
 
             await _dictionary.DeleteLanguageAsync(
@@ -326,7 +277,7 @@ public sealed class DictionaryModel : PageModel
                 HttpContext.RequestAborted);
 
             TempData["SuccessMessage"] =
-                $"تم حذف اللغة {language.Code} نهائياً.";
+                $"تم حذف اللغة {language.Code} وترجماتها نهائياً.";
 
             return RedirectToPage();
         }
@@ -339,6 +290,7 @@ public sealed class DictionaryModel : PageModel
                 new { culture });
         }
     }
+
     public async Task<IActionResult> OnPostSaveAsync(
         string culture,
         string key,
@@ -500,36 +452,33 @@ public sealed class DictionaryModel : PageModel
     public async Task<IActionResult>
         OnGetNewLanguageTemplateAsync()
     {
-        var sourceKeys =
+        var rows =
             (await _dictionary.GetRowsAsync(
                 HttpContext.RequestAborted))
-            .Select(item => item.Key)
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(
-                item => item,
-                StringComparer.Ordinal)
+            .Where(item =>
+                string.Equals(
+                    item.CultureCode,
+                    ZynoraSupportedCultures.DefaultCode,
+                    StringComparison.OrdinalIgnoreCase))
+            .Select(item =>
+                new Dictionary<string, string>(
+                    StringComparer.Ordinal)
+                {
+                    ["CultureCode"] = "fr-FR",
+                    ["NativeName"] = "Français",
+                    ["EnglishName"] = "French",
+                    ["Direction"] = "ltr",
+                    ["Key"] = item.Key,
+                    ["Translation"] =
+                        string.Empty
+                })
             .ToArray();
-
-        var rows =
-            sourceKeys
-                .Select(key =>
-                    new Dictionary<string, string>(
-                        StringComparer.Ordinal)
-                    {
-                        ["CultureCode"] = "fr-FR",
-                        ["NativeName"] = "Français",
-                        ["EnglishName"] = "French",
-                        ["Direction"] = "ltr",
-                        ["Key"] = key,
-                        ["Translation"] =
-                            string.Empty
-                    })
-                .ToArray();
 
         return Workbook(
             rows,
             "new-language-template");
     }
+
     private static Dictionary<string, string>
         ToExportRow(DictionaryEntryRow item) =>
         new(StringComparer.Ordinal)
@@ -600,4 +549,3 @@ public sealed class DictionaryModel : PageModel
             $"{fileName}.xlsx");
     }
 }
-

@@ -1,8 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Authorization;
-using SmartAttendance.Web;
 using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Culture;
@@ -10,22 +9,51 @@ namespace SmartAttendance.Web.Pages.Culture;
 [AllowAnonymous]
 public sealed class SetModel : PageModel
 {
-    private readonly ILocalizationDictionaryService _dictionary;
+    private readonly
+        ILocalizationDictionaryService _dictionary;
 
-    public SetModel(ILocalizationDictionaryService dictionary) => _dictionary = dictionary;
-
-    public async Task<IActionResult> OnPostAsync(string? culture, string? returnUrl)
+    public SetModel(
+        ILocalizationDictionaryService dictionary)
     {
-        var supported = await _dictionary.FindLanguageAsync(culture, HttpContext.RequestAborted);
+        _dictionary = dictionary;
+    }
+
+    public async Task<IActionResult> OnPostAsync(
+        string? culture,
+        string? returnUrl)
+    {
+        var visibleLanguages =
+            await _dictionary.GetLanguagesAsync(
+                HttpContext.RequestAborted);
+
+        var supported =
+            visibleLanguages.FirstOrDefault(item =>
+                string.Equals(
+                    item.Code,
+                    culture,
+                    StringComparison.OrdinalIgnoreCase));
+
         if (supported is null)
-            return BadRequest();
+        {
+            return BadRequest(
+                "اللغة المطلوبة غير متاحة حالياً.");
+        }
 
         Response.Cookies.Append(
-            CookieRequestCultureProvider.DefaultCookieName,
-            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(supported.Code)),
+            CookieRequestCultureProvider
+                .DefaultCookieName,
+
+            CookieRequestCultureProvider
+                .MakeCookieValue(
+                    new RequestCulture(
+                        supported.Code)),
+
             new CookieOptions
             {
-                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                Expires =
+                    DateTimeOffset.UtcNow
+                        .AddYears(1),
+
                 HttpOnly = true,
                 IsEssential = true,
                 SameSite = SameSiteMode.Lax,
@@ -33,7 +61,11 @@ public sealed class SetModel : PageModel
                 Path = "/"
             });
 
-        var destination = Url.IsLocalUrl(returnUrl) ? returnUrl! : "/";
+        var destination =
+            Url.IsLocalUrl(returnUrl)
+                ? returnUrl!
+                : "/";
+
         return LocalRedirect(destination);
     }
 }

@@ -144,15 +144,9 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                 catalog[pair.Key] = pair.Value;
         }
 
-        var isSourceLanguage = string.Equals(
-            language.Code,
-            ZynoraSupportedCultures.DefaultCode,
-            StringComparison.OrdinalIgnoreCase);
-
-        if (isSourceLanguage)
+        if (language.IsDefault)
         {
-            foreach (var key in GetSourceKeys(state))
-                catalog.TryAdd(key, key);
+            foreach (var key in GetSourceKeys(state)) catalog.TryAdd(key, key);
         }
 
         return catalog;
@@ -166,19 +160,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 
         foreach (var language in state.Languages)
         {
-            var catalog = await GetCatalogAsync(
-                language.Code,
-                cancellationToken);
-
-            var isSourceLanguage = string.Equals(
-                language.Code,
-                ZynoraSupportedCultures.DefaultCode,
-                StringComparison.OrdinalIgnoreCase);
-
-            state.MachineTranslatedKeys.TryGetValue(
-                language.Code,
-                out var machineTranslatedKeys);
-
+            var catalog = await GetCatalogAsync(language.Code, cancellationToken);
+            state.MachineTranslatedKeys.TryGetValue(language.Code, out var machineTranslatedKeys);
             foreach (var key in keys)
             {
                 rows.Add(new DictionaryEntryRow(
@@ -187,11 +170,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                     language.EnglishName,
                     language.Direction,
                     key,
-                    isSourceLanguage
-                        ? key
-                        : catalog.GetValueOrDefault(key, string.Empty),
-                    !isSourceLanguage &&
-                    machineTranslatedKeys?.Contains(key) == true));
+                    language.IsDefault ? key : catalog.GetValueOrDefault(key, string.Empty),
+                    !language.IsDefault && machineTranslatedKeys?.Contains(key) == true));
             }
         }
 
@@ -236,15 +216,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         {
             var state = await LoadStateUnsafeAsync(cancellationToken);
             var language = FindLanguage(state, culture);
-
-            if (string.Equals(
-                    language.Code,
-                    ZynoraSupportedCultures.DefaultCode,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    "لغة المصدر لا تُعدّل من جدول الترجمات.");
-            }
+            if (language.IsDefault)
+                throw new InvalidOperationException("لا يمكن تعديل مفاتيح العربية لأنها لغة المصدر المحمية.");
 
             var sourceKeys = GetSourceKeys(state);
             var unknown = normalized
@@ -290,6 +263,14 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
     {
         var code = NormalizeCultureCode(cultureCode);
 
+        if (string.Equals(
+                code,
+                ZynoraSupportedCultures.DefaultCode,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "لغة المصدر العربية موجودة مسبقاً ولا يمكن إضافتها مرة أخرى.");
+        }
 
         nativeName = NormalizeCell(
             nativeName,
@@ -330,7 +311,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                     $"اللغة {code} موجودة مسبقاً.");
             }
 
-            // اللغة الجديدة تظهر مباشرة، والإخفاء قرار صريح من المستخدم.
+            // اللغة الجديدة تبدأ مخفية حتى تتم مراجعة القاموس.
             state.Languages.Add(
                 new DictionaryLanguage(
                     code,
@@ -338,7 +319,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                     englishName,
                     direction,
                     false,
-                    false));
+                    true));
 
             state.Translations.TryAdd(
                 code,
@@ -376,20 +357,13 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                 state,
                 culture);
 
-            var visibleCount =
-                state.Languages.Count(item =>
-                    !item.IsHidden);
-
-            if (hidden &&
-                !language.IsHidden &&
-                visibleCount <= 1)
+            if (language.IsDefault)
             {
                 throw new InvalidOperationException(
-                    "يجب أن تبقى لغة واحدة ظاهرة على الأقل في النظام.");
+                    "لا يمكن إخفاء لغة المصدر العربية.");
             }
 
-            var index =
-                state.Languages.IndexOf(language);
+            var index = state.Languages.IndexOf(language);
 
             state.Languages[index] =
                 language with
@@ -406,6 +380,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
             _gate.Release();
         }
     }
+
     public async Task<DictionaryImportResult> ImportAsync(
         Stream stream,
         string fileName,
@@ -533,76 +508,26 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         }
     }
 
-    public async Task DeleteLanguageAsync(
-        string culture,
-        CancellationToken cancellationToken = default)
+    public async Task DeleteLanguageAsync(string culture, CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
-
         try
         {
-            var state =
-                await LoadStateUnsafeAsync(
-                    cancellationToken);
-
-            var language =
-                FindLanguage(
-                    state,
-                    culture);
-
-            if (state.Languages.Count <= 1)
-            {
-                throw new InvalidOperationException(
-                    "لا يمكن حذف آخر لغة في النظام. يجب أن تبقى لغة واحدة على الأقل.");
-            }
-
-            var visibleCount =
-                state.Languages.Count(item =>
-                    !item.IsHidden);
-
-            if (!language.IsHidden &&
-                visibleCount <= 1)
-            {
-                throw new InvalidOperationException(
-                    "لا يمكن حذف آخر لغة ظاهرة. أظهر لغة أخرى أولاً.");
-            }
-
-            var wasDefault =
-                language.IsDefault;
-
+            var state = await LoadStateUnsafeAsync(cancellationToken);
+            var language = FindLanguage(state, culture);
+            if (language.IsDefault)
+                throw new InvalidOperationException("لا يمكن حذف العربية لأنها لغة المصدر واللغة الاحتياطية للنظام.");
             state.Languages.Remove(language);
             state.Translations.Remove(language.Code);
-            state.MachineTranslatedKeys.Remove(
-                language.Code);
-
-            if (wasDefault)
-            {
-                var replacement =
-                    state.Languages
-                        .FirstOrDefault(item =>
-                            !item.IsHidden)
-                    ?? state.Languages[0];
-
-                var replacementIndex =
-                    state.Languages.IndexOf(
-                        replacement);
-
-                state.Languages[replacementIndex] =
-                    replacement with
-                    {
-                        IsDefault = true
-                    };
-            }
-
-            await PersistUnsafeAsync(
-                state,
-                cancellationToken);
+            state.MachineTranslatedKeys.Remove(language.Code);
+            await PersistUnsafeAsync(state, cancellationToken);
         }
         finally
         {
             _gate.Release();
         }
     }
+
     private async Task<DictionaryState> ReadStateAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);

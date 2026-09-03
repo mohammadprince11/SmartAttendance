@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Globalization;
 using System.Resources;
 using System.Text.Json;
@@ -11,8 +11,7 @@ public sealed record DictionaryLanguage(
     string NativeName,
     string EnglishName,
     string Direction,
-    bool IsDefault = false,
-    bool IsHidden = false);
+    bool IsDefault = false);
 
 public sealed record DictionaryEntryRow(
     string CultureCode,
@@ -32,20 +31,7 @@ public sealed record DictionaryImportResult(
 public interface ILocalizationDictionaryService
 {
     Task<IReadOnlyList<DictionaryLanguage>> GetLanguagesAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<DictionaryLanguage>> GetAllLanguagesAsync(CancellationToken cancellationToken = default);
     Task<DictionaryLanguage?> FindLanguageAsync(string? code, CancellationToken cancellationToken = default);
-
-    Task AddLanguageAsync(
-        string cultureCode,
-        string nativeName,
-        string englishName,
-        string direction,
-        CancellationToken cancellationToken = default);
-
-    Task SetLanguageHiddenAsync(
-        string culture,
-        bool hidden,
-        CancellationToken cancellationToken = default);
     Task<IReadOnlyDictionary<string, string>> GetCatalogAsync(string? culture, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DictionaryEntryRow>> GetRowsAsync(CancellationToken cancellationToken = default);
     Task SaveTranslationAsync(string culture, string key, string translation, CancellationToken cancellationToken = default);
@@ -99,24 +85,11 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
             StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<IReadOnlyList<DictionaryLanguage>> GetLanguagesAsync(
-        CancellationToken cancellationToken = default)
-    {
-        var languages = await GetAllLanguagesAsync(cancellationToken);
-
-        return languages
-            .Where(item => !item.IsHidden)
-            .ToArray();
-    }
-
-    public async Task<IReadOnlyList<DictionaryLanguage>> GetAllLanguagesAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DictionaryLanguage>> GetLanguagesAsync(CancellationToken cancellationToken = default)
     {
         var state = await ReadStateAsync(cancellationToken);
-
         return state.Languages
             .OrderByDescending(item => item.IsDefault)
-            .ThenBy(item => item.IsHidden)
             .ThenBy(item => item.EnglishName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -144,15 +117,9 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                 catalog[pair.Key] = pair.Value;
         }
 
-        var isSourceLanguage = string.Equals(
-            language.Code,
-            ZynoraSupportedCultures.DefaultCode,
-            StringComparison.OrdinalIgnoreCase);
-
-        if (isSourceLanguage)
+        if (language.IsDefault)
         {
-            foreach (var key in GetSourceKeys(state))
-                catalog.TryAdd(key, key);
+            foreach (var key in GetSourceKeys(state)) catalog.TryAdd(key, key);
         }
 
         return catalog;
@@ -166,19 +133,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
 
         foreach (var language in state.Languages)
         {
-            var catalog = await GetCatalogAsync(
-                language.Code,
-                cancellationToken);
-
-            var isSourceLanguage = string.Equals(
-                language.Code,
-                ZynoraSupportedCultures.DefaultCode,
-                StringComparison.OrdinalIgnoreCase);
-
-            state.MachineTranslatedKeys.TryGetValue(
-                language.Code,
-                out var machineTranslatedKeys);
-
+            var catalog = await GetCatalogAsync(language.Code, cancellationToken);
+            state.MachineTranslatedKeys.TryGetValue(language.Code, out var machineTranslatedKeys);
             foreach (var key in keys)
             {
                 rows.Add(new DictionaryEntryRow(
@@ -187,11 +143,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
                     language.EnglishName,
                     language.Direction,
                     key,
-                    isSourceLanguage
-                        ? key
-                        : catalog.GetValueOrDefault(key, string.Empty),
-                    !isSourceLanguage &&
-                    machineTranslatedKeys?.Contains(key) == true));
+                    language.IsDefault ? key : catalog.GetValueOrDefault(key, string.Empty),
+                    !language.IsDefault && machineTranslatedKeys?.Contains(key) == true));
             }
         }
 
@@ -236,15 +189,8 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         {
             var state = await LoadStateUnsafeAsync(cancellationToken);
             var language = FindLanguage(state, culture);
-
-            if (string.Equals(
-                    language.Code,
-                    ZynoraSupportedCultures.DefaultCode,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    "لغة المصدر لا تُعدّل من جدول الترجمات.");
-            }
+            if (language.IsDefault)
+                throw new InvalidOperationException("لا يمكن تعديل مفاتيح العربية لأنها لغة المصدر المحمية.");
 
             var sourceKeys = GetSourceKeys(state);
             var unknown = normalized
@@ -281,131 +227,6 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         }
     }
 
-    public async Task AddLanguageAsync(
-        string cultureCode,
-        string nativeName,
-        string englishName,
-        string direction,
-        CancellationToken cancellationToken = default)
-    {
-        var code = NormalizeCultureCode(cultureCode);
-
-
-        nativeName = NormalizeCell(
-            nativeName,
-            120,
-            "NativeName");
-
-        englishName = NormalizeCell(
-            englishName,
-            120,
-            "EnglishName");
-
-        direction = NormalizeCell(
-                direction,
-                3,
-                "Direction")
-            .ToLowerInvariant();
-
-        if (direction is not ("rtl" or "ltr"))
-        {
-            throw new InvalidOperationException(
-                "Direction يجب أن يكون rtl أو ltr.");
-        }
-
-        await _gate.WaitAsync(cancellationToken);
-
-        try
-        {
-            var state = await LoadStateUnsafeAsync(
-                cancellationToken);
-
-            if (state.Languages.Any(item =>
-                    string.Equals(
-                        item.Code,
-                        code,
-                        StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new InvalidOperationException(
-                    $"اللغة {code} موجودة مسبقاً.");
-            }
-
-            // اللغة الجديدة تظهر مباشرة، والإخفاء قرار صريح من المستخدم.
-            state.Languages.Add(
-                new DictionaryLanguage(
-                    code,
-                    nativeName,
-                    englishName,
-                    direction,
-                    false,
-                    false));
-
-            state.Translations.TryAdd(
-                code,
-                new Dictionary<string, string>(
-                    StringComparer.Ordinal));
-
-            state.MachineTranslatedKeys.TryAdd(
-                code,
-                new HashSet<string>(
-                    StringComparer.Ordinal));
-
-            await PersistUnsafeAsync(
-                state,
-                cancellationToken);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
-
-    public async Task SetLanguageHiddenAsync(
-        string culture,
-        bool hidden,
-        CancellationToken cancellationToken = default)
-    {
-        await _gate.WaitAsync(cancellationToken);
-
-        try
-        {
-            var state = await LoadStateUnsafeAsync(
-                cancellationToken);
-
-            var language = FindLanguage(
-                state,
-                culture);
-
-            var visibleCount =
-                state.Languages.Count(item =>
-                    !item.IsHidden);
-
-            if (hidden &&
-                !language.IsHidden &&
-                visibleCount <= 1)
-            {
-                throw new InvalidOperationException(
-                    "يجب أن تبقى لغة واحدة ظاهرة على الأقل في النظام.");
-            }
-
-            var index =
-                state.Languages.IndexOf(language);
-
-            state.Languages[index] =
-                language with
-                {
-                    IsHidden = hidden
-                };
-
-            await PersistUnsafeAsync(
-                state,
-                cancellationToken);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
     public async Task<DictionaryImportResult> ImportAsync(
         Stream stream,
         string fileName,
@@ -488,13 +309,7 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
             var existing = state.Languages.FirstOrDefault(item =>
                 string.Equals(item.Code, code, StringComparison.OrdinalIgnoreCase));
             var isNew = existing is null;
-            var language = new DictionaryLanguage(
-                code,
-                nativeName,
-                englishName,
-                direction,
-                false,
-                existing?.IsHidden ?? false);
+            var language = new DictionaryLanguage(code, nativeName, englishName, direction, false);
             if (existing is null) state.Languages.Add(language);
             else state.Languages[state.Languages.IndexOf(existing)] = language;
 
@@ -533,76 +348,26 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         }
     }
 
-    public async Task DeleteLanguageAsync(
-        string culture,
-        CancellationToken cancellationToken = default)
+    public async Task DeleteLanguageAsync(string culture, CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
-
         try
         {
-            var state =
-                await LoadStateUnsafeAsync(
-                    cancellationToken);
-
-            var language =
-                FindLanguage(
-                    state,
-                    culture);
-
-            if (state.Languages.Count <= 1)
-            {
-                throw new InvalidOperationException(
-                    "لا يمكن حذف آخر لغة في النظام. يجب أن تبقى لغة واحدة على الأقل.");
-            }
-
-            var visibleCount =
-                state.Languages.Count(item =>
-                    !item.IsHidden);
-
-            if (!language.IsHidden &&
-                visibleCount <= 1)
-            {
-                throw new InvalidOperationException(
-                    "لا يمكن حذف آخر لغة ظاهرة. أظهر لغة أخرى أولاً.");
-            }
-
-            var wasDefault =
-                language.IsDefault;
-
+            var state = await LoadStateUnsafeAsync(cancellationToken);
+            var language = FindLanguage(state, culture);
+            if (language.IsDefault)
+                throw new InvalidOperationException("لا يمكن حذف العربية لأنها لغة المصدر واللغة الاحتياطية للنظام.");
             state.Languages.Remove(language);
             state.Translations.Remove(language.Code);
-            state.MachineTranslatedKeys.Remove(
-                language.Code);
-
-            if (wasDefault)
-            {
-                var replacement =
-                    state.Languages
-                        .FirstOrDefault(item =>
-                            !item.IsHidden)
-                    ?? state.Languages[0];
-
-                var replacementIndex =
-                    state.Languages.IndexOf(
-                        replacement);
-
-                state.Languages[replacementIndex] =
-                    replacement with
-                    {
-                        IsDefault = true
-                    };
-            }
-
-            await PersistUnsafeAsync(
-                state,
-                cancellationToken);
+            state.MachineTranslatedKeys.Remove(language.Code);
+            await PersistUnsafeAsync(state, cancellationToken);
         }
         finally
         {
             _gate.Release();
         }
     }
+
     private async Task<DictionaryState> ReadStateAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);

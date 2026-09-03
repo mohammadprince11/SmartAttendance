@@ -1,7 +1,7 @@
 using System.Globalization;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Authorization;
 using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Culture;
@@ -12,8 +12,7 @@ namespace SmartAttendance.Web.Pages.Culture;
 [AllowAnonymous]
 public sealed class CatalogModel : PageModel
 {
-    private readonly
-        ILocalizationDictionaryService _dictionary;
+    private readonly ILocalizationDictionaryService _dictionary;
 
     public CatalogModel(
         ILocalizationDictionaryService dictionary)
@@ -24,34 +23,27 @@ public sealed class CatalogModel : PageModel
     public async Task<IActionResult> OnGetAsync(
         string? culture)
     {
-        var visibleLanguages =
+        var languages =
             await _dictionary.GetLanguagesAsync(
                 HttpContext.RequestAborted);
 
         var requested =
-            visibleLanguages.FirstOrDefault(item =>
+            languages.FirstOrDefault(item =>
                 string.Equals(
                     item.Code,
                     culture,
                     StringComparison.OrdinalIgnoreCase))
             ??
-            visibleLanguages.FirstOrDefault(item =>
+            languages.FirstOrDefault(item =>
                 string.Equals(
                     item.Code,
-                    CultureInfo
-                        .CurrentUICulture
-                        .Name,
+                    CultureInfo.CurrentUICulture.Name,
                     StringComparison.OrdinalIgnoreCase))
             ??
-            visibleLanguages.FirstOrDefault(item =>
-                item.IsDefault)
-            ??
-            visibleLanguages.FirstOrDefault();
+            languages.FirstOrDefault();
 
         if (requested is null)
-        {
             return NotFound();
-        }
 
         var translations =
             await _dictionary.GetCatalogAsync(
@@ -60,12 +52,8 @@ public sealed class CatalogModel : PageModel
 
         return new JsonResult(new
         {
-            culture =
-                requested.Code,
-
-            direction =
-                requested.Direction,
-
+            culture = requested.Code,
+            direction = requested.Direction,
             translations
         });
     }

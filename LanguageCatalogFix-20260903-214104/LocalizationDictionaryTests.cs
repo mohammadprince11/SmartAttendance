@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using SmartAttendance.Web.Infrastructure.Localization;
@@ -94,28 +94,7 @@ public sealed class LocalizationDictionaryTests
             Assert.Equal("Traduction héritée", (await service.GetCatalogAsync("fr-FR"))[sourceKey]);
 
             await service.DeleteLanguageAsync("fr-FR");
-
-            // لا توجد لغة ثابتة غير قابلة للحذف.
-            // الممنوع فقط هو حذف آخر لغة متبقية.
-            await service.DeleteLanguageAsync("ar-IQ");
-            Assert.Null(
-                await service.FindLanguageAsync("ar-IQ"));
-
-            var remaining =
-                await service.GetAllLanguagesAsync();
-
-            while (remaining.Count > 1)
-            {
-                await service.DeleteLanguageAsync(
-                    remaining[0].Code);
-
-                remaining =
-                    await service.GetAllLanguagesAsync();
-            }
-
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => service.DeleteLanguageAsync(
-                    remaining.Single().Code));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteLanguageAsync("ar-IQ"));
         }
         finally
         {

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
@@ -76,24 +76,60 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
         _dictionary = dictionary;
     }
 
+    // ZYNORA_COMPANY_DATA_VISIBLE_LANGUAGE_FILTER_V1
     public async Task<IReadOnlyList<CompanyLanguageOption>> GetLanguagesAsync(
         int companyId,
         CancellationToken cancellationToken = default)
     {
-        await EnsureCompanyAccessAsync(companyId, cancellationToken);
+        await EnsureCompanyAccessAsync(
+            companyId,
+            cancellationToken);
+
+        /*
+         * مهم:
+         * قاموس واجهة النظام لا يعني أن اللغة مفعلة تلقائياً
+         * لبيانات الموظفين والأقسام والمناصب.
+         *
+         * اللغة يجب أن تحقق شرطين:
+         * 1. مفعلة للشركة في CompanyLanguages.
+         * 2. غير مخفية في Language Catalog.
+         */
+
+        var visibleCultures =
+            (await _dictionary.GetLanguagesAsync(
+                cancellationToken))
+            .Select(item => item.Code)
+            .Distinct(
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (visibleCultures.Length == 0)
+        {
+            return [];
+        }
+
         return await _db.CompanyLanguages
             .AsNoTracking()
-            .Where(item => item.CompanyId == companyId && item.IsActive && !item.IsDeleted)
-            .OrderByDescending(item => item.IsDefault)
-            .ThenBy(item => item.EnglishName)
-            .Select(item => new CompanyLanguageOption(
-                item.CultureCode,
-                item.NativeName,
-                item.EnglishName,
-                item.Direction,
-                item.IsDefault,
-                item.IsRequired))
-            .ToListAsync(cancellationToken);
+            .Where(item =>
+                item.CompanyId == companyId &&
+                item.IsActive &&
+                !item.IsDeleted &&
+                visibleCultures.Contains(
+                    item.CultureCode))
+            .OrderByDescending(item =>
+                item.IsDefault)
+            .ThenBy(item =>
+                item.EnglishName)
+            .Select(item =>
+                new CompanyLanguageOption(
+                    item.CultureCode,
+                    item.NativeName,
+                    item.EnglishName,
+                    item.Direction,
+                    item.IsDefault,
+                    item.IsRequired))
+            .ToListAsync(
+                cancellationToken);
     }
 
     public async Task SaveLanguagesAsync(
@@ -387,3 +423,4 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
         return normalized;
     }
 }
+

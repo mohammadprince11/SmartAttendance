@@ -610,26 +610,26 @@
                 <div class="zy-language-card__actions">
 
                     <form method="post"
-      asp-page-handler="SetVisibility">
+                          asp-page-handler="SetVisibility">
 
-    <input type="hidden"
-           name="culture"
-           value="@language.Code" />
+                        <input type="hidden"
+                               name="culture"
+                               value="@language.Code" />
 
-    <input type="hidden"
-           name="action"
-           value="@(language.IsHidden ? "show" : "hide")" />
+                        <input type="hidden"
+                               name="hidden"
+                               value="@(!language.IsHidden)" />
 
-    <button type="submit"
-            class="zy-language-action"
-            title="@(isLastVisible ? "يجب أن تبقى لغة واحدة ظاهرة" : null)"
-            @(isLastVisible ? "disabled" : null)>
+                        <button type="submit"
+                                class="zy-language-action"
+                                title="@(isLastVisible ? "يجب أن تبقى لغة واحدة ظاهرة" : null)"
+                                @(isLastVisible ? "disabled" : null)>
 
-        @(language.IsHidden
-            ? "إظهار"
-            : "إخفاء")
-    </button>
-</form>
+                            @(language.IsHidden
+                                ? "إظهار"
+                                : "إخفاء")
+                        </button>
+                    </form>
 
                     <form method="post"
                           asp-page-handler="DeleteLanguage" data-zy-delete-language
@@ -949,7 +949,6 @@
 })();
 </script>
 }
-
 
 
 
