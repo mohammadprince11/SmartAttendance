@@ -17,17 +17,17 @@
        (يساراً) بدل أن تخرج عن حافة الشاشة اليمنى فيُقصّ محتواها. */
     .emp-bell-panel {
         position: fixed; width: min(340px, calc(100vw - 24px)); max-height: min(520px, calc(100vh - 84px));
-        background: var(--zy-migrated-color-57c5aa9398, #121a2b); border: 1px solid var(--zy-migrated-color-b34d3e7911, rgba(255,255,255,.12)); border-radius: 14px;
-        box-shadow: 0 18px 48px var(--zy-migrated-color-fd9af3c8e7, rgba(0,0,0,.52)); z-index: 4000; overflow: hidden;
-        color: var(--zy-migrated-color-3bd84bea55, #eaf6f8); isolation: isolate;
+        background: var(--zy-migrated-color-57c5aa9398); border: 1px solid var(--zy-migrated-color-b34d3e7911); border-radius: 14px;
+        box-shadow: 0 18px 48px var(--zy-migrated-color-fd9af3c8e7); z-index: 4000; overflow: hidden;
+        color: var(--zy-migrated-color-3bd84bea55); isolation: isolate;
     }
     .emp-bell-panel[hidden] { display: none !important; }
     /* حركة ظهور سلسة عند فتح المنسدلة (fade + انزلاق بسيط) */
     .emp-bell.is-open > .emp-bell-panel { animation: empBellIn .2s cubic-bezier(.2,.8,.25,1); transform-origin: top; }
     @keyframes empBellIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    .emp-bell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--zy-migrated-color-c201d2dab2, rgba(255,255,255,.09)); }
-    .emp-bell-head b { font-size: 14px; color: var(--zy-migrated-color-3bd84bea55, #eaf6f8); }
-    .emp-bell-all { background: transparent; border: 0; cursor: pointer; padding: 4px 6px; border-radius: 8px; color: var(--zy-migrated-color-0f1cc78a41, #65d9e0); font-size: 12px; font-weight: 600; }
+    .emp-bell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--zy-migrated-color-c201d2dab2); }
+    .emp-bell-head b { font-size: 14px; color: var(--zy-migrated-color-3bd84bea55); }
+    .emp-bell-all { background: transparent; border: 0; cursor: pointer; padding: 4px 6px; border-radius: 8px; color: var(--zy-migrated-color-0f1cc78a41); font-size: 12px; font-weight: 600; }
     .emp-bell-all[disabled] { opacity: .45; cursor: default; }
     .emp-bell-list { max-height: min(60vh, calc(100vh - 160px)); overflow-y: auto; overscroll-behavior: contain; }
     .emp-bell-item {
@@ -39,7 +39,7 @@
     .emp-bell-item-t { font-size: 13px; font-weight: 600; color: var(--zy-migrated-color-3bd84bea55); margin: 0 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .emp-bell-item-m { font-size: 12px; color: var(--zy-migrated-color-6d65c193c8); margin: 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .emp-bell-item-d { font-size: 11px; color: var(--zy-migrated-color-d442acb154); margin-top: 4px; display: block; }
-    .emp-bell-empty { padding: 30px 14px; text-align: center; color: var(--zy-migrated-color-6d65c193c8, #9fb3c7); font-size: 13px; }
+    .emp-bell-empty { padding: 30px 14px; text-align: center; color: var(--zy-migrated-color-6d65c193c8); font-size: 13px; }
 
     @media (max-width: 520px) {
         .emp-bell-panel {

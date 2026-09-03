@@ -36,7 +36,7 @@ public sealed class NotificationBellInteractionContractTests
     }
 
     [Fact]
-    public void Employee_portal_loads_notification_color_tokens_and_panel_has_safe_fallbacks()
+    public void Employee_portal_loads_notification_color_tokens_and_panel_uses_tokens()
     {
         var root = FindRepositoryRoot();
         var layout = File.ReadAllText(Path.Combine(root,
@@ -45,7 +45,7 @@ public sealed class NotificationBellInteractionContractTests
             "SmartAttendance.Web/wwwroot/css/pages/default-fe42d97482.css"));
 
         Assert.Contains("~/css/zynora-migrated-color-tokens.css", layout, StringComparison.Ordinal);
-        Assert.Contains("var(--zy-migrated-color-57c5aa9398, #121a2b)", css, StringComparison.Ordinal);
+        Assert.Contains("var(--zy-migrated-color-57c5aa9398)", css, StringComparison.Ordinal);
         Assert.Contains("@media (max-width: 520px)", css, StringComparison.Ordinal);
     }
 
