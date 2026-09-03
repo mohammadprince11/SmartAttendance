@@ -40,15 +40,30 @@
         <input type="hidden" asp-for="CompanyId" />
         <section class="zy-data-languages__explain">
             <strong>قاعدة الإدخال</strong>
-            <p>تكفي لغة أساسية واحدة، واللغات الإضافية اختيارية. عند تفعيل لغة إضافية تصبح قيمها مطلوبة في الحقول النصية القابلة للترجمة.</p>
+            <p>
+                فعّل اللغات التي تستخدمها الشركة، ثم حدد لكل لغة إن كانت مطلوبة أو اختيارية.
+                اللغة الأساسية تكون مفعلة ومطلوبة دائماً.
+            </p>
         </section>
 
         <section class="zy-data-languages__grid" aria-label="اللغات المتاحة">
             @foreach (var language in Model.AvailableLanguages)
             {
-                var active = Model.ActiveCultureCodes.Contains(language.Code, StringComparer.OrdinalIgnoreCase);
-                var isDefault = string.Equals(Model.DefaultCultureCode, language.Code, StringComparison.OrdinalIgnoreCase);
-                <article class="zy-data-language-card @(active ? "is-active" : "")">
+                var active = Model.ActiveCultureCodes.Contains(
+                    language.Code,
+                    StringComparer.OrdinalIgnoreCase);
+
+                var isDefault = string.Equals(
+                    Model.DefaultCultureCode,
+                    language.Code,
+                    StringComparison.OrdinalIgnoreCase);
+
+                var required = isDefault ||
+                    Model.RequiredCultureCodes.Contains(
+                        language.Code,
+                        StringComparer.OrdinalIgnoreCase);
+
+                <article class="zy-data-language-card @(active ? "is-active" : "") @(required ? "is-required" : "")">
                     <label class="zy-data-language-card__enable">
                         <input type="checkbox" name="ActiveCultureCodes" value="@language.Code" checked="@active" />
                         <span>تفعيل</span>
@@ -57,10 +72,24 @@
                         <strong data-zy-no-localize>@language.NativeName</strong>
                         <small>@language.EnglishName · @language.Code · @language.Direction.ToUpperInvariant()</small>
                     </div>
-                    <label class="zy-data-language-card__default">
-                        <input type="radio" name="DefaultCultureCode" value="@language.Code" checked="@isDefault" />
-                        <span>اللغة الأساسية</span>
-                    </label>
+                    <div class="zy-data-language-card__rules">
+                        <label class="zy-data-language-card__default">
+                            <input type="radio"
+                                   name="DefaultCultureCode"
+                                   value="@language.Code"
+                                   checked="@isDefault" />
+                            <span>اللغة الأساسية</span>
+                        </label>
+
+                        <label class="zy-data-language-card__required">
+                            <input type="checkbox"
+                                   name="RequiredCultureCodes"
+                                   value="@language.Code"
+                                   checked="@required"
+                                   disabled="@isDefault" />
+                            <span>مطلوبة عند الإدخال</span>
+                        </label>
+                    </div>
                 </article>
             }
         </section>
@@ -71,3 +100,65 @@
         </footer>
     </form>
 </main>
+
+@section Scripts {
+<script>
+(function () {
+    const form = document.querySelector(".zy-data-languages__form");
+    if (!form) return;
+
+    const cards = Array.from(
+        form.querySelectorAll(".zy-data-language-card"));
+
+    function syncCard(card) {
+        const active = card.querySelector(
+            'input[name="ActiveCultureCodes"]');
+
+        const required = card.querySelector(
+            'input[name="RequiredCultureCodes"]');
+
+        const primary = card.querySelector(
+            'input[name="DefaultCultureCode"]');
+
+        if (!active || !required || !primary) return;
+
+        if (primary.checked) {
+            active.checked = true;
+            required.checked = true;
+        }
+
+        if (!active.checked) {
+            required.checked = false;
+        }
+
+        required.disabled =
+            !active.checked || primary.checked;
+
+        card.classList.toggle(
+            "is-active",
+            active.checked);
+
+        card.classList.toggle(
+            "is-required",
+            required.checked);
+    }
+
+    cards.forEach(syncCard);
+
+    form.addEventListener("change", function (event) {
+        const target = event.target;
+
+        if (target.matches(
+            'input[name="DefaultCultureCode"]')) {
+            cards.forEach(syncCard);
+            return;
+        }
+
+        const card = target.closest(
+            ".zy-data-language-card");
+
+        if (card) syncCard(card);
+    });
+})();
+</script>
+}

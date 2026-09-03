@@ -29,6 +29,7 @@ public interface ICompanyDataLocalizationService
         int companyId,
         string defaultCultureCode,
         IReadOnlyCollection<string> activeCultureCodes,
+        IReadOnlyCollection<string> requiredCultureCodes,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<string>> ValidateRequiredValuesAsync(
@@ -99,6 +100,7 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
         int companyId,
         string defaultCultureCode,
         IReadOnlyCollection<string> activeCultureCodes,
+        IReadOnlyCollection<string> requiredCultureCodes,
         CancellationToken cancellationToken = default)
     {
         await EnsureCompanyAccessAsync(companyId, cancellationToken);
@@ -109,8 +111,39 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var selectionError = CompanyLanguagePolicy.ValidateSelection(normalizedDefault, normalizedActive);
-        if (selectionError is not null) throw new InvalidOperationException(selectionError);
+        var normalizedRequired = requiredCultureCodes
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(NormalizeCulture)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var selectionError = CompanyLanguagePolicy.ValidateSelection(
+            normalizedDefault,
+            normalizedActive);
+        if (selectionError is not null)
+            throw new InvalidOperationException(selectionError);
+
+        // اللغة الأساسية لا يمكن أن تكون اختيارية.
+        if (!normalizedRequired.Contains(
+                normalizedDefault,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            normalizedRequired = normalizedRequired
+                .Append(normalizedDefault)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        var requiredOutsideActive = normalizedRequired.FirstOrDefault(
+            code => !normalizedActive.Contains(
+                code,
+                StringComparer.OrdinalIgnoreCase));
+
+        if (requiredOutsideActive is not null)
+        {
+            throw new InvalidOperationException(
+                $"اللغة المطلوبة {requiredOutsideActive} يجب أن تكون مفعلة أولاً.");
+        }
 
         var catalogLanguages = await _dictionary.GetLanguagesAsync(cancellationToken);
         var catalogByCode = catalogLanguages.ToDictionary(
@@ -135,10 +168,20 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
 
         foreach (var item in existing)
         {
-            item.IsActive = normalizedActive.Contains(item.CultureCode, StringComparer.OrdinalIgnoreCase);
+            item.IsActive = normalizedActive.Contains(
+                item.CultureCode,
+                StringComparer.OrdinalIgnoreCase);
+
             item.IsDefault = item.IsActive &&
-                string.Equals(item.CultureCode, normalizedDefault, StringComparison.OrdinalIgnoreCase);
-            item.IsRequired = item.IsActive;
+                string.Equals(
+                    item.CultureCode,
+                    normalizedDefault,
+                    StringComparison.OrdinalIgnoreCase);
+
+            item.IsRequired = item.IsActive &&
+                normalizedRequired.Contains(
+                    item.CultureCode,
+                    StringComparer.OrdinalIgnoreCase);
             item.IsDeleted = false;
             item.UpdatedAt = DateTime.UtcNow;
         }
@@ -158,8 +201,13 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
                     EnglishName = language.EnglishName,
                     Direction = language.Direction,
                     IsActive = true,
-                    IsRequired = true,
-                    IsDefault = string.Equals(cultureCode, normalizedDefault, StringComparison.OrdinalIgnoreCase)
+                    IsRequired = normalizedRequired.Contains(
+                        cultureCode,
+                        StringComparer.OrdinalIgnoreCase),
+                    IsDefault = string.Equals(
+                        cultureCode,
+                        normalizedDefault,
+                        StringComparison.OrdinalIgnoreCase)
                 };
                 _db.CompanyLanguages.Add(item);
             }

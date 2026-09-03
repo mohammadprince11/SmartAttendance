@@ -32,6 +32,7 @@ public sealed class DataLanguagesModel : PageModel
     [BindProperty(SupportsGet = true)] public int? CompanyId { get; set; }
     [BindProperty] public string DefaultCultureCode { get; set; } = string.Empty;
     [BindProperty] public List<string> ActiveCultureCodes { get; set; } = [];
+    [BindProperty] public List<string> RequiredCultureCodes { get; set; } = [];
 
     public List<CompanyChoice> Companies { get; private set; } = [];
     public IReadOnlyList<DictionaryLanguage> AvailableLanguages { get; private set; } = [];
@@ -51,8 +52,11 @@ public sealed class DataLanguagesModel : PageModel
                 companyId,
                 DefaultCultureCode,
                 ActiveCultureCodes,
+                RequiredCultureCodes,
                 HttpContext.RequestAborted);
-            TempData["SuccessMessage"] = "تم حفظ اللغة الأساسية واللغات الإضافية لبيانات الشركة.";
+
+            TempData["SuccessMessage"] =
+                "تم حفظ اللغات المفعلة وتحديد اللغات المطلوبة والاختيارية بنجاح.";
             return RedirectToPage(new { companyId });
         }
         catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException)
@@ -87,7 +91,15 @@ public sealed class DataLanguagesModel : PageModel
 
         if (!Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
-            ActiveCultureCodes = ConfiguredLanguages.Select(item => item.CultureCode).ToList();
+            ActiveCultureCodes = ConfiguredLanguages
+                .Select(item => item.CultureCode)
+                .ToList();
+
+            RequiredCultureCodes = ConfiguredLanguages
+                .Where(item => item.IsRequired)
+                .Select(item => item.CultureCode)
+                .ToList();
+
             DefaultCultureCode = ConfiguredLanguages.FirstOrDefault(item => item.IsDefault)?.CultureCode
                 ?? AvailableLanguages.FirstOrDefault(item => item.IsDefault)?.Code
                 ?? AvailableLanguages.FirstOrDefault()?.Code

@@ -293,6 +293,7 @@ public class CreateModel : PageModel
                     NativeName = language.NativeName,
                     Direction = language.Direction,
                     IsDefault = language.IsDefault,
+                    IsRequired = language.IsRequired,
                     FirstName = existing?.FirstName,
                     SecondName = existing?.SecondName,
                     ThirdName = existing?.ThirdName,
@@ -641,6 +642,7 @@ public sealed class EmployeeNameTranslationInput
     public string NativeName { get; set; } = string.Empty;
     public string Direction { get; set; } = "ltr";
     public bool IsDefault { get; set; }
+    public bool IsRequired { get; set; }
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? ThirdName { get; set; }
