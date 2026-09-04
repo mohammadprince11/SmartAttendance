@@ -63,10 +63,60 @@ public sealed class EmployeeBootstrapImportEngine
         new("IsActive", false, EmployeeTemplateColumnKind.Text, 13, "فعال"),
         new("DirectManagerEmployeeNo", false, EmployeeTemplateColumnKind.Text, 24,
             "رقم الموظف للمدير المباشر"),
-        // الراتب الأساسي يسكن EmployeeFinancialInfos لا Employees — عمود بآخر
-        // القالب حتى لا ينزاح ترتيب الأعمدة على ملفٍ معبّأ سابقاً.
-        new("BasicSalary", false, EmployeeTemplateColumnKind.Text, 16, "الراتب الأساسي")
+        // الراتب الأساسي يسكن EmployeeFinancialInfos لا Employees. الأعمدة حتى
+        // BasicSalary هي كتلة القالب القديمة الثابتة؛ أي توسعة جديدة تُلحَق بعدها
+        // حتى لا ينزاح ترتيب ملفٍ معبّأ سابقاً.
+        new("BasicSalary", false, EmployeeTemplateColumnKind.Text, 16, "الراتب الأساسي"),
+        new("FirstName", false, EmployeeTemplateColumnKind.Text, 18, "الاسم الأول (عربي)"),
+        new("SecondName", false, EmployeeTemplateColumnKind.Text, 18, "الاسم الثاني (عربي)"),
+        new("ThirdName", false, EmployeeTemplateColumnKind.Text, 18, "الاسم الثالث (عربي)"),
+        new("LastName", false, EmployeeTemplateColumnKind.Text, 18, "اللقب (عربي)"),
+        new("FirstNameEn", false, EmployeeTemplateColumnKind.Text, 18, "الاسم الأول (إنجليزي)"),
+        new("SecondNameEn", false, EmployeeTemplateColumnKind.Text, 18, "الاسم الثاني (إنجليزي)"),
+        new("ThirdNameEn", false, EmployeeTemplateColumnKind.Text, 18, "الاسم الثالث (إنجليزي)"),
+        new("LastNameEn", false, EmployeeTemplateColumnKind.Text, 18, "اللقب (إنجليزي)"),
+        new("IsCitizen", false, EmployeeTemplateColumnKind.Text, 13, "مواطن"),
+        new("PassportNo", false, EmployeeTemplateColumnKind.Text, 18, "رقم جواز السفر"),
+        new("SponsorName", false, EmployeeTemplateColumnKind.Text, 20, "اسم الكفيل"),
+        new("Religion", false, EmployeeTemplateColumnKind.Text, 15, "الديانة"),
+        new("MotherCountry", false, EmployeeTemplateColumnKind.Text, 18, "البلد الأم"),
+        new("MotherCity", false, EmployeeTemplateColumnKind.Text, 18, "المدينة الأم"),
+        new("JoiningDate", false, EmployeeTemplateColumnKind.Date, 18, "تاريخ المباشرة الفعلية"),
+        new("WorkType", false, EmployeeTemplateColumnKind.Text, 16, "نوع الدوام"),
+        new("JobGrade", false, EmployeeTemplateColumnKind.Text, 18, "الدرجة الوظيفية"),
+        new("PhoneExtension", false, EmployeeTemplateColumnKind.Text, 15, "امتداد الهاتف"),
+        new("PersonalEmail", false, EmployeeTemplateColumnKind.Text, 28, "البريد الشخصي")
     };
+
+    private static readonly LocalizedTemplateField[] LocalizedTemplateFields =
+    {
+        new("FirstName", "الاسم الأول", true, 18),
+        new("SecondName", "الاسم الثاني", false, 18),
+        new("ThirdName", "الاسم الثالث", false, 18),
+        new("LastName", "اللقب", true, 18),
+        new("CompanyName", "اسم الشركة", true, 28),
+        new("WorkLocationName", "اسم موقع العمل", true, 26),
+        new("DepartmentName", "اسم القسم", true, 24),
+        new("PositionName", "المسمى الوظيفي", true, 28)
+    };
+
+    private static readonly HashSet<string> ReplacedByLocalizedColumns =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "FullName",
+            "FirstName",
+            "SecondName",
+            "ThirdName",
+            "LastName",
+            "FirstNameEn",
+            "SecondNameEn",
+            "ThirdNameEn",
+            "LastNameEn",
+            "CompanyName",
+            "WorkLocationName",
+            "DepartmentName",
+            "PositionName"
+        };
 
     private readonly ApplicationDbContext _dbContext;
 
@@ -75,9 +125,142 @@ public sealed class EmployeeBootstrapImportEngine
         _dbContext = dbContext;
     }
 
-    public async Task<List<string>> GetTemplateColumnsAsync()
+    private async Task<List<TemplateLanguage>> LoadTemplateLanguagesAsync(
+        int? companyId)
     {
-        var columns = BaseColumns
+        var query = _dbContext.CompanyLanguages
+            .AsNoTracking()
+            .Where(item => item.IsActive && !item.IsDeleted);
+
+        if (companyId.HasValue && companyId.Value > 0)
+        {
+            query = query.Where(item => item.CompanyId == companyId.Value);
+        }
+
+        var configured = await query
+            .OrderByDescending(item => item.IsDefault)
+            .ThenBy(item => item.EnglishName)
+            .Select(item => new TemplateLanguage(
+                item.CultureCode,
+                item.NativeName,
+                item.IsDefault,
+                item.IsRequired))
+            .ToListAsync();
+
+        // عند عدم اختيار شركة نستخدم اتحاد لغات الشركات، لا صفاً مكرراً لكل شركة.
+        configured = configured
+            .GroupBy(item => item.CultureCode, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new TemplateLanguage(
+                group.Key,
+                group.Select(item => item.NativeName)
+                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? group.Key,
+                group.Any(item => item.IsDefault),
+                group.Any(item => item.IsRequired)))
+            .OrderByDescending(item => item.IsDefault)
+            .ThenBy(item => item.CultureCode, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (configured.Count == 0)
+        {
+            configured.Add(new TemplateLanguage(
+                "ar-IQ",
+                "العربية",
+                true,
+                true));
+        }
+
+        if (!configured.Any(item => item.IsDefault))
+        {
+            configured[0] = configured[0] with { IsDefault = true };
+        }
+
+        return configured;
+    }
+
+    private static List<EmployeeTemplateColumn> BuildLocalizedTemplateColumns(
+        IReadOnlyList<TemplateLanguage> languages)
+    {
+        var result = new List<EmployeeTemplateColumn>();
+        var insertedNames = false;
+
+        foreach (var column in BaseColumns)
+        {
+            if (column.Name.Equals("FullName", StringComparison.OrdinalIgnoreCase))
+            {
+                AddLocalizedColumns(result, languages,
+                    LocalizedTemplateFields.Where(field =>
+                        field.Name is "FirstName" or "SecondName" or "ThirdName" or "LastName"));
+                insertedNames = true;
+                continue;
+            }
+
+            if (ReplacedByLocalizedColumns.Contains(column.Name))
+            {
+                var field = LocalizedTemplateFields.FirstOrDefault(item =>
+                    item.Name.Equals(column.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (field is not null &&
+                    field.Name is not ("FirstName" or "SecondName" or "ThirdName" or "LastName"))
+                {
+                    AddLocalizedColumns(result, languages, new[] { field });
+                }
+
+                continue;
+            }
+
+            result.Add(column);
+        }
+
+        if (!insertedNames)
+        {
+            AddLocalizedColumns(result, languages,
+                LocalizedTemplateFields.Where(field =>
+                    field.Name is "FirstName" or "SecondName" or "ThirdName" or "LastName"));
+        }
+
+        return result;
+    }
+
+    private static void AddLocalizedColumns(
+        ICollection<EmployeeTemplateColumn> target,
+        IReadOnlyList<TemplateLanguage> languages,
+        IEnumerable<LocalizedTemplateField> fields)
+    {
+        foreach (var language in languages)
+        {
+            foreach (var field in fields)
+            {
+                var name = BuildLocalizedColumnName(field.Name, language.CultureCode);
+                var displayName = $"{field.ArabicLabel} [{language.CultureCode}]";
+                target.Add(new EmployeeTemplateColumn(
+                    name,
+                    field.Required && language.IsRequired,
+                    EmployeeTemplateColumnKind.Text,
+                    field.Width,
+                    displayName));
+            }
+        }
+    }
+
+    private static string BuildLocalizedColumnName(string fieldName, string cultureCode) =>
+        $"{fieldName}[{NormalizeCultureCode(cultureCode)}]";
+
+    private static string NormalizeCultureCode(string cultureCode)
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(cultureCode.Trim()).Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return cultureCode.Trim();
+        }
+    }
+
+    public async Task<List<string>> GetTemplateColumnsAsync(int? companyId = null)
+    {
+        var columns = BuildLocalizedTemplateColumns(
+                await LoadTemplateLanguagesAsync(companyId))
             .Select(column => column.Name)
             .ToList();
 
@@ -91,11 +274,16 @@ public sealed class EmployeeBootstrapImportEngine
         return columns;
     }
 
-    public async Task<List<string>> GetRequiredTemplateColumnsAsync()
+    public async Task<List<string>> GetRequiredTemplateColumnsAsync(int? companyId = null)
     {
-        var required = RequiredColumnNames.ToList();
+        var localizedColumns = BuildLocalizedTemplateColumns(
+            await LoadTemplateLanguagesAsync(companyId));
+        var required = localizedColumns
+            .Where(column => column.Required)
+            .Select(column => column.Name)
+            .ToList();
         var usedHeaders = new HashSet<string>(
-            BaseColumns.Select(column => column.Name),
+            localizedColumns.Select(column => column.Name),
             StringComparer.OrdinalIgnoreCase);
         var dynamicFields =
             await LoadDynamicFieldDefinitionsAsync();
@@ -160,11 +348,13 @@ public sealed class EmployeeBootstrapImportEngine
 
     public async Task<byte[]> BuildTemplateWorkbookAsync(
         bool includeData = false,
-        TemplateExportScope? exportScope = null)
+        TemplateExportScope? exportScope = null,
+        int? companyId = null)
     {
         await EmployeeProfileDynamicFields.EnsureSchemaAsync(_dbContext);
 
-        var columns = BaseColumns.ToList();
+        var languages = await LoadTemplateLanguagesAsync(companyId);
+        var columns = BuildLocalizedTemplateColumns(languages);
         var dynamicFields = await LoadDynamicFieldDefinitionsAsync();
         var usedHeaders = new HashSet<string>(
             columns.Select(column => column.Name),
@@ -254,7 +444,8 @@ public sealed class EmployeeBootstrapImportEngine
                 UpdatedCount = 0,
                 SkippedCount = plan.Rows.Count,
                 ErrorCount = plan.Rows.Count,
-                Message = "No valid employee rows were found."
+                Message = BuildImportFailureMessage(
+                    plan.Rows.Select(row => row.Errors))
             };
         }
 
@@ -377,10 +568,37 @@ public sealed class EmployeeBootstrapImportEngine
                     row.MaritalStatus,
                     created,
                     value => employee.MaritalStatus = value);
+                ApplyOptional(row.FirstName, created, value => employee.FirstName = value);
+                ApplyOptional(row.SecondName, created, value => employee.SecondName = value);
+                ApplyOptional(row.ThirdName, created, value => employee.ThirdName = value);
+                ApplyOptional(row.LastName, created, value => employee.LastName = value);
+                ApplyOptional(row.FirstNameEn, created, value => employee.FirstNameEn = value);
+                ApplyOptional(row.SecondNameEn, created, value => employee.SecondNameEn = value);
+                ApplyOptional(row.ThirdNameEn, created, value => employee.ThirdNameEn = value);
+                ApplyOptional(row.LastNameEn, created, value => employee.LastNameEn = value);
+                ApplyOptional(row.PassportNo, created, value => employee.PassportNo = value);
+                ApplyOptional(row.SponsorName, created, value => employee.SponsorName = value);
+                ApplyOptional(row.Religion, created, value => employee.Religion = value);
+                ApplyOptional(row.MotherCountry, created, value => employee.MotherCountry = value);
+                ApplyOptional(row.MotherCity, created, value => employee.MotherCity = value);
+                ApplyOptional(row.WorkType, created, value => employee.WorkType = value);
+                ApplyOptional(row.JobGrade, created, value => employee.JobGrade = value);
+                ApplyOptional(row.PhoneExtension, created, value => employee.PhoneExtension = value);
+                ApplyOptional(row.PersonalEmail, created, value => employee.PersonalEmail = value);
 
                 if (row.BirthDate.HasValue)
                 {
                     employee.BirthDate = row.BirthDate;
+                }
+
+                if (row.JoiningDate.HasValue)
+                {
+                    employee.JoiningDate = row.JoiningDate;
+                }
+
+                if (row.IsCitizen.HasValue)
+                {
+                    employee.IsCitizen = row.IsCitizen.Value;
                 }
 
                 if (row.IsActive.HasValue)
@@ -407,7 +625,11 @@ public sealed class EmployeeBootstrapImportEngine
                     new ResolvedEmployeeImportRow(
                         row,
                         employee,
-                        created));
+                        created,
+                        company.Id,
+                        branch.Id,
+                        department.Id,
+                        position.Id));
             }
 
             await _dbContext.SaveChangesAsync();
@@ -424,6 +646,8 @@ public sealed class EmployeeBootstrapImportEngine
 
             foreach (var resolved in resolvedRows)
             {
+                await SaveImportedLocalizedValuesAsync(resolved);
+
                 await UpdateExtendedEmployeeColumnsAsync(
                     resolved.Employee.Id,
                     resolved.Plan,
@@ -493,16 +717,83 @@ public sealed class EmployeeBootstrapImportEngine
             SkippedCount = skipped,
             ErrorCount = skipped,
             Message =
-                $"Import completed from {originalFileName}. " +
-                $"Employees created: {createdEmployees}, " +
-                $"employees updated: {updatedEmployees}, " +
-                $"companies created: {structureCounts.Companies}, " +
-                $"work locations created: {structureCounts.Branches}, " +
-                $"departments created: {structureCounts.Departments}, " +
-                $"positions created: {structureCounts.Positions}, " +
-                $"custom values saved: {dynamicValues}, " +
-                $"skipped rows: {skipped}."
+                $"اكتمل استيراد الملف {originalFileName}. " +
+                $"الموظفون المضافون: {createdEmployees}، " +
+                $"الموظفون المحدّثون: {updatedEmployees}، " +
+                $"الشركات المضافة: {structureCounts.Companies}، " +
+                $"مواقع العمل المضافة: {structureCounts.Branches}، " +
+                $"الأقسام المضافة: {structureCounts.Departments}، " +
+                $"المناصب المضافة: {structureCounts.Positions}، " +
+                $"القيم المخصصة المحفوظة: {dynamicValues}، " +
+                $"الصفوف المتخطاة: {skipped}."
         };
+    }
+
+    public static string BuildImportFailureMessage(
+        IEnumerable<IEnumerable<string>> rowErrors)
+    {
+        ArgumentNullException.ThrowIfNull(rowErrors);
+
+        var rows = rowErrors
+            .Select(errors => errors?
+                .Where(error => !string.IsNullOrWhiteSpace(error))
+                .Select(LocalizeImportError)
+                .ToList() ?? new List<string>())
+            .ToList();
+
+        if (rows.Count == 0)
+        {
+            return "لم يعثر الملف على صفوف موظفين قابلة للاستيراد.";
+        }
+
+        var commonReasons = rows
+            .SelectMany(errors => errors)
+            .GroupBy(error => error, StringComparer.Ordinal)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.Ordinal)
+            .Take(3)
+            .Select(group => $"{group.Key} ({group.Count()} صف)")
+            .ToList();
+
+        var message =
+            $"لم يتم استيراد أي موظف. الصفوف المرفوضة: {rows.Count}.";
+
+        return commonReasons.Count == 0
+            ? message
+            : $"{message} الأسباب الأكثر تكراراً: " +
+              string.Join("، ", commonReasons) + ".";
+    }
+
+    private static string LocalizeImportError(string error)
+    {
+        const string requiredSuffix = " is required.";
+
+        if (error.EndsWith(requiredSuffix, StringComparison.Ordinal))
+        {
+            var fieldName = error[..^requiredSuffix.Length];
+            var field = BaseColumns.FirstOrDefault(column =>
+                column.Name.Equals(
+                    fieldName,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (field != null)
+            {
+                return $"{field.DisplayName ?? field.Name} مطلوب";
+            }
+        }
+
+        const string customFieldPrefix =
+            "Required custom field is missing: ";
+
+        if (error.StartsWith(
+                customFieldPrefix,
+                StringComparison.Ordinal))
+        {
+            return "الحقل المخصص المطلوب غير معبأ: " +
+                   error[customFieldPrefix.Length..];
+        }
+
+        return error;
     }
 
     private async Task<EmployeeBootstrapPlan> BuildPlanAsync(
@@ -523,6 +814,8 @@ public sealed class EmployeeBootstrapImportEngine
             .ToList();
 
         var snapshot = await LoadSnapshotAsync();
+        var defaultCultures = await LoadDefaultCulturesAsync();
+        var requiredCultures = await LoadRequiredCulturesAsync();
         var dynamicDefinitions =
             await LoadDynamicFieldDefinitionsAsync();
         var plans = new List<EmployeeBootstrapRowPlan>();
@@ -535,7 +828,9 @@ public sealed class EmployeeBootstrapImportEngine
                 row,
                 snapshot,
                 seenEmployeeNumbers,
-                dynamicDefinitions);
+                dynamicDefinitions,
+                defaultCultures,
+                requiredCultures);
 
             plans.Add(plan);
         }
@@ -718,40 +1013,46 @@ public sealed class EmployeeBootstrapImportEngine
         ParsedImportRow row,
         BootstrapSnapshot snapshot,
         HashSet<string> seenEmployeeNumbers,
-        IReadOnlyList<DynamicFieldDefinition> dynamicDefinitions)
+        IReadOnlyList<DynamicFieldDefinition> dynamicDefinitions,
+        IReadOnlyDictionary<string, string> defaultCultures,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> requiredCultures)
     {
+        var preferredCulture = ResolvePreferredCulture(row.Values, defaultCultures);
+        var firstName = GetPreferredLocalizedValue(row.Values, "FirstName", preferredCulture);
+        var secondName = GetPreferredLocalizedValue(row.Values, "SecondName", preferredCulture);
+        var thirdName = GetPreferredLocalizedValue(row.Values, "ThirdName", preferredCulture);
+        var lastName = GetPreferredLocalizedValue(row.Values, "LastName", preferredCulture);
+        var composedName = ComposeFullName(firstName, secondName, thirdName, lastName);
+
         var plan = new EmployeeBootstrapRowPlan
         {
             RowNumber = row.RowNumber,
             Values = row.Values,
             EmployeeNo = GetValue(row.Values, "EmployeeNo"),
-            FullName = GetValue(row.Values, "FullName"),
-            CompanyName = GetValue(
-                row.Values,
-                "CompanyName",
-                "Company"),
+            FullName = FirstNonBlank(GetValue(row.Values, "FullName"), composedName),
+            CompanyName = FirstNonBlank(
+                GetPreferredLocalizedValue(row.Values, "CompanyName", preferredCulture),
+                GetValue(row.Values, "Company")),
             CompanyCode = GetValue(
                 row.Values,
                 "CompanyCode"),
-            WorkLocationName = GetValue(
-                row.Values,
-                "WorkLocationName",
-                "BranchName",
-                "WorkLocation"),
+            WorkLocationName = FirstNonBlank(
+                GetPreferredLocalizedValue(row.Values, "WorkLocationName", preferredCulture),
+                GetValue(row.Values, "BranchName", "WorkLocation")),
             WorkLocationCode = GetValue(
                 row.Values,
                 "WorkLocationCode",
                 "BranchCode"),
-            DepartmentName = GetValue(
+            DepartmentName = GetPreferredLocalizedValue(
                 row.Values,
-                "DepartmentName"),
+                "DepartmentName",
+                preferredCulture),
             DepartmentCode = GetValue(
                 row.Values,
                 "DepartmentCode"),
-            PositionName = GetValue(
-                row.Values,
-                "PositionName",
-                "Position"),
+            PositionName = FirstNonBlank(
+                GetPreferredLocalizedValue(row.Values, "PositionName", preferredCulture),
+                GetValue(row.Values, "Position")),
             PositionCode = GetValue(
                 row.Values,
                 "PositionCode"),
@@ -784,8 +1085,36 @@ public sealed class EmployeeBootstrapImportEngine
                 "EmploymentStatus"),
             DirectManagerEmployeeNo = GetValue(
                 row.Values,
-                "DirectManagerEmployeeNo")
+                "DirectManagerEmployeeNo"),
+            FirstName = firstName,
+            SecondName = secondName,
+            ThirdName = thirdName,
+            LastName = lastName,
+            FirstNameEn = FirstNonBlank(
+                GetValue(row.Values, "FirstNameEn"),
+                GetPreferredLocalizedValue(row.Values, "FirstName", "en-US")),
+            SecondNameEn = FirstNonBlank(
+                GetValue(row.Values, "SecondNameEn"),
+                GetPreferredLocalizedValue(row.Values, "SecondName", "en-US")),
+            ThirdNameEn = FirstNonBlank(
+                GetValue(row.Values, "ThirdNameEn"),
+                GetPreferredLocalizedValue(row.Values, "ThirdName", "en-US")),
+            LastNameEn = FirstNonBlank(
+                GetValue(row.Values, "LastNameEn"),
+                GetPreferredLocalizedValue(row.Values, "LastName", "en-US")),
+            PassportNo = GetValue(row.Values, "PassportNo"),
+            SponsorName = GetValue(row.Values, "SponsorName"),
+            Religion = GetValue(row.Values, "Religion"),
+            MotherCountry = GetValue(row.Values, "MotherCountry"),
+            MotherCity = GetValue(row.Values, "MotherCity"),
+            WorkType = GetValue(row.Values, "WorkType"),
+            JobGrade = GetValue(row.Values, "JobGrade"),
+            PhoneExtension = GetValue(row.Values, "PhoneExtension"),
+            PersonalEmail = GetValue(row.Values, "PersonalEmail")
         };
+
+        plan.LocalizedValues.AddRange(ParseLocalizedValues(row.Values));
+        ValidateRequiredLocalizedValues(plan, requiredCultures);
 
         Require(plan.EmployeeNo, "EmployeeNo", plan.Errors);
         Require(plan.FullName, "FullName", plan.Errors);
@@ -856,6 +1185,30 @@ public sealed class EmployeeBootstrapImportEngine
             "PositionName",
             plan.Errors);
 
+        foreach (var (value, maximum, field) in new (string Value, int Maximum, string Field)[]
+                 {
+                     (plan.FirstName, 100, "FirstName"),
+                     (plan.SecondName, 100, "SecondName"),
+                     (plan.ThirdName, 100, "ThirdName"),
+                     (plan.LastName, 100, "LastName"),
+                     (plan.FirstNameEn, 100, "FirstNameEn"),
+                     (plan.SecondNameEn, 100, "SecondNameEn"),
+                     (plan.ThirdNameEn, 100, "ThirdNameEn"),
+                     (plan.LastNameEn, 100, "LastNameEn"),
+                     (plan.PassportNo, 50, "PassportNo"),
+                     (plan.SponsorName, 150, "SponsorName"),
+                     (plan.Religion, 50, "Religion"),
+                     (plan.MotherCountry, 100, "MotherCountry"),
+                     (plan.MotherCity, 100, "MotherCity"),
+                     (plan.WorkType, 50, "WorkType"),
+                     (plan.JobGrade, 100, "JobGrade"),
+                     (plan.PhoneExtension, 20, "PhoneExtension"),
+                     (plan.PersonalEmail, 200, "PersonalEmail")
+                 })
+        {
+            ValidateLength(value, maximum, field, plan.Errors);
+        }
+
         var hireDateText = GetValue(
             row.Values,
             "HireDate");
@@ -888,6 +1241,32 @@ public sealed class EmployeeBootstrapImportEngine
             else
             {
                 plan.BirthDate = birthDate;
+            }
+        }
+
+        var joiningDateText = GetValue(row.Values, "JoiningDate");
+        if (!string.IsNullOrWhiteSpace(joiningDateText))
+        {
+            if (!TryParseDate(joiningDateText, out var joiningDate))
+            {
+                plan.Errors.Add($"Invalid JoiningDate: {joiningDateText}");
+            }
+            else
+            {
+                plan.JoiningDate = joiningDate;
+            }
+        }
+
+        var isCitizenText = GetValue(row.Values, "IsCitizen");
+        if (!string.IsNullOrWhiteSpace(isCitizenText))
+        {
+            if (!TryParseBoolean(isCitizenText, out var isCitizen))
+            {
+                plan.Errors.Add($"Invalid IsCitizen value: {isCitizenText}");
+            }
+            else
+            {
+                plan.IsCitizen = isCitizen;
             }
         }
 
@@ -2002,6 +2381,9 @@ public sealed class EmployeeBootstrapImportEngine
             $"""
             SELECT TOP (@MaxRows)
                 e.Id,
+                b.CompanyId,
+                e.BranchId,
+                ISNULL(e.DepartmentId, 0) AS DepartmentId,
                 e.PositionId,
                 e.EmployeeNo,
                 e.FullName,
@@ -2025,6 +2407,25 @@ public sealed class EmployeeBootstrapImportEngine
                 ISNULL(e.Country, N'') AS Country,
                 ISNULL(e.ContractType, N'') AS ContractType,
                 ISNULL(e.EmploymentStatus, N'') AS EmploymentStatus,
+                ISNULL(e.FirstName, N'') AS FirstName,
+                ISNULL(e.SecondName, N'') AS SecondName,
+                ISNULL(e.ThirdName, N'') AS ThirdName,
+                ISNULL(e.LastName, N'') AS LastName,
+                ISNULL(e.FirstNameEn, N'') AS FirstNameEn,
+                ISNULL(e.SecondNameEn, N'') AS SecondNameEn,
+                ISNULL(e.ThirdNameEn, N'') AS ThirdNameEn,
+                ISNULL(e.LastNameEn, N'') AS LastNameEn,
+                CASE WHEN e.IsCitizen = 1 THEN 'true' ELSE 'false' END AS IsCitizen,
+                ISNULL(e.PassportNo, N'') AS PassportNo,
+                ISNULL(e.SponsorName, N'') AS SponsorName,
+                ISNULL(e.Religion, N'') AS Religion,
+                ISNULL(e.MotherCountry, N'') AS MotherCountry,
+                ISNULL(e.MotherCity, N'') AS MotherCity,
+                CONVERT(varchar(10), e.JoiningDate, 23) AS JoiningDate,
+                ISNULL(e.WorkType, N'') AS WorkType,
+                ISNULL(e.JobGrade, N'') AS JobGrade,
+                ISNULL(e.PhoneExtension, N'') AS PhoneExtension,
+                ISNULL(e.PersonalEmail, N'') AS PersonalEmail,
                 {basicSalaryExpr} AS BasicSalary,
                 CASE
                     WHEN e.IsActive = 1 THEN 'true'
@@ -2046,6 +2447,9 @@ public sealed class EmployeeBootstrapImportEngine
             command => AddParameter(command, "@MaxRows", MaxRows),
             reader => new TemplateEmployeeRow(
                 GetInt32(reader, "Id"),
+                GetInt32(reader, "CompanyId"),
+                GetInt32(reader, "BranchId"),
+                GetInt32(reader, "DepartmentId"),
                 GetNullableInt32(reader, "PositionId"),
                 new Dictionary<string, string>(
                     StringComparer.OrdinalIgnoreCase)
@@ -2095,7 +2499,26 @@ public sealed class EmployeeBootstrapImportEngine
                             reader,
                             "DirectManagerEmployeeNo"),
                     ["BasicSalary"] =
-                        GetString(reader, "BasicSalary")
+                        GetString(reader, "BasicSalary"),
+                    ["FirstName"] = GetString(reader, "FirstName"),
+                    ["SecondName"] = GetString(reader, "SecondName"),
+                    ["ThirdName"] = GetString(reader, "ThirdName"),
+                    ["LastName"] = GetString(reader, "LastName"),
+                    ["FirstNameEn"] = GetString(reader, "FirstNameEn"),
+                    ["SecondNameEn"] = GetString(reader, "SecondNameEn"),
+                    ["ThirdNameEn"] = GetString(reader, "ThirdNameEn"),
+                    ["LastNameEn"] = GetString(reader, "LastNameEn"),
+                    ["IsCitizen"] = GetString(reader, "IsCitizen"),
+                    ["PassportNo"] = GetString(reader, "PassportNo"),
+                    ["SponsorName"] = GetString(reader, "SponsorName"),
+                    ["Religion"] = GetString(reader, "Religion"),
+                    ["MotherCountry"] = GetString(reader, "MotherCountry"),
+                    ["MotherCity"] = GetString(reader, "MotherCity"),
+                    ["JoiningDate"] = GetString(reader, "JoiningDate"),
+                    ["WorkType"] = GetString(reader, "WorkType"),
+                    ["JobGrade"] = GetString(reader, "JobGrade"),
+                    ["PhoneExtension"] = GetString(reader, "PhoneExtension"),
+                    ["PersonalEmail"] = GetString(reader, "PersonalEmail")
                 }));
 
         if (employees.Count == 0)
@@ -2109,6 +2532,8 @@ public sealed class EmployeeBootstrapImportEngine
                 employees,
                 dynamicHeadersByKey);
         }
+
+        await FillLocalizedTemplateValuesAsync(employees, columns);
 
         var rows = new List<List<string>>(employees.Count);
 
@@ -2173,6 +2598,93 @@ public sealed class EmployeeBootstrapImportEngine
             }
 
             employee.Values[header] = value.FieldValue;
+        }
+    }
+
+    private async Task FillLocalizedTemplateValuesAsync(
+        List<TemplateEmployeeRow> employees,
+        IReadOnlyList<EmployeeTemplateColumn> columns)
+    {
+        var localizedColumns = new List<LocalizedTemplateColumn>();
+        foreach (var column in columns)
+        {
+            if (TryParseLocalizedHeader(
+                    column.Name,
+                    out var fieldName,
+                    out var cultureCode))
+            {
+                localizedColumns.Add(new LocalizedTemplateColumn(
+                    column.Name,
+                    fieldName,
+                    cultureCode));
+            }
+        }
+
+        if (localizedColumns.Count == 0 || employees.Count == 0)
+        {
+            return;
+        }
+
+        var companyIds = employees.Select(item => item.CompanyId).Distinct().ToArray();
+        var defaults = await _dbContext.CompanyLanguages
+            .AsNoTracking()
+            .Where(item =>
+                companyIds.Contains(item.CompanyId) &&
+                item.IsActive &&
+                item.IsDefault &&
+                !item.IsDeleted)
+            .ToDictionaryAsync(
+                item => item.CompanyId,
+                item => NormalizeCultureCode(item.CultureCode));
+
+        var translations = await _dbContext.LocalizedEntityValues
+            .AsNoTracking()
+            .Where(item =>
+                companyIds.Contains(item.CompanyId) &&
+                !item.IsDeleted &&
+                (item.EntityType == "Employee" ||
+                 item.EntityType == "Company" ||
+                 item.EntityType == "Branch" ||
+                 item.EntityType == "Department" ||
+                 item.EntityType == "Position"))
+            .ToListAsync();
+
+        foreach (var employee in employees)
+        {
+            foreach (var column in localizedColumns)
+            {
+                var (entityType, entityId, localizedField, fallbackKey) = column.FieldName switch
+                {
+                    "CompanyName" => ("Company", employee.CompanyId, "Name", "CompanyName"),
+                    "WorkLocationName" => ("Branch", employee.BranchId, "Name", "WorkLocationName"),
+                    "DepartmentName" => ("Department", employee.DepartmentId, "Name", "DepartmentName"),
+                    "PositionName" => ("Position", employee.PositionId ?? 0, "Name", "PositionName"),
+                    _ => ("Employee", employee.Id, column.FieldName, column.FieldName)
+                };
+
+                var value = translations.FirstOrDefault(item =>
+                    item.CompanyId == employee.CompanyId &&
+                    item.EntityType == entityType &&
+                    item.EntityId == entityId &&
+                    item.FieldName.Equals(localizedField, StringComparison.OrdinalIgnoreCase) &&
+                    item.CultureCode.Equals(column.CultureCode, StringComparison.OrdinalIgnoreCase))?.Value;
+
+                if (string.IsNullOrWhiteSpace(value) &&
+                    defaults.TryGetValue(employee.CompanyId, out var defaultCulture) &&
+                    defaultCulture.Equals(column.CultureCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    employee.Values.TryGetValue(fallbackKey, out value);
+                }
+
+                if (string.IsNullOrWhiteSpace(value) &&
+                    column.CultureCode.StartsWith("en", StringComparison.OrdinalIgnoreCase) &&
+                    employee.Values.TryGetValue(fallbackKey + "En", out var legacyEnglish))
+                {
+                    value = legacyEnglish;
+                }
+
+                employee.Values[column.Name] = value ?? string.Empty;
+            }
         }
     }
 
@@ -2310,8 +2822,10 @@ public sealed class EmployeeBootstrapImportEngine
         bool HasAny(params string[] names)
         {
             return names.Any(name =>
-                normalized.Contains(
-                    NormalizeHeader(name)));
+                normalized.Contains(NormalizeHeader(name)) ||
+                headers.Any(header =>
+                    TryParseLocalizedHeader(header, out var fieldName, out _) &&
+                    fieldName.Equals(name, StringComparison.OrdinalIgnoreCase)));
         }
 
         var missing = new List<string>();
@@ -2321,9 +2835,10 @@ public sealed class EmployeeBootstrapImportEngine
             missing.Add("EmployeeNo");
         }
 
-        if (!HasAny("FullName"))
+        if (!HasAny("FullName") &&
+            !(HasAny("FirstName") && HasAny("LastName")))
         {
-            missing.Add("FullName");
+            missing.Add("FirstName/LastName");
         }
 
         if (!HasAny("CompanyName", "CompanyCode"))
@@ -3180,9 +3695,17 @@ public sealed class EmployeeBootstrapImportEngine
              index++)
         {
             var column = dataColumns[index];
+            var mappingKey = column.Name;
+            if (TryParseLocalizedHeader(
+                    column.Name,
+                    out var localizedField,
+                    out _))
+            {
+                mappingKey = localizedField;
+            }
 
             if (!mappings.TryGetValue(
-                    column.Name,
+                    mappingKey,
                     out var referenceHeader) ||
                 !referenceMap.TryGetValue(
                     referenceHeader,
@@ -3206,7 +3729,7 @@ public sealed class EmployeeBootstrapImportEngine
 
             items.Add(
                 "<dataValidation type=\"list\" allowBlank=\"1\" showErrorMessage=\"0\" showInputMessage=\"1\" " +
-                $"sqref=\"{sqref}\" promptTitle=\"NEXORA reference\" prompt=\"Select an existing value or type a new value to create it automatically.\">" +
+                $"sqref=\"{sqref}\" promptTitle=\"ZYNORA reference\" prompt=\"Select an existing value or type a new value to create it automatically.\">" +
                 $"<formula1>{formula}</formula1>" +
                 "</dataValidation>");
         }
@@ -3536,6 +4059,421 @@ public sealed class EmployeeBootstrapImportEngine
 
         return string.Empty;
     }
+
+    private async Task SaveImportedLocalizedValuesAsync(
+        ResolvedEmployeeImportRow resolved)
+    {
+        if (resolved.Plan.LocalizedValues.Count == 0)
+        {
+            return;
+        }
+
+        var activeCultures = (await _dbContext.CompanyLanguages
+                .AsNoTracking()
+                .Where(item =>
+                    item.CompanyId == resolved.CompanyId &&
+                    item.IsActive &&
+                    !item.IsDeleted)
+                .Select(item => item.CultureCode)
+                .ToListAsync())
+            .Select(NormalizeCultureCode)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (activeCultures.Count == 0)
+        {
+            return;
+        }
+
+        var values = resolved.Plan.LocalizedValues
+            .Where(item =>
+                activeCultures.Contains(item.CultureCode) &&
+                !string.IsNullOrWhiteSpace(item.Value))
+            .ToList();
+
+        await UpsertLocalizedEntityAsync(
+            resolved.CompanyId,
+            "Company",
+            resolved.CompanyId,
+            values.Where(item => item.FieldName == "CompanyName")
+                .Select(item => item with { FieldName = "Name" }));
+
+        await UpsertLocalizedEntityAsync(
+            resolved.CompanyId,
+            "Branch",
+            resolved.BranchId,
+            values.Where(item => item.FieldName == "WorkLocationName")
+                .Select(item => item with { FieldName = "Name" }));
+
+        await UpsertLocalizedEntityAsync(
+            resolved.CompanyId,
+            "Department",
+            resolved.DepartmentId,
+            values.Where(item => item.FieldName == "DepartmentName")
+                .Select(item => item with { FieldName = "Name" }));
+
+        await UpsertLocalizedEntityAsync(
+            resolved.CompanyId,
+            "Position",
+            resolved.PositionId,
+            values.Where(item => item.FieldName == "PositionName")
+                .Select(item => item with { FieldName = "Name" }));
+
+        var employeeValues = values
+            .Where(item => item.FieldName is
+                "FirstName" or "SecondName" or "ThirdName" or "LastName")
+            .ToList();
+
+        foreach (var culture in employeeValues
+                     .Select(item => item.CultureCode)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var cultureValues = employeeValues
+                .Where(item => item.CultureCode.Equals(
+                    culture,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var fullName = ComposeFullName(
+                cultureValues.FirstOrDefault(item => item.FieldName == "FirstName")?.Value ?? string.Empty,
+                cultureValues.FirstOrDefault(item => item.FieldName == "SecondName")?.Value ?? string.Empty,
+                cultureValues.FirstOrDefault(item => item.FieldName == "ThirdName")?.Value ?? string.Empty,
+                cultureValues.FirstOrDefault(item => item.FieldName == "LastName")?.Value ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                employeeValues.Add(new LocalizedCellValue("FullName", culture, fullName));
+            }
+        }
+
+        await UpsertLocalizedEntityAsync(
+            resolved.CompanyId,
+            "Employee",
+            resolved.Employee.Id,
+            employeeValues);
+    }
+
+    private async Task UpsertLocalizedEntityAsync(
+        int companyId,
+        string entityType,
+        int entityId,
+        IEnumerable<LocalizedCellValue> candidateValues)
+    {
+        var values = candidateValues
+            .Where(item => !string.IsNullOrWhiteSpace(item.Value))
+            .GroupBy(
+                item => $"{item.FieldName}\u001f{item.CultureCode}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToList();
+
+        if (values.Count == 0)
+        {
+            return;
+        }
+
+        var fields = values.Select(item => item.FieldName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var cultures = values.Select(item => item.CultureCode)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var existing = await _dbContext.LocalizedEntityValues
+            .Where(item =>
+                item.CompanyId == companyId &&
+                item.EntityType == entityType &&
+                item.EntityId == entityId &&
+                fields.Contains(item.FieldName) &&
+                cultures.Contains(item.CultureCode))
+            .ToListAsync();
+
+        foreach (var value in values)
+        {
+            var row = existing.FirstOrDefault(item =>
+                item.FieldName.Equals(value.FieldName, StringComparison.OrdinalIgnoreCase) &&
+                item.CultureCode.Equals(value.CultureCode, StringComparison.OrdinalIgnoreCase));
+
+            if (row is null)
+            {
+                _dbContext.LocalizedEntityValues.Add(new LocalizedEntityValue
+                {
+                    CompanyId = companyId,
+                    EntityType = entityType,
+                    EntityId = entityId,
+                    FieldName = value.FieldName,
+                    CultureCode = value.CultureCode,
+                    Value = value.Value.Trim(),
+                    TranslationStatus = "Import"
+                });
+            }
+            else
+            {
+                row.Value = value.Value.Trim();
+                row.TranslationStatus = "Import";
+                row.IsDeleted = false;
+                row.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task<Dictionary<string, string>> LoadDefaultCulturesAsync()
+    {
+        var rows = await (
+            from company in _dbContext.Companies.AsNoTracking()
+            join language in _dbContext.CompanyLanguages.AsNoTracking()
+                on company.Id equals language.CompanyId
+            where !company.IsDeleted &&
+                  language.IsActive &&
+                  language.IsDefault &&
+                  !language.IsDeleted
+            select new
+            {
+                company.Code,
+                company.Name,
+                language.CultureCode
+            }).ToListAsync();
+
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            var culture = NormalizeCultureCode(row.CultureCode);
+            if (!string.IsNullOrWhiteSpace(row.Code))
+            {
+                result[$"code:{NormalizeKey(row.Code)}"] = culture;
+            }
+
+            if (!string.IsNullOrWhiteSpace(row.Name))
+            {
+                result[$"name:{NormalizeKey(row.Name)}"] = culture;
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<Dictionary<string, IReadOnlyList<string>>> LoadRequiredCulturesAsync()
+    {
+        var rows = await (
+            from company in _dbContext.Companies.AsNoTracking()
+            join language in _dbContext.CompanyLanguages.AsNoTracking()
+                on company.Id equals language.CompanyId
+            where !company.IsDeleted && language.IsActive && language.IsRequired && !language.IsDeleted
+            select new { company.Code, company.Name, language.CultureCode }).ToListAsync();
+
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in rows.GroupBy(row => NormalizeKey(row.Code)))
+        {
+            result[$"code:{group.Key}"] = group.Select(row => NormalizeCultureCode(row.CultureCode))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        foreach (var group in rows.GroupBy(row => NormalizeKey(row.Name)))
+        {
+            result[$"name:{group.Key}"] = group.Select(row => NormalizeCultureCode(row.CultureCode))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        return result;
+    }
+
+    private static void ValidateRequiredLocalizedValues(
+        EmployeeBootstrapRowPlan plan,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> requirements)
+    {
+        IReadOnlyList<string>? cultures = null;
+        if (!string.IsNullOrWhiteSpace(plan.CompanyCode))
+            requirements.TryGetValue($"code:{NormalizeKey(plan.CompanyCode)}", out cultures);
+        if (cultures is null && !string.IsNullOrWhiteSpace(plan.CompanyName))
+            requirements.TryGetValue($"name:{NormalizeKey(plan.CompanyName)}", out cultures);
+        if (cultures is null || cultures.Count == 0) return;
+
+        var requiredFields = new[]
+        {
+            "FirstName", "LastName", "CompanyName", "WorkLocationName", "DepartmentName", "PositionName"
+        };
+
+        foreach (var culture in cultures)
+        {
+            foreach (var field in requiredFields)
+            {
+                var present = plan.LocalizedValues.Any(item =>
+                    item.FieldName.Equals(field, StringComparison.OrdinalIgnoreCase) &&
+                    item.CultureCode.Equals(culture, StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(item.Value));
+
+                // الملفات القديمة تبقى مدعومة: القيمة غير الموسومة تغطي اللغة الأساسية فقط.
+                if (!present &&
+                    plan.LocalizedValues.Count == 0 &&
+                    !string.IsNullOrWhiteSpace(GetLegacyPlanValue(plan, field)))
+                {
+                    present = true;
+                }
+
+                if (!present)
+                {
+                    plan.Errors.Add($"{field} [{culture}] is required.");
+                }
+            }
+        }
+    }
+
+    private static string GetLegacyPlanValue(EmployeeBootstrapRowPlan plan, string fieldName) => fieldName switch
+    {
+        "FirstName" => FirstNonBlank(plan.FirstName, plan.FullName),
+        "LastName" => FirstNonBlank(plan.LastName, plan.FullName),
+        "CompanyName" => plan.CompanyName,
+        "WorkLocationName" => plan.WorkLocationName,
+        "DepartmentName" => plan.DepartmentName,
+        "PositionName" => plan.PositionName,
+        _ => string.Empty
+    };
+
+    private static string? ResolvePreferredCulture(
+        IReadOnlyDictionary<string, string> values,
+        IReadOnlyDictionary<string, string> configuredDefaults)
+    {
+        var companyCode = GetValue(values, "CompanyCode");
+        if (!string.IsNullOrWhiteSpace(companyCode) &&
+            configuredDefaults.TryGetValue(
+                $"code:{NormalizeKey(companyCode)}",
+                out var byCode))
+        {
+            return byCode;
+        }
+
+        var companyName = GetValue(values, "CompanyName", "Company");
+        if (!string.IsNullOrWhiteSpace(companyName) &&
+            configuredDefaults.TryGetValue(
+                $"name:{NormalizeKey(companyName)}",
+                out var byName))
+        {
+            return byName;
+        }
+
+        foreach (var localizedName in ParseLocalizedValues(values)
+                     .Where(item => item.FieldName == "CompanyName" && !string.IsNullOrWhiteSpace(item.Value)))
+        {
+            if (configuredDefaults.TryGetValue(
+                    $"name:{NormalizeKey(localizedName.Value)}",
+                    out var byLocalizedName))
+            {
+                return byLocalizedName;
+            }
+        }
+
+        return null;
+    }
+
+    private static string GetPreferredLocalizedValue(
+        IReadOnlyDictionary<string, string> values,
+        string fieldName,
+        string? preferredCulture)
+    {
+        var legacy = GetValue(values, fieldName);
+        if (!string.IsNullOrWhiteSpace(legacy))
+        {
+            return legacy;
+        }
+
+        var localized = ParseLocalizedValues(values)
+            .Where(item => item.FieldName.Equals(
+                fieldName,
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(preferredCulture))
+        {
+            var preferred = localized.FirstOrDefault(item =>
+                item.CultureCode.Equals(
+                    NormalizeCultureCode(preferredCulture),
+                    StringComparison.OrdinalIgnoreCase));
+            if (preferred is not null && !string.IsNullOrWhiteSpace(preferred.Value))
+            {
+                return preferred.Value;
+            }
+        }
+
+        var arabic = localized.FirstOrDefault(item =>
+            item.CultureCode.StartsWith("ar", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(item.Value));
+
+        return arabic?.Value ??
+               localized.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Value))?.Value ??
+               string.Empty;
+    }
+
+    private static List<LocalizedCellValue> ParseLocalizedValues(
+        IReadOnlyDictionary<string, string> values)
+    {
+        var result = new List<LocalizedCellValue>();
+
+        foreach (var pair in values)
+        {
+            if (!TryParseLocalizedHeader(
+                    pair.Key,
+                    out var fieldName,
+                    out var cultureCode) ||
+                !LocalizedTemplateFields.Any(field =>
+                    field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            result.Add(new LocalizedCellValue(
+                fieldName,
+                cultureCode,
+                pair.Value?.Trim() ?? string.Empty));
+        }
+
+        return result;
+    }
+
+    public static bool TryParseLocalizedHeader(
+        string? header,
+        out string fieldName,
+        out string cultureCode)
+    {
+        fieldName = string.Empty;
+        cultureCode = string.Empty;
+
+        var value = (header ?? string.Empty).Replace("*", string.Empty).Trim();
+        var start = value.LastIndexOf('[');
+        var end = value.LastIndexOf(']');
+        if (start < 0 || end <= start)
+        {
+            return false;
+        }
+
+        var culture = value[(start + 1)..end].Trim();
+        try
+        {
+            cultureCode = CultureInfo.GetCultureInfo(culture).Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return false;
+        }
+
+        var normalizedField = ImportHeaderAliases.Canonicalize(value[..start]);
+        var definition = LocalizedTemplateFields.FirstOrDefault(field =>
+            ImportHeaderAliases.Canonicalize(field.Name) == normalizedField ||
+            ImportHeaderAliases.Canonicalize(field.ArabicLabel) == normalizedField);
+
+        if (definition is null)
+        {
+            return false;
+        }
+
+        fieldName = definition.Name;
+        return true;
+    }
+
+    private static string ComposeFullName(params string[] parts) =>
+        string.Join(" ", parts
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Select(part => part.Trim()));
+
+    private static string FirstNonBlank(params string[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
 
     private static bool TryParseBoolean(
         string value,
@@ -3950,6 +4888,26 @@ public sealed class EmployeeBootstrapImportEngine
         public bool? IsActive { get; set; }
         public string DirectManagerEmployeeNo { get; set; } = string.Empty;
         public decimal? BasicSalary { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string SecondName { get; set; } = string.Empty;
+        public string ThirdName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string FirstNameEn { get; set; } = string.Empty;
+        public string SecondNameEn { get; set; } = string.Empty;
+        public string ThirdNameEn { get; set; } = string.Empty;
+        public string LastNameEn { get; set; } = string.Empty;
+        public bool? IsCitizen { get; set; }
+        public string PassportNo { get; set; } = string.Empty;
+        public string SponsorName { get; set; } = string.Empty;
+        public string Religion { get; set; } = string.Empty;
+        public string MotherCountry { get; set; } = string.Empty;
+        public string MotherCity { get; set; } = string.Empty;
+        public DateOnly? JoiningDate { get; set; }
+        public string WorkType { get; set; } = string.Empty;
+        public string JobGrade { get; set; } = string.Empty;
+        public string PhoneExtension { get; set; } = string.Empty;
+        public string PersonalEmail { get; set; } = string.Empty;
+        public List<LocalizedCellValue> LocalizedValues { get; } = new();
         public string EmployeeAction { get; set; } = "Create";
         public CompanyReference? Company { get; set; }
         public BranchReference? Branch { get; set; }
@@ -4111,7 +5069,11 @@ public sealed class EmployeeBootstrapImportEngine
     private sealed record ResolvedEmployeeImportRow(
         EmployeeBootstrapRowPlan Plan,
         Employee Employee,
-        bool Created);
+        bool Created,
+        int CompanyId,
+        int BranchId,
+        int DepartmentId,
+        int PositionId);
 
     private sealed record DynamicFieldDefinition(
         string FieldKey,
@@ -4131,8 +5093,33 @@ public sealed class EmployeeBootstrapImportEngine
 
     private sealed record TemplateEmployeeRow(
         int Id,
+        int CompanyId,
+        int BranchId,
+        int DepartmentId,
         int? PositionId,
         Dictionary<string, string> Values);
+
+    private sealed record TemplateLanguage(
+        string CultureCode,
+        string NativeName,
+        bool IsDefault,
+        bool IsRequired);
+
+    private sealed record LocalizedTemplateField(
+        string Name,
+        string ArabicLabel,
+        bool Required,
+        double Width);
+
+    private sealed record LocalizedCellValue(
+        string FieldName,
+        string CultureCode,
+        string Value);
+
+    private sealed record LocalizedTemplateColumn(
+        string Name,
+        string FieldName,
+        string CultureCode);
 
     private sealed record TemplateReferenceData(
         List<TemplateReferenceRow> Companies,

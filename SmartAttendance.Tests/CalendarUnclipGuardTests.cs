@@ -41,7 +41,7 @@ public class CalendarUnclipGuardTests
     private static string CalendarCss()
     {
         var css = File.ReadAllText(Path.Combine(
-            RepoRoot(), "SmartAttendance.Web", "wwwroot", "css", "nexora-calendar-v18.css"));
+            RepoRoot(), "SmartAttendance.Web", "wwwroot", "css", "zynora-calendar-v18.css"));
 
         return Regex.Replace(css, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
     }
@@ -125,7 +125,7 @@ public class CalendarUnclipGuardTests
 
         // والراية تُرفع وتُنزل بكلا المنتقيين — منتقي التاريخ ومنتقي الشهر يتشاركان
         // الصنف `.nxcal`، فلو رفعها أحدهما ولم يُنزلها الآخر بقي القصّ مفكوكاً.
-        foreach (var script in new[] { "nexora-calendar-v18.js", "nexora-month-picker-v1.js" })
+        foreach (var script in new[] { "zynora-calendar-v18.js", "zynora-month-picker-v1.js" })
         {
             var source = File.ReadAllText(Path.Combine(
                 RepoRoot(), "SmartAttendance.Web", "wwwroot", "js", script));

@@ -89,7 +89,7 @@ window.__zyGovScan = async function (pages) {
         } catch (_) { /* محدِّد لا يدعمه المتصفّح */ }
       });
 
-      doc.querySelectorAll('.nexora-content *').forEach(el => {
+      doc.querySelectorAll('.zynora-content *').forEach(el => {
         const widget = role(el);
         if (!widget) return;
 

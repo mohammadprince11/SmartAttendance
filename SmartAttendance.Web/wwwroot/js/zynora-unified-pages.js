@@ -12,7 +12,7 @@
     var NON_TEXT_INPUT_TYPES = ["checkbox", "radio", "hidden", "file", "color", "range", "image"];
     var PAGE_HEADERS = [
         "page-header", "hrms-page-header", "zhr-header", "nx-setup-header",
-        "nexora-page-header", "ps-head", "ats-page-header", "dat-page-header"
+        "zynora-page-header", "ps-head", "ats-page-header", "dat-page-header"
     ];
 
     function classNames(element) {

@@ -1,0 +1,707 @@
+/*
+ * ZYNORA HR — Core Application Shell
+ * Existing "zynora-" class names are temporarily retained as internal
+ * compatibility hooks. All visible branding and design tokens are ZYNORA.
+ */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+    background: var(--zy-bg);
+}
+
+body {
+    width: 100%;
+    max-width: 100%;
+    /* لا `overflow` هنا: الحماية الأفقية على <html> وحدها، وأي قيمة غير
+       `visible` تجعل <body> حاوية تمرير فتموت الالتصاقات داخله.
+       انظر zynora-global-scroll-system.css — مِلكية التمرير مركزها هناك. */
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--brand-primary) 8%, transparent), transparent 28%),
+        var(--zy-bg) !important;
+    color: var(--zy-text) !important;
+    font-family: var(--zy-font-ar) !important;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+html[lang="en"] body {
+    font-family: var(--zy-font-ui) !important;
+}
+
+a {
+    color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+.zynora-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 100vh !important;
+    display: grid !important;
+    align-items: stretch !important;
+    background: transparent !important;
+}
+
+html[dir="rtl"] .zynora-shell {
+    grid-template-columns: minmax(0, 1fr) var(--zy-sidebar-width) !important;
+}
+
+html[dir="ltr"] .zynora-shell {
+    grid-template-columns: var(--zy-sidebar-width) minmax(0, 1fr) !important;
+}
+
+.zynora-sidebar {
+    width: var(--zy-sidebar-width) !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    position: sticky !important;
+    top: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: var(--zy-space-3) var(--zy-space-2) !important;
+    background:
+        radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 30%),
+        linear-gradient(180deg, var(--zy-midnight-navy), #06101F 100%) !important;
+    border: 0 !important;
+    color: var(--zy-cloud-white) !important;
+    box-shadow: -8px 0 28px rgba(8, 20, 38, .20) !important;
+    z-index: 30 !important;
+}
+
+html[dir="rtl"] .zynora-sidebar {
+    grid-column: 2 !important;
+    border-left: 1px solid rgba(217, 225, 232, .10) !important;
+}
+
+html[dir="ltr"] .zynora-sidebar {
+    grid-column: 1 !important;
+    border-right: 1px solid rgba(217, 225, 232, .10) !important;
+}
+
+.zynora-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: transparent !important;
+}
+
+html[dir="rtl"] .zynora-main {
+    grid-column: 1 !important;
+}
+
+html[dir="ltr"] .zynora-main {
+    grid-column: 2 !important;
+}
+
+.zynora-brand-card {
+    display: block !important;
+    margin: 0 var(--zy-space-1) var(--zy-space-3) !important;
+    padding: var(--zy-space-2) var(--zy-space-2) var(--zy-space-3) !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(217, 225, 232, .12) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.zynora-brand-link {
+    display: block !important;
+    text-decoration: none !important;
+}
+
+.zynora-brand-logo {
+    display: block;
+    width: min(100%, 222px);
+    height: auto;
+    margin-inline: auto;
+}
+
+.zynora-brand-tagline {
+    display: block;
+    margin-top: var(--zy-space-2);
+    color: rgba(247, 249, 251, .66);
+    font-family: var(--zy-font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    text-align: center;
+    direction: ltr;
+}
+
+.zynora-brand-symbol {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: var(--zy-radius-lg) !important;
+    box-shadow: none !important;
+}
+
+.zynora-wordmark {
+    color: var(--zy-cloud-white) !important;
+    font-family: var(--zy-font-display) !important;
+    font-weight: 600 !important;
+    letter-spacing: .12em !important;
+}
+
+.zynora-arabic {
+    color: var(--zy-refined-aqua) !important;
+}
+
+.zynora-tagline {
+    color: rgba(247, 249, 251, .62) !important;
+}
+
+.zynora-nav {
+    display: grid !important;
+    gap: var(--zy-space-2) !important;
+}
+
+.zynora-nav-group {
+    margin: 0 !important;
+    border: 1px solid rgba(217, 225, 232, .08) !important;
+    border-radius: var(--zy-radius-lg) !important;
+    background: rgba(247, 249, 251, .018) !important;
+    overflow: clip !important;
+}
+
+.zynora-nav-group[open] {
+    border-color: color-mix(in srgb, var(--brand-primary) 18%, transparent) !important;
+    background: color-mix(in srgb, var(--brand-primary) 3.5%, transparent) !important;
+}
+
+.zynora-nav-link,
+.zynora-nav-group > summary {
+    min-height: 42px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 9px 12px !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--zy-radius-md) !important;
+    color: rgba(247, 249, 251, .74) !important;
+    background: transparent !important;
+    text-decoration: none !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    transition:
+        color var(--zy-duration-fast) var(--zy-ease),
+        background-color var(--zy-duration-fast) var(--zy-ease),
+        border-color var(--zy-duration-fast) var(--zy-ease) !important;
+}
+
+.zynora-nav-group > summary {
+    list-style: none !important;
+    color: rgba(247, 249, 251, .88) !important;
+}
+
+.zynora-nav-group > summary::-webkit-details-marker {
+    display: none !important;
+}
+
+.zynora-nav-link:hover,
+.zynora-nav-group > summary:hover {
+    color: var(--zy-cloud-white) !important;
+    background: rgba(247, 249, 251, .05) !important;
+    border-color: rgba(217, 225, 232, .10) !important;
+}
+
+.zynora-nav-link.active,
+.zynora-nav-link.zynora-active,
+.zynora-nav-link[aria-current="page"] {
+    color: var(--zy-midnight-navy) !important;
+    background: var(--zy-electric-teal) !important;
+    border-color: rgba(66, 222, 211, .68) !important;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--brand-primary) 14%, transparent) !important;
+}
+
+.zynora-nav-link.active span,
+.zynora-nav-link.zynora-active span,
+.zynora-nav-link[aria-current="page"] span {
+    color: var(--zy-midnight-navy) !important;
+}
+
+.zynora-nav-group-links {
+    display: grid !important;
+    gap: var(--zy-space-1) !important;
+    padding: 0 var(--zy-space-2) var(--zy-space-2) !important;
+    background: transparent !important;
+}
+
+.zynora-nav-group-links .zynora-nav-link {
+    min-height: 36px !important;
+    padding: 7px 11px !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+}
+
+.zynora-nav-dot {
+    width: 8px !important;
+    height: 8px !important;
+    flex: 0 0 8px !important;
+    border-radius: 2px !important;
+    background: var(--zy-electric-teal) !important;
+    box-shadow: none !important;
+}
+
+.zynora-nav-dot.gold {
+    background: var(--zy-champagne-gold) !important;
+}
+
+.zynora-chevron {
+    width: 7px !important;
+    height: 7px !important;
+    margin-inline-start: auto !important;
+    border-inline-end: 1.5px solid rgba(247, 249, 251, .55) !important;
+    border-bottom: 1.5px solid rgba(247, 249, 251, .55) !important;
+    transform: rotate(45deg) !important;
+    transition: transform var(--zy-duration-fast) var(--zy-ease) !important;
+}
+
+.zynora-nav-group[open] .zynora-chevron {
+    transform: rotate(225deg) !important;
+}
+
+.zynora-topbar {
+    min-height: var(--zy-topbar-height) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: var(--zy-space-3) !important;
+    padding: 12px var(--zy-space-4) !important;
+    background: color-mix(in srgb, var(--zy-bg-elevated) 92%, transparent) !important;
+    border-bottom: 1px solid var(--zy-border) !important;
+    backdrop-filter: blur(16px) !important;
+}
+
+.zynora-topbar-left {
+    min-width: 0;
+}
+
+.zynora-page-title {
+    color: var(--zy-text) !important;
+    font-family: var(--zy-font-ar) !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+}
+
+html[lang="en"] .zynora-page-title {
+    font-family: var(--zy-font-display) !important;
+}
+
+.zynora-page-subtitle {
+    margin-top: 3px !important;
+    color: var(--zy-text-muted) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+}
+
+.zynora-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--zy-space-2) !important;
+    flex-wrap: wrap !important;
+}
+
+.zynora-user-chip,
+.zynora-pill-button {
+    min-height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--zy-space-2) !important;
+    padding: 7px 11px !important;
+    border: 1px solid var(--zy-border) !important;
+    border-radius: var(--zy-radius-lg) !important;
+    background: var(--zy-surface) !important;
+    color: var(--zy-text) !important;
+    text-decoration: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: var(--zy-shadow-sm) !important;
+}
+
+.zynora-pill-button:hover {
+    border-color: var(--zy-border-strong) !important;
+    background: var(--zy-surface-raised) !important;
+}
+
+.zynora-user-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    border-radius: var(--zy-radius-md) !important;
+    background: var(--zy-electric-teal) !important;
+    color: var(--zy-midnight-navy) !important;
+    font-family: var(--zy-font-ui) !important;
+    font-weight: 800 !important;
+}
+
+.zynora-user-name {
+    color: var(--zy-text) !important;
+}
+
+.zynora-user-role {
+    color: var(--zy-text-muted) !important;
+    font-size: 10px !important;
+}
+
+.zynora-content {
+    width: 100% !important;
+    max-width: var(--zy-content-max) !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    margin-inline: auto !important;
+    padding: var(--zy-space-4) !important;
+    /* `scroll-padding-top` انتقل إلى <html> لأنه صار مالك التمرير. */
+    background: transparent !important;
+}
+
+.zynora-content > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+[data-sidebar-toggle] {
+    display: none !important;
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 0 !important;
+    box-shadow: var(--zy-focus-ring) !important;
+}
+
+@media (max-width: 980px) {
+    .zynora-shell,
+    html[dir="rtl"] .zynora-shell,
+    html[dir="ltr"] .zynora-shell {
+        display: block !important;
+    }
+
+    .zynora-sidebar {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: 48vh !important;
+        position: relative !important;
+        padding: var(--zy-space-2) !important;
+        border: 0 !important;
+        border-bottom: 1px solid rgba(217, 225, 232, .10) !important;
+        box-shadow: none !important;
+    }
+
+    .zynora-brand-card {
+        margin-bottom: var(--zy-space-2) !important;
+        padding-bottom: var(--zy-space-2) !important;
+    }
+
+    .zynora-brand-logo {
+        width: min(100%, 190px);
+    }
+
+    .zynora-topbar {
+        position: relative !important;
+        min-height: auto !important;
+        align-items: flex-start !important;
+        padding: var(--zy-space-3) !important;
+    }
+
+    .zynora-controls {
+        justify-content: flex-end !important;
+    }
+
+    .zynora-content {
+        padding: var(--zy-space-3) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .zynora-topbar {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .zynora-controls {
+        justify-content: flex-start !important;
+    }
+
+    .zynora-user-role {
+        display: none !important;
+    }
+
+    .zynora-content {
+        padding: 12px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+/* ZYNORA_PHASE1B_SHELL_POLISH_START */
+
+.zynora-main {
+    background:
+        radial-gradient(circle at 8% -8%, color-mix(in srgb, var(--brand-primary) 7%, transparent), transparent 28%),
+        var(--zy-bg) !important;
+}
+
+.zynora-topbar {
+    box-shadow: 0 1px 0 rgba(8, 20, 38, .03) !important;
+}
+
+html[data-theme="light"] .zynora-topbar {
+    background: rgba(247, 249, 251, .92) !important;
+}
+
+html[data-theme="dark"] .zynora-topbar {
+    background: rgba(16, 28, 48, .92) !important;
+}
+
+.zynora-topbar-left {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.zynora-page-title {
+    font-size: 20px !important;
+    letter-spacing: -.01em;
+}
+
+.zynora-page-subtitle {
+    color: var(--zy-text-muted) !important;
+}
+
+.zynora-controls {
+    flex-wrap: nowrap !important;
+}
+
+.zynora-user-copy {
+    min-width: 0;
+    display: grid;
+    gap: 1px;
+}
+
+.zynora-user-name,
+.zynora-user-role {
+    display: block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zynora-user-name {
+    font-weight: 800 !important;
+}
+
+.zynora-user-role {
+    color: var(--zy-text-muted) !important;
+}
+
+.zynora-theme-toggle {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--zy-border);
+    border-radius: var(--zy-radius-lg);
+    background: var(--zy-surface);
+    color: var(--zy-text);
+    cursor: pointer;
+    box-shadow: var(--zy-shadow-sm);
+    transition:
+        transform var(--zy-duration-fast) var(--zy-ease),
+        border-color var(--zy-duration-fast) var(--zy-ease),
+        background-color var(--zy-duration-fast) var(--zy-ease);
+}
+
+.zynora-theme-toggle:hover {
+    transform: translateY(-1px);
+    border-color: var(--zy-border-strong);
+    background: var(--zy-surface-raised);
+}
+
+.zynora-theme-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.zynora-theme-icon--sun {
+    display: none;
+}
+
+html[data-theme="dark"] .zynora-theme-icon--sun {
+    display: block;
+}
+
+html[data-theme="dark"] .zynora-theme-icon--moon {
+    display: none;
+}
+
+.zynora-logout-button {
+    color: var(--zy-danger) !important;
+}
+
+.zynora-logout-button:hover {
+    border-color: rgba(217, 79, 92, .28) !important;
+    background: var(--zy-danger-soft) !important;
+}
+
+.zynora-nav-dot {
+    --zy-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='4' width='6' height='6' rx='1.5'/%3E%3Crect x='14' y='4' width='6' height='6' rx='1.5'/%3E%3Crect x='4' y='14' width='6' height='6' rx='1.5'/%3E%3Crect x='14' y='14' width='6' height='6' rx='1.5'/%3E%3C/svg%3E");
+    width: 19px !important;
+    height: 19px !important;
+    flex: 0 0 19px !important;
+    border-radius: 0 !important;
+    background: currentColor !important;
+    box-shadow: none !important;
+    -webkit-mask: var(--zy-nav-icon) center / contain no-repeat;
+    mask: var(--zy-nav-icon) center / contain no-repeat;
+}
+
+[data-nav-area="setup"] .zynora-nav-dot {
+    --zy-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h16M6 20V8l6-4 6 4v12M9 20v-5h6v5M9 10h.01M12 10h.01M15 10h.01'/%3E%3C/svg%3E");
+}
+
+[data-nav-area="identity"] .zynora-nav-dot {
+    --zy-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 11l2 2 4-4'/%3E%3C/svg%3E");
+}
+
+[data-nav-area="people"] .zynora-nav-dot {
+    --zy-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 11a3 3 0 1 0 0-6M23 21v-2a4 4 0 0 0-3-3.87'/%3E%3C/svg%3E");
+}
+
+[data-nav-area="attendance"] .zynora-nav-dot {
+    --zy-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18M8 15l2 2 4-4'/%3E%3C/svg%3E");
+}
+
+[data-nav-area="payroll"] .zynora-nav-dot {
+    --zy-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h15a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h13M15 11h6v4h-6a2 2 0 0 1 0-4Z'/%3E%3C/svg%3E");
+}
+
+.zynora-nav-dot.gold {
+    color: var(--zy-champagne-gold);
+}
+
+.zynora-nav-link.active .zynora-nav-dot,
+.zynora-nav-link.zynora-active .zynora-nav-dot,
+.zynora-nav-link[aria-current="page"] .zynora-nav-dot {
+    color: var(--zy-midnight-navy);
+}
+
+.zynora-nav-group[open] > summary .zynora-nav-dot {
+    color: var(--zy-electric-teal);
+}
+
+/* لون شريط التمرير على المستند لا على المحتوى — المحتوى لم يعد مُمرِّراً. */
+html {
+    scrollbar-color: color-mix(in srgb, var(--brand-primary) 35%, transparent) transparent;
+}
+
+@media (max-width: 760px) {
+    .zynora-controls {
+        width: 100%;
+        flex-wrap: wrap !important;
+    }
+
+    .zynora-user-chip {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .zynora-user-name,
+    .zynora-user-role {
+        max-width: 130px;
+    }
+}
+
+/* ZYNORA_PHASE1B_SHELL_POLISH_END */
+
+/* ==========================================================================
+   ZYNORA_SIDEBAR_LIGHT — نسخة الثيم الفاتح للقائمة الجانبية (2026-07)
+   السايدبار كان دارك ثابتاً على الثيمين. بالفاتح: أبيض بحدود ونصوص غامقة،
+   والرابط النشط يبقى تركوازياً.
+   ========================================================================== */
+html[data-theme="light"] .zynora-sidebar {
+    background: #ffffff !important;
+    color: #0b2239 !important;
+    box-shadow: -6px 0 22px rgba(15, 40, 70, .07) !important;
+}
+html[data-theme="light"][dir="rtl"] .zynora-sidebar { border-left: 1px solid rgba(15, 60, 100, .12) !important; }
+html[data-theme="light"][dir="ltr"] .zynora-sidebar { border-right: 1px solid rgba(15, 60, 100, .12) !important; }
+
+html[data-theme="light"] .zynora-nav-link,
+html[data-theme="light"] .zynora-nav-group > summary {
+    color: rgba(11, 34, 57, .72) !important;
+}
+html[data-theme="light"] .zynora-nav-group > summary { color: rgba(11, 34, 57, .9) !important; }
+
+html[data-theme="light"] .zynora-nav-link:hover,
+html[data-theme="light"] .zynora-nav-group > summary:hover {
+    color: #0b2239 !important;
+    background: color-mix(in srgb, var(--brand-primary) 8%, transparent) !important;
+    border-color: color-mix(in srgb, var(--brand-primary) 18%, transparent) !important;
+}
+
+html[data-theme="light"] .zynora-nav-group {
+    border-color: rgba(15, 60, 100, .1) !important;
+    background: rgba(15, 60, 100, .02) !important;
+}
+html[data-theme="light"] .zynora-nav-group[open] {
+    border-color: color-mix(in srgb, var(--brand-primary) 28%, transparent) !important;
+    background: color-mix(in srgb, var(--brand-primary) 5%, transparent) !important;
+}
+
+/* الرابط النشط: تركوازي بنص غامق — نفس هوية الدارك، مقروء بالفاتح */
+html[data-theme="light"] .zynora-nav-link.active,
+html[data-theme="light"] .zynora-nav-link.zynora-active,
+html[data-theme="light"] .zynora-nav-link[aria-current="page"] {
+    color: #04141F !important;
+    background: var(--zy-electric-teal) !important;
+}
+
+/* الشعار: نسخة النص الغامق على الثيم الفاتح (الافتراضية نصها أبيض للسايدبار الغامق) */
+html[data-theme="light"] .zynora-brand-logo {
+    content: url("/brand/zynora-logo-horizontal-dark.svg");
+}
+html[data-theme="light"] .zynora-brand-tagline { color: #64748b !important; }

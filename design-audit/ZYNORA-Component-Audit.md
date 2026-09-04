@@ -36,17 +36,17 @@ Generated: 2026-09-04 13:33:55
 
 ## Date / Calendar systems found
 
-- nexora-calendar-v18.js
-- nexora-edit-custom-datepicker.js
-- nexora-employee-updates-date-system.js
-- nexora-month-picker-v1.js
+- zynora-calendar-v18.js
+- zynora-edit-custom-datepicker.js
+- zynora-employee-updates-date-system.js
+- zynora-month-picker-v1.js
 - nxex-datepicker.js
 - nxex-timepicker.js
 
 ## Select / Dropdown systems found
 
-- nexora-select-optional-v17.js
-- nexora-select-system.js
+- zynora-select-optional-v17.js
+- zynora-select-system.js
 
 ## Most used button classes
 

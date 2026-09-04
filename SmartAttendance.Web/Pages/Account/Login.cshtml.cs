@@ -266,7 +266,6 @@ public class LoginModel : PageModel
 
     private void DeleteLegacyIdentityCookies()
     {
-        Response.Cookies.Delete("NEXORA.Auth");
         Response.Cookies.Delete("SA.UserId");
         Response.Cookies.Delete("SA.UserName");
         Response.Cookies.Delete("SA.DisplayName");

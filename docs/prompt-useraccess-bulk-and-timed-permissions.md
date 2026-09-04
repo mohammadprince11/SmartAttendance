@@ -28,7 +28,7 @@ Cloudflare Tunnel · قاعدة `SmartAttendance`).
 - **العزل بين الشركات مقدّس**: كل استعلام موظف يفرض `scope.ToSqlPredicate("e.CompanyId")` أو `EmployeeCompanyGuard`. أخطر ثغرات المشروع تاريخيّاً كانت تخويلاً/عزلاً — شغّل `/security-review` قبل الدمج.
 - **لا تتعامل مع كلمات المرور/الأسرار بنفسك** (قاعدة أمان). المستخدم يُدخل القيم؛ أنت تبني الآليّة.
 - **انحدارٌ كامل أخضر** قبل الـPR: `dotnet test SmartAttendance.Tests/SmartAttendance.Tests.csproj -c Release`.
-- **شارة الإصدار**: يوجد رقمٌ ظاهر بجانب «Smarter People. Stronger Business.» في `Pages/Shared/_Layout.cshtml` (`nexora-brand-version`). **كل تعديلٍ يرفعه** — الحاليّ **v.3**، فابدأ من **v.4**.
+- **شارة الإصدار**: يوجد رقمٌ ظاهر بجانب «Smarter People. Stronger Business.» في `Pages/Shared/_Layout.cshtml` (`zynora-brand-version`). **كل تعديلٍ يرفعه** — الحاليّ **v.3**، فابدأ من **v.4**.
 - **النشر (عند الموافقة)**: `echo DEPLOY | powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy/Publish-Zynora.ps1 -TaskName "ZynoraPortalServer" -SqlServer "." -Database "SmartAttendance" -Approve` — يأخذ نسخةَ رجوعٍ (ملفات+قاعدة) ويُحمي الموقع تلقائياً.
 
 ## البنية ذات الصلة (فحصتُها مسبقاً)

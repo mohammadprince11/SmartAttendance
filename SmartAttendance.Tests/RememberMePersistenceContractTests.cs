@@ -25,6 +25,28 @@ public sealed class RememberMePersistenceContractTests
         Assert.Contains("@if (!embed && !__zyRememberedSession)\n    {\n        var __zySessionDb", layout, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Login_DoesNotDeleteTheActiveAuthenticationCookieAfterSignIn()
+    {
+        var program = ReadWeb("Program.cs");
+        var login = ReadWeb("Pages/Account/Login.cshtml.cs");
+
+        Assert.Contains("options.Cookie.Name = \"ZYNORA.Auth\";", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("Response.Cookies.Delete(\"ZYNORA.Auth\")", login, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LoginCard_KeepsBalancedSpaceInsideTheVisualStage()
+    {
+        var css = ReadWeb("wwwroot/css/login-foundation.css");
+
+        Assert.Contains(".login-stage > .login-card", css, StringComparison.Ordinal);
+        Assert.Contains("width: calc(100% - 32px) !important;", css, StringComparison.Ordinal);
+        Assert.Contains("margin: 16px !important;", css, StringComparison.Ordinal);
+        Assert.Contains("width: calc(100% - 24px) !important;", css, StringComparison.Ordinal);
+        Assert.Contains("margin: 12px !important;", css, StringComparison.Ordinal);
+    }
+
     private static string ReadWeb(string relativePath)
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());

@@ -37,7 +37,7 @@ public static class OnlinePunchStore
 
     /// <summary>
     /// مفتاح إعداد «أقل عدد ساعات بين الحضور والانصراف» بجدول الإعدادات العام
-    /// (<c>NexoraHrSettings</c>). يعدّله أدمن النظام من صفحة «إعدادات الحضور».
+    /// (<c>ZynoraHrSettings</c>). يعدّله أدمن النظام من صفحة «إعدادات الحضور».
     /// </summary>
     public const string MinCheckoutHoursKey = "Attendance.OnlinePunch.MinCheckoutHours";
 

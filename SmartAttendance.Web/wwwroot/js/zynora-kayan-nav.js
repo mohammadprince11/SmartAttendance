@@ -7,7 +7,7 @@
 // - الأكورديون الداخلي (ky-acc) حصري + انميشن إغلاق (details يخفي فوراً، فنؤخر إزالة open).
 // - الموبايل (<981px): سلوك <details> الطبيعي.
 (function () {
-    var groups = Array.prototype.slice.call(document.querySelectorAll(".nexora-nav-group"));
+    var groups = Array.prototype.slice.call(document.querySelectorAll(".zynora-nav-group"));
     if (!groups.length) return;
 
     var desktop = window.matchMedia("(min-width: 981px)");
@@ -23,7 +23,7 @@
     // صنف `.active`.
     //
     // 🐞 كلتا الإشارتين تصل **متأخّرة** عن تنفيذ هذا الملف، وقِيس ذلك حيّاً:
-    //  · `open` يضبطها `nexora-ui-stabilization-phase1.js` وهو يُحمَّل بعدنا بسطر.
+    //  · `open` يضبطها `zynora-ui-stabilization-phase1.js` وهو يُحمَّل بعدنا بسطر.
     //  · وصنف `.active` يضيفه السكربت نفسه، ولا يرندره Razor هنا لأن شرطه
     //    `IsUnder("/Violations/Index")` بينما المسار الفعليّ `/Violations`.
     // فكان الشرط يفشل صامتاً والدرج يبقى مغلقاً. والمسار متاح دائماً وبلا ترتيب.
@@ -33,7 +33,7 @@
         var path = window.location.pathname.replace(/\/+$/, "").toLowerCase() || "/";
         if (path === "/") return false;
 
-        var links = group.querySelectorAll(".nexora-nav-group-links a[href]");
+        var links = group.querySelectorAll(".zynora-nav-group-links a[href]");
         for (var i = 0; i < links.length; i++) {
             var href = (links[i].getAttribute("href") || "").split("?")[0].replace(/\/+$/, "").toLowerCase();
             if (!href || href === "/") continue;
@@ -62,7 +62,7 @@
         closeAll(group);
         group.classList.remove("ky-closing");
 
-        var sidebar = document.querySelector(".nexora-sidebar");
+        var sidebar = document.querySelector(".zynora-sidebar");
         if (sidebar) {
             var rect = sidebar.getBoundingClientRect();
             links.style.setProperty("--ky-right", (window.innerWidth - rect.right) + "px");
@@ -75,7 +75,7 @@
 
     groups.forEach(function (group) {
         var summary = group.querySelector(":scope > summary");
-        var links = group.querySelector(":scope > .nexora-nav-group-links");
+        var links = group.querySelector(":scope > .zynora-nav-group-links");
         if (!summary || !links) return;
 
         // مجموعة الصفحة الحالية (يرندرها السيرفر `open`).
@@ -91,7 +91,7 @@
         // شاشات القسم بنقرة. وصفّ «رجوع» يعيدك للقائمة الرئيسية.
         //
         // ⚠️ والكشف **بالرابط النشط لا بخاصية `open`**: قِيس أن `open` تصل متأخرة.
-        // `nexora-ui-stabilization-phase1.js` يُحمَّل **بعد** هذا الملف وهو الذي
+        // `zynora-ui-stabilization-phase1.js` يُحمَّل **بعد** هذا الملف وهو الذي
         // يضبط `activeGroup.open = true`، فحين يقرأ هذا السطر الخاصيةَ تكون غائبة
         // ويمرّ بلا أثر — وهو ما جعل الدرج يبقى مغلقاً رغم صحّة كل شيء آخر.
         // أما صنف الرابط النشط فيرندره Razor بالـHTML نفسه، فلا يتعلّق بترتيب أحد.
@@ -174,9 +174,9 @@
     document.addEventListener("click", function (e) {
         if (!desktop.matches) return;
         // النقر خارج القائمة والدرج يغلق الدرج؛ اختيار رابط داخل الدرج يغلقه أيضاً (مثل كيان).
-        var inNav = e.target.closest(".nexora-nav-group");
+        var inNav = e.target.closest(".zynora-nav-group");
         if (!inNav) { closeAll(null); return; }
-        var link = e.target.closest(".nexora-nav-group-links a.nexora-nav-link");
+        var link = e.target.closest(".zynora-nav-group-links a.zynora-nav-link");
         if (link && !link.classList.contains("ky-drawer-title")) closeAll(null);
     });
 

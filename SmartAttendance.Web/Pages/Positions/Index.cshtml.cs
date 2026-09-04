@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Positions;
@@ -18,10 +19,14 @@ namespace SmartAttendance.Web.Pages.Positions;
 public class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICompanyDataLocalizationService _dataLocalization;
 
-    public IndexModel(ApplicationDbContext db)
+    public IndexModel(
+        ApplicationDbContext db,
+        ICompanyDataLocalizationService dataLocalization)
     {
         _db = db;
+        _dataLocalization = dataLocalization;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -29,6 +34,9 @@ public class IndexModel : PageModel
 
     [BindProperty]
     public JobPositionForm Input { get; set; } = new();
+
+    [BindProperty]
+    public List<PositionTranslationInput> PositionTranslations { get; set; } = [];
 
     [BindProperty]
     public PositionReferenceForm ReferenceInput { get; set; } = new();
@@ -96,6 +104,16 @@ public class IndexModel : PageModel
 
         Input.CompanyId = selectedCompanyId;
 
+        await ValidateAndMapPositionTranslationsAsync(selectedCompanyId);
+
+        if (!ModelState.IsValid)
+        {
+            var submittedTranslations = PositionTranslations;
+            await LoadPageAsync(Input.Id > 0 ? Input.Id : null);
+            PositionTranslations = submittedTranslations;
+            return Page();
+        }
+
         if (string.IsNullOrWhiteSpace(Input.ArabicName))
         {
             TempData["ErrorMessage"] = "\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u0635\u0628 \u0645\u0637\u0644\u0648\u0628.";
@@ -124,6 +142,8 @@ public class IndexModel : PageModel
             await LoadPageAsync(Input.Id > 0 ? Input.Id : null);
             return Page();
         }
+
+        var savedPositionId = Input.Id;
 
         if (Input.Id > 0)
         {
@@ -235,6 +255,24 @@ public class IndexModel : PageModel
                 });
 
             TempData["SuccessMessage"] = "\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u0645\u0646\u0635\u0628 \u0628\u0646\u062c\u0627\u062d.";
+
+            savedPositionId = Convert.ToInt32(await ExecuteScalarAsync(
+                "SELECT TOP 1 Id FROM dbo.HrJobPositions WHERE CompanyId = @CompanyId AND ArabicName = @ArabicName ORDER BY Id DESC;",
+                command =>
+                {
+                    AddParameter(command, "@CompanyId", selectedCompanyId);
+                    AddParameter(command, "@ArabicName", Input.ArabicName);
+                }) ?? 0);
+        }
+
+        if (savedPositionId > 0)
+        {
+            await _dataLocalization.SaveValuesAsync(
+                selectedCompanyId,
+                "Position",
+                savedPositionId,
+                ToLocalizedValues(PositionTranslations),
+                HttpContext.RequestAborted);
         }
 
         return RedirectToPage(new { companyId = selectedCompanyId });
@@ -521,7 +559,83 @@ public class IndexModel : PageModel
                 };
             }
         }
+
+        await LoadPositionTranslationsAsync(selectedCompanyId, Input.Id);
     }
+
+    private async Task LoadPositionTranslationsAsync(int companyId, int positionId)
+    {
+        var languages = await _dataLocalization.GetLanguagesAsync(companyId, HttpContext.RequestAborted);
+        var stored = positionId > 0
+            ? await _db.LocalizedEntityValues.AsNoTracking()
+                .Where(item => item.CompanyId == companyId && item.EntityType == "Position" &&
+                    item.EntityId == positionId && !item.IsDeleted)
+                .ToListAsync(HttpContext.RequestAborted)
+            : [];
+
+        string? Value(string culture, string field, string? fallback, bool isDefault) =>
+            stored.FirstOrDefault(item => item.CultureCode == culture && item.FieldName == field)?.Value ??
+            (isDefault ? fallback : null);
+
+        PositionTranslations = languages.Select(language => new PositionTranslationInput
+        {
+            CultureCode = language.CultureCode,
+            NativeName = language.NativeName,
+            Direction = language.Direction,
+            IsDefault = language.IsDefault,
+            IsRequired = language.IsRequired,
+            Name = Value(language.CultureCode, "Name", Input.ArabicName, language.IsDefault),
+            Description = Value(language.CultureCode, "Description", Input.Description, language.IsDefault),
+            JobPurpose = Value(language.CultureCode, "JobPurpose", Input.JobPurpose, language.IsDefault),
+            KeyResponsibilities = Value(language.CultureCode, "KeyResponsibilities", Input.KeyResponsibilities, language.IsDefault),
+            JobRequirements = Value(language.CultureCode, "JobRequirements", Input.JobRequirements, language.IsDefault),
+            RequiredSkills = Value(language.CultureCode, "RequiredSkills", Input.RequiredSkills, language.IsDefault),
+            JobKpis = Value(language.CultureCode, "JobKpis", Input.JobKpis, language.IsDefault)
+        }).ToList();
+    }
+
+    private async Task ValidateAndMapPositionTranslationsAsync(int companyId)
+    {
+        var languages = await _dataLocalization.GetLanguagesAsync(companyId, HttpContext.RequestAborted);
+        foreach (var item in PositionTranslations)
+        {
+            var language = languages.FirstOrDefault(language => language.CultureCode == item.CultureCode);
+            if (language is null) continue;
+            item.NativeName = language.NativeName;
+            item.Direction = language.Direction;
+            item.IsDefault = language.IsDefault;
+            item.IsRequired = language.IsRequired;
+        }
+
+        var errors = await _dataLocalization.ValidateRequiredValuesAsync(
+            companyId,
+            new[] { "Name" },
+            ToLocalizedValues(PositionTranslations),
+            HttpContext.RequestAborted);
+        foreach (var error in errors) ModelState.AddModelError(nameof(PositionTranslations), error);
+
+        var primary = PositionTranslations.FirstOrDefault(item => item.IsDefault) ?? PositionTranslations.FirstOrDefault();
+        if (primary is null || string.IsNullOrWhiteSpace(primary.Name)) return;
+        Input.ArabicName = NormalizeText(primary.Name);
+        Input.Description = NormalizeText(primary.Description);
+        Input.JobPurpose = NormalizeText(primary.JobPurpose);
+        Input.KeyResponsibilities = NormalizeText(primary.KeyResponsibilities);
+        Input.JobRequirements = NormalizeText(primary.JobRequirements);
+        Input.RequiredSkills = NormalizeText(primary.RequiredSkills);
+        Input.JobKpis = NormalizeText(primary.JobKpis);
+    }
+
+    private static List<LocalizedFieldValue> ToLocalizedValues(IEnumerable<PositionTranslationInput> values) =>
+        values.SelectMany(item => new[]
+        {
+            new LocalizedFieldValue(item.CultureCode, "Name", item.Name),
+            new LocalizedFieldValue(item.CultureCode, "Description", item.Description),
+            new LocalizedFieldValue(item.CultureCode, "JobPurpose", item.JobPurpose),
+            new LocalizedFieldValue(item.CultureCode, "KeyResponsibilities", item.KeyResponsibilities),
+            new LocalizedFieldValue(item.CultureCode, "JobRequirements", item.JobRequirements),
+            new LocalizedFieldValue(item.CultureCode, "RequiredSkills", item.RequiredSkills),
+            new LocalizedFieldValue(item.CultureCode, "JobKpis", item.JobKpis)
+        }).ToList();
 
     private async Task<bool> CompanyExistsAsync(int companyId)
     {
@@ -921,6 +1035,22 @@ public sealed class JobPositionForm
     public string? Certifications { get; set; }
 
     public bool IsActive { get; set; } = true;
+}
+
+public sealed class PositionTranslationInput
+{
+    public string CultureCode { get; set; } = string.Empty;
+    public string NativeName { get; set; } = string.Empty;
+    public string Direction { get; set; } = "ltr";
+    public bool IsDefault { get; set; }
+    public bool IsRequired { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public string? JobPurpose { get; set; }
+    public string? KeyResponsibilities { get; set; }
+    public string? JobRequirements { get; set; }
+    public string? RequiredSkills { get; set; }
+    public string? JobKpis { get; set; }
 }
 
 public sealed class JobPositionRow

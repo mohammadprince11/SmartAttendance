@@ -38,11 +38,11 @@ html[dir="rtl"] input[dir="ltr"] {
     text-align: start;
 }
 
-html[dir="ltr"] .nexora-shell,
-html[dir="ltr"] .nexora-sidebar,
-html[dir="ltr"] .nexora-main,
-html[dir="ltr"] .nexora-content,
-html[dir="ltr"] .nexora-nav-group-links,
+html[dir="ltr"] .zynora-shell,
+html[dir="ltr"] .zynora-sidebar,
+html[dir="ltr"] .zynora-main,
+html[dir="ltr"] .zynora-content,
+html[dir="ltr"] .zynora-nav-group-links,
 html[dir="ltr"] .zy-user-menu,
 html[dir="ltr"] .zy-language-dialog,
 html[dir="ltr"] .zy-ui-contract,
@@ -50,11 +50,11 @@ html[dir="ltr"] .zy-ui-contract :where(div, section, article, form, fieldset, he
     direction: ltr !important;
 }
 
-html[dir="rtl"] .nexora-shell,
-html[dir="rtl"] .nexora-sidebar,
-html[dir="rtl"] .nexora-main,
-html[dir="rtl"] .nexora-content,
-html[dir="rtl"] .nexora-nav-group-links,
+html[dir="rtl"] .zynora-shell,
+html[dir="rtl"] .zynora-sidebar,
+html[dir="rtl"] .zynora-main,
+html[dir="rtl"] .zynora-content,
+html[dir="rtl"] .zynora-nav-group-links,
 html[dir="rtl"] .zy-user-menu,
 html[dir="rtl"] .zy-language-dialog {
     direction: rtl;

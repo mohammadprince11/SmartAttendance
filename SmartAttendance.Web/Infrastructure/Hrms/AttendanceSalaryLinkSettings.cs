@@ -5,7 +5,7 @@ using SmartAttendance.Web.Infrastructure.HrSettings;
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 /// <summary>
-/// قراءة/حفظ سياسة ربط الراتب بالحضور من <c>NexoraHrSettings</c>.
+/// قراءة/حفظ سياسة ربط الراتب بالحضور من <c>ZynoraHrSettings</c>.
 /// فُصلت عن <see cref="AttendanceSalaryLink"/> لتبقى تلك دالةً نقيّة قابلة
 /// للاختبار بلا قاعدة بيانات.
 /// </summary>

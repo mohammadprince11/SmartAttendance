@@ -69,7 +69,7 @@ namespace SmartAttendance.Infrastructure.Migrations
                 table: "PayrollCutoffPolicies",
                 sql: "[ToDay] BETWEEN 1 AND 31");
 
-            // NEXORA_CUTOFF_REDESIGN_DATA_MIGRATION
+            // ZYNORA_CUTOFF_REDESIGN_DATA_MIGRATION
             migrationBuilder.Sql(
                 """
                 UPDATE policy
@@ -99,8 +99,8 @@ namespace SmartAttendance.Infrastructure.Migrations
                       AND policyType.PolicyType = policy.PolicyType
                 );
 
-                IF OBJECT_ID('tempdb..#NexoraPolicyMerge') IS NOT NULL
-                    DROP TABLE #NexoraPolicyMerge;
+                IF OBJECT_ID('tempdb..#ZynoraPolicyMerge') IS NOT NULL
+                    DROP TABLE #ZynoraPolicyMerge;
 
                 ;WITH RankedPolicies AS
                 (
@@ -120,13 +120,13 @@ namespace SmartAttendance.Infrastructure.Migrations
                     FROM PayrollCutoffPolicies AS policy
                 )
                 SELECT Id, KeeperId
-                INTO #NexoraPolicyMerge
+                INTO #ZynoraPolicyMerge
                 FROM RankedPolicies;
 
                 UPDATE policyType
                 SET policyType.PayrollCutoffPolicyId = mergeMap.KeeperId
                 FROM PayrollCutoffPolicyTypes AS policyType
-                INNER JOIN #NexoraPolicyMerge AS mergeMap
+                INNER JOIN #ZynoraPolicyMerge AS mergeMap
                     ON mergeMap.Id = policyType.PayrollCutoffPolicyId
                 WHERE mergeMap.Id <> mergeMap.KeeperId;
 
@@ -146,11 +146,11 @@ namespace SmartAttendance.Infrastructure.Migrations
 
                 DELETE policy
                 FROM PayrollCutoffPolicies AS policy
-                INNER JOIN #NexoraPolicyMerge AS mergeMap
+                INNER JOIN #ZynoraPolicyMerge AS mergeMap
                     ON mergeMap.Id = policy.Id
                 WHERE mergeMap.Id <> mergeMap.KeeperId;
 
-                DROP TABLE #NexoraPolicyMerge;
+                DROP TABLE #ZynoraPolicyMerge;
                 """);            migrationBuilder.CreateIndex(
                 name: "IX_PayrollCutoffPolicyTypes_PayrollCutoffPolicyId_PolicyType",
                 table: "PayrollCutoffPolicyTypes",

@@ -2,22 +2,22 @@
 @model SmartAttendance.Web.Pages.Branches.ImportModel
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-setup-pages.css" asp-append-version="true" />
 }
 
 @{
     ViewData["Title"] = "استيراد مواقع العمل والفروع";
 }
 
-<div class="nexora-import-page" data-import-page="branches">
-    <section class="nexora-import-hero">
+<div class="zynora-import-page" data-import-page="branches">
+    <section class="zynora-import-hero">
         <div>
-            <span class="nexora-setup-kicker">استيراد البيانات</span>
+            <span class="zynora-setup-kicker">استيراد البيانات</span>
             <h1>استيراد مواقع العمل والفروع</h1>
             <p>ارفع بيانات مواقع العمل والفروع وربطها بالشركة قبل إنشاء الأقسام والموظفين.</p>
         </div>
 
-        <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
+        <div class="zynora-import-hero-actions"> @* ZYNORA_FIX22A_TEMPLATE_LINK *@
             <a href="?handler=Template" class="nx-setup-btn nx-setup-btn-primary">Excel Template</a>
             <a asp-page="/Setup/Index" asp-route-companyId="@Model.CompanyId" asp-fragment="work-locations" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</a>
         </div>
@@ -32,38 +32,38 @@
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="nexora-import-alert is-error">
+        <div class="zynora-import-alert is-error">
             @Model.ErrorMessage
         </div>
     }
 
     @if (Model.ImportResult != null)
     {
-        <section class="nexora-import-card">
-            <div class="nexora-import-card-head">
+        <section class="zynora-import-card">
+            <div class="zynora-import-card-head">
                 <div>
                     <span>نتيجة الاستيراد</span>
                     <strong>ملخص العملية بعد الحفظ</strong>
                 </div>
             </div>
 
-            <div class="nexora-import-summary">
-                <div class="nexora-import-summary-card">
+            <div class="zynora-import-summary">
+                <div class="zynora-import-summary-card">
                     <span>تمت الإضافة</span>
                     <strong>@Model.ImportResult.CreatedCount</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>تم التحديث</span>
                     <strong>@Model.ImportResult.UpdatedCount</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>تم التخطي</span>
                     <strong>@Model.ImportResult.SkippedCount</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>الأخطاء</span>
                     <strong>@Model.ImportResult.ErrorCount</strong>
                 </div>
@@ -71,8 +71,8 @@
         </section>
     }
 
-    <section class="nexora-import-card">
-        <div class="nexora-import-card-head">
+    <section class="zynora-import-card">
+        <div class="zynora-import-card-head">
             <div>
                 <span>مصدر البيانات</span>
                 <strong>اختر ملف Excel أو الصق البيانات مباشرة</strong>
@@ -82,57 +82,57 @@
 
         <form method="post" enctype="multipart/form-data" asp-page-handler="Preview">
             <input asp-for="CompanyId" type="hidden" />
-            <div class="nexora-import-two">
-                <div class="nexora-import-box">
-                    <div class="nexora-import-box-title">
-                        <span class="nexora-import-step">1</span>
+            <div class="zynora-import-two">
+                <div class="zynora-import-box">
+                    <div class="zynora-import-box-title">
+                        <span class="zynora-import-step">1</span>
                         رفع ملف Excel / CSV
                     </div>
 
-                    <p class="nexora-import-help">
+                    <p class="zynora-import-help">
                         اختر ملفاً جاهزاً بصيغة .xlsx أو .csv يحتوي على أعمدة مواقع العمل والفروع.
                     </p>
 
-                    <input asp-for="ImportFile" type="file" accept=".xlsx,.csv" class="nexora-import-file" />
+                    <input asp-for="ImportFile" type="file" accept=".xlsx,.csv" class="zynora-import-file" />
 
-                    <div class="nexora-import-note">
+                    <div class="zynora-import-note">
                         إذا قمت برفع ملف ولصق بيانات في نفس الوقت، سيتم اعتماد الملف المرفوع.
                     </div>
                 </div>
 
-                <div class="nexora-import-box">
-                    <div class="nexora-import-box-title">
-                        <span class="nexora-import-step">2</span>
+                <div class="zynora-import-box">
+                    <div class="zynora-import-box-title">
+                        <span class="zynora-import-step">2</span>
                         لصق من Excel
                     </div>
 
-                    <p class="nexora-import-help">
+                    <p class="zynora-import-help">
                         حدد الصفوف من Excel ثم اضغط Ctrl + C، وبعدها الصقها هنا باستخدام Ctrl + V.
                     </p>
 
                     <textarea asp-for="PastedData"
-                              class="nexora-import-paste"
+                              class="zynora-import-paste"
                               placeholder="Name&#9;CompanyName&#9;Address&#10;Iraq Mall&#9;Al-Raghad&#9;Baghdad"></textarea>
                 </div>
             </div>
 
-            <div class="nexora-import-required">
+            <div class="zynora-import-required">
                 <div>
                     <span>الأعمدة المطلوبة</span>
                     <strong>يجب أن يحتوي الملف على هذه الأعمدة</strong>
                 </div>
 
-                <div class="nexora-import-badges">
+                <div class="zynora-import-badges">
                     @foreach (var column in Model.RequiredColumns)
                     {
-                        <span class="nexora-import-badge">@column</span>
+                        <span class="zynora-import-badge">@column</span>
                     }
                 </div>
             </div>
 
-            <div class="nexora-import-actions">
+            <div class="zynora-import-actions">
                 <button type="submit" class="nx-setup-btn nx-setup-btn-primary">معاينة البيانات</button>
-                <div class="nexora-import-hero-actions"> @* NEXORA_FIX22A_TEMPLATE_LINK *@
+                <div class="zynora-import-hero-actions"> @* ZYNORA_FIX22A_TEMPLATE_LINK *@
             <a href="?handler=Template" class="nx-setup-btn nx-setup-btn-primary">Excel Template</a>
             <a asp-page="/Setup/Index" asp-route-companyId="@Model.CompanyId" asp-fragment="work-locations" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0644;&#x0639;&#x0648;&#x062F;&#x0629; &#x0625;&#x0644;&#x0649; &#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</a>
         </div>
@@ -142,8 +142,8 @@
 
     @if (Model.Preview != null)
     {
-        <section class="nexora-import-card">
-            <div class="nexora-import-card-head">
+        <section class="zynora-import-card">
+            <div class="zynora-import-card-head">
                 <div>
                     <span>معاينة البيانات</span>
                     <strong>@Model.Preview.FileName</strong>
@@ -151,28 +151,28 @@
                 <small>يتم عرض أول @Model.Preview.PreviewLimit صف فقط، لكن الاستيراد سيعالج كل الصفوف الصالحة.</small>
             </div>
 
-            <div class="nexora-import-summary">
-                <div class="nexora-import-summary-card">
+            <div class="zynora-import-summary">
+                <div class="zynora-import-summary-card">
                     <span>إجمالي الصفوف</span>
                     <strong>@Model.Preview.TotalRows</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>جاهزة</span>
                     <strong>@Model.Preview.ReadyCount</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>إضافة</span>
                     <strong>@Model.Preview.CreateCount</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>تحديث</span>
                     <strong>@Model.Preview.UpdateCount</strong>
                 </div>
 
-                <div class="nexora-import-summary-card">
+                <div class="zynora-import-summary-card">
                     <span>أخطاء</span>
                     <strong>@Model.Preview.ErrorCount</strong>
                 </div>
@@ -180,7 +180,7 @@
 
             @if (Model.Preview.ReadyCount > 0)
             {
-                <form method="post" asp-page-handler="Import" class="nexora-import-confirm">
+                <form method="post" asp-page-handler="Import" class="zynora-import-confirm">
                     <input asp-for="CompanyId" type="hidden" />
                     <input type="hidden" name="token" value="@Model.Preview.Token" />
                     <button type="submit" class="nx-setup-btn nx-setup-btn-primary">استيراد الصفوف الصالحة</button>
@@ -188,16 +188,16 @@
             }
         </section>
 
-        <section class="table-card nexora-setup-card">
-            <div class="nexora-setup-card-head">
+        <section class="table-card zynora-setup-card">
+            <div class="zynora-setup-card-head">
                 <div>
                     <span>تفاصيل المعاينة</span>
                     <strong>حالة كل صف قبل الاستيراد</strong>
                 </div>
             </div>
 
-            <div class="nexora-setup-table-wrap">
-                <table class="data-table nexora-setup-table">
+            <div class="zynora-setup-table-wrap">
+                <table class="data-table zynora-setup-table">
                     <thead>
                         <tr>
                             <th>الصف</th>

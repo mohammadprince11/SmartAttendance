@@ -6,7 +6,7 @@
 }
 <link rel="stylesheet" href="~/css/pages/employeegroups-1dbc7d6239.css" asp-append-version="true" />
 
-<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-hr-settings-v16.css" asp-append-version="true" />
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
@@ -27,15 +27,15 @@
 
         <form method="post" asp-page-handler="Add" class="nxhs-inline-add zyu-4d69a74d8bb6">
             <input name="name" placeholder="اسم المجموعة" required class="zyu-43459be14cf5" />
-            <select data-nexora-select="true" name="branchId">
+            <select data-zynora-select="true" name="branchId">
                 <option value="">كل الفروع</option>
                 @foreach (var (id, name) in Model.Branches) { <option value="@id">@name</option> }
             </select>
-            <select data-nexora-select="true" name="departmentId">
+            <select data-zynora-select="true" name="departmentId">
                 <option value="">كل الأقسام</option>
                 @foreach (var (id, name) in Model.Departments) { <option value="@id">@name</option> }
             </select>
-            <select data-nexora-select="true" name="workType">
+            <select data-zynora-select="true" name="workType">
                 <option value="">كل أنواع الدوام</option>
                 @foreach (var workType in Model.WorkTypes) { <option value="@workType">@workType</option> }
             </select>

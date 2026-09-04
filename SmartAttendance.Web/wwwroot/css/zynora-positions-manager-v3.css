@@ -5540,12 +5540,12 @@ html:not([data-theme="light"])
 
 /* ==========================================================
    CUSTOM SELECT WRAPPERS
-   حتى إذا NexoraSelect غطى الـ select الأصلي
+   حتى إذا ZynoraSelect غطى الـ select الأصلي
    ========================================================== */
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select,
+.zynora-select,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -5553,7 +5553,7 @@ html:not([data-theme="light"])
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select__trigger,
+.zynora-select__trigger,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -5574,7 +5574,7 @@ html:not([data-theme="light"])
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select__menu,
+.zynora-select__menu,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -5595,7 +5595,7 @@ html:not([data-theme="light"])
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select__option:hover,
+.zynora-select__option:hover,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -7318,7 +7318,7 @@ html:not([data-theme="light"])
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select,
+.zynora-select,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -7326,7 +7326,7 @@ html:not([data-theme="light"])
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select__trigger,
+.zynora-select__trigger,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -7345,7 +7345,7 @@ html:not([data-theme="light"])
 
 html:not([data-theme="light"])
 .zy-pos-page
-.nexora-select__menu,
+.zynora-select__menu,
 
 html:not([data-theme="light"])
 .zy-pos-page
@@ -7941,9 +7941,9 @@ html:not([data-theme="light"]) .zy-pos-table-wrap {
 /*
    Actual layout:
    body
-     .nexora-shell
-       .nexora-main
-         .nexora-content
+     .zynora-shell
+       .zynora-main
+         .zynora-content
            .zy-pos-page
 */
 
@@ -7965,7 +7965,7 @@ body:has(.zy-pos-page) {
 /* Shell */
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-shell {
+.zynora-shell {
 
     background:
         var(--surface-app, #0B1020) !important;
@@ -7981,7 +7981,7 @@ body:has(.zy-pos-page)
 /* Main */
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-main {
+.zynora-main {
 
     background:
         var(--surface-app, #0B1020) !important;
@@ -7997,7 +7997,7 @@ body:has(.zy-pos-page)
 /* Content */
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-content {
+.zynora-content {
 
     background:
         var(--surface-app, #0B1020) !important;
@@ -8029,19 +8029,19 @@ body:has(.zy-pos-page)
 /* منع أي glow قديم */
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-main::before,
+.zynora-main::before,
 
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-main::after,
+.zynora-main::after,
 
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-content::before,
+.zynora-content::before,
 
 html:not([data-theme="light"])
 body:has(.zy-pos-page)
-.nexora-content::after,
+.zynora-content::after,
 
 html:not([data-theme="light"])
 body:has(.zy-pos-page)

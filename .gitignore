@@ -19,12 +19,12 @@ artifacts/mobile/*.aab
 # Patch and temporary files
 *.zip
 files/
-Apply_NEXORA_*.ps1
-Remove_NEXORA_*.ps1
+Apply_ZYNORA_*.ps1
+Remove_ZYNORA_*.ps1
 *.bak_*
 *.before_*
-NEXORA_ARCHIVED_PAGES/
-NEXORA_BACKUPS_PreGit/
+ZYNORA_ARCHIVED_PAGES/
+ZYNORA_BACKUPS_PreGit/
 
 # Database files - never commit real company data
 *.mdf
@@ -38,9 +38,9 @@ appsettings.Development.json
 secrets.json
 .env
 
-# NEXORA temporary patch/backups
+# ZYNORA temporary patch/backups
 *.bak_*
-_NEXORA_CLEANUP_QUARANTINE_*/
+_ZYNORA_CLEANUP_QUARANTINE_*/
 *.ps1
 # ...عدا سكربتات التشغيل المعتمدة: القاعدة أعلاه لسكربتات الترقيع العابرة،
 # وأداةُ نشرٍ يعتمد عليها الإصدار ليست عابرة.
@@ -54,7 +54,7 @@ README_V*.md
 
 # Employee uploaded photos
 SmartAttendance.Web/wwwroot/uploads/employee-photos/
-# NEXORA local cleanup/archive
+# ZYNORA local cleanup/archive
 __Cleanup_Archive/
 *.bak*
 *.tmp
@@ -67,10 +67,10 @@ __Archive_RemovedPages/
 appsettings.json
 appsettings.*.json
 !appsettings.example.json
-_nexora_backups/
+_zynora_backups/
 
-# NEXORA local-only artifacts
-_nexora_diagnostics/
+# ZYNORA local-only artifacts
+_zynora_diagnostics/
 SmartAttendance.Web/wwwroot/uploads/company-logos/
 SmartAttendance.Web/wwwroot/tenant-assets/
 SmartAttendance.Web/App_Data/PageImports/
@@ -106,4 +106,8 @@ LanguageCatalogFix-*/
 GlobalLanguageVisibility-*/
 VisibilityFix-*/
 *.bak-*
+
+# LanguageLab runtime and design snapshots are workstation-only.
+.language-lab-run/
+_design-backups/
 

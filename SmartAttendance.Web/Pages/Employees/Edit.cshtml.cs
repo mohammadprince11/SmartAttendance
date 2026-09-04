@@ -9,6 +9,7 @@ using SmartAttendance.Application.Employees.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -18,6 +19,7 @@ public class EditModel : PageModel
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
     private readonly IPermissionAuthorizationService _permissionAuthorizationService;
+    private readonly ICompanyDataLocalizationService _dataLocalization;
 
     private static readonly HashSet<string> AllowedEmployeePhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -41,17 +43,22 @@ public class EditModel : PageModel
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
         IPermissionAuthorizationService permissionAuthorizationService,
-        Infrastructure.Security.IProtectedFileService protectedFiles)
+        Infrastructure.Security.IProtectedFileService protectedFiles,
+        ICompanyDataLocalizationService dataLocalization)
     {
         _employeeService = employeeService;
         _dbContext = dbContext;
         _environment = environment;
         _permissionAuthorizationService = permissionAuthorizationService;
         _protectedFiles = protectedFiles;
+        _dataLocalization = dataLocalization;
     }
 
     [BindProperty]
     public EmployeeEditViewModel Employee { get; set; } = new();
+
+    [BindProperty]
+    public List<EmployeeNameTranslationInput> EmployeeNameTranslations { get; set; } = [];
 
     [BindProperty]
     public IFormFile? EmployeePhoto { get; set; }
@@ -117,6 +124,8 @@ public class EditModel : PageModel
 
         Employee = employee;
         PrefillQuadNameFromFullName();
+        var companyId = await ResolveEmployeeCompanyIdAsync(Employee.BranchId);
+        await LoadEmployeeNameTranslationsAsync(companyId, false);
 
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
         CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
@@ -150,6 +159,15 @@ public class EditModel : PageModel
         FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
         RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
         RequiredFieldKeys.ExceptWith(DeferredTranslatedNameKeys);
+
+        var companyId = await ResolveEmployeeCompanyIdAsync(Employee.BranchId);
+        ModelState.Remove("Employee.FullName");
+        ModelState.Remove("Employee.FirstName");
+        ModelState.Remove("Employee.SecondName");
+        ModelState.Remove("Employee.ThirdName");
+        ModelState.Remove("Employee.LastName");
+        await LoadEmployeeNameTranslationsAsync(companyId, true);
+        await ValidateAndMapEmployeeNamesAsync(companyId);
 
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
@@ -193,6 +211,16 @@ public class EditModel : PageModel
             Employee.ThirdNameEn = current.ThirdNameEn;
             Employee.LastNameEn = current.LastNameEn;
 
+            var english = EmployeeNameTranslations.FirstOrDefault(item =>
+                item.CultureCode.StartsWith("en", StringComparison.OrdinalIgnoreCase));
+            if (english is not null)
+            {
+                Employee.FirstNameEn = english.FirstName;
+                Employee.SecondNameEn = english.SecondName;
+                Employee.ThirdNameEn = english.ThirdName;
+                Employee.LastNameEn = english.LastName;
+            }
+
             var assignmentChanged =
                 current.BranchId != Employee.BranchId ||
                 current.DepartmentId != Employee.DepartmentId ||
@@ -232,6 +260,20 @@ public class EditModel : PageModel
 
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
 
+            await _dataLocalization.SaveValuesAsync(
+                companyId,
+                "Employee",
+                Employee.Id,
+                EmployeeNameTranslations.SelectMany(item => new[]
+                {
+                    new LocalizedFieldValue(item.CultureCode, "FirstName", item.FirstName),
+                    new LocalizedFieldValue(item.CultureCode, "SecondName", item.SecondName),
+                    new LocalizedFieldValue(item.CultureCode, "ThirdName", item.ThirdName),
+                    new LocalizedFieldValue(item.CultureCode, "LastName", item.LastName),
+                    new LocalizedFieldValue(item.CultureCode, "FullName", ComposeName(item))
+                }).ToList(),
+                HttpContext.RequestAborted);
+
             await transaction.CommitAsync();
         }
 
@@ -248,6 +290,71 @@ public class EditModel : PageModel
 
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
+
+    private async Task<int> ResolveEmployeeCompanyIdAsync(int branchId) =>
+        await _dbContext.Branches.AsNoTracking()
+            .Where(item => item.Id == branchId && !item.IsDeleted)
+            .Select(item => item.CompanyId)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted);
+
+    private async Task LoadEmployeeNameTranslationsAsync(int companyId, bool preservePostedValues)
+    {
+        if (companyId <= 0) return;
+        var posted = preservePostedValues
+            ? EmployeeNameTranslations.ToDictionary(item => item.CultureCode, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, EmployeeNameTranslationInput>(StringComparer.OrdinalIgnoreCase);
+        var languages = await _dataLocalization.GetLanguagesAsync(companyId, HttpContext.RequestAborted);
+        var stored = preservePostedValues
+            ? []
+            : await _dbContext.LocalizedEntityValues.AsNoTracking()
+                .Where(item => item.CompanyId == companyId && item.EntityType == "Employee" &&
+                    item.EntityId == Employee.Id && !item.IsDeleted)
+                .ToListAsync(HttpContext.RequestAborted);
+
+        string? Stored(string culture, string field) => stored.FirstOrDefault(item =>
+            item.CultureCode == culture && item.FieldName == field)?.Value;
+
+        EmployeeNameTranslations = languages.Select(language =>
+        {
+            posted.TryGetValue(language.CultureCode, out var submitted);
+            return new EmployeeNameTranslationInput
+            {
+                CompanyId = companyId,
+                CultureCode = language.CultureCode,
+                NativeName = language.NativeName,
+                Direction = language.Direction,
+                IsDefault = language.IsDefault,
+                IsRequired = language.IsRequired,
+                FirstName = submitted?.FirstName ?? Stored(language.CultureCode, "FirstName") ?? (language.IsDefault ? Employee.FirstName : null),
+                SecondName = submitted?.SecondName ?? Stored(language.CultureCode, "SecondName") ?? (language.IsDefault ? Employee.SecondName : null),
+                ThirdName = submitted?.ThirdName ?? Stored(language.CultureCode, "ThirdName") ?? (language.IsDefault ? Employee.ThirdName : null),
+                LastName = submitted?.LastName ?? Stored(language.CultureCode, "LastName") ?? (language.IsDefault ? Employee.LastName : null)
+            };
+        }).ToList();
+    }
+
+    private async Task ValidateAndMapEmployeeNamesAsync(int companyId)
+    {
+        var values = EmployeeNameTranslations.SelectMany(item => new[]
+        {
+            new LocalizedFieldValue(item.CultureCode, "FirstName", item.FirstName),
+            new LocalizedFieldValue(item.CultureCode, "LastName", item.LastName)
+        }).ToList();
+        var errors = await _dataLocalization.ValidateRequiredValuesAsync(
+            companyId, new[] { "FirstName", "LastName" }, values, HttpContext.RequestAborted);
+        foreach (var error in errors) ModelState.AddModelError(nameof(EmployeeNameTranslations), error);
+        var primary = EmployeeNameTranslations.FirstOrDefault(item => item.IsDefault) ?? EmployeeNameTranslations.FirstOrDefault();
+        if (primary is null) return;
+        Employee.FirstName = primary.FirstName?.Trim();
+        Employee.SecondName = primary.SecondName?.Trim();
+        Employee.ThirdName = primary.ThirdName?.Trim();
+        Employee.LastName = primary.LastName?.Trim();
+        Employee.FullName = ComposeName(primary);
+    }
+
+    private static string ComposeName(EmployeeNameTranslationInput item) =>
+        string.Join(" ", new[] { item.FirstName, item.SecondName, item.ThirdName, item.LastName }
+            .Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value!.Trim()));
 
     // الموظفون القدامى عندهم FullName فقط؛ نوزّعه على خانات الرباعي حتى يبقى
     // مصدر إدخال الاسم واحداً بالنموذج، وإعادة تركيبه عند الحفظ تعطي نفس النص.

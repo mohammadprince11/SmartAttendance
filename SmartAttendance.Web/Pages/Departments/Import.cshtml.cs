@@ -222,7 +222,7 @@ public class ImportModel : PageModel
 
         return value;
     }
-    // NEXORA_FIX22A_TEMPLATE_HELPERS
+    // ZYNORA_FIX22A_TEMPLATE_HELPERS
     private static byte[] BuildTemplateWorkbook(string sheetName, string[] headers, string[] sample)
     {
         using var memory = new MemoryStream();
@@ -309,13 +309,13 @@ public class ImportModel : PageModel
         return System.Security.SecurityElement.Escape(value ?? string.Empty) ?? string.Empty;
     }
 
-    // NEXORA_FIX22C_TEMPLATE_HANDLER_ONLY
+    // ZYNORA_FIX22C_TEMPLATE_HANDLER_ONLY
     public IActionResult OnGetTemplate()
     {
         var bytes = BuildTemplateWorkbook("Departments", new[] { "Name" }, new[] { "Human Resources" });
         return File(
             bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "NEXORA_Departments_Template.xlsx");
+            "ZYNORA_Departments_Template.xlsx");
     }
 }

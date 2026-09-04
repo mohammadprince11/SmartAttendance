@@ -172,9 +172,9 @@ public sealed class LocalizationContractTests
         var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
         var navigation = ReadWeb("wwwroot", "js", "zynora-kayan-nav.js");
 
-        Assert.Contains("html[dir=\"ltr\"] .nexora-shell", refresh, StringComparison.Ordinal);
-        Assert.Contains("html[dir=\"ltr\"] .nexora-sidebar", refresh, StringComparison.Ordinal);
-        Assert.Contains("html[dir=\"ltr\"] .nexora-main", refresh, StringComparison.Ordinal);
+        Assert.Contains("html[dir=\"ltr\"] .zynora-shell", refresh, StringComparison.Ordinal);
+        Assert.Contains("html[dir=\"ltr\"] .zynora-sidebar", refresh, StringComparison.Ordinal);
+        Assert.Contains("html[dir=\"ltr\"] .zynora-main", refresh, StringComparison.Ordinal);
         Assert.Contains("--ky-left", refresh, StringComparison.Ordinal);
         Assert.Contains("kySlideOverLtr", refresh, StringComparison.Ordinal);
 

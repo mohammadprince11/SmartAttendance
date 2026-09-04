@@ -26,7 +26,7 @@ html[data-theme="dark"] body.zy-app:has(#employee-create-form) {
 
 /* ---------- Canvas ---------- */
 
-html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nexora-content {
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .zynora-content {
     background: var(--zec-page) !important;
 }
 

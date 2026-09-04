@@ -1,4 +1,4 @@
-/* NEXORA Positions Manager - root clean implementation */
+/* ZYNORA Positions Manager - root clean implementation */
 
 .nxp-positions-page {
     display: grid;
@@ -848,7 +848,7 @@ body.nxp-modal-open {
 }
 
 
-/* NEXORA Positions categories and levels final enhancements */
+/* ZYNORA Positions categories and levels final enhancements */
 .nxp-hero {
     display: flex;
     align-items: flex-start;
@@ -921,7 +921,7 @@ body.nxp-modal-open {
     }
 }
 
-/* NEXORA_FIX20B_POSITIONS_FORM_ONE_ROW_START */
+/* ZYNORA_FIX20B_POSITIONS_FORM_ONE_ROW_START */
 #positionForm {
     display: grid !important;
     grid-template-columns: minmax(320px, 1.35fr) repeat(3, minmax(190px, 1fr)) !important;
@@ -978,8 +978,8 @@ body.nxp-modal-open {
         grid-column: 1 / -1 !important;
     }
 }
-/* NEXORA_FIX20B_POSITIONS_FORM_ONE_ROW_END */
-/* NEXORA_POSITIONS_JOB_MODAL_CANONICAL_START */
+/* ZYNORA_FIX20B_POSITIONS_FORM_ONE_ROW_END */
+/* ZYNORA_POSITIONS_JOB_MODAL_CANONICAL_START */
 #positionForm > .nxp-position-profile-launchers {
     grid-column: auto !important;
     display: block !important;
@@ -1309,8 +1309,8 @@ body.nxp-profile-modal-open {
         min-width: 0 !important;
     }
 }
-/* NEXORA_POSITIONS_JOB_MODAL_CANONICAL_END */
-/* NEXORA_FIX20D_REFERENCE_DROPDOWNS_START */
+/* ZYNORA_POSITIONS_JOB_MODAL_CANONICAL_END */
+/* ZYNORA_FIX20D_REFERENCE_DROPDOWNS_START */
 #positionForm {
     grid-template-columns: minmax(220px, 1.35fr) repeat(6, minmax(130px, 1fr)) !important;
     align-items: end !important;
@@ -1505,9 +1505,9 @@ body.nxp-profile-modal-open {
         grid-column: 1 / -1 !important;
     }
 }
-/* NEXORA_FIX20D_REFERENCE_DROPDOWNS_END */
+/* ZYNORA_FIX20D_REFERENCE_DROPDOWNS_END */
 
-/* NEXORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_START */
+/* ZYNORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_START */
 #positionForm {
     grid-template-columns: minmax(200px, 1.35fr) repeat(8, minmax(108px, 1fr)) !important;
 }
@@ -1550,8 +1550,8 @@ body.nxp-profile-modal-open {
         grid-column: 1 / -1 !important;
     }
 }
-/* NEXORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_END */
-/* NEXORA_FIX20H_POSITIONS_TWO_ROWS_START */
+/* ZYNORA_FIX20G_EDUCATION_DEGREE_SPECIALIZATION_END */
+/* ZYNORA_FIX20H_POSITIONS_TWO_ROWS_START */
 /* Layout: keep position setup fields readable by splitting them into two rows. */
 #positionForm {
     display: grid !important;
@@ -1696,15 +1696,15 @@ body.nxp-profile-modal-open {
         grid-column: 1 / -1 !important;
     }
 }
-/* NEXORA_FIX20H_POSITIONS_TWO_ROWS_END */
+/* ZYNORA_FIX20H_POSITIONS_TWO_ROWS_END */
 
 
 
 
-/* NEXORA_FIX20M_POSITIONS_CLEAN_SELECT_CSS_START */
+/* ZYNORA_FIX20M_POSITIONS_CLEAN_SELECT_CSS_START */
 /*
 Diagnosis:
-The custom select is built by the global NEXORA select system:
+The custom select is built by the global ZYNORA select system:
 select + .nxcs-select > .nxcs-trigger > .nxcs-value + .nxcs-caret
 
 The previous Position-only fixes targeted generic button[aria-haspopup] and child spans.
@@ -1782,7 +1782,7 @@ It does not override the global .nxcs trigger structure.
     text-decoration: none !important;
 }
 
-/* Restore and protect the global NEXORA custom select inside Positions. */
+/* Restore and protect the global ZYNORA custom select inside Positions. */
 #positionForm .nxcs-select {
     width: 100% !important;
     max-width: 100% !important;
@@ -1870,12 +1870,12 @@ It does not override the global .nxcs trigger structure.
         grid-column: 1 / -1 !important;
     }
 }
-/* NEXORA_FIX20M_POSITIONS_CLEAN_SELECT_CSS_END */
+/* ZYNORA_FIX20M_POSITIONS_CLEAN_SELECT_CSS_END */
 
-/* NEXORA_FIX20O_POSITIONS_SELECT_CARET_LEFT_MANAGE_MATCH_START */
+/* ZYNORA_FIX20O_POSITIONS_SELECT_CARET_LEFT_MANAGE_MATCH_START */
 /*
 Diagnosis:
-The global NEXORA select DOM is:
+The global ZYNORA select DOM is:
 .nxcs-trigger > .nxcs-value + .nxcs-caret
 
 In RTL flex, this naturally renders:
@@ -2005,8 +2005,8 @@ so the caret moved right. This block restores the global flex behavior.
     justify-content: space-between !important;
     gap: 8px !important;
 }
-/* NEXORA_FIX20O_POSITIONS_SELECT_CARET_LEFT_MANAGE_MATCH_END */
-/* NEXORA_FIX21A_POSITIONS_IMPORT_START */
+/* ZYNORA_FIX20O_POSITIONS_SELECT_CARET_LEFT_MANAGE_MATCH_END */
+/* ZYNORA_FIX21A_POSITIONS_IMPORT_START */
 .nxp-import-page .nxp-hero__links {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -2130,4 +2130,4 @@ button[disabled].nxp-btn {
         grid-template-columns: 1fr !important;
     }
 }
-/* NEXORA_FIX21A_POSITIONS_IMPORT_END */
+/* ZYNORA_FIX21A_POSITIONS_IMPORT_END */

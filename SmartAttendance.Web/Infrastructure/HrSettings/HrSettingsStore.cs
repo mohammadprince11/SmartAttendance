@@ -8,50 +8,8 @@ public static class HrSettingsStore
 {
     public static async Task EnsureTablesAsync(ApplicationDbContext db)
     {
-        await ExecuteAsync(db,
-            """
-IF OBJECT_ID('NexoraHrSettings', 'U') IS NULL
-BEGIN
-    CREATE TABLE NexoraHrSettings
-    (
-        SettingKey nvarchar(160) NOT NULL PRIMARY KEY,
-        SettingValue nvarchar(max) NULL,
-        UpdatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME()
-    );
-END;
-
-IF OBJECT_ID('NexoraTerminationReasons', 'U') IS NULL
-BEGIN
-    CREATE TABLE NexoraTerminationReasons
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Name nvarchar(180) NOT NULL,
-        IsMandatory bit NOT NULL DEFAULT(0),
-        RequiresSelfService bit NOT NULL DEFAULT(1),
-        EndOfServicePercent decimal(18,2) NOT NULL DEFAULT(100),
-        IsActive bit NOT NULL DEFAULT(1),
-        CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME()
-    );
-END;
-
-IF OBJECT_ID('NexoraNotificationRules', 'U') IS NULL
-BEGIN
-    CREATE TABLE NexoraNotificationRules
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        Name nvarchar(220) NOT NULL,
-        IsEnabled bit NOT NULL DEFAULT(0),
-        Audience nvarchar(80) NULL,
-        DaysBefore int NOT NULL DEFAULT(0),
-        TriggerDescription nvarchar(500) NULL,
-        SelectedItems nvarchar(500) NULL,
-        SupervisorName nvarchar(220) NULL,
-        DisplayOrder int NOT NULL DEFAULT(100),
-        CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME()
-    );
-END;
-""");
-
+        // Runtime schema ownership belongs to SqlSchemaMigrator at application startup.
+        // This compatibility method retains the existing data-seeding behavior only.
         await SeedTerminationReasonsAsync(db);
         await SeedNotificationRulesAsync(db);
     }
@@ -61,7 +19,7 @@ END;
         await EnsureTablesAsync(db);
 
         var value = await ScalarAsync<string?>(db,
-            "SELECT SettingValue FROM NexoraHrSettings WHERE SettingKey = @Key;",
+            "SELECT SettingValue FROM ZynoraHrSettings WHERE SettingKey = @Key;",
             command => Add(command, "@Key", key));
 
         return string.IsNullOrWhiteSpace(value) ? fallback : value;
@@ -73,7 +31,7 @@ END;
 
         await ExecuteAsync(db,
             """
-MERGE NexoraHrSettings AS target
+MERGE ZynoraHrSettings AS target
 USING (SELECT @Key AS SettingKey, @Value AS SettingValue) AS source
 ON target.SettingKey = source.SettingKey
 WHEN MATCHED THEN
@@ -99,7 +57,7 @@ WHEN NOT MATCHED THEN
         if (companyId <= 0) return fallback;
         await EnsureTablesAsync(db);
         var value = await ScalarAsync<string?>(db,
-            "SELECT SettingValue FROM NexoraHrSettings WHERE SettingKey = @Key;",
+            "SELECT SettingValue FROM ZynoraHrSettings WHERE SettingKey = @Key;",
             command => Add(command, "@Key", CompanyKey(companyId, key)));
         return value is null ? await GetAsync(db, key, fallback) : value;
     }
@@ -124,7 +82,7 @@ WHEN NOT MATCHED THEN
         return await QueryAsync(db,
             """
 SELECT Id, Name, IsMandatory, RequiresSelfService, EndOfServicePercent, IsActive
-FROM NexoraTerminationReasons
+FROM ZynoraTerminationReasons
 ORDER BY Id;
 """,
             reader => new TerminationReasonRow
@@ -144,7 +102,7 @@ ORDER BY Id;
 
         await ExecuteAsync(db,
             """
-INSERT INTO NexoraTerminationReasons(Name, IsMandatory, RequiresSelfService, EndOfServicePercent, IsActive, CreatedAt)
+INSERT INTO ZynoraTerminationReasons(Name, IsMandatory, RequiresSelfService, EndOfServicePercent, IsActive, CreatedAt)
 VALUES(@Name, @IsMandatory, @RequiresSelfService, @EndOfServicePercent, 1, SYSUTCDATETIME());
 """,
             command =>
@@ -162,7 +120,7 @@ VALUES(@Name, @IsMandatory, @RequiresSelfService, @EndOfServicePercent, 1, SYSUT
 
         await ExecuteAsync(db,
             """
-UPDATE NexoraTerminationReasons
+UPDATE ZynoraTerminationReasons
 SET Name = @Name,
     IsMandatory = @IsMandatory,
     RequiresSelfService = @RequiresSelfService,
@@ -184,7 +142,7 @@ WHERE Id = @Id;
     public static async Task DeleteTerminationReasonAsync(ApplicationDbContext db, int id)
     {
         await EnsureTablesAsync(db);
-        await ExecuteAsync(db, "DELETE FROM NexoraTerminationReasons WHERE Id = @Id;", command => Add(command, "@Id", id));
+        await ExecuteAsync(db, "DELETE FROM ZynoraTerminationReasons WHERE Id = @Id;", command => Add(command, "@Id", id));
     }
 
     public static async Task<List<NotificationRuleRow>> LoadNotificationRulesAsync(ApplicationDbContext db)
@@ -194,7 +152,7 @@ WHERE Id = @Id;
         return await QueryAsync(db,
             """
 SELECT Id, Name, IsEnabled, Audience, DaysBefore, TriggerDescription, SelectedItems, SupervisorName, DisplayOrder
-FROM NexoraNotificationRules
+FROM ZynoraNotificationRules
 ORDER BY DisplayOrder, Id;
 """,
             reader => new NotificationRuleRow
@@ -216,7 +174,7 @@ ORDER BY DisplayOrder, Id;
         await EnsureTablesAsync(db);
 
         await ExecuteAsync(db,
-            "UPDATE NexoraNotificationRules SET IsEnabled = @IsEnabled WHERE Id = @Id;",
+            "UPDATE ZynoraNotificationRules SET IsEnabled = @IsEnabled WHERE Id = @Id;",
             command =>
             {
                 Add(command, "@Id", id);
@@ -230,7 +188,7 @@ ORDER BY DisplayOrder, Id;
 
         await ExecuteAsync(db,
             """
-UPDATE NexoraNotificationRules
+UPDATE ZynoraNotificationRules
 SET Audience = @Audience,
     DaysBefore = @DaysBefore,
     SelectedItems = @SelectedItems,
@@ -249,12 +207,12 @@ WHERE Id = @Id;
 
     private static async Task SeedTerminationReasonsAsync(ApplicationDbContext db)
     {
-        var count = await ScalarAsync<int>(db, "SELECT COUNT(1) FROM NexoraTerminationReasons;");
+        var count = await ScalarAsync<int>(db, "SELECT COUNT(1) FROM ZynoraTerminationReasons;");
         if (count > 0) return;
 
         await ExecuteAsync(db,
             """
-INSERT INTO NexoraTerminationReasons(Name, IsMandatory, RequiresSelfService, EndOfServicePercent, IsActive, CreatedAt)
+INSERT INTO ZynoraTerminationReasons(Name, IsMandatory, RequiresSelfService, EndOfServicePercent, IsActive, CreatedAt)
 VALUES
 (N'استقالة', 0, 1, 100, 1, SYSUTCDATETIME()),
 (N'إقالة', 1, 1, 100, 1, SYSUTCDATETIME()),
@@ -267,12 +225,12 @@ VALUES
 
     private static async Task SeedNotificationRulesAsync(ApplicationDbContext db)
     {
-        var count = await ScalarAsync<int>(db, "SELECT COUNT(1) FROM NexoraNotificationRules;");
+        var count = await ScalarAsync<int>(db, "SELECT COUNT(1) FROM ZynoraNotificationRules;");
         if (count > 0) return;
 
         await ExecuteAsync(db,
             """
-INSERT INTO NexoraNotificationRules(Name, IsEnabled, Audience, DaysBefore, TriggerDescription, SelectedItems, SupervisorName, DisplayOrder, CreatedAt)
+INSERT INTO ZynoraNotificationRules(Name, IsEnabled, Audience, DaysBefore, TriggerDescription, SelectedItems, SupervisorName, DisplayOrder, CreatedAt)
 VALUES
 (N'عيد ميلاد موظف', 0, N'المشرفين', 0, N'عند حلول عيد ميلاد موظف', N'كل الموظفين', NULL, 10, SYSUTCDATETIME()),
 (N'ذكرى عمل موظف', 0, N'المشرفين', 0, N'عند حلول ذكرى عمل موظف', N'كل الموظفين', NULL, 20, SYSUTCDATETIME()),

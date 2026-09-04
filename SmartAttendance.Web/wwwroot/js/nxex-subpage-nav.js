@@ -24,7 +24,7 @@
         }, true);
     });
 
-    // كلندر النظام (nexora-calendar-v18) لوحته مطلقة فيقصّها جسم الصفحة على الموبايل.
+    // كلندر النظام (zynora-calendar-v18) لوحته مطلقة فيقصّها جسم الصفحة على الموبايل.
     // نُرسيها ثابتةً أسفل الشاشة (fixed) لتظهر كاملة — نفس معالجة شاشة الإجازة.
     function dockPanel(picker) {
         const panel = picker.querySelector('.nxcal__panel');

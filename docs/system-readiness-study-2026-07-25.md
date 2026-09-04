@@ -66,7 +66,7 @@
    - **العمل:** خدمة ويندوز (أو NالسSM/IIS)، بيئة Production، أسرار عبر User-Secrets/متغيرات بيئة، Health endpoint، سكربت نسخ احتياطي مجدول.
 
 5. **لا تسليم إشعارات خارجي (بريد/SMS/Push)** ❌
-   - قواعد الإشعارات (`NexoraNotificationRules`) مُعرَّفة والإشعارات داخل التطبيق (`AttendanceNotificationStore`)، **لكن لا يوجد `IEmailSender`/SMTP/WebPush** في الكود → لا تصل الإشعارات خارج الشاشة.
+   - قواعد الإشعارات (`ZynoraNotificationRules`) مُعرَّفة والإشعارات داخل التطبيق (`AttendanceNotificationStore`)، **لكن لا يوجد `IEmailSender`/SMTP/WebPush** في الكود → لا تصل الإشعارات خارج الشاشة.
    - **العمل:** قناة بريد (SMTP) على الأقل + Web-Push للـPWA للطلبات/الموافقات.
 
 6. **تغطية اختبارات ضعيفة** ❌

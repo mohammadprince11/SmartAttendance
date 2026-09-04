@@ -10,9 +10,9 @@
 }
 <link rel="stylesheet" href="~/css/pages/edit-8ddd20e994.css" asp-append-version="true" />
 
-<link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-edit-clean-layout.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-photo-upload.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-edit-clean-layout.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-employee-edit-profile-theme-preview.css" asp-append-version="true" />
 
 
@@ -91,21 +91,38 @@
                 </div>
                 @* اسم الموظف الكامل يتولّد تلقائياً من الاسم الرباعي — لا يُدخل مرتين *@
                 <input type="hidden" asp-for="Employee.FullName" />
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.FirstName">الاسم الأول (عربي)</label>
-                    <input asp-for="Employee.FirstName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.SecondName">الاسم الثاني (عربي)</label>
-                    <input asp-for="Employee.SecondName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.ThirdName">الاسم الثالث (عربي)</label>
-                    <input asp-for="Employee.ThirdName" data-quad-name />
-                </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.LastName">اللقب (عربي)</label>
-                    <input asp-for="Employee.LastName" data-quad-name />
+                <div class="nxr-edit-language-list" id="employeeNameTranslations">
+                    @for (var index = 0; index < Model.EmployeeNameTranslations.Count; index++)
+                    {
+                        var language = Model.EmployeeNameTranslations[index];
+                        <fieldset class="nxr-edit-language-card" dir="@language.Direction" lang="@language.CultureCode">
+                            <legend>
+                                <strong data-zy-no-localize>@language.NativeName</strong>
+                                <small>@language.CultureCode · @(language.IsDefault ? "اللغة الأساسية" : "لغة إضافية")</small>
+                            </legend>
+                            <input type="hidden" asp-for="EmployeeNameTranslations[index].CompanyId" />
+                            <input type="hidden" asp-for="EmployeeNameTranslations[index].CultureCode" />
+                            <div class="nxr-edit-language-grid">
+                                <div class="nxr-edit-field">
+                                    <label>الاسم الأول @(language.IsRequired ? "*" : "")</label>
+                                    <input asp-for="EmployeeNameTranslations[index].FirstName" dir="@language.Direction" />
+                                </div>
+                                <div class="nxr-edit-field">
+                                    <label>الاسم الثاني</label>
+                                    <input asp-for="EmployeeNameTranslations[index].SecondName" dir="@language.Direction" />
+                                </div>
+                                <div class="nxr-edit-field">
+                                    <label>الاسم الثالث</label>
+                                    <input asp-for="EmployeeNameTranslations[index].ThirdName" dir="@language.Direction" />
+                                </div>
+                                <div class="nxr-edit-field">
+                                    <label>اللقب @(language.IsRequired ? "*" : "")</label>
+                                    <input asp-for="EmployeeNameTranslations[index].LastName" dir="@language.Direction" />
+                                </div>
+                            </div>
+                        </fieldset>
+                    }
+                    <span asp-validation-for="EmployeeNameTranslations" class="text-danger"></span>
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
@@ -197,7 +214,7 @@
                     <label asp-for="Employee.Country">البلد</label>
                     <select asp-for="Employee.Country" class="nxr-native-select">
                         <option value="">اختر البلد</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) && !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownCountry(Model.Employee.Country)) { <option value="@Model.Employee.Country">@Model.Employee.Country</option> }
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) && !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownCountry(Model.Employee.Country)) { <option value="@Model.Employee.Country">@Model.Employee.Country</option> }
                         <option value="Iraq">العراق</option><option value="Syria">سوريا</option><option value="Jordan">الأردن</option><option value="Lebanon">لبنان</option><option value="Saudi Arabia">السعودية</option><option value="United Arab Emirates">الإمارات</option><option value="Qatar">قطر</option><option value="Kuwait">الكويت</option><option value="Bahrain">البحرين</option><option value="Oman">عمان</option><option value="Egypt">مصر</option><option value="Turkey">تركيا</option><option value="Iran">إيران</option><option value="India">الهند</option><option value="Pakistan">باكستان</option><option value="Bangladesh">بنغلادش</option><option value="Philippines">الفلبين</option><option value="Nepal">نيبال</option><option value="Other">أخرى</option>
                     </select>
                 </div>
@@ -205,7 +222,7 @@
                     <label asp-for="Employee.Nationality">الجنسية</label>
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
                         <option value="">اختر الجنسية</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) && !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality)) { <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option> }
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) && !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality)) { <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option> }
                         <option value="Iraqi">عراقي</option><option value="Syrian">سوري</option><option value="Jordanian">أردني</option><option value="Lebanese">لبناني</option><option value="Saudi">سعودي</option><option value="Emirati">إماراتي</option><option value="Qatari">قطري</option><option value="Kuwaiti">كويتي</option><option value="Bahraini">بحريني</option><option value="Omani">عماني</option><option value="Egyptian">مصري</option><option value="Turkish">تركي</option><option value="Iranian">إيراني</option><option value="Indian">هندي</option><option value="Pakistani">باكستاني</option><option value="Bangladeshi">بنغلادشي</option><option value="Filipino">فلبيني</option><option value="Nepali">نيبالي</option><option value="Other">أخرى</option>
                     </select>
                 </div>
@@ -248,14 +265,14 @@
                         <option value="">@T["اختر البلد الأم"]</option>
 
                         @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCountry) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCountry(Model.Employee.MotherCountry))
+                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.IsKnownCountry(Model.Employee.MotherCountry))
                         {
                             <option value="@Model.Employee.MotherCountry">
                                 @Model.Employee.MotherCountry
                             </option>
                         }
 
-                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Countries)
+                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.Countries)
                         {
                             <option value="@country.Value">
                                 @T[country.Label]
@@ -278,7 +295,7 @@
                         <option value="">@T["اختر المدينة الأم"]</option>
 
                         @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCity) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCity(
+                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.IsKnownCity(
                                  Model.Employee.MotherCountry,
                                  Model.Employee.MotherCity))
                         {
@@ -288,7 +305,7 @@
                             </option>
                         }
 
-                        @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Cities)
+                        @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.Cities)
                         {
                             <option value="@city.Value"
                                     data-country="@city.CountryValue">
@@ -416,9 +433,9 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/nexora-employee-mother-location.js"
+    <script src="~/js/zynora-employee-mother-location.js"
             asp-append-version="true"></script>
-    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-employee-photo-upload.js" asp-append-version="true"></script>
 
     <script>
         (() => {
@@ -504,7 +521,7 @@
             const department = document.getElementById("Employee_DepartmentId");
             const position = document.getElementById("Employee_PositionId");
             if (!workLocation || !department || !position) return;
-            function refreshSelect(select) { if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") { window.NexoraSelect.refresh(select); } select.dispatchEvent(new Event("change", { bubbles: true })); }
+            function refreshSelect(select) { if (window.ZynoraSelect && typeof window.ZynoraSelect.refresh === "function") { window.ZynoraSelect.refresh(select); } select.dispatchEvent(new Event("change", { bubbles: true })); }
             function filterByCompany(select, companyId) {
                 let currentIsValid = false;
                 Array.from(select.options).forEach(option => {
@@ -524,7 +541,7 @@
             }
             workLocation.addEventListener("change", filterOrganization);
             filterOrganization();
-            window.NexoraEditFilterOrganization = filterOrganization;
+            window.ZynoraEditFilterOrganization = filterOrganization;
         })();
     </script>
 
@@ -541,7 +558,7 @@
                     if (!option.value) { option.textContent = placeholder; return; }
                     if (group[option.value]) { option.textContent = group[option.value]; }
                 });
-                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") { window.NexoraSelect.refresh(marital); } else { marital.dispatchEvent(new Event("change", { bubbles: true })); }
+                if (window.ZynoraSelect && typeof window.ZynoraSelect.refresh === "function") { window.ZynoraSelect.refresh(marital); } else { marital.dispatchEvent(new Event("change", { bubbles: true })); }
             }
             function bind() {
                 const gender = document.getElementById("Employee_Gender");
@@ -614,6 +631,15 @@
                     .forEach(function (it) { parent.insertBefore(it.box, anchor); });
                 parent.removeChild(anchor);
             });
+
+            // تبقى أسماء الموظف بجميع اللغات مباشرة بعد الكود حتى لو غيّر
+            // استوديو الحقول ترتيب الحقول القياسية الأخرى.
+            var localizedNames = document.getElementById("employeeNameTranslations");
+            var employeeNo = document.querySelector('[name="Employee.EmployeeNo"]');
+            var employeeNoBox = employeeNo && (employeeNo.closest(".nxr-edit-field") || employeeNo.parentElement);
+            if (localizedNames && employeeNoBox && employeeNoBox.parentElement === localizedNames.parentElement) {
+                employeeNoBox.insertAdjacentElement("afterend", localizedNames);
+            }
         })();
     </script>
     <partial name="_ValidationScriptsPartial" />

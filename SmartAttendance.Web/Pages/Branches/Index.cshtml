@@ -2,7 +2,7 @@
 @model SmartAttendance.Web.Pages.Branches.IndexModel
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-setup-pages.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-branches-theme-v2.css" asp-append-version="true" />
 }
 
@@ -16,15 +16,15 @@
         companies.FirstOrDefault()?.Id;
 }
 
-<div class="nexora-setup-page" data-setup-page="branches">
-    <section class="nexora-setup-hero">
+<div class="zynora-setup-page" data-setup-page="branches">
+    <section class="zynora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">&#x0627;&#x0644;&#x062E;&#x0637;&#x0648;&#x0629; &#x0627;&#x0644;&#x062B;&#x0627;&#x0646;&#x064A;&#x0629;</span>
+            <span class="zynora-setup-kicker">&#x0627;&#x0644;&#x062E;&#x0637;&#x0648;&#x0629; &#x0627;&#x0644;&#x062B;&#x0627;&#x0646;&#x064A;&#x0629;</span>
             <h1>&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0648;&#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639;</h1>
             <p>&#x0623;&#x0636;&#x0641; &#x0627;&#x0644;&#x0645;&#x0643;&#x062A;&#x0628; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x060C; &#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639;&#x060C; &#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x062A;&#x0634;&#x063A;&#x064A;&#x0644;&#x064A;&#x0629;&#x060C; &#x0627;&#x0644;&#x0645;&#x0634;&#x0627;&#x0631;&#x064A;&#x0639; &#x0623;&#x0648; &#x0646;&#x0642;&#x0627;&#x0637; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;.</p>
         </div>
 
-        <div class="nexora-setup-actions">
+        <div class="zynora-setup-actions">
             <a asp-page="./Import" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
             <button type="button"
                     class="btn-primary nx-setup-btn nx-setup-btn-primary"
@@ -42,8 +42,8 @@
         </div>
     }
 
-    <section class="table-card nexora-setup-card">
-        <div class="nexora-setup-card-head">
+    <section class="table-card zynora-setup-card">
+        <div class="zynora-setup-card-head">
             <div>
                 <span>&#x0633;&#x062C;&#x0644; &#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
                 <strong>&#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639; &#x0648;&#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0645;&#x0639;&#x0631;&#x0641;&#x0629; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</strong>
@@ -51,7 +51,7 @@
             <small>&#x0643;&#x0644; &#x0642;&#x0633;&#x0645; &#x0648;&#x0645;&#x0648;&#x0638;&#x0641; &#x064A;&#x0631;&#x062A;&#x0628;&#x0637; &#x0628;&#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644; &#x0645;&#x062D;&#x062F;&#x062F;.</small>
         </div>
 
-        <form method="get" class="search-form nexora-setup-search">
+        <form method="get" class="search-form zynora-setup-search">
             <input type="search"
                    name="SearchTerm"
                    value="@Model.SearchTerm"
@@ -61,8 +61,8 @@
             <a asp-page="./Index" class="btn-secondary nx-setup-btn nx-setup-btn-secondary">&#x0645;&#x0633;&#x062D;</a>
         </form>
 
-        <div class="nexora-setup-table-wrap">
-            <table class="data-table nexora-setup-table">
+        <div class="zynora-setup-table-wrap">
+            <table class="data-table zynora-setup-table">
                 <thead>
                     <tr>
                         <th>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</th>
@@ -147,7 +147,7 @@
             <div class="nx-setup-form-grid">
                 <label class="nx-setup-field">
                     <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                    <select name="Branch.CompanyId" data-nexora-select="true" required>
+                    <select name="Branch.CompanyId" data-zynora-select="true" required>
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</option>
                         @foreach (var company in Model.Companies)
                         {
@@ -480,11 +480,11 @@
                             button.dataset.branchEditActive === "true";
 
 
-                    if (window.NexoraSelect &&
-                        typeof window.NexoraSelect.refresh === "function" &&
+                    if (window.ZynoraSelect &&
+                        typeof window.ZynoraSelect.refresh === "function" &&
                         editCompany) {
 
-                        window.NexoraSelect.refresh(editCompany);
+                        window.ZynoraSelect.refresh(editCompany);
                     }
 
                 });

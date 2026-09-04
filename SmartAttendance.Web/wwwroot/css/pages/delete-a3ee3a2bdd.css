@@ -1,5 +1,5 @@
 /* Source: Pages/Companies/Delete.cshtml */
-/* NEXORA_FIX19D_SMART_COMPANY_DELETE_START */
+/* ZYNORA_FIX19D_SMART_COMPANY_DELETE_START */
 .nxr-company-delete-page {
     min-height: calc(100vh - 120px);
     display: flex;
@@ -203,4 +203,4 @@
     font-weight: 900;
     margin-bottom: 18px;
 }
-/* NEXORA_FIX19D_SMART_COMPANY_DELETE_END */
+/* ZYNORA_FIX19D_SMART_COMPANY_DELETE_END */

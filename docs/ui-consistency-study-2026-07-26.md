@@ -13,10 +13,10 @@
 | المكوّن | عدد التطبيقات المتنافسة | الدليل |
 |---------|------------------------|--------|
 | **الأزرار** | 10+ بادئات صنف | `.nxr-btn`(23) · `.nxp-btn`(7) · `.hrms-btn-*` · `.esl-btn` · `.rehire-btn` · `.lifecycle-btn-*` · `.endservice-btn` · `.nxex-*` · `.nxpen-*` · `.z360-*` — **45 ملف CSS يعرّف زراً** |
-| **منتقي التاريخ/الكلاندر** | ~7 أنظمة | `nxex-datepicker.js`(البوابة) · `nexora-calendar-v18.js` · `nexora-edit-custom-datepicker.js` · `emp-picker.js` · `nexora-month-picker-v1.js` · `nexora-employee-updates-date-system.js` + **`input[type=date]` أصلي بـ84 موضع/33 ملف** |
-| **الدروب/select** | 3 أنماط | `data-nexora-select` مخصّص(18 ملف) · `<select>` أصلي(بقية الصفحات) · دروب البوابة `nxex` |
+| **منتقي التاريخ/الكلاندر** | ~7 أنظمة | `nxex-datepicker.js`(البوابة) · `zynora-calendar-v18.js` · `zynora-edit-custom-datepicker.js` · `emp-picker.js` · `zynora-month-picker-v1.js` · `zynora-employee-updates-date-system.js` + **`input[type=date]` أصلي بـ84 موضع/33 ملف** |
+| **الدروب/select** | 3 أنماط | `data-zynora-select` مخصّص(18 ملف) · `<select>` أصلي(بقية الصفحات) · دروب البوابة `nxex` |
 | **الوقت** | منفصل | `nxex-timepicker.js` (البوابة فقط) |
-| **ملفات CSS** | 66 ملف | معظمها `nexora-<feature>-*.css` بنمط ملف-لكل-ميزة |
+| **ملفات CSS** | 66 ملف | معظمها `zynora-<feature>-*.css` بنمط ملف-لكل-ميزة |
 
 **النتيجة المرئية:** نفس الإجراء (اختيار تاريخ، فتح دروب، ضغط زر حفظ) يبدو ويتصرّف بشكل مختلف حسب الصفحة — تحديداً منتقي التاريخ (أصلي رمادي بصفحة، ومخصّص ملوّن بأخرى) والدروبات.
 
@@ -30,7 +30,7 @@
 |---------|----------------------|---------------------|
 | زر أساسي/ثانوي/خطر/شبح | `.zy-btn` + `.zy-btn--primary/ghost/danger/success` | `hrms-btn-*` (الأنظف، يعتمد tokens) |
 | حقل إدخال | `.zy-field` (label + input) | `nxp-field` |
-| دروب | `.zy-select` (نظام JS واحد) | `nexora-select-system.js` |
+| دروب | `.zy-select` (نظام JS واحد) | `zynora-select-system.js` |
 | منتقي تاريخ | نظام datepicker **واحد** | `nxex-datepicker.js` (الأحدث، RTL-aware) |
 | منتقي وقت | `nxex-timepicker.js` (موجود، يُعمّم) | — |
 | جدول | `.zy-table` | `nxp-table` / `sa-table` |
@@ -47,10 +47,10 @@
 > مبدأ: **توحيد بصري بلا كسر وظيفي**. نبدأ بأكثر مكوّن يلفت النظر (منتقي التاريخ) لأنه الأكثر تبايناً وذكره المستخدم.
 
 ### المرحلة أ — منتقي التاريخ (الأعلى أولوية)
-توحيد كل `input[type=date]` الأصلية (84 موضع/33 ملف) + الأنظمة المخصّصة على **منتقي واحد** (نمط `nxex-datepicker` المعمّم عالمياً). حذف/إيقاف: `nexora-calendar-v18`, `nexora-edit-custom-datepicker`, `emp-picker`, `nexora-month-picker`, `nexora-employee-updates-date-system` بعد الترحيل.
+توحيد كل `input[type=date]` الأصلية (84 موضع/33 ملف) + الأنظمة المخصّصة على **منتقي واحد** (نمط `nxex-datepicker` المعمّم عالمياً). حذف/إيقاف: `zynora-calendar-v18`, `zynora-edit-custom-datepicker`, `emp-picker`, `zynora-month-picker`, `zynora-employee-updates-date-system` بعد الترحيل.
 
 ### المرحلة ب — الدروب/select
-تعميم `nexora-select-system.js` على كل `<select>` (أو تنسيق أصلي موحّد عبر CSS عالمي)، وإزالة `nexora-select-optional-v17` المكرّر.
+تعميم `zynora-select-system.js` على كل `<select>` (أو تنسيق أصلي موحّد عبر CSS عالمي)، وإزالة `zynora-select-optional-v17` المكرّر.
 
 ### المرحلة ج — الأزرار
 `zynora-components.css` عالمي يوحّد شكل كل بادئات الأزرار عبر تجميع المحدّدات (`.nxr-btn, .nxp-btn, .esl-btn, ... { ... }`) على مواصفة واحدة (ارتفاع/حشو/حواف/حالة hover/focus) — تغطية عالية بمخاطرة منخفضة بلا لمس 130 صفحة يدوياً.

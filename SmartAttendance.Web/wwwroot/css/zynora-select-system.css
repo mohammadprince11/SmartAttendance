@@ -1,0 +1,259 @@
+/* ZYNORA_FIX15C_GLOBAL_SELECT_SYSTEM_START */
+.nxos,
+.nxos__menu {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+select.nxos-native,
+select.nxcs-native,
+select[data-zynora-built="1"],
+select[data-nxcs-enhanced="true"] {
+    position: absolute !important;
+    inset-inline-start: -10000px !important;
+    left: -10000px !important;
+    top: auto !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 1px !important;
+    min-height: 1px !important;
+    max-width: 1px !important;
+    max-height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    z-index: -1 !important;
+}
+
+.nxcs-select,
+.nxcs-select * {
+    box-sizing: border-box !important;
+}
+
+.nxcs-select {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    direction: rtl !important;
+}
+
+.nxcs-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    border-radius: 14px !important;
+    /* ⚠️ كان حدّاً **تركوازياً** مثبّتاً `rgba(18,217,227,.34)` — وهذا أوسع
+       مكوّن بالنظام: مسحٌ حيّ لـ81 صفحة أحصى **231 منسدلة على 57 صفحة**، كلّها
+       بهذا الحدّ. فبقي التيل حاضراً بكل شاشة بعد اعتماد سلايت-بلو.
+       الآن يشتقّ من لون العلامة فيتبعه ويتبع أي هوية White-Label. */
+    border: 1px solid color-mix(in srgb, var(--brand-primary, #486C8F) 40%, transparent) !important;
+    /* والخلفية كانت كحليّاً مثبّتاً من عهد سابق — تتبع سطح الحقل بالتوكن. */
+    background: var(--surface-input, #0B1A2D) !important;
+    color: var(--sa-text, #E6EAEE) !important;
+    padding: 0 14px !important;
+    font-weight: 950 !important;
+    line-height: 1.25 !important;
+    cursor: pointer !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035) !important;
+    outline: none !important;
+    text-align: right !important;
+}
+
+.nxcs-trigger:hover,
+.nxcs-select.is-open .nxcs-trigger,
+.nxcs-trigger:focus {
+    border-color: rgba(34, 211, 238, .72) !important;
+    box-shadow:
+        0 0 0 4px rgba(34, 211, 238, .10),
+        inset 0 1px 0 rgba(255, 255, 255, .06) !important;
+}
+
+.nxcs-value {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    color: inherit !important;
+}
+
+/* سهم المنسدلة: شيفرون مجرَّد لا زرٌّ دائريّ.
+   كان قرصاً 26×26 بحدٍّ وخلفية داخل حقلٍ ارتفاعه 30px — أي أنه يملأ الحقل تقريباً
+   فيبدو كزرٍّ ثانٍ ملصوقٍ بالحقل لا كمؤشّر فتح. ولونه كان تيلاً مثبَّتاً
+   (`rgba(34,211,238,…)`) بالوضعين، فلا يتبع سلايت-بلو ولا محرّك هوية الشركة.
+   الآن: بلا حدّ ولا خلفية، وبلون النصّ الثانوي، ويتلوّن بالهوية عند الفتح. */
+.nxcs-caret {
+    width: 16px !important;
+    height: 16px !important;
+    flex: 0 0 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    transition: transform .15s ease, color .15s ease !important;
+}
+
+/* ⚠️ اللون بتخصصية (0,3,0) عمداً: `zynora-legacy-bridge` — وهو **آخر ملف
+   يُحمَّل** — يفرض `color: inherit` على كل سليلٍ بـ`.zynora-setup-page`، فيرث
+   السهم لون نصّ الحقل ويصير `#E6E6E6` بدل الرمادي الثانوي. صنفٌ واحد يتعادل معه
+   فيخسر بترتيب التحميل. رُصد بمسحٍ حيّ: 7 صفحات على `rgb(132,150,165)`
+   و`/Setup` وحدها على `rgb(230,230,230)`. */
+.nxcs-trigger .nxcs-caret.nxcs-caret {
+    color: var(--color-text-secondary, #8496a5) !important;
+}
+
+.nxcs-caret svg {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+/* الشيفرون ينقلب عند الفتح — إشارةٌ للحالة كانت غائبة تماماً */
+.nxcs-select.is-open .nxcs-caret {
+    transform: rotate(180deg) !important;
+    color: var(--color-primary-text, #486C8F) !important;
+}
+
+.nxcs-trigger:hover .nxcs-caret {
+    color: var(--color-primary-text, #486C8F) !important;
+}
+
+.nxcs-panel {
+    position: fixed !important;
+    z-index: 2147482500 !important;
+    display: grid !important;
+    gap: 0 !important;   /* الفصل بالخطّ الشعريّ لا بالفجوة — انظر .nxcs-option */
+    padding: 8px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(34, 211, 238, .28) !important;
+    background:
+        linear-gradient(135deg, rgba(7, 18, 31, .98), rgba(6, 30, 46, .98)) !important;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, .42) !important;
+    overflow: auto !important;
+    direction: rtl !important;
+}
+
+/* صفوف الخيارات: خطٌّ فاصلٌ شعريّ بدل صفوفٍ مستديرة متباعدة.
+   كانت كل خيارٍ صندوقاً مستديراً 11px بفجوة 5px بينه وبين جاره، فالقائمة الطويلة
+   (العملات · الجنسيات · الموظفون) تُقرأ **كومةَ أزرار** لا قائمةَ اختيار، والعين
+   تفكّ كل صندوقٍ على حدة. والفجوات تترك شرائط ميتة لا تستجيب للمرور.
+   الخطّ الشعريّ أهدأ ويُحاذي العين عمودياً، والصفّ كامل العرض فيصير هدف المرور
+   متّصلاً بلا فراغات. */
+.nxcs-option {
+    min-height: 34px !important;
+    width: 100% !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--color-border, rgba(217, 225, 232, .14)) !important;
+    border-radius: 0 !important;
+    padding: 8px 12px !important;
+    background: transparent !important;
+    color: var(--color-text-primary, #E6EAEE) !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+    cursor: pointer !important;
+}
+
+/* آخر صفٍّ بلا خطّ — وإلا بدا الخطّ حدّاً سفلياً للّوحة مكرّراً */
+.nxcs-option:last-child {
+    border-bottom: 0 !important;
+}
+
+.nxcs-option:hover,
+.nxcs-option:focus {
+    background: var(--color-primary-soft, rgba(72, 108, 143, .14)) !important;
+    color: var(--color-text-primary, #FFFFFF) !important;
+}
+
+/* المختار: لون الهوية صلباً بدل تدرّج تيل مثبَّت (نصفه هوية ونصفه سماويّ قديم) */
+.nxcs-option.is-selected {
+    background: var(--color-primary-strong, #486C8F) !important;
+    background-image: none !important;
+    color: var(--color-on-primary, #ffffff) !important;
+}
+
+.nxcs-option:disabled {
+    opacity: .45 !important;
+    cursor: not-allowed !important;
+}
+
+.nxcs-select.is-disabled {
+    opacity: .72 !important;
+    pointer-events: none !important;
+}
+/* ZYNORA_FIX15C_GLOBAL_SELECT_SYSTEM_END */
+/* ZYNORA_FIX15D_DROPDOWN_POSITION_START */
+.nxcs-panel {
+    overscroll-behavior: contain !important;
+    /* كان تيلاً مثبَّتاً بالوضعين — آخر بقايا التيل بهذا الملف */
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 55%, transparent) transparent !important;
+    scrollbar-width: thin !important;
+}
+
+.nxcs-panel::-webkit-scrollbar {
+    width: 8px !important;
+}
+
+.nxcs-panel::-webkit-scrollbar-track {
+    background: rgba(7, 18, 31, .85) !important;
+    border-radius: 999px !important;
+}
+
+.nxcs-panel::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, .50) !important;
+    border-radius: 999px !important;
+}
+/* ZYNORA_FIX15D_DROPDOWN_POSITION_END */
+/* ZYNORA_FIX15E_LIGHT_THEME_START
+   نسخة الثيم الفاتح: المكون كان دارك ثابتاً فينكسر على data-theme="light" —
+   نقلب الخلفيات لأبيض والنصوص لغامق بنفس قوة !important ليتغلب. */
+html[data-theme="light"] .nxcs-trigger {
+    background: #ffffff !important;
+    border-color: rgba(13, 148, 158, .35) !important;
+    color: #0b2239 !important;
+    box-shadow: inset 0 1px 0 rgba(0, 0, 0, .02) !important;
+}
+
+html[data-theme="light"] .nxcs-trigger:hover,
+html[data-theme="light"] .nxcs-select.is-open .nxcs-trigger,
+html[data-theme="light"] .nxcs-trigger:focus {
+    border-color: rgba(13, 148, 158, .7) !important;
+    box-shadow: 0 0 0 4px rgba(13, 148, 158, .10) !important;
+}
+
+/* ⛔ حُذف طقم الفاتح للسهم: كان يعيد الحدّ والخلفية بتيلٍ آخر مثبَّت (#0d949e)،
+   أي قرصان بلونين حسب الوضع. القاعدة أعلاه بالتوكنز تخدم الوضعين. */
+
+html[data-theme="light"] .nxcs-panel {
+    background: #ffffff !important;
+    border-color: rgba(13, 148, 158, .3) !important;
+    box-shadow: 0 22px 55px rgba(15, 40, 70, .22) !important;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 55%, transparent) transparent !important;
+}
+
+/* ⛔ حُذف طقم الفاتح للخيارات (اللون والمرور والمختار): كان يعيد تيلاً مثبَّتاً
+   (`rgba(13,148,158,.10)` وتدرّج `#0fb5c0`) — أي قائمتان بهويّتين حسب الوضع.
+   قواعد الأساس أعلاه بالتوكنز (`--color-text-primary` · `--color-primary-soft` ·
+   `--color-primary-strong`) تخدم الوضعين وتتبع محرّك هوية الشركة. */
+
+html[data-theme="light"] .nxcs-panel::-webkit-scrollbar-track {
+    background: #eef3f6 !important;
+}
+
+html[data-theme="light"] .nxcs-panel::-webkit-scrollbar-thumb {
+    background: rgba(13, 148, 158, .45) !important;
+}
+/* ZYNORA_FIX15E_LIGHT_THEME_END */

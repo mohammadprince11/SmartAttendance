@@ -4,7 +4,7 @@ namespace SmartAttendance.Web.Infrastructure.CompanyContext;
 
 public static class CompanySelectionContext
 {
-    public const string CookieName = "NEXORA.CompanyId";
+    public const string CookieName = "ZYNORA.CompanyId";
 
     public static int? Resolve(
         HttpContext httpContext,

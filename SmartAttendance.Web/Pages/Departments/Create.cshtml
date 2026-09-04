@@ -3,7 +3,7 @@
 
 @section Styles {
     <link rel="stylesheet"
-          href="~/css/nexora-setup-pages.css"
+          href="~/css/zynora-setup-pages.css"
           asp-append-version="true" />
 
     <style>
@@ -76,10 +76,10 @@
     ViewData["Title"] = "إضافة قسم";
 }
 
-<div class="nexora-setup-page nx-setup-form-page">
-    <section class="nexora-setup-hero">
+<div class="zynora-setup-page nx-setup-form-page">
+    <section class="zynora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">الأقسام</span>
+            <span class="zynora-setup-kicker">الأقسام</span>
             <h1>إضافة قسم</h1>
             <p>
                 اختر الشركة ثم أدخل اسم القسم حسب لغات بيانات الشركة المفعلة.
@@ -100,7 +100,7 @@
         </div>
     }
 
-    <section class="nexora-setup-card">
+    <section class="zynora-setup-card">
         <form method="post"
               id="department-create-form"
               class="nx-setup-modal-form">
@@ -113,7 +113,7 @@
                     <span>الشركة</span>
 
                     <select asp-for="Department.CompanyId"
-                            data-nexora-select="true">
+                            data-zynora-select="true">
                         <option value="">اختر الشركة</option>
 
                         @foreach (var company in Model.Companies)

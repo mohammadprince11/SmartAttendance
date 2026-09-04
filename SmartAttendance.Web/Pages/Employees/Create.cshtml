@@ -12,11 +12,11 @@
 }
 <link rel="stylesheet" href="~/css/pages/create-105041754d.css" asp-append-version="true" />
 
-<link rel="stylesheet" href="~/css/nexora-employee-create-documents-final.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-create-clean-fix.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-create-stable.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-photo-upload.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/nexora-employee-profile-dynamic-fields.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-create-documents-final.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-create-clean-fix.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-create-stable.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-photo-upload.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-profile-dynamic-fields.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-employee-create-designlab-v1.css" asp-append-version="true" />
 <link rel="stylesheet"
       href="~/css/zynora-employee-create-language-cards-v1.css"
@@ -200,7 +200,7 @@
                     <input asp-for="Employee.BirthDate" type="date" />
                     <span asp-validation-for="Employee.BirthDate" class="text-danger"></span>
                 </div>
-@* NEXORA_DEMOGRAPHIC_FIELDS_START *@
+@* ZYNORA_DEMOGRAPHIC_FIELDS_START *@
                 <div class="nxr-field">
                     <label asp-for="Employee.Gender">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;</label>
                     <select asp-for="Employee.Gender" class="nxr-native-select">
@@ -277,8 +277,8 @@
                     </select>
                     <span asp-validation-for="Employee.Nationality" class="text-danger"></span>
                 </div>
-@* NEXORA_DEMOGRAPHIC_FIELDS_END *@
-@* NEXORA_MARITAL_STATUS_FIELD_END *@
+@* ZYNORA_DEMOGRAPHIC_FIELDS_END *@
+@* ZYNORA_MARITAL_STATUS_FIELD_END *@
 
                 @* ---------- الجنسية والإقامة (نمط كيان — مطابق لصفحة التعديل) ---------- *@
                 <div class="nxr-field">
@@ -316,14 +316,14 @@
                         <option value="">@T["اختر البلد الأم"]</option>
 
                         @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCountry) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCountry(Model.Employee.MotherCountry))
+                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.IsKnownCountry(Model.Employee.MotherCountry))
                         {
                             <option value="@Model.Employee.MotherCountry">
                                 @Model.Employee.MotherCountry
                             </option>
                         }
 
-                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Countries)
+                        @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.Countries)
                         {
                             <option value="@country.Value">
                                 @T[country.Label]
@@ -346,7 +346,7 @@
                         <option value="">@T["اختر المدينة الأم"]</option>
 
                         @if (!string.IsNullOrWhiteSpace(Model.Employee.MotherCity) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.IsKnownCity(
+                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.IsKnownCity(
                                  Model.Employee.MotherCountry,
                                  Model.Employee.MotherCity))
                         {
@@ -356,7 +356,7 @@
                             </option>
                         }
 
-                        @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.NexoraEmployeeGeoLookups.Cities)
+                        @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.Cities)
                         {
                             <option value="@city.Value"
                                     data-country="@city.CountryValue">
@@ -400,7 +400,7 @@
 
                 <div class="nxr-field">
                     <label asp-for="Employee.DepartmentId">&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</label>
-                    <select data-nexora-select="true" asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
+                    <select data-zynora-select="true" asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
                         @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name))
                         {
@@ -456,6 +456,20 @@
                         @foreach (var grade in Model.GradeOptions) { <option value="@grade">@grade</option> }
                     </select>
                 </div>
+
+                @if (Model.CanEditCompensation)
+                {
+                    <div class="nxr-field">
+                        <label asp-for="BasicSalary">الراتب الأساسي</label>
+                        <input asp-for="BasicSalary"
+                               type="number"
+                               min="0"
+                               step="0.001"
+                               inputmode="decimal"
+                               placeholder="0" />
+                        <span asp-validation-for="BasicSalary" class="text-danger"></span>
+                    </div>
+                }
             </div>
         </section>
 
@@ -495,7 +509,7 @@
         </section>
 
 
-        @* NEXORA_CREATE_DYNAMIC_PROFILE_FIELDS_MARKER *@
+        @* ZYNORA_CREATE_DYNAMIC_PROFILE_FIELDS_MARKER *@
         @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
         {
             <section class="nxr-card nxr-form-section nxr-create-section nxr-create-dynamic-profile-section">
@@ -667,9 +681,9 @@
 </form>
 </div>
 @section Scripts {
-    <script src="~/js/nexora-employee-mother-location.js"
+    <script src="~/js/zynora-employee-mother-location.js"
             asp-append-version="true"></script>
-    <!-- NEXORA_CREATE_ORGANIZATION_FILTER_START -->
+    <!-- ZYNORA_CREATE_ORGANIZATION_FILTER_START -->
     <script>
         (() => {
             const company = document.getElementById("SelectedCompanyId");
@@ -682,8 +696,8 @@
             }
 
             function refreshSelect(select) {
-                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
-                    window.NexoraSelect.refresh(select);
+                if (window.ZynoraSelect && typeof window.ZynoraSelect.refresh === "function") {
+                    window.ZynoraSelect.refresh(select);
                 }
 
                 select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -740,13 +754,13 @@
             workLocation.addEventListener("change", filterOrganization);
             filterCompany();
 
-            window.NexoraCreateFilterOrganization = filterOrganization;
-            window.NexoraCreateFilterCompany = filterCompany;
+            window.ZynoraCreateFilterOrganization = filterOrganization;
+            window.ZynoraCreateFilterCompany = filterCompany;
         })();
     </script>
-    <!-- NEXORA_CREATE_ORGANIZATION_FILTER_END -->
+    <!-- ZYNORA_CREATE_ORGANIZATION_FILTER_END -->
 
-    <!-- NEXORA_MARITAL_BY_GENDER_START -->
+    <!-- ZYNORA_MARITAL_BY_GENDER_START -->
     <script>
         (() => {
             const labels = {
@@ -799,8 +813,8 @@
                     }
                 });
 
-                if (window.NexoraSelect && typeof window.NexoraSelect.refresh === "function") {
-                    window.NexoraSelect.refresh(marital);
+                if (window.ZynoraSelect && typeof window.ZynoraSelect.refresh === "function") {
+                    window.ZynoraSelect.refresh(marital);
                 } else {
                     marital.dispatchEvent(new Event("change", { bubbles: true }));
                 }
@@ -829,7 +843,7 @@
             setTimeout(bind, 900);
         })();
     </script>
-    <!-- NEXORA_MARITAL_BY_GENDER_END -->
+    <!-- ZYNORA_MARITAL_BY_GENDER_END -->
     <script>
         // الاسم الرباعي → يبني "الاسم الكامل" المخفي تلقائياً أثناء الكتابة.
         (function () {
@@ -908,8 +922,8 @@
         })();
     </script>
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/nexora-employee-create-documents-final.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-employee-photo-upload.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-employee-create-documents-final.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-employee-photo-upload.js" asp-append-version="true"></script>
 }
 
 

@@ -68,7 +68,7 @@ public sealed class CompanyDataLocalizationTests
         Assert.Contains("SaveEmployeeNameTranslationsAsync", model, StringComparison.Ordinal);
         Assert.Contains("if (languages.Count == 0)", model, StringComparison.Ordinal);
         Assert.Contains("id=\"SelectedCompanyId\"", page, StringComparison.Ordinal);
-        Assert.Contains("NexoraCreateFilterCompany", page, StringComparison.Ordinal);
+        Assert.Contains("ZynoraCreateFilterCompany", page, StringComparison.Ordinal);
         Assert.DoesNotContain("تظهر اللغة الأساسية وأي لغات إضافية مفعلة للشركة", page, StringComparison.Ordinal);
         Assert.DoesNotContain(">إعداد اللغات</a>", page, StringComparison.Ordinal);
         Assert.True(

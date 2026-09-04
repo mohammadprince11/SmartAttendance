@@ -111,7 +111,7 @@ IF COL_LENGTH('DisciplinaryPenaltyRules','ActionType') IS NULL
     ALTER TABLE DisciplinaryPenaltyRules ADD ActionType nvarchar(40) NOT NULL
         CONSTRAINT DF_DisciplinaryPenaltyRules_ActionType DEFAULT(N'VerbalWarning');
 
--- سبب الإيقاف — لإجراء «إنهاء الخدمة» وحده، مربوط بـNexoraTerminationReasons.
+-- سبب الإيقاف — لإجراء «إنهاء الخدمة» وحده، مربوط بـZynoraTerminationReasons.
 IF COL_LENGTH('DisciplinaryPenaltyRules','TerminationReasonId') IS NULL
     ALTER TABLE DisciplinaryPenaltyRules ADD TerminationReasonId int NULL;
 

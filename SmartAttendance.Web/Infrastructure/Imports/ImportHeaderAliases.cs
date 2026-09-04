@@ -62,6 +62,25 @@ public static class ImportHeaderAliases
             ("فعال", "IsActive"),
             ("رقم الموظف للمدير المباشر", "DirectManagerEmployeeNo"),
             ("الراتب الأساسي", "BasicSalary"),
+            ("الاسم الأول عربي", "FirstName"),
+            ("الاسم الثاني عربي", "SecondName"),
+            ("الاسم الثالث عربي", "ThirdName"),
+            ("اللقب عربي", "LastName"),
+            ("الاسم الأول إنجليزي", "FirstNameEn"),
+            ("الاسم الثاني إنجليزي", "SecondNameEn"),
+            ("الاسم الثالث إنجليزي", "ThirdNameEn"),
+            ("اللقب إنجليزي", "LastNameEn"),
+            ("مواطن", "IsCitizen"),
+            ("رقم جواز السفر", "PassportNo"),
+            ("اسم الكفيل", "SponsorName"),
+            ("الديانة", "Religion"),
+            ("البلد الأم", "MotherCountry"),
+            ("المدينة الأم", "MotherCity"),
+            ("تاريخ المباشرة الفعلية", "JoiningDate"),
+            ("نوع الدوام", "WorkType"),
+            ("الدرجة الوظيفية", "JobGrade"),
+            ("امتداد الهاتف", "PhoneExtension"),
+            ("البريد الشخصي", "PersonalEmail"),
 
             // مرادفات شائعة يكتبها الناس بدل نصّ القالب حرفياً
             ("الرقم الوظيفي", "EmployeeNo"),
@@ -86,6 +105,9 @@ public static class ImportHeaderAliases
             ("المدير المباشر", "DirectManagerEmployeeNo"),
             ("الراتب", "BasicSalary"),
             ("الراتب الاسمي", "BasicSalary"),
+            ("رقم الجواز", "PassportNo"),
+            ("الكفيل", "SponsorName"),
+            ("تاريخ المباشرة الفعلي", "JoiningDate"),
 
             // أعمدة الورقة المرجعية — تُطابَق لتُتجاهَل كمرجع لا لتُقرأ
             // حقلاً مخصّصاً (IsReferenceHeader يفحص البادئة "ref").

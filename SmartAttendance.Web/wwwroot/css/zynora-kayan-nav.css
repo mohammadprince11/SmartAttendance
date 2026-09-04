@@ -14,27 +14,27 @@
 .ky-back { display: none; }
 
 @media (min-width: 981px) {
-    .nexora-nav-group { position: static !important; }
+    .zynora-nav-group { position: static !important; }
 
-    .nexora-nav-group:not(.ky-open):not(.ky-closing) > .nexora-nav-group-links { display: none !important; }
+    .zynora-nav-group:not(.ky-open):not(.ky-closing) > .zynora-nav-group-links { display: none !important; }
 
     /* كروم 131+ يخفي محتوى details المغلق عبر ::details-content بـ content-visibility:hidden،
        ولأننا نفتح بكلاس ky-open دون خاصية open يجب كشف المحتوى صراحةً وإلا لا يُرسم الدرج إطلاقاً */
-    .nexora-nav-group.ky-open::details-content,
-    .nexora-nav-group.ky-closing::details-content {
+    .zynora-nav-group.ky-open::details-content,
+    .zynora-nav-group.ky-closing::details-content {
         content-visibility: visible !important;
         display: contents !important;
     }
 
-    .nexora-nav-group.ky-open > summary {
+    .zynora-nav-group.ky-open > summary {
         background: rgba(18, 217, 227, .10) !important;
         color: #e6eaee !important;
     }
 
     /* الدرج: لوحة كاملة الارتفاع تغطي القائمة نفسها (لا تطغى على المحتوى)
        — موضعها وعرضها يُطابقان القائمة ديناميكياً بالـ JS (--ky-right / --ky-w) */
-    .nexora-nav-group.ky-open > .nexora-nav-group-links,
-    .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+    .zynora-nav-group.ky-open > .zynora-nav-group-links,
+    .zynora-nav-group.ky-closing > .zynora-nav-group-links {
         position: fixed !important;
         top: 0 !important;
         bottom: 0 !important;
@@ -60,16 +60,16 @@
 
     /* الدرج عمود flex: بلا هذي القاعدة تنضغط عناصره لتطابق الارتفاع بدل أن تفيض،
        فلا يكبر scrollHeight ولا يشتغل التمرير وتُقص العناصر السفلية بالشاشات القصيرة */
-    .nexora-nav-group.ky-open > .nexora-nav-group-links > *,
-    .nexora-nav-group.ky-closing > .nexora-nav-group-links > * {
+    .zynora-nav-group.ky-open > .zynora-nav-group-links > *,
+    .zynora-nav-group.ky-closing > .zynora-nav-group-links > * {
         flex-shrink: 0;
     }
 
-    .nexora-nav-group.ky-open > .nexora-nav-group-links {
+    .zynora-nav-group.ky-open > .zynora-nav-group-links {
         animation: kySlideOver .32s cubic-bezier(.22, .61, .36, 1) both;
     }
 
-    .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+    .zynora-nav-group.ky-closing > .zynora-nav-group-links {
         animation: kySlideOut .22s cubic-bezier(.55, .06, .68, .19) both;
         pointer-events: none;
     }
@@ -120,7 +120,7 @@
     /* عنوان المجموعة يلي صف الرجوع — **اسم شاشة لا رابط**.
        كان `<a>` إلى قائمة الموظفين فيفتح صفحةً لمن ظنّه عنواناً، وهي وجهة
        «عرض الموظفين» نفسها. صار `<div>`، فيلزم إبطال ما يوحي بالنقر:
-       المؤشّر وتأثير المرور الموروثان من `.nexora-nav-link`. */
+       المؤشّر وتأثير المرور الموروثان من `.zynora-nav-link`. */
     .ky-drawer-title,
     .ky-drawer-title:hover {
         cursor: default !important;
@@ -141,7 +141,7 @@
 }
 
 /* علامة هادئة على مجموعة الصفحة الحالية دون فتح الدرج تلقائياً */
-.nexora-nav-group > summary.ky-current {
+.zynora-nav-group > summary.ky-current {
     background: rgba(18, 217, 227, .07) !important;
 }
 
@@ -199,7 +199,7 @@
 
 .ky-acc[open] > .ky-acc-body { max-height: 460px; }
 
-.ky-acc .ky-acc-body .nexora-nav-link {
+.ky-acc .ky-acc-body .zynora-nav-link {
     margin-inline-start: 10px;
     border-inline-start: 2px solid rgba(157, 184, 204, .18);
     border-radius: 0 10px 10px 0;
@@ -212,13 +212,13 @@
    surface, title and return row for the selected light mode.
 */
 @media (min-width: 981px) {
-    html[data-theme="light"] .nexora-nav-group.ky-open > summary {
+    html[data-theme="light"] .zynora-nav-group.ky-open > summary {
         background: rgba(72, 108, 143, .09) !important;
         color: #0B2239 !important;
     }
 
-    html[data-theme="light"] .nexora-nav-group.ky-open > .nexora-nav-group-links,
-    html[data-theme="light"] .nexora-nav-group.ky-closing > .nexora-nav-group-links {
+    html[data-theme="light"] .zynora-nav-group.ky-open > .zynora-nav-group-links,
+    html[data-theme="light"] .zynora-nav-group.ky-closing > .zynora-nav-group-links {
         background:
             radial-gradient(circle at 85% 0%, rgba(72, 108, 143, .10), transparent 34%),
             linear-gradient(180deg, rgba(255, 255, 255, .995), rgba(244, 246, 248, .995)) !important;
@@ -227,25 +227,25 @@
         color: #0B2239 !important;
     }
 
-    html[data-theme="light"] .nexora-nav-group-links .ky-back {
+    html[data-theme="light"] .zynora-nav-group-links .ky-back {
         border-bottom-color: rgba(15, 60, 100, .14) !important;
         background: rgba(72, 108, 143, .05) !important;
         color: #53697D !important;
     }
 
-    html[data-theme="light"] .nexora-nav-group-links .ky-back:hover {
+    html[data-theme="light"] .zynora-nav-group-links .ky-back:hover {
         background: rgba(72, 108, 143, .11) !important;
         color: #0B2239 !important;
     }
 
-    html[data-theme="light"] .nexora-nav-group-links .ky-drawer-title,
-    html[data-theme="light"] .nexora-nav-group-links .ky-drawer-title:hover {
+    html[data-theme="light"] .zynora-nav-group-links .ky-drawer-title,
+    html[data-theme="light"] .zynora-nav-group-links .ky-drawer-title:hover {
         border-bottom-color: rgba(15, 60, 100, .14) !important;
         background: rgba(72, 108, 143, .07) !important;
         color: #0B2239 !important;
     }
 
-    html[data-theme="light"] .ky-acc .ky-acc-body .nexora-nav-link {
+    html[data-theme="light"] .ky-acc .ky-acc-body .zynora-nav-link {
         border-inline-start-color: rgba(15, 60, 100, .16);
     }
 }
