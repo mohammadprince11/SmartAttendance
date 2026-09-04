@@ -1,0 +1,775 @@
+
+/* ZYNORA_DESIGNLAB_INLINE_STYLES_EXTERNALIZED_20260904 */
+/* Source: SmartAttendance.Web/Pages/DesignLab/Components.cshtml */
+/* ==========================================================
+   ZYNORA COMPONENT LAB — FINAL BLOCK PALETTE
+   ========================================================== */
+
+.zcl-page {
+    --lab-page:      #101521;
+    --lab-section:   #131C2B;
+    --lab-block:     #182131;
+    --lab-inner:     #111B2A;
+    --lab-border:    rgba(217,225,232,.08);
+    --lab-border-2:  rgba(217,225,232,.13);
+}
+
+
+/* ==========================================================
+   SECTIONS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app .zcl-page .zcl-section {
+    background: var(--lab-section) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.012) !important;
+}
+
+
+/* ==========================================================
+   00 — FOUNDATION BLOCKS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#principles .zcl-principles article {
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   01 — BUTTON SYSTEM
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-demo-block,
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-grid-2 > .zcl-demo-block {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-decision {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+}
+
+
+/* ==========================================================
+   02 — INPUTS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#inputs .zcl-demo-block {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+/* ==========================================================
+   03 — SELECTION CONTROLS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#selection .zcl-demo-block {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+/* Select itself remains darker than its block */
+
+html[data-theme="dark"] body.zy-app
+#selection select,
+
+html[data-theme="dark"] body.zy-app
+#selection .zy-select {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+}
+
+
+/* ==========================================================
+   04 — DATE / MONTH / TIME
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#datetime .zdt2-stage {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.012) !important;
+}
+
+
+/* ==========================================================
+   05 — CARDS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#cards .zc5-stage {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#cards .zc5-info-card {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+
+    box-shadow:
+        0 8px 20px rgba(0,0,0,.08) !important;
+}
+
+
+/* ==========================================================
+   06 — TABLES
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#tables .zy-table-wrap {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+/* ==========================================================
+   07 — MODAL / DRAWER
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#overlays .zcl-modal-frame,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zcl-drawer-frame {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-modal__header,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-modal__body,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-modal__footer,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zcl-drawer-head {
+
+    background: transparent !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-input {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+}
+
+
+/* ==========================================================
+   08 — FEEDBACK
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#feedback .zcl-empty {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+/* ==========================================================
+   HOVER MUST NOT BRING THE OLD BLUE BACK
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#principles .zcl-principles article:hover,
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-demo-block:hover,
+
+html[data-theme="dark"] body.zy-app
+#selection .zcl-demo-block:hover,
+
+html[data-theme="dark"] body.zy-app
+#cards .zc5-stage:hover {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+}
+
+/* ==========================================================
+   07 — MODAL / DRAWER FINAL DESIGN
+   ========================================================== */
+
+#overlays {
+    --ov-block: #182131;
+    --ov-inner: #111B2A;
+    --ov-line: rgba(217,225,232,.08);
+    --ov-line-strong: rgba(217,225,232,.13);
+    --ov-text: #E8EDF3;
+    --ov-muted: #96A3B2;
+}
+
+
+/* ----------------------------------------------------------
+   PREVIEW AREA
+   ---------------------------------------------------------- */
+
+#overlays .zcl-overlay-preview {
+    display: grid !important;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+
+    gap: 18px !important;
+
+    padding: 20px !important;
+
+    background: transparent !important;
+}
+
+
+/* ----------------------------------------------------------
+   MODAL + DRAWER PANELS
+   ---------------------------------------------------------- */
+
+#overlays .zcl-modal-frame,
+#overlays .zcl-drawer-frame {
+
+    min-height: 290px !important;
+
+    background:
+        var(--ov-block) !important;
+
+    border:
+        1px solid
+        var(--ov-line) !important;
+
+    border-radius:
+        16px !important;
+
+    overflow:
+        hidden !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   TITLES ABOVE PANELS
+   ---------------------------------------------------------- */
+
+#overlays .zcl-overlay-label,
+#overlays .zcl-demo-title {
+
+    margin-bottom:
+        10px !important;
+
+    color:
+        var(--ov-muted) !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        850 !important;
+
+    letter-spacing:
+        .1em !important;
+}
+
+
+/* ==========================================================
+   MODAL
+   ========================================================== */
+
+#overlays .zy-modal__header {
+
+    min-height:
+        64px !important;
+
+    padding:
+        16px 18px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        16px !important;
+
+    border-bottom:
+        1px solid
+        var(--ov-line) !important;
+
+    background:
+        transparent !important;
+}
+
+
+#overlays .zy-modal__header h3,
+#overlays .zy-modal__header h2 {
+
+    margin:
+        0 !important;
+
+    color:
+        var(--ov-text) !important;
+
+    font-size:
+        17px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+#overlays .zy-modal__body {
+
+    padding:
+        20px 18px !important;
+
+    background:
+        transparent !important;
+}
+
+
+#overlays .zy-modal__body label {
+
+    display:
+        block !important;
+
+    margin-bottom:
+        8px !important;
+
+    color:
+        var(--ov-muted) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        700 !important;
+}
+
+
+#overlays .zy-modal__body input,
+#overlays .zy-modal__body .zy-input {
+
+    width:
+        100% !important;
+
+    min-height:
+        44px !important;
+
+    padding-inline:
+        13px !important;
+
+    background:
+        var(--ov-inner) !important;
+
+    border:
+        1px solid
+        var(--ov-line-strong) !important;
+
+    border-radius:
+        11px !important;
+
+    color:
+        var(--ov-text) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#overlays .zy-modal__footer {
+
+    min-height:
+        66px !important;
+
+    padding:
+        12px 18px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        10px !important;
+
+    border-top:
+        1px solid
+        var(--ov-line) !important;
+
+    background:
+        rgba(0,0,0,.035) !important;
+}
+
+
+/* ==========================================================
+   DRAWER
+   ========================================================== */
+
+#overlays .zcl-drawer-head {
+
+    padding:
+        18px !important;
+
+    border-bottom:
+        1px solid
+        var(--ov-line) !important;
+
+    background:
+        transparent !important;
+}
+
+
+#overlays .zcl-drawer-head strong {
+
+    display:
+        block !important;
+
+    margin-bottom:
+        4px !important;
+
+    color:
+        var(--ov-text) !important;
+
+    font-size:
+        15px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+#overlays .zcl-drawer-head span {
+
+    color:
+        var(--ov-muted) !important;
+
+    font-size:
+        11px !important;
+}
+
+
+/* كل صف بالـDrawer */
+
+#overlays .zcl-drawer-frame > div:not(.zcl-drawer-head) {
+
+    min-height:
+        50px !important;
+
+    padding:
+        13px 18px !important;
+
+    box-sizing:
+        border-box !important;
+}
+
+
+/* الفواصل */
+
+#overlays .zcl-drawer-frame > div:not(:last-child) {
+
+    border-bottom:
+        1px solid
+        var(--ov-line) !important;
+}
+
+
+/* Labels */
+
+#overlays .zcl-drawer-frame [class*="label"],
+#overlays .zcl-drawer-frame dt {
+
+    color:
+        var(--ov-muted) !important;
+}
+
+
+/* Values */
+
+#overlays .zcl-drawer-frame [class*="value"],
+#overlays .zcl-drawer-frame dd,
+#overlays .zcl-drawer-frame strong {
+
+    color:
+        var(--ov-text) !important;
+}
+
+
+/* ==========================================================
+   REMOVE OLD STATUS DOT COMPLETELY
+   ========================================================== */
+
+#overlays .zy-badge__dot,
+#overlays .zy-badge > span:empty {
+
+    display:
+        none !important;
+
+    width:
+        0 !important;
+
+    height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+#overlays .zy-badge::before,
+#overlays .zy-badge::after {
+
+    display:
+        none !important;
+
+    content:
+        none !important;
+}
+
+
+/* Active badge */
+
+#overlays .zy-badge {
+
+    width:
+        max-content !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        30px !important;
+
+    padding:
+        6px 11px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        0 !important;
+
+    border-radius:
+        999px !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* specifically Active */
+
+#overlays .zy-badge--success {
+
+    color:
+        #63C88D !important;
+
+    background:
+        rgba(70,155,105,.12) !important;
+
+    border:
+        1px solid
+        rgba(70,155,105,.18) !important;
+}
+
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
+
+#overlays .zy-btn {
+
+    min-height:
+        40px !important;
+
+    padding-inline:
+        15px !important;
+
+    border-radius:
+        10px !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        750 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* primary */
+
+#overlays .zy-btn--primary {
+
+    background:
+        #557A9D !important;
+
+    border-color:
+        #557A9D !important;
+}
+
+
+/* secondary / close */
+
+#overlays .zy-btn--ghost,
+#overlays .zy-btn--secondary {
+
+    background:
+        #18273A !important;
+
+    border-color:
+        var(--ov-line-strong) !important;
+
+    color:
+        #D9E2EA !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 800px) {
+
+    #overlays .zcl-overlay-preview {
+
+        grid-template-columns:
+            1fr !important;
+    }
+}
+
+#overlays .zcl-overlay-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: max-content !important;
+    min-width: 0 !important;
+    min-height: 28px !important;
+
+    padding: 6px 11px !important;
+
+    border-radius: 999px !important;
+
+    font-size: 10.5px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+
+    gap: 0 !important;
+
+    box-sizing: border-box !important;
+
+    box-shadow: none !important;
+}
+
+
+#overlays .zcl-overlay-status--active {
+    color: #63C88D !important;
+
+    background:
+        rgba(70,155,105,.12) !important;
+
+    border:
+        1px solid
+        rgba(70,155,105,.18) !important;
+}
+
+
+/* ممنوع أي دائرة أو pseudo-element */
+#overlays .zcl-overlay-status::before,
+#overlays .zcl-overlay-status::after {
+    display: none !important;
+    content: none !important;
+}
+/* END ZYNORA_DESIGNLAB_INLINE_STYLES_EXTERNALIZED_20260904 */

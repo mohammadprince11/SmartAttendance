@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO.Compression;
@@ -162,16 +162,14 @@ public sealed class EmployeeBootstrapImportEngine
 
         if (configured.Count == 0)
         {
-            configured.Add(new TemplateLanguage(
-                "ar-IQ",
-                "العربية",
-                true,
-                true));
+            throw new InvalidOperationException(
+                "لا توجد لغة بيانات شركة مفعّلة. فعّل لغة واحدة على الأقل من إعدادات لغات بيانات الشركة.");
         }
 
         if (!configured.Any(item => item.IsDefault))
         {
-            configured[0] = configured[0] with { IsDefault = true };
+            throw new InvalidOperationException(
+                "يجب تعيين لغة أساسية واحدة على الأقل من إعدادات لغات بيانات الشركة.");
         }
 
         return configured;
@@ -4369,35 +4367,61 @@ public sealed class EmployeeBootstrapImportEngine
         string? preferredCulture)
     {
         var legacy = GetValue(values, fieldName);
+
         if (!string.IsNullOrWhiteSpace(legacy))
         {
             return legacy;
         }
 
-        var localized = ParseLocalizedValues(values)
-            .Where(item => item.FieldName.Equals(
-                fieldName,
-                StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var localized = new List<LocalizedCellValue>();
+
+        foreach (var pair in values)
+        {
+            if (!TryParseLocalizedHeader(
+                    pair.Key,
+                    out var parsedField,
+                    out var cultureCode) ||
+                !parsedField.Equals(
+                    fieldName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = pair.Value?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            localized.Add(
+                new LocalizedCellValue(
+                    parsedField,
+                    cultureCode,
+                    value));
+        }
 
         if (!string.IsNullOrWhiteSpace(preferredCulture))
         {
+            var normalizedPreferred =
+                NormalizeCultureCode(preferredCulture);
+
             var preferred = localized.FirstOrDefault(item =>
                 item.CultureCode.Equals(
-                    NormalizeCultureCode(preferredCulture),
+                    normalizedPreferred,
                     StringComparison.OrdinalIgnoreCase));
-            if (preferred is not null && !string.IsNullOrWhiteSpace(preferred.Value))
+
+            if (preferred is not null)
             {
                 return preferred.Value;
             }
         }
 
-        var arabic = localized.FirstOrDefault(item =>
-            item.CultureCode.StartsWith("ar", StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(item.Value));
-
-        return arabic?.Value ??
-               localized.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Value))?.Value ??
+        return localized
+                   .FirstOrDefault(item =>
+                       !string.IsNullOrWhiteSpace(item.Value))
+                   ?.Value ??
                string.Empty;
     }
 

@@ -3147,4 +3147,159 @@ body.nx-setup-modal-open .nxcs-panel {
 .nx-setup-modal__actions {
     background: transparent !important;
 }
+/* ZYNORA_DEPARTMENT_CREATE_LANGUAGES_EXTERNALIZED_20260904 */
+/* Source: SmartAttendance.Web/Pages/Departments/Create.cshtml */
+.zy-department-languages {
+            margin-top: 18px;
+        }
 
+        .zy-department-language-company {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+            gap: 12px;
+        }
+
+        .zy-department-language-company[hidden] {
+            display: none !important;
+        }
+
+        .zy-department-language-card {
+            min-width: 0;
+            margin: 0;
+            padding: 15px;
+            border: 1px solid var(--border-default);
+            border-radius: 14px;
+            background: var(--surface-raised);
+        }
+
+        .zy-department-language-card legend {
+            padding-inline: 8px;
+            font-weight: 800;
+        }
+
+        .zy-department-language-card legend small {
+            margin-inline-start: 7px;
+            color: var(--text-muted);
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .zy-department-language-field {
+            display: grid;
+            gap: 7px;
+        }
+
+        .zy-department-language-field > span {
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .zy-department-language-field input {
+            width: 100%;
+        }
+
+        .zy-department-language-missing {
+            grid-column: 1 / -1;
+            padding: 14px;
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            color: var(--text-muted);
+        }
+
+        .zy-department-language-missing a {
+            margin-inline-start: 6px;
+            color: var(--color-primary);
+        }
+/* END ZYNORA_DEPARTMENT_CREATE_LANGUAGES_EXTERNALIZED_20260904 */
+/* ZYNORA_DEPARTMENT_EDIT_LANGUAGES_EXTERNALIZED_20260904 */
+/* Source: SmartAttendance.Web/Pages/Departments/Edit.cshtml */
+.zy-department-edit-languages {
+            margin-top: 18px;
+        }
+
+        .zy-department-edit-language-company {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(
+                        min(100%, 340px),
+                        1fr
+                    )
+                );
+            gap: 12px;
+        }
+
+        .zy-department-edit-language-company[hidden] {
+            display: none !important;
+        }
+
+        .zy-department-edit-language-card {
+            min-width: 0;
+            margin: 0;
+            padding: 15px;
+
+            border:
+                1px solid
+                var(--border-default);
+
+            border-radius: 14px;
+
+            background:
+                var(--surface-raised);
+        }
+
+        .zy-department-edit-language-card legend {
+            max-width: 100%;
+            padding-inline: 8px;
+
+            font-weight: 800;
+        }
+
+        .zy-department-edit-language-card legend small {
+            margin-inline-start: 7px;
+
+            color:
+                var(--text-muted);
+
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .zy-department-edit-language-field {
+            display: grid;
+            gap: 7px;
+        }
+
+        .zy-department-edit-language-field > span {
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .zy-department-edit-language-field input {
+            width: 100%;
+        }
+
+        .zy-department-edit-language-missing {
+            grid-column: 1 / -1;
+
+            padding: 14px;
+
+            border:
+                1px solid
+                var(--border-default);
+
+            border-radius: 12px;
+
+            color:
+                var(--text-muted);
+        }
+
+        .zy-department-edit-language-missing a {
+            margin-inline-start: 6px;
+
+            color:
+                var(--color-primary);
+        }
+/* END ZYNORA_DEPARTMENT_EDIT_LANGUAGES_EXTERNALIZED_20260904 */
