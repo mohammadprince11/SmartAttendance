@@ -731,3 +731,197 @@ html[data-theme="dark"] body.zy-app #employee-create-form .nxr-create-submit-bar
         animation-duration: .01ms !important;
     }
 }
+
+/* ==========================================================
+   ZYNORA EMPLOYEE CREATE - COMPONENT PARITY V1
+   Scope: visual component parity only.
+   Contract: DO NOT alter page layout, grids, section order, or widths.
+   Source of truth: /DesignLab/Components
+   ========================================================== */
+
+/* ---------- Shared control rhythm ---------- */
+
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) {
+    --zec-control-h-parity: 44px;
+    --zec-control-radius-parity: 12px;
+    --zec-control-pad-x-parity: 12px;
+}
+
+/* ---------- Buttons ---------- */
+
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-btn,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-force-btn,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-document-file-trigger {
+    min-height: 40px !important;
+    padding: 0 16px !important;
+    border-radius: var(--zec-control-radius-parity) !important;
+    border-color: var(--zec-border-strong) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    font-weight: 800 !important;
+}
+
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-btn.primary,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-force-btn.gold,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-document-file-trigger.is-selected {
+    border-color: var(--color-primary-strong, #6F8DA8) !important;
+    background: var(--color-primary-strong, #6F8DA8) !important;
+    color: var(--color-on-primary, #0C1520) !important;
+}
+
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-btn:focus-visible,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-force-btn:focus-visible,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-document-file-trigger:focus-visible {
+    outline: none !important;
+    border-color: var(--zec-focus) !important;
+    box-shadow: 0 0 0 3px var(--zec-focus-soft) !important;
+}
+
+/* ---------- Labels / help / validation ---------- */
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field > label,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-login-account-body > label,
+html[data-theme="dark"] body.zy-app #employee-create-form .zy-employee-language-fields > label > span {
+    color: var(--zec-text-soft) !important;
+    font-weight: 750 !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field > small,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field > span:not(.text-danger),
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-photo-hint small,
+html[data-theme="dark"] body.zy-app #employee-create-form .zy-employee-language-card legend small {
+    color: var(--zec-muted) !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .text-danger,
+html[data-theme="dark"] body.zy-app #employee-create-form [data-valmsg-for],
+html[data-theme="dark"] body.zy-app #employee-create-form .nx-req-star {
+    color: var(--zec-danger) !important;
+}
+
+/* ---------- Native inputs / textareas ---------- */
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field select:not(.nxcs-native),
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-login-account-body input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html[data-theme="dark"] body.zy-app #employee-create-form .zy-employee-language-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    min-height: var(--zec-control-h-parity) !important;
+    padding-inline: var(--zec-control-pad-x-parity) !important;
+    border: 1px solid var(--zec-control-border) !important;
+    border-radius: var(--zec-control-radius-parity) !important;
+    background: var(--zec-inner) !important;
+    background-image: none !important;
+    color: var(--zec-text) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field textarea {
+    border: 1px solid var(--zec-control-border) !important;
+    border-radius: var(--zec-control-radius-parity) !important;
+    background: var(--zec-inner) !important;
+    background-image: none !important;
+    color: var(--zec-text) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field input:not([type="checkbox"]):not([type="radio"]):focus,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field textarea:focus,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-field select:focus,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxr-login-account-body input:not([type="checkbox"]):focus,
+html[data-theme="dark"] body.zy-app #employee-create-form .zy-employee-language-fields input:focus {
+    border-color: var(--zec-focus) !important;
+    box-shadow: 0 0 0 3px var(--zec-focus-soft) !important;
+}
+
+/* ---------- Disabled / readonly ---------- */
+
+html[data-theme="dark"] body.zy-app #employee-create-form input:disabled,
+html[data-theme="dark"] body.zy-app #employee-create-form select:disabled,
+html[data-theme="dark"] body.zy-app #employee-create-form textarea:disabled {
+    opacity: .62 !important;
+    cursor: not-allowed !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form input[readonly],
+html[data-theme="dark"] body.zy-app #employee-create-form textarea[readonly] {
+    background: #101827 !important;
+    color: var(--zec-muted) !important;
+}
+
+/* ---------- Custom dropdown ---------- */
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcs-trigger {
+    min-height: var(--zec-control-h-parity) !important;
+    border-radius: var(--zec-control-radius-parity) !important;
+    border-color: var(--zec-control-border) !important;
+    background: var(--zec-popover) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcs-trigger:hover {
+    border-color: var(--zec-control-hover) !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcs-select.is-open .nxcs-trigger,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcs-trigger:focus-visible {
+    border-color: var(--zec-focus) !important;
+    box-shadow: 0 0 0 3px var(--zec-focus-soft) !important;
+}
+
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) > .nxcs-panel {
+    border-radius: var(--zec-control-radius-parity) !important;
+    border-color: #33465A !important;
+    background: var(--zec-popover) !important;
+    background-image: none !important;
+}
+
+/* ---------- Date picker ---------- */
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcal__button {
+    min-height: var(--zec-control-h-parity) !important;
+    border-radius: var(--zec-control-radius-parity) !important;
+    border-color: var(--zec-control-border) !important;
+    background: var(--zec-popover) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcal.is-open .nxcal__button,
+html[data-theme="dark"] body.zy-app #employee-create-form .nxcal__button:focus-visible {
+    border-color: var(--zec-focus) !important;
+    box-shadow: 0 0 0 3px var(--zec-focus-soft) !important;
+}
+
+/* ---------- Checkbox ---------- */
+
+html[data-theme="dark"] body.zy-app #employee-create-form input[type="checkbox"] {
+    width: 17px !important;
+    height: 17px !important;
+    min-width: 17px !important;
+    min-height: 17px !important;
+    accent-color: var(--color-primary-strong, #6F8DA8) !important;
+    cursor: pointer !important;
+}
+
+html[data-theme="dark"] body.zy-app #employee-create-form input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--zec-focus) !important;
+    outline-offset: 2px !important;
+}
+
+/* ---------- Feedback ---------- */
+
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-error,
+html[data-theme="dark"] body.zy-app:has(#employee-create-form) .nxr-documents-validation.open {
+    border-radius: var(--zec-control-radius-parity) !important;
+    box-shadow: none !important;
+}
+
+/* ---------- Explicit non-layout contract ----------
+   Intentionally absent:
+   grid-template-columns, grid-column, grid-row,
+   section width changes, page width changes, ordering,
+   flex-direction, positioning, or responsive layout overrides.
+   ========================================================== */

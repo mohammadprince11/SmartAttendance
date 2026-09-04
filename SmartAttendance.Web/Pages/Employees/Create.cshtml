@@ -152,7 +152,7 @@
                                         <input type="hidden" asp-for="EmployeeNameTranslations[index].CultureCode" disabled="@(!selectedCompany)" />
                                         <div class="zy-employee-language-fields">
                                             <label>
-                                                <span>الاسم الأول @(language.IsRequired ? "*" : "")</span>
+                                                <span>@language.FirstNameLabel @(language.IsRequired ? "*" : "")</span>
                                                 <input asp-for="EmployeeNameTranslations[index].FirstName"
                                                        dir="@language.Direction"
                                                        required="@(language.IsRequired ? "required" : null)"
@@ -160,21 +160,21 @@
                                             </label>
 
                                             <label>
-                                                <span>الاسم الثاني</span>
+                                                <span>@language.SecondNameLabel</span>
                                                 <input asp-for="EmployeeNameTranslations[index].SecondName"
                                                        dir="@language.Direction"
                                                        disabled="@(!selectedCompany)" />
                                             </label>
 
                                             <label>
-                                                <span>الاسم الثالث</span>
+                                                <span>@language.ThirdNameLabel</span>
                                                 <input asp-for="EmployeeNameTranslations[index].ThirdName"
                                                        dir="@language.Direction"
                                                        disabled="@(!selectedCompany)" />
                                             </label>
 
                                             <label>
-                                                <span>اللقب @(language.IsRequired ? "*" : "")</span>
+                                                <span>@language.LastNameLabel @(language.IsRequired ? "*" : "")</span>
                                                 <input asp-for="EmployeeNameTranslations[index].LastName"
                                                        dir="@language.Direction"
                                                        required="@(language.IsRequired ? "required" : null)"

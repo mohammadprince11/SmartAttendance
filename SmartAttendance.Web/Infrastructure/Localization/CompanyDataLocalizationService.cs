@@ -76,7 +76,7 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
         _dictionary = dictionary;
     }
 
-    // ZYNORA_COMPANY_DATA_VISIBLE_LANGUAGE_FILTER_V1
+    // ZYNORA_COMPANY_DATA_VISIBLE_LANGUAGE_FILTER_V2
     public async Task<IReadOnlyList<CompanyLanguageOption>> GetLanguagesAsync(
         int companyId,
         CancellationToken cancellationToken = default)
@@ -86,50 +86,78 @@ public sealed class CompanyDataLocalizationService : ICompanyDataLocalizationSer
             cancellationToken);
 
         /*
-         * مهم:
-         * قاموس واجهة النظام لا يعني أن اللغة مفعلة تلقائياً
-         * لبيانات الموظفين والأقسام والمناصب.
+         * CompanyLanguages owns tenant policy only:
+         * Active / Default / Required.
          *
-         * اللغة يجب أن تحقق شرطين:
-         * 1. مفعلة للشركة في CompanyLanguages.
-         * 2. غير مخفية في Language Catalog.
+         * Language Catalog owns language metadata:
+         * NativeName / EnglishName / Direction.
+         *
+         * This prevents stale tenant rows (for example fr-FR saved as rtl)
+         * from leaking into employee, department, or position forms.
          */
+        var catalogLanguages =
+            await _dictionary.GetLanguagesAsync(
+                cancellationToken);
 
-        var visibleCultures =
-            (await _dictionary.GetLanguagesAsync(
-                cancellationToken))
-            .Select(item => item.Code)
-            .Distinct(
-                StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        if (visibleCultures.Length == 0)
+        if (catalogLanguages.Count == 0)
         {
             return [];
         }
 
-        return await _db.CompanyLanguages
-            .AsNoTracking()
-            .Where(item =>
-                item.CompanyId == companyId &&
-                item.IsActive &&
-                !item.IsDeleted &&
-                visibleCultures.Contains(
-                    item.CultureCode))
+        var catalogByCode =
+            catalogLanguages.ToDictionary(
+                item => NormalizeCulture(item.Code),
+                StringComparer.OrdinalIgnoreCase);
+
+        var configured =
+            await _db.CompanyLanguages
+                .AsNoTracking()
+                .Where(item =>
+                    item.CompanyId == companyId &&
+                    item.IsActive &&
+                    !item.IsDeleted)
+                .Select(item => new
+                {
+                    item.CultureCode,
+                    item.IsDefault,
+                    item.IsRequired
+                })
+                .ToListAsync(
+                    cancellationToken);
+
+        var result =
+            new List<CompanyLanguageOption>(
+                configured.Count);
+
+        foreach (var item in configured)
+        {
+            var cultureCode =
+                NormalizeCulture(item.CultureCode);
+
+            if (!catalogByCode.TryGetValue(
+                    cultureCode,
+                    out var catalogLanguage))
+            {
+                continue;
+            }
+
+            result.Add(
+                new CompanyLanguageOption(
+                    cultureCode,
+                    catalogLanguage.NativeName,
+                    catalogLanguage.EnglishName,
+                    catalogLanguage.Direction,
+                    item.IsDefault,
+                    item.IsRequired));
+        }
+
+        return result
             .OrderByDescending(item =>
                 item.IsDefault)
-            .ThenBy(item =>
-                item.EnglishName)
-            .Select(item =>
-                new CompanyLanguageOption(
-                    item.CultureCode,
-                    item.NativeName,
-                    item.EnglishName,
-                    item.Direction,
-                    item.IsDefault,
-                    item.IsRequired))
-            .ToListAsync(
-                cancellationToken);
+            .ThenBy(
+                item => item.EnglishName,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public async Task SaveLanguagesAsync(
