@@ -39,4 +39,28 @@ public sealed class EmployeeImportMultilingualContractTests
             out _,
             out _));
     }
+
+    [Fact]
+    public void Localized_value_without_company_default_has_no_arabic_bias()
+    {
+        var method = typeof(EmployeeBootstrapImportEngine).GetMethod(
+            "GetPreferredLocalizedValue",
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var values = new Dictionary<string, string>
+        {
+            ["FirstName [fr-FR]"] = "Jean",
+            ["FirstName [ar-IQ]"] = "Mohammed"
+
+        };
+
+        var result = method!.Invoke(
+            null,
+            new object?[] { values, "FirstName", null });
+
+        Assert.Equal("Jean", Assert.IsType<string>(result));
+    }
 }

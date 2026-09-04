@@ -334,7 +334,7 @@ html[dir="ltr"] .zy-user-menu__panel {
     background: var(--zy-surface);
     color: var(--zy-text);
 
-    box-shadow: 0 24px 80px rgba(0, 0, 0, .42);
+    box-shadow: var(--zy-shadow-lg);
 }
 
 .zy-language-dialog__card {
@@ -464,7 +464,7 @@ html[dir="ltr"] .zy-user-menu__panel {
     border-radius: 50%;
 
     background: var(--zy-electric-teal);
-    color: #07141c;
+    color: var(--zy-midnight-navy);
 
     font-size: 13px;
     font-weight: 900;
@@ -511,12 +511,12 @@ html[dir="ltr"] .zy-user-menu__panel {
     background: var(--zy-surface) !important;
     color: var(--zy-text) !important;
 
-    box-shadow: 0 24px 70px rgba(0,0,0,.42) !important;
+    box-shadow: var(--zy-shadow-lg) !important;
     overflow: hidden !important;
 }
 
 .zy-language-dialog::backdrop {
-    background: rgba(3,10,22,.68) !important;
+    background: color-mix(in srgb, var(--zy-text) 68%, transparent) !important;
     backdrop-filter: blur(4px) !important;
 }
 
@@ -702,7 +702,7 @@ html[dir="ltr"] .zy-user-menu__panel {
     border-radius: 50% !important;
 
     background: var(--zy-electric-teal) !important;
-    color: #07141c !important;
+    color: var(--zy-midnight-navy) !important;
 
     font-size: 11px !important;
     font-weight: 900 !important;
@@ -748,4 +748,3 @@ html[dir="ltr"] .zy-user-menu__panel {
         min-height: 62px !important;
     }
 }
-

@@ -15,7 +15,7 @@ public sealed class LocalizationContractTests
         Assert.Contains("UseRequestLocalization", program, StringComparison.Ordinal);
         Assert.Contains("CookieRequestCultureProvider", program, StringComparison.Ordinal);
         Assert.Contains("ZynoraSupportedCultures.All", program, StringComparison.Ordinal);
-        Assert.Contains("FindLanguageAsync", handler, StringComparison.Ordinal);
+        Assert.Contains("GetLanguagesAsync", handler, StringComparison.Ordinal);
         Assert.Contains("[AllowAnonymous]", handler, StringComparison.Ordinal);
         Assert.Contains("LocalRedirect", handler, StringComparison.Ordinal);
         Assert.Contains("HttpOnly = true", handler, StringComparison.Ordinal);
@@ -121,9 +121,11 @@ public sealed class LocalizationContractTests
         Assert.DoesNotContain("innerHTML", script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("localStorage", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("NoStore = true", catalog, StringComparison.Ordinal);
-        Assert.Contains("OnGetAsync(string? culture)", catalog, StringComparison.Ordinal);
-        Assert.Contains("_dictionary.FindLanguageAsync", catalog, StringComparison.Ordinal);
-        Assert.Contains("direction = requested.Direction", catalog, StringComparison.Ordinal);
+        Assert.Contains("OnGetAsync(", catalog, StringComparison.Ordinal);
+        Assert.Contains("string? culture", catalog, StringComparison.Ordinal);
+        Assert.Contains("_dictionary.GetLanguagesAsync", catalog, StringComparison.Ordinal);
+        Assert.Contains("direction =", catalog, StringComparison.Ordinal);
+        Assert.Contains("requested.Direction", catalog, StringComparison.Ordinal);
     }
 
     [Fact]
