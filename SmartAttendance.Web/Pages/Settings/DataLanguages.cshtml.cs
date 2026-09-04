@@ -44,7 +44,14 @@ public sealed class DataLanguagesModel : PageModel
     {
         var loadResult = await LoadAsync();
         if (loadResult is not PageResult) return loadResult;
-        if (CompanyId is not { } companyId) return NotFound();
+
+        if (CompanyId is not { } companyId)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "لا توجد شركة مضافة حالياً. أنشئ شركة أولاً ثم عد لإعداد لغات بياناتها.");
+            return Page();
+        }
 
         try
         {
@@ -59,7 +66,8 @@ public sealed class DataLanguagesModel : PageModel
                 "تم حفظ اللغات المفعلة وتحديد اللغات المطلوبة والاختيارية بنجاح.";
             return RedirectToPage(new { companyId });
         }
-        catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException)
+        catch (Exception exception) when (
+            exception is InvalidOperationException or UnauthorizedAccessException)
         {
             ModelState.AddModelError(string.Empty, exception.Message);
             return await LoadAsync();
@@ -69,6 +77,7 @@ public sealed class DataLanguagesModel : PageModel
     private async Task<IActionResult> LoadAsync()
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+
         Companies = (await _db.Companies
                 .AsNoTracking()
                 .Where(item => !item.IsDeleted && item.IsActive)
@@ -78,18 +87,63 @@ public sealed class DataLanguagesModel : PageModel
             .Where(item => scope.Allows(item.Id))
             .ToList();
 
+        AvailableLanguages = await _dictionary.GetLanguagesAsync(
+            HttpContext.RequestAborted);
+
+        /*
+         * Empty database / first-run state:
+         * the settings page must remain reachable even before the first company
+         * exists. There is no tenant language policy to load yet, so render the
+         * page with the dictionary languages and an explicit empty state.
+         */
+        if (Companies.Count == 0)
+        {
+            CompanyId = null;
+            ConfiguredLanguages = [];
+
+            if (!Request.Method.Equals(
+                    "POST",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                DefaultCultureCode =
+                    AvailableLanguages.FirstOrDefault(item => item.IsDefault)?.Code
+                    ?? AvailableLanguages.FirstOrDefault()?.Code
+                    ?? string.Empty;
+
+                ActiveCultureCodes = [];
+                RequiredCultureCodes = [];
+            }
+
+            return Page();
+        }
+
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,
             CompanyId,
             Companies.Select(item => item.Id).ToArray());
-        if (CompanyId is null) return NotFound();
 
-        AvailableLanguages = await _dictionary.GetLanguagesAsync(HttpContext.RequestAborted);
+        /*
+         * A stale/invalid companyId must not turn a settings screen into a 404.
+         * Render the page and let the user choose from the authorized companies.
+         */
+        if (CompanyId is null)
+        {
+            ConfiguredLanguages = [];
+
+            ModelState.AddModelError(
+                string.Empty,
+                "تعذر تحديد الشركة المطلوبة. اختر شركة متاحة ثم أعد المحاولة.");
+
+            return Page();
+        }
+
         ConfiguredLanguages = await _dataLocalization.GetLanguagesAsync(
             CompanyId.Value,
             HttpContext.RequestAborted);
 
-        if (!Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
+        if (!Request.Method.Equals(
+                "POST",
+                StringComparison.OrdinalIgnoreCase))
         {
             ActiveCultureCodes = ConfiguredLanguages
                 .Select(item => item.CultureCode)
@@ -100,7 +154,8 @@ public sealed class DataLanguagesModel : PageModel
                 .Select(item => item.CultureCode)
                 .ToList();
 
-            DefaultCultureCode = ConfiguredLanguages.FirstOrDefault(item => item.IsDefault)?.CultureCode
+            DefaultCultureCode =
+                ConfiguredLanguages.FirstOrDefault(item => item.IsDefault)?.CultureCode
                 ?? AvailableLanguages.FirstOrDefault(item => item.IsDefault)?.Code
                 ?? AvailableLanguages.FirstOrDefault()?.Code
                 ?? string.Empty;

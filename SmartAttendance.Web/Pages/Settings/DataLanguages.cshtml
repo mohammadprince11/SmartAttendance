@@ -19,86 +19,128 @@
             <h1>لغات بيانات الشركة</h1>
             <p>حدد لغة أساسية واحدة، وفعّل أي لغات إضافية تحتاجها لأسماء الموظفين والشركات والفروع والأقسام والمناصب والسياسات والمخالفات.</p>
         </div>
-        <form method="get" class="zy-data-languages__company">
-            <label for="companyId">الشركة</label>
-            <select id="companyId" name="companyId" onchange="this.form.submit()">
-                @foreach (var company in Model.Companies)
-                {
-                    <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name · @company.Code</option>
-                }
-            </select>
-        </form>
+
+        @if (Model.Companies.Count > 0)
+        {
+            <form method="get" class="zy-data-languages__company">
+                <label for="companyId">الشركة</label>
+                <select id="companyId" name="companyId" onchange="this.form.submit()">
+                    @foreach (var company in Model.Companies)
+                    {
+                        <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">
+                            @company.Name · @company.Code
+                        </option>
+                    }
+                </select>
+            </form>
+        }
+        else
+        {
+            <div class="zy-data-languages__company">
+                <span>الشركة</span>
+                <strong>لا توجد شركة مضافة حالياً</strong>
+            </div>
+        }
     </header>
 
     @if (TempData["SuccessMessage"] is string success)
     {
         <div class="zy-data-languages__notice success">@success</div>
     }
+
     <div asp-validation-summary="All" class="zy-data-languages__notice error"></div>
 
-    <form method="post" asp-page-handler="Save" class="zy-data-languages__form">
-        <input type="hidden" asp-for="CompanyId" />
-        <section class="zy-data-languages__explain">
-            <strong>قاعدة الإدخال</strong>
+    @if (Model.Companies.Count == 0)
+    {
+        <section class="zy-data-languages__explain" aria-label="الحالة الأولية">
+            <strong>ابدأ بإنشاء شركة</strong>
             <p>
-                فعّل اللغات التي تستخدمها الشركة، ثم حدد لكل لغة إن كانت مطلوبة أو اختيارية.
-                اللغة الأساسية تكون مفعلة ومطلوبة دائماً.
+                يمكنك فتح صفحة لغات البيانات وإدارة قاموس اللغات حتى قبل إنشاء أول شركة.
+                إعداد اللغة الأساسية واللغات المطلوبة والاختيارية يصبح متاحاً بعد إنشاء الشركة.
             </p>
         </section>
 
-        <section class="zy-data-languages__grid" aria-label="اللغات المتاحة">
-            @foreach (var language in Model.AvailableLanguages)
-            {
-                var active = Model.ActiveCultureCodes.Contains(
-                    language.Code,
-                    StringComparer.OrdinalIgnoreCase);
+        <footer class="zy-data-languages__actions">
+            <a asp-page="/Settings/Dictionary">إدارة قاموس اللغات</a>
+            <a asp-page="/Setup/Index">إنشاء شركة</a>
+        </footer>
+    }
+    else
+    {
+        <form method="post" asp-page-handler="Save" class="zy-data-languages__form">
+            <input type="hidden" asp-for="CompanyId" />
 
-                var isDefault = string.Equals(
-                    Model.DefaultCultureCode,
-                    language.Code,
-                    StringComparison.OrdinalIgnoreCase);
+            <section class="zy-data-languages__explain">
+                <strong>قاعدة الإدخال</strong>
+                <p>
+                    فعّل اللغات التي تستخدمها الشركة، ثم حدد لكل لغة إن كانت مطلوبة أو اختيارية.
+                    اللغة الأساسية تكون مفعلة ومطلوبة دائماً.
+                </p>
+            </section>
 
-                var required = isDefault ||
-                    Model.RequiredCultureCodes.Contains(
+            <section class="zy-data-languages__grid" aria-label="اللغات المتاحة">
+                @foreach (var language in Model.AvailableLanguages)
+                {
+                    var active = Model.ActiveCultureCodes.Contains(
                         language.Code,
                         StringComparer.OrdinalIgnoreCase);
 
-                <article class="zy-data-language-card @(active ? "is-active" : "") @(required ? "is-required" : "")">
-                    <label class="zy-data-language-card__enable">
-                        <input type="checkbox" name="ActiveCultureCodes" value="@language.Code" checked="@active" />
-                        <span>تفعيل</span>
-                    </label>
-                    <div>
-                        <strong data-zy-no-localize>@language.NativeName</strong>
-                        <small>@language.EnglishName · @language.Code · @language.Direction.ToUpperInvariant()</small>
-                    </div>
-                    <div class="zy-data-language-card__rules">
-                        <label class="zy-data-language-card__default">
-                            <input type="radio"
-                                   name="DefaultCultureCode"
-                                   value="@language.Code"
-                                   checked="@isDefault" />
-                            <span>اللغة الأساسية</span>
-                        </label>
+                    var isDefault = string.Equals(
+                        Model.DefaultCultureCode,
+                        language.Code,
+                        StringComparison.OrdinalIgnoreCase);
 
-                        <label class="zy-data-language-card__required">
+                    var required = isDefault ||
+                        Model.RequiredCultureCodes.Contains(
+                            language.Code,
+                            StringComparer.OrdinalIgnoreCase);
+
+                    <article class="zy-data-language-card @(active ? "is-active" : "") @(required ? "is-required" : "")">
+                        <label class="zy-data-language-card__enable">
                             <input type="checkbox"
-                                   name="RequiredCultureCodes"
+                                   name="ActiveCultureCodes"
                                    value="@language.Code"
-                                   checked="@required"
-                                   disabled="@isDefault" />
-                            <span>مطلوبة عند الإدخال</span>
+                                   checked="@active" />
+                            <span>تفعيل</span>
                         </label>
-                    </div>
-                </article>
-            }
-        </section>
 
-        <footer class="zy-data-languages__actions">
-            <a asp-page="/Settings/Dictionary">إضافة لغة إلى القاموس</a>
-            <button type="submit">حفظ إعدادات اللغات</button>
-        </footer>
-    </form>
+                        <div>
+                            <strong data-zy-no-localize>@language.NativeName</strong>
+                            <small>
+                                @language.EnglishName ·
+                                @language.Code ·
+                                @language.Direction.ToUpperInvariant()
+                            </small>
+                        </div>
+
+                        <div class="zy-data-language-card__rules">
+                            <label class="zy-data-language-card__default">
+                                <input type="radio"
+                                       name="DefaultCultureCode"
+                                       value="@language.Code"
+                                       checked="@isDefault" />
+                                <span>اللغة الأساسية</span>
+                            </label>
+
+                            <label class="zy-data-language-card__required">
+                                <input type="checkbox"
+                                       name="RequiredCultureCodes"
+                                       value="@language.Code"
+                                       checked="@required"
+                                       disabled="@isDefault" />
+                                <span>مطلوبة عند الإدخال</span>
+                            </label>
+                        </div>
+                    </article>
+                }
+            </section>
+
+            <footer class="zy-data-languages__actions">
+                <a asp-page="/Settings/Dictionary">إضافة لغة إلى القاموس</a>
+                <button type="submit">حفظ إعدادات اللغات</button>
+            </footer>
+        </form>
+    }
 </main>
 
 @section Scripts {
