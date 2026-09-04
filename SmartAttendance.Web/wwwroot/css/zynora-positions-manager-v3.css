@@ -6854,3 +6854,1220 @@ html:not([data-theme="light"])
 
 /* ZYNORA_POSITIONS_REGISTRY_HEADER_V20_END */
 
+
+/* ==========================================================
+   ZYNORA_POSITIONS_PEOPLE_COLOR_SYNC_V21
+   Match Positions palette to Employees / People module
+   Layout and behavior remain unchanged
+   ========================================================== */
+
+
+/* ==========================================================
+   SHARED PEOPLE PALETTE
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page {
+
+    --pos-app:
+        var(--surface-app, #0B1020);
+
+    --pos-panel:
+        var(--surface-panel, #0F1A2E);
+
+    --pos-input:
+        #081426;
+
+    --pos-input-hover:
+        #0A182B;
+
+    --pos-input-focus:
+        #0B1B30;
+
+    --pos-text:
+        var(--color-text-primary, #F7F9FB);
+
+    --pos-label:
+        #D9E1E8;
+
+    --pos-muted:
+        #8895A7;
+
+    --pos-border:
+        rgba(217,225,232,.08);
+
+    --pos-border-strong:
+        rgba(217,225,232,.14);
+
+    --pos-brand:
+        var(--brand-primary, var(--color-primary));
+
+    --pos-aqua:
+        var(--brand-primary-aqua, #42DED3);
+}
+
+
+/* ==========================================================
+   HERO
+   إزالة البترولي / Teal Gradient
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-hero {
+
+    background:
+        var(--pos-panel) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        0 12px 30px rgba(0,0,0,.14) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__content h1 {
+
+    color:
+        var(--pos-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-hero__content p,
+
+html:not([data-theme="light"])
+.zy-pos-company-bar span {
+
+    color:
+        var(--pos-muted) !important;
+}
+
+
+/* الـEyebrow يبقى Accent صغير فقط */
+html:not([data-theme="light"])
+.zy-pos-eyebrow {
+
+    color:
+        var(--pos-aqua) !important;
+}
+
+
+/* ==========================================================
+   COMPANY BAR
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-company-bar {
+
+    border-top-color:
+        var(--pos-border) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-company-bar strong {
+
+    color:
+        var(--pos-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-company-bar select {
+
+    background:
+        var(--pos-input) !important;
+
+    color:
+        var(--pos-text) !important;
+
+    border-color:
+        var(--pos-border-strong) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   BUTTONS
+   نفس منطق Employees
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-btn--primary {
+
+    background:
+        var(--color-primary-text) !important;
+
+    background-image:
+        none !important;
+
+    color:
+        var(--pos-app) !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-btn--primary:hover {
+
+    background:
+        var(--pos-aqua) !important;
+
+    color:
+        var(--pos-app) !important;
+
+    box-shadow:
+        0 4px 12px
+        color-mix(
+            in srgb,
+            var(--pos-brand) 20%,
+            transparent
+        ) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-btn--secondary {
+
+    background:
+        rgba(217,225,232,.10) !important;
+
+    color:
+        var(--pos-text) !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-btn--secondary:hover {
+
+    background:
+        rgba(217,225,232,.15) !important;
+
+    color:
+        #fff !important;
+}
+
+
+/* ==========================================================
+   KPI CARDS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-kpis article {
+
+    background:
+        var(--pos-panel) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpis article span {
+
+    color:
+        var(--pos-muted) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpis article strong {
+
+    color:
+        var(--pos-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-kpi-icon {
+
+    background:
+        color-mix(
+            in srgb,
+            var(--pos-brand) 10%,
+            transparent
+        ) !important;
+
+    color:
+        var(--pos-aqua) !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--pos-brand) 20%,
+            transparent
+        ) !important;
+}
+
+
+/* ==========================================================
+   MAIN REGISTRY CARD
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-card {
+
+    background:
+        var(--pos-panel) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Registry Header */
+html:not([data-theme="light"])
+.zy-pos-card__head {
+
+    background:
+        transparent !important;
+
+    background-image:
+        none !important;
+
+    border:
+        0 !important;
+
+    border-bottom:
+        1px solid var(--pos-border) !important;
+
+    border-radius:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head h2 {
+
+    color:
+        var(--pos-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-card__head p {
+
+    color:
+        var(--pos-muted) !important;
+}
+
+
+/* ==========================================================
+   FILTER CARD
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filters {
+
+    background:
+        var(--pos-panel) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter > span {
+
+    color:
+        var(--pos-muted) !important;
+}
+
+
+/* ==========================================================
+   INPUTS / SEARCH / SELECT
+   مطابق تقريباً لصفحة الموظفين
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-filter input,
+
+html:not([data-theme="light"])
+.zy-pos-filter select,
+
+html:not([data-theme="light"])
+#positionSearch,
+
+html:not([data-theme="light"])
+#categoryFilter,
+
+html:not([data-theme="light"])
+#levelFilter,
+
+html:not([data-theme="light"])
+#statusFilter {
+
+    background:
+        var(--pos-input) !important;
+
+    background-color:
+        var(--pos-input) !important;
+
+    background-image:
+        none !important;
+
+    color:
+        var(--pos-text) !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter input::placeholder,
+
+html:not([data-theme="light"])
+#positionSearch::placeholder {
+
+    color:
+        #667487 !important;
+
+    opacity:
+        1 !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter input:hover,
+
+html:not([data-theme="light"])
+.zy-pos-filter select:hover {
+
+    background:
+        var(--pos-input-hover) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-filter input:focus,
+
+html:not([data-theme="light"])
+.zy-pos-filter select:focus,
+
+html:not([data-theme="light"])
+#positionSearch:focus {
+
+    background:
+        var(--pos-input-focus) !important;
+
+    border-color:
+        var(--color-primary-text) !important;
+
+    box-shadow:
+        0 0 0 3px
+        color-mix(
+            in srgb,
+            var(--pos-brand) 15%,
+            transparent
+        ) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* ==========================================================
+   CUSTOM SELECT
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select__trigger,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select__trigger {
+
+    background:
+        var(--pos-input) !important;
+
+    color:
+        var(--pos-text) !important;
+
+    border-color:
+        var(--pos-border) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nexora-select__menu,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.nx-select__menu {
+
+    background:
+        var(--pos-panel) !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-table-wrap {
+
+    background:
+        var(--pos-panel) !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table thead,
+
+html:not([data-theme="light"])
+.zy-pos-table thead tr,
+
+html:not([data-theme="light"])
+.zy-pos-table thead th {
+
+    background:
+        color-mix(
+            in srgb,
+            var(--pos-brand) 3%,
+            transparent
+        ) !important;
+
+    color:
+        #D9E1E8 !important;
+
+    border-color:
+        var(--pos-border) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody td {
+
+    background:
+        transparent !important;
+
+    color:
+        var(--pos-text) !important;
+
+    border-color:
+        var(--pos-border) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody tr:nth-child(even) td {
+
+    background:
+        transparent !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-table tbody tr:hover td {
+
+    background:
+        rgba(217,225,232,.03) !important;
+}
+
+
+/* ==========================================================
+   POSITION TEXT
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-name strong {
+
+    color:
+        var(--pos-text) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-name span,
+
+html:not([data-theme="light"])
+.zy-pos-name small {
+
+    color:
+        var(--pos-muted) !important;
+}
+
+
+/* ==========================================================
+   CATEGORY / LEVEL CHIPS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-classification span,
+
+html:not([data-theme="light"])
+.zy-pos-classification small {
+
+    background:
+        rgba(217,225,232,.07) !important;
+
+    color:
+        var(--pos-label) !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+}
+
+
+/* ==========================================================
+   EMPLOYEE LINK
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-link,
+
+html:not([data-theme="light"])
+.zy-pos-employee-link {
+
+    color:
+        var(--pos-aqua) !important;
+}
+
+
+/* ==========================================================
+   STATUS
+   نفس Success / Danger Palette بالموظفين
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-status.is-active {
+
+    background:
+        color-mix(
+            in srgb,
+            #28A745 14%,
+            transparent
+        ) !important;
+
+    color:
+        #5FD17A !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            #28A745 24%,
+            transparent
+        ) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-status.is-inactive {
+
+    background:
+        color-mix(
+            in srgb,
+            #FF4D4F 11%,
+            transparent
+        ) !important;
+
+    color:
+        #FF8F91 !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            #FF4D4F 22%,
+            transparent
+        ) !important;
+}
+
+
+/* ==========================================================
+   ACTION BUTTONS
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-action--edit,
+
+html:not([data-theme="light"])
+.zy-pos-action--neutral {
+
+    background:
+        rgba(217,225,232,.10) !important;
+
+    color:
+        var(--pos-text) !important;
+
+    border:
+        1px solid var(--pos-border) !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action--edit:hover,
+
+html:not([data-theme="light"])
+.zy-pos-action--neutral:hover {
+
+    background:
+        rgba(217,225,232,.15) !important;
+
+    color:
+        #fff !important;
+}
+
+
+html:not([data-theme="light"])
+.zy-pos-action--delete {
+
+    background:
+        color-mix(
+            in srgb,
+            #FF4D4F 8%,
+            transparent
+        ) !important;
+
+    color:
+        #FF8587 !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            #FF4D4F 22%,
+            transparent
+        ) !important;
+}
+
+
+/* ==========================================================
+   MODALS
+   ========================================================== */
+
+html body
+#position-editor-modal
+.zy-pos-editor-modal,
+
+html body
+#position-job-profile-modal
+.zy-pos-job-modal,
+
+html body
+#position-delete-modal
+.zy-pos-delete-modal,
+
+html body
+#position-employees-modal
+.zy-pos-employees-modal,
+
+html body
+.zy-pos-reference-modal {
+
+    background:
+        var(--surface-panel, #0F1A2E) !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(217,225,232,.08) !important;
+
+    box-shadow:
+        0 24px 64px rgba(0,0,0,.34) !important;
+}
+
+
+/* Modal Header */
+html body
+#position-editor-modal
+.nx-setup-modal__head,
+
+html body
+#position-job-profile-modal
+.nx-setup-modal__head,
+
+html body
+#position-delete-modal
+.nx-setup-modal__head,
+
+html body
+#position-employees-modal
+.nx-setup-modal__head,
+
+html body
+.zy-pos-reference-modal
+.nx-setup-modal__head {
+
+    background:
+        transparent !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Inner cards */
+html body
+#position-editor-modal
+.zy-pos-editor-section,
+
+html body
+#position-editor-modal
+.zy-pos-editor__section,
+
+html body
+#position-editor-modal
+.zy-pos-job-section,
+
+html body
+#position-employees-modal
+.zy-pos-employees-list article {
+
+    background:
+        #081426 !important;
+
+    background-image:
+        none !important;
+
+    border:
+        1px solid rgba(217,225,232,.08) !important;
+}
+
+
+/* Modal inputs */
+html body
+#position-editor-modal input,
+
+html body
+#position-editor-modal select,
+
+html body
+#position-editor-modal textarea,
+
+html body
+#position-job-profile-modal textarea,
+
+html body
+.zy-pos-reference-modal input {
+
+    background:
+        #081426 !important;
+
+    color:
+        var(--color-text-primary, #F7F9FB) !important;
+
+    border:
+        1px solid rgba(217,225,232,.08) !important;
+}
+
+
+html body
+#position-editor-modal input:focus,
+
+html body
+#position-editor-modal select:focus,
+
+html body
+#position-editor-modal textarea:focus,
+
+html body
+#position-job-profile-modal textarea:focus,
+
+html body
+.zy-pos-reference-modal input:focus {
+
+    border-color:
+        var(--color-primary-text) !important;
+
+    box-shadow:
+        0 0 0 3px
+        color-mix(
+            in srgb,
+            var(--brand-primary) 15%,
+            transparent
+        ) !important;
+
+    outline:
+        none !important;
+}
+
+
+/* Modal footer */
+html body
+#position-editor-modal
+.nx-setup-modal__actions,
+
+html body
+#position-job-profile-modal
+.nx-setup-modal__actions,
+
+html body
+#position-delete-modal
+.nx-setup-modal__actions {
+
+    background:
+        var(--surface-panel, #0F1A2E) !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* Close buttons */
+html body
+#position-editor-modal
+.nx-setup-modal__close,
+
+html body
+#position-job-profile-modal
+.nx-setup-modal__close,
+
+html body
+#position-delete-modal
+.nx-setup-modal__close,
+
+html body
+#position-employees-modal
+.nx-setup-modal__close {
+
+    background:
+        rgba(217,225,232,.10) !important;
+
+    color:
+        var(--color-text-primary, #F7F9FB) !important;
+
+    border:
+        1px solid rgba(217,225,232,.08) !important;
+}
+
+
+/* ==========================================================
+   MODAL BACKDROP
+   ========================================================== */
+
+html body
+#position-editor-modal.nx-setup-modal,
+
+html body
+#position-job-profile-modal.nx-setup-modal,
+
+html body
+#position-delete-modal.nx-setup-modal,
+
+html body
+#position-employees-modal.nx-setup-modal,
+
+html body
+#position-reference-competencies.nx-setup-modal,
+
+html body
+#position-reference-education.nx-setup-modal,
+
+html body
+#position-reference-specializations.nx-setup-modal,
+
+html body
+#position-reference-certifications.nx-setup-modal {
+
+    background:
+        rgba(3,8,16,.32) !important;
+
+    backdrop-filter:
+        blur(8px) saturate(108%) !important;
+
+    -webkit-backdrop-filter:
+        blur(8px) saturate(108%) !important;
+}
+
+
+/* ==========================================================
+   FINAL GUARD
+   إزالة أي Gradient بترولي متبقي
+   ========================================================== */
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-card,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-kpis article,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-filters,
+
+html:not([data-theme="light"])
+.zy-pos-page
+.zy-pos-table-wrap {
+
+    background-image:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_PEOPLE_COLOR_SYNC_V21_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_BACKGROUND_SYNC_V22
+   Final page background alignment with Employees
+   ========================================================== */
+
+html:not([data-theme="light"]),
+html:not([data-theme="light"]) body {
+    background: var(--surface-app, #0B1020) !important;
+    background-image: none !important;
+}
+
+/* الصفحة نفسها */
+html:not([data-theme="light"]) .zy-pos-page,
+html:not([data-theme="light"]) .zy-pos-page > *,
+html:not([data-theme="light"]) main:has(.zy-pos-page) {
+    background-image: none !important;
+}
+
+/* خلفية إطار الصفحة */
+html:not([data-theme="light"]) .zy-pos-page {
+    background: transparent !important;
+}
+
+/* أي غلاف خارجي للمحتوى */
+html:not([data-theme="light"]) .content-wrapper,
+html:not([data-theme="light"]) .page-content,
+html:not([data-theme="light"]) .page-shell,
+html:not([data-theme="light"]) .main-content,
+html:not([data-theme="light"]) .app-content,
+html:not([data-theme="light"]) .content-body {
+    background: var(--surface-app, #0B1020) !important;
+    background-image: none !important;
+}
+
+/* إزالة أي glow / blobs / pseudo background */
+html:not([data-theme="light"]) .zy-pos-page::before,
+html:not([data-theme="light"]) .zy-pos-page::after,
+html:not([data-theme="light"]) .page-content::before,
+html:not([data-theme="light"]) .page-content::after,
+html:not([data-theme="light"]) .page-shell::before,
+html:not([data-theme="light"]) .page-shell::after,
+html:not([data-theme="light"]) .main-content::before,
+html:not([data-theme="light"]) .main-content::after {
+    content: none !important;
+    display: none !important;
+    background: none !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+/* إذا أكو سكشنات كبيرة بعدها حاملة gradient */
+html:not([data-theme="light"]) .zy-pos-hero,
+html:not([data-theme="light"]) .zy-pos-kpis,
+html:not([data-theme="light"]) .zy-pos-card,
+html:not([data-theme="light"]) .zy-pos-filters,
+html:not([data-theme="light"]) .zy-pos-table-wrap {
+    background-image: none !important;
+}
+
+/* ZYNORA_POSITIONS_BACKGROUND_SYNC_V22_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_REAL_SHELL_BG_V23
+   Match actual application shell background to Employees
+   ========================================================== */
+
+/*
+   Actual layout:
+   body
+     .nexora-shell
+       .nexora-main
+         .nexora-content
+           .zy-pos-page
+*/
+
+/* صفحة المناصب فقط */
+html:not([data-theme="light"])
+body:has(.zy-pos-page) {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Shell */
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-shell {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Main */
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-main {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Content */
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-content {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Positions root */
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.zy-pos-page {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* منع أي glow قديم */
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-main::before,
+
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-main::after,
+
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-content::before,
+
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.nexora-content::after,
+
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.zy-pos-page::before,
+
+html:not([data-theme="light"])
+body:has(.zy-pos-page)
+.zy-pos-page::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+
+    background:
+        none !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_REAL_SHELL_BG_V23_END */
+
+

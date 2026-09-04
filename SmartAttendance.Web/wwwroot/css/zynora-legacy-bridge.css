@@ -795,3 +795,322 @@ html body
 
 /* ZYNORA_DEPARTMENT_DELETE_MODAL_V1_END */
 
+
+/* ==========================================================
+   ZYNORA_POSITIONS_EMPLOYEES_BG_FINAL_V24
+   Final cascade layer — match /Positions background to /Employees
+   ========================================================== */
+
+/*
+   IMPORTANT:
+   This file loads AFTER RenderBody/page CSS,
+   therefore this is the final authoritative override.
+*/
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page) {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-shell,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-main,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-content {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* صفحة Positions نفسها تبقى شفافة فوق خلفية Employees */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* إزالة أي Glow خارجي */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-shell::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-shell::after,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-main::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-main::after,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-content::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-content::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+
+    background:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_EMPLOYEES_BG_FINAL_V24_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_EMPLOYEES_EXACT_PARITY_V25
+
+   Measured with Playwright:
+   Employees app background = #101521
+   Employees card background = #182131
+
+   Positions previously:
+   app  = #0B1020
+   card = #0F1A2E
+   ========================================================== */
+
+
+/* ==========================================================
+   APPLICATION BACKGROUND
+   exact Employees value
+   ========================================================== */
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page),
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-shell,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-main {
+
+    background-color:
+        #101521 !important;
+
+    background:
+        #101521 !important;
+
+    background-image:
+        none !important;
+}
+
+
+/*
+   Employees .nexora-content is transparent.
+   Make Positions behave identically.
+*/
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-content {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* ==========================================================
+   MAIN SURFACES
+   exact Employees card value
+   ========================================================== */
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-hero,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-kpis article,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-card {
+
+    background:
+        #182131 !important;
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Filter surface */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-filters {
+
+    background:
+        #182131 !important;
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Table container */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table-wrap {
+
+    background:
+        #182131 !important;
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Header row */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table thead,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table thead tr,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table thead th {
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Rows stay on same Employees surface family */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table tbody td {
+
+    background-color:
+        #182131 !important;
+}
+
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table tbody tr:hover td {
+
+    background-color:
+        #1C2738 !important;
+}
+
+
+/* ==========================================================
+   REMOVE OLD GLOWS
+   ========================================================== */
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page::after,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-main::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.nexora-main::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_EMPLOYEES_EXACT_PARITY_V25_END */
+
+
