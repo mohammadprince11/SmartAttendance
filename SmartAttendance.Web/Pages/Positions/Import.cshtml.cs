@@ -86,7 +86,7 @@ public class ImportModel : PageModel
         return File(
             bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"NEXORA_Positions_Import_Template_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+            $"ZYNORA_Positions_Import_Template_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
     }
 
     public async Task<IActionResult> OnPostPreviewAsync()

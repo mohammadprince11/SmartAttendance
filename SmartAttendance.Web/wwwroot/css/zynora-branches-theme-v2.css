@@ -25,8 +25,8 @@
    HERO / CARDS
    ========================================================== */
 
-html:not([data-theme="light"]) .nexora-setup-hero,
-html:not([data-theme="light"]) .nexora-setup-card,
+html:not([data-theme="light"]) .zynora-setup-hero,
+html:not([data-theme="light"]) .zynora-setup-card,
 html:not([data-theme="light"]) .form-card {
 
     background:
@@ -45,22 +45,22 @@ html:not([data-theme="light"]) .form-card {
 
 
 /* hero */
-html:not([data-theme="light"]) .nexora-setup-hero h1,
+html:not([data-theme="light"]) .zynora-setup-hero h1,
 html:not([data-theme="light"]) .page-header h1 {
 
     color: #ffffff !important;
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-hero p,
+html:not([data-theme="light"]) .zynora-setup-hero p,
 html:not([data-theme="light"]) .page-header p {
 
     color: var(--zb-muted) !important;
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-kicker,
-html:not([data-theme="light"]) .nexora-setup-card-head > div > span {
+html:not([data-theme="light"]) .zynora-setup-kicker,
+html:not([data-theme="light"]) .zynora-setup-card-head > div > span {
 
     color: var(--zb-gold) !important;
 }
@@ -70,7 +70,7 @@ html:not([data-theme="light"]) .nexora-setup-card-head > div > span {
    SEARCH AREA
    ========================================================== */
 
-html:not([data-theme="light"]) .nexora-setup-search {
+html:not([data-theme="light"]) .zynora-setup-search {
 
     background:
         rgba(5,18,30,.42) !important;
@@ -80,7 +80,7 @@ html:not([data-theme="light"]) .nexora-setup-search {
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-search input {
+html:not([data-theme="light"]) .zynora-setup-search input {
 
     background:
         var(--zb-input) !important;
@@ -93,14 +93,14 @@ html:not([data-theme="light"]) .nexora-setup-search input {
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-search input::placeholder {
+html:not([data-theme="light"]) .zynora-setup-search input::placeholder {
 
     color:
         #71879a !important;
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-search input:focus {
+html:not([data-theme="light"]) .zynora-setup-search input:focus {
 
     background:
         var(--zb-input-focus) !important;
@@ -120,7 +120,7 @@ html:not([data-theme="light"]) .nexora-setup-search input:focus {
    TABLE
    ========================================================== */
 
-html:not([data-theme="light"]) .nexora-setup-table-wrap {
+html:not([data-theme="light"]) .zynora-setup-table-wrap {
 
     background:
         rgba(4,16,27,.42) !important;
@@ -130,21 +130,21 @@ html:not([data-theme="light"]) .nexora-setup-table-wrap {
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-table {
+html:not([data-theme="light"]) .zynora-setup-table {
 
     background:
         transparent !important;
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-table thead {
+html:not([data-theme="light"]) .zynora-setup-table thead {
 
     background:
         rgba(5,18,30,.72) !important;
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-table th {
+html:not([data-theme="light"]) .zynora-setup-table th {
 
     color:
         var(--zb-label) !important;
@@ -154,7 +154,7 @@ html:not([data-theme="light"]) .nexora-setup-table th {
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-table td {
+html:not([data-theme="light"]) .zynora-setup-table td {
 
     color:
         var(--zb-label) !important;
@@ -164,14 +164,14 @@ html:not([data-theme="light"]) .nexora-setup-table td {
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-table tbody tr {
+html:not([data-theme="light"]) .zynora-setup-table tbody tr {
 
     background:
         transparent !important;
 }
 
 
-html:not([data-theme="light"]) .nexora-setup-table tbody tr:hover {
+html:not([data-theme="light"]) .zynora-setup-table tbody tr:hover {
 
     background:
         rgba(34,211,238,.045) !important;
@@ -404,7 +404,7 @@ html:not([data-theme="light"]) .btn-delete {
    EDIT PAGE
    ========================================================== */
 
-html:not([data-theme="light"]) .nx-setup-form-page .nexora-setup-card {
+html:not([data-theme="light"]) .nx-setup-form-page .zynora-setup-card {
 
     background:
         linear-gradient(
@@ -502,8 +502,8 @@ html:not([data-theme="light"]) .pagination button {
 
 /* Hero أقرب إلى Employee Create */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-hero {
+.zynora-setup-page
+.zynora-setup-hero {
 
     background:
         linear-gradient(
@@ -522,8 +522,8 @@ html:not([data-theme="light"])
 
 /* Card الرئيسي */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-card {
+.zynora-setup-page
+.zynora-setup-card {
 
     background:
         linear-gradient(
@@ -542,8 +542,8 @@ html:not([data-theme="light"])
 
 /* Search area أخف */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-search {
+.zynora-setup-page
+.zynora-setup-search {
 
     background:
         rgba(4,16,27,.34) !important;
@@ -555,8 +555,8 @@ html:not([data-theme="light"])
 
 /* Search input */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-search input {
+.zynora-setup-page
+.zynora-setup-search input {
 
     background:
         #081a2a !important;
@@ -571,11 +571,11 @@ html:not([data-theme="light"])
 
 /* Primary buttons — نفس Create */
 html:not([data-theme="light"])
-.nexora-setup-page
+.zynora-setup-page
 .btn-primary,
 
 html:not([data-theme="light"])
-.nexora-setup-page
+.zynora-setup-page
 .nx-setup-btn-primary {
 
     background:
@@ -598,11 +598,11 @@ html:not([data-theme="light"])
 
 /* Secondary buttons */
 html:not([data-theme="light"])
-.nexora-setup-page
+.zynora-setup-page
 .btn-secondary,
 
 html:not([data-theme="light"])
-.nexora-setup-page
+.zynora-setup-page
 .nx-setup-btn-secondary {
 
     background:
@@ -618,8 +618,8 @@ html:not([data-theme="light"])
 
 /* Table container */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-table-wrap {
+.zynora-setup-page
+.zynora-setup-table-wrap {
 
     background:
         linear-gradient(
@@ -638,8 +638,8 @@ html:not([data-theme="light"])
 
 /* Table header */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-table thead {
+.zynora-setup-page
+.zynora-setup-table thead {
 
     background:
         rgba(8,27,43,.74) !important;
@@ -648,8 +648,8 @@ html:not([data-theme="light"])
 
 /* Rows */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-table tbody tr {
+.zynora-setup-page
+.zynora-setup-table tbody tr {
 
     background:
         rgba(3,13,23,.16) !important;
@@ -657,8 +657,8 @@ html:not([data-theme="light"])
 
 
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-table tbody tr:hover {
+.zynora-setup-page
+.zynora-setup-table tbody tr:hover {
 
     background:
         rgba(34,211,238,.055) !important;
@@ -667,7 +667,7 @@ html:not([data-theme="light"])
 
 /* Edit */
 html:not([data-theme="light"])
-.nexora-setup-page
+.zynora-setup-page
 .btn-edit {
 
     background:
@@ -683,7 +683,7 @@ html:not([data-theme="light"])
 
 /* Delete يبقى Red Accent محدود */
 html:not([data-theme="light"])
-.nexora-setup-page
+.zynora-setup-page
 .btn-delete {
 
     background:
@@ -699,12 +699,12 @@ html:not([data-theme="light"])
 
 /* Gold فقط للعناوين الثانوية */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-kicker,
+.zynora-setup-page
+.zynora-setup-kicker,
 
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-card-head > div > span {
+.zynora-setup-page
+.zynora-setup-card-head > div > span {
 
     color:
         #f5c96b !important;
@@ -713,8 +713,8 @@ html:not([data-theme="light"])
 
 /* Main/secondary typography */
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-card-head strong {
+.zynora-setup-page
+.zynora-setup-card-head strong {
 
     color:
         #f4f8fb !important;
@@ -722,8 +722,8 @@ html:not([data-theme="light"])
 
 
 html:not([data-theme="light"])
-.nexora-setup-page
-.nexora-setup-card-head small {
+.zynora-setup-page
+.zynora-setup-card-head small {
 
     color:
         #9fb8c9 !important;

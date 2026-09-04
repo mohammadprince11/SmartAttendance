@@ -299,7 +299,7 @@
 | 4 · مقام أيام العمل | ✅ | `WorkDaysBasis` (ثابت/فترة/سنة مالية + استثناء) |
 | 5 · سياسة الإسقاط | ✅ | `PenaltyDropPolicy` (مرّة/دوريّة + وحدة + مرساة) |
 | 6 · قالب لكل درجة + قالب الأتمتة | ✅ | `MessageTemplateId` · `AutoMessageTemplateId` |
-| 7 · سبب الإيقاف لإنهاء الخدمة | ✅ | `TerminationReasonId` ⟵ `NexoraTerminationReasons` |
+| 7 · سبب الإيقاف لإنهاء الخدمة | ✅ | `TerminationReasonId` ⟵ `ZynoraTerminationReasons` |
 | 8 · الشبكة المحرَّرة داخل الصفّ | ✅ | `SaveCategories` · `SaveViolationTypes` + `zynora-grid-editor.js` |
 | 9 · بحث + حذف جماعي | ✅ | محكوم: فئةٌ لها مخالفات ومخالفةٌ لها حالات لا تُحذفان |
 | 10 · عمودا الاسم عربي/English | ✅ | `NameEn` على الفئة والمخالفة |

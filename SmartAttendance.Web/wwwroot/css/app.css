@@ -302,13 +302,13 @@ body {
 /*
     ⚠️ ألوان هذه العائلة كانت مثبَّتة بقيم فاتحة (`#ffffff` · `#334155` · `#f8fafc`)
     وهي بقيّةٌ من زمنٍ كان التطبيق فيه فاتحاً حصراً. بعد Design System v1 صارت
-    `.table-card` تُفرَض **داكنةً** من `nexora-ui-stabilization-phase1.css`
+    `.table-card` تُفرَض **داكنةً** من `zynora-ui-stabilization-phase1.css`
     (`background: linear-gradient(...) !important`) بينما بقي نصّ الخليّة `#334155`
     كما هو ⟹ **نصّ داكن على بطاقة داكنة** ≈ 1.7:1 — غير مقروء بالوضع الداكن،
     وترويسةٌ وصفُّ مرورٍ بلون `#f8fafc` يومضان كجزيرةٍ فاتحة.
 
     القياس بالكود (2026-08-07): ثلاث عشرة صفحة تستعمل `table.data-table`؛ سبعٌ منها
-    محميّة بنطاقها (`.nexora-setup-page` بـ`nexora-setup-pages.css`، و
+    محميّة بنطاقها (`.zynora-setup-page` بـ`zynora-setup-pages.css`، و
     `/AttendanceRecords` بـ`attendance-records-filters.css`) وتبقى **ستّ** مكشوفة:
     `Devices/{Index,Import}` · `Holidays/{Index,Import}` · `LeaveRequests/{Index,Import}`.
 

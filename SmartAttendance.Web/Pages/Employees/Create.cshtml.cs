@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Application.Branches.ViewModels;
 using SmartAttendance.Application.Departments.ViewModels;
 using SmartAttendance.Application.Employees.Services;
@@ -20,6 +21,12 @@ public class CreateModel : PageModel
     private readonly ApplicationDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
     private readonly ICompanyDataLocalizationService _dataLocalization;
+    private readonly ILocalizationDictionaryService _dictionary;
+
+    private const string FirstNameLabelKey = "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644";
+    private const string SecondNameLabelKey = "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062b\u0627\u0646\u064a";
+    private const string ThirdNameLabelKey = "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062b\u0627\u0644\u062b";
+    private const string LastNameLabelKey = "\u0627\u0644\u0644\u0642\u0628";
 
     private static readonly HashSet<string> AllowedDocumentExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -36,16 +43,23 @@ public class CreateModel : PageModel
         IEmployeeService employeeService,
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
-        ICompanyDataLocalizationService dataLocalization)
+        ICompanyDataLocalizationService dataLocalization,
+        ILocalizationDictionaryService dictionary)
     {
         _employeeService = employeeService;
         _dbContext = dbContext;
         _environment = environment;
         _dataLocalization = dataLocalization;
+        _dictionary = dictionary;
     }
 
     [BindProperty]
     public EmployeeCreateViewModel Employee { get; set; } = new();
+
+    [BindProperty]
+    public decimal? BasicSalary { get; set; }
+
+    public bool CanEditCompensation { get; set; }
 
 
     [BindProperty]
@@ -119,6 +133,7 @@ public class CreateModel : PageModel
 
     public async Task OnGetAsync()
     {
+        CanEditCompensation = await CanEditCompensationGloballyAsync();
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         await ResolveSelectedCompanyAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
@@ -139,6 +154,7 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        CanEditCompensation = await CanEditCompensationGloballyAsync();
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         await ResolveSelectedCompanyAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
@@ -166,6 +182,16 @@ public class CreateModel : PageModel
 
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
+
+        if (BasicSalary is < 0)
+        {
+            ModelState.AddModelError(nameof(BasicSalary), "الراتب الأساسي لا يمكن أن يكون سالباً.");
+        }
+
+        if (BasicSalary.HasValue && !CanEditCompensation)
+        {
+            ModelState.AddModelError(nameof(BasicSalary), "لا تملك صلاحية إدخال أو تعديل الراتب الأساسي.");
+        }
 
         if (!ModelState.IsValid)
             return Page();
@@ -232,6 +258,7 @@ public class CreateModel : PageModel
         if (employeeId > 0)
         {
             await SaveEmployeeNameTranslationsAsync(employeeId);
+            await SaveBasicSalaryAsync(employeeId);
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, employeeId, Request.Form);
             var photoResult = await SaveEmployeePhotoAsync(employeeId);
             var documentResult = await SaveInitialDocumentsAsync(employeeId);
@@ -255,6 +282,56 @@ public class CreateModel : PageModel
         return RedirectToPage("./Index");
     }
 
+    private async Task<bool> CanEditCompensationGloballyAsync()
+    {
+        var authorization = HttpContext.RequestServices
+            .GetService<IPermissionAuthorizationService>();
+        if (authorization is null)
+        {
+            return false;
+        }
+
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        return await authorization.HasGlobalPermissionAsync(
+            systemUserId,
+            PeoplePermissionCodes.EditCompensation,
+            PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.EditCompensation),
+            HttpContext.RequestAborted);
+    }
+
+    private async Task SaveBasicSalaryAsync(int employeeId)
+    {
+        if (!BasicSalary.HasValue || !CanEditCompensation || employeeId <= 0)
+        {
+            return;
+        }
+
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+            UPDATE dbo.EmployeeFinancialInfos
+            SET BasicSalary = @BasicSalary,
+                UpdatedAt = SYSUTCDATETIME()
+            WHERE EmployeeId = @EmployeeId
+              AND ISNULL(IsDeleted, 0) = 0;
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                INSERT INTO dbo.EmployeeFinancialInfos
+                    (EmployeeId, BasicSalary, CreatedAt, IsDeleted)
+                VALUES
+                    (@EmployeeId, @BasicSalary, SYSUTCDATETIME(), 0);
+            END;
+            """,
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@BasicSalary", BasicSalary.Value);
+            });
+    }
+
     private async Task LoadEmployeeNameLanguagesAsync(bool preservePostedValues)
     {
         var posted = preservePostedValues
@@ -266,6 +343,10 @@ public class CreateModel : PageModel
                 EmployeeNameTranslationKeyComparer.Instance);
 
         var result = new List<EmployeeNameTranslationInput>();
+        var labelCatalogs =
+            new Dictionary<string, IReadOnlyDictionary<string, string>>(
+                StringComparer.OrdinalIgnoreCase);
+
         CompaniesMissingLanguageSetup = [];
         foreach (var companyId in Branches.Select(item => item.CompanyId).Where(id => id > 0).Distinct())
         {
@@ -286,6 +367,19 @@ public class CreateModel : PageModel
                     (companyId, language.CultureCode),
                     out var existing);
 
+                if (!labelCatalogs.TryGetValue(
+                        language.CultureCode,
+                        out var labelCatalog))
+                {
+                    labelCatalog =
+                        await _dictionary.GetCatalogAsync(
+                            language.CultureCode,
+                            HttpContext.RequestAborted);
+
+                    labelCatalogs[language.CultureCode] =
+                        labelCatalog;
+                }
+
                 result.Add(new EmployeeNameTranslationInput
                 {
                     CompanyId = companyId,
@@ -294,6 +388,10 @@ public class CreateModel : PageModel
                     Direction = language.Direction,
                     IsDefault = language.IsDefault,
                     IsRequired = language.IsRequired,
+                    FirstNameLabel = ResolveEmployeeNameLabel(labelCatalog, FirstNameLabelKey),
+                    SecondNameLabel = ResolveEmployeeNameLabel(labelCatalog, SecondNameLabelKey),
+                    ThirdNameLabel = ResolveEmployeeNameLabel(labelCatalog, ThirdNameLabelKey),
+                    LastNameLabel = ResolveEmployeeNameLabel(labelCatalog, LastNameLabelKey),
                     FirstName = existing?.FirstName,
                     SecondName = existing?.SecondName,
                     ThirdName = existing?.ThirdName,
@@ -438,6 +536,14 @@ public class CreateModel : PageModel
         }
         return values;
     }
+
+    private static string ResolveEmployeeNameLabel(
+        IReadOnlyDictionary<string, string> catalog,
+        string sourceKey) =>
+        catalog.TryGetValue(sourceKey, out var translation) &&
+        !string.IsNullOrWhiteSpace(translation)
+            ? translation.Trim()
+            : sourceKey;
 
     private static string ComposeName(EmployeeNameTranslationInput item) => string.Join(' ',
         new[] { item.FirstName, item.SecondName, item.ThirdName, item.LastName }
@@ -643,6 +749,10 @@ public sealed class EmployeeNameTranslationInput
     public string Direction { get; set; } = "ltr";
     public bool IsDefault { get; set; }
     public bool IsRequired { get; set; }
+    public string FirstNameLabel { get; set; } = string.Empty;
+    public string SecondNameLabel { get; set; } = string.Empty;
+    public string ThirdNameLabel { get; set; } = string.Empty;
+    public string LastNameLabel { get; set; } = string.Empty;
     public string? FirstName { get; set; }
     public string? SecondName { get; set; }
     public string? ThirdName { get; set; }

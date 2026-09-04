@@ -5,7 +5,7 @@
     ViewData["Title"] = "فترة الإنذار";
 }
 
-<link rel="stylesheet" href="~/css/nexora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-hr-settings-v16.css" asp-append-version="true" />
 
 <section class="nxhs-page nxhs-simple" dir="rtl">
     <header class="nxhs-titlebar">
@@ -40,7 +40,7 @@
 
             <label class="nxhs-field">
                 <span>من</span>
-                <select data-nexora-select="true" asp-for="NoticeBasis">
+                <select data-zynora-select="true" asp-for="NoticeBasis">
                     <option value="TerminationDate">تاريخ الإيقاف</option>
                     <option value="ResignationDate">تاريخ الاستقالة</option>
                 </select>
@@ -62,7 +62,7 @@
 
             <label class="nxhs-field-row">
                 <span>موظفين بدون مناوبة</span>
-                <select data-nexora-select="true" asp-for="NoAttendanceException">
+                <select data-zynora-select="true" asp-for="NoAttendanceException">
                     <option value="None">لا شيء</option>
                     <option value="Holidays">العطل الرسمية</option>
                 </select>
@@ -70,7 +70,7 @@
 
             <label class="nxhs-field-row">
                 <span>موظفين الحضور المنتظم</span>
-                <select data-nexora-select="true" asp-for="RegularAttendanceException">
+                <select data-zynora-select="true" asp-for="RegularAttendanceException">
                     <option value="None">لا شيء</option>
                     <option value="Holidays">العطل الرسمية</option>
                 </select>
@@ -78,7 +78,7 @@
 
             <label class="nxhs-field-row">
                 <span>موظفين الحضور المجدول</span>
-                <select data-nexora-select="true" asp-for="ScheduledAttendanceException">
+                <select data-zynora-select="true" asp-for="ScheduledAttendanceException">
                     <option value="None">لا شيء</option>
                     <option value="Holidays">العطل الرسمية</option>
                 </select>
@@ -90,7 +90,7 @@
 
             <label class="nxhs-field-row">
                 <span>الراتب المستحق</span>
-                <select data-nexora-select="true" asp-for="SalaryAction">
+                <select data-zynora-select="true" asp-for="SalaryAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -98,7 +98,7 @@
 
             <label class="nxhs-field-row">
                 <span>مكافأة نهاية الخدمة</span>
-                <select data-nexora-select="true" asp-for="EndOfServiceAction">
+                <select data-zynora-select="true" asp-for="EndOfServiceAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -106,7 +106,7 @@
 
             <label class="nxhs-field-row">
                 <span>بدل الإجازة</span>
-                <select data-nexora-select="true" asp-for="LeaveAllowanceAction">
+                <select data-zynora-select="true" asp-for="LeaveAllowanceAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -114,7 +114,7 @@
 
             <label class="nxhs-field-row">
                 <span>صرف التذاكر نقداً</span>
-                <select data-nexora-select="true" asp-for="TicketAction">
+                <select data-zynora-select="true" asp-for="TicketAction">
                     <option value="LastWorkingDay">احتساب حتى آخر يوم عمل</option>
                     <option value="TerminationDate">احتساب حتى تاريخ الإيقاف</option>
                 </select>
@@ -127,7 +127,7 @@
     </form>
 </section>
 
-<script src="~/js/nexora-hr-settings-v16.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-hr-settings-v16.js" asp-append-version="true" defer></script>
 
 @section Scripts {
 

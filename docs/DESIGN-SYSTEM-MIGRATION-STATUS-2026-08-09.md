@@ -9,9 +9,9 @@ _2026-08-09. Living tracker so new pages adopt the canonical `zy-*` components i
 | `zynora-theme-contract.css` | semantic brand/status tokens (`--brand-*`, `--status-*`) |
 | `zynora-design-tokens.css` + `zynora-tokens.css` | design tokens (spacing/type/radius/control sizes, `--zy-*`) |
 | `zynora-design-system.css` | **canonical components** (`.zy-*`) |
-| `nexora-brand.css` | application shell / navigation |
+| `zynora-brand.css` | application shell / navigation |
 | `zynora-legacy-bridge.css` | temporary legacy page bridge |
-| `app.css`, `nexora-*`, page CSS | **legacy generations — to be retired progressively** |
+| `app.css`, `zynora-*`, page CSS | **legacy generations — to be retired progressively** |
 
 > Debt: `zynora-design-tokens.css` and `zynora-tokens.css` both exist (token duplication) — consolidate later; do not add a third.
 

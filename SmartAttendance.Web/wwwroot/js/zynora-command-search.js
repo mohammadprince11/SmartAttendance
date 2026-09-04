@@ -9,13 +9,13 @@
     if (!input || !results) return;
 
     var seen = Object.create(null);
-    var pages = Array.prototype.slice.call(document.querySelectorAll(".nexora-nav a[href]"))
+    var pages = Array.prototype.slice.call(document.querySelectorAll(".zynora-nav a[href]"))
         .map(function (link) {
             var href = link.getAttribute("href") || "";
             if (!href || href === "#" || seen[href]) return null;
             seen[href] = true;
-            var group = link.closest(".nexora-nav-group");
-            var summary = group ? group.querySelector(":scope > summary .nexora-nav-text") : null;
+            var group = link.closest(".zynora-nav-group");
+            var summary = group ? group.querySelector(":scope > summary .zynora-nav-text") : null;
             return {
                 label: (link.textContent || "").replace(/\s+/g, " ").trim(),
                 group: summary ? (summary.textContent || "").trim() : "الرئيسية",

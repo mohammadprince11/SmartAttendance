@@ -10,7 +10,7 @@
         width: 100% !important;
         max-width: 100% !important;
     }
-    /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_START */
+    /* ZYNORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_START */
     .nxr-page.nxr-create-clean-page {
         display: grid !important;
         gap: 16px !important;
@@ -255,9 +255,9 @@
             grid-column: auto !important;
         }
     }
-    /* NEXORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_END */
+    /* ZYNORA_FIX05C_CREATE_EDIT_VISUAL_ALIGNMENT_END */
 
-    /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_START */
+    /* ZYNORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_START */
     .nxr-page.nxr-create-clean-page {
         max-width: 1240px !important;
         margin-inline: auto !important;
@@ -557,9 +557,9 @@
             width: 100% !important;
         }
     }
-    /* NEXORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_END */
+    /* ZYNORA_FIX12A_CREATE_PAGE_PREMIUM_POLISH_END */
 
-    /* NEXORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_START */
+    /* ZYNORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_START */
     .nxr-page.nxr-create-clean-page {
         width: min(100%, 1240px) !important;
         min-width: 0 !important;
@@ -713,7 +713,7 @@
             font-size: 21px !important;
         }
     }
-        /* NEXORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_START */
+        /* ZYNORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_START */
     /* Canonical end-of-form action bar, visible only at form end. */
     #employee-create-form,
     .nxr-form.nxr-create-clean-form {
@@ -772,8 +772,8 @@
             grid-template-columns: 1fr !important;
         }
     }
-/* NEXORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_END */
-    /* NEXORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_END */
+/* ZYNORA_FIXED_EMPLOYEE_CREATE_ACTION_BAR_END */
+    /* ZYNORA_RESPONSIVE_EMPLOYEE_CREATE_FOUNDATION_END */
 
 /* Static inline utilities migrated from Pages/Employees/Create.cshtml */
 

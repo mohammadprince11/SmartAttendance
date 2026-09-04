@@ -308,7 +308,7 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent); }
 .zy-input::placeholder, .zy-textarea::placeholder { color: var(--color-text-secondary); opacity: .8; }
 
-/* تحييد تضخيم أنظمة الـselect والكلاندر القديمة (nexora-select/calendar العامة)
+/* تحييد تضخيم أنظمة الـselect والكلاندر القديمة (zynora-select/calendar العامة)
    داخل نطاق الهوية الجديدة — الارتفاع الموحد المضغوط يفوز دائماً */
 /* الحقول الأصلية التي «تبتلعها» الودجتات (nxcs-native/nxcal-native) يجب أن تبقى
    مخفية 1px — استثناؤها هنا وإلا أحياها التجاوز فظهر حقلان فوق بعض. */
@@ -328,7 +328,7 @@ html[data-theme="light"] .zy-theme-btn .zy-tt-moon { display: block; }
 /* ⚠️ بلا نطاق: كانت هذه بسابقة `.zy-app` الميتة (موجودة بصفحتين فقط)، فالحقل
    الأصليّ الذي «تبتلعه» الودجت **لم يكن مخفيّاً**: `zynora-components` يفرض
    `min-height:40px` على حقول `.zy-scope`، و`min-height` يغلب `height:1px` الذي
-   يضعه `nexora-calendar-v18` بنفس التخصصية، فيبقى الحقل يحجز 40px من التخطيط
+   يضعه `zynora-calendar-v18` بنفس التخصصية، فيبقى الحقل يحجز 40px من التخطيط
    بجانب الودجت المرئيّة. قيس حيّاً على `/ShiftTypes` وغيرها 2026-08-02.
    تكرار الصنف ثلاثاً يرفع التخصصية فوق `.zy-scope input[type="date"]`. */
 input.nxcal-native.nxcal-native.nxcal-native,
@@ -472,7 +472,7 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 @media (max-width: 640px) { .zy-kv { grid-template-columns: 1fr; } }
 
 /* ==================== الغلبة على العوامّ القديمة ==========================
-   nexora-ui-stabilization يفرض button=40px وinput=42px بـ!important عالمياً،
+   zynora-ui-stabilization يفرض button=40px وinput=42px بـ!important عالمياً،
    وzynora-components (قديم) يفرض خط 14px على [class*="-btn"] — داخل الهوية
    الجديدة نستعيد القياس المضغوط بنفس القوة وبتحميل لاحق فنفوز. */
 /* تكرار الكلاس يرفع التخصصية فوق قاعدة [class*="-btn"]:not():not():not() القديمة */
@@ -495,7 +495,7 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 }
 
 /* ============ زناد الكلاندر: لون التوكنز بالوضعين (لا نطاق ولا مقاس) ========
-   `nexora-calendar-v18.css` يقفل الزناد على تدرّجٍ كحليّ داكن وحدٍّ تيل ونصٍّ
+   `zynora-calendar-v18.css` يقفل الزناد على تدرّجٍ كحليّ داكن وحدٍّ تيل ونصٍّ
    شبه أبيض — بالوضعين. فبالوضع الفاتح يظهر كل حقل تاريخ **شريطاً كحلياً صلباً**
    وسط حقولٍ بيضاء، ونصّه داكنٌ على داكن.
 
@@ -544,11 +544,11 @@ html[dir="rtl"] .zy-drawer { transform: translateX(100%); }
 .nxcal__choice { min-height: 28px !important; font-size: 12px !important; }
 
 /* إغلاق فجوة عمود السايدبار (الجريد 288 والملف القديم يفرض 252) */
-.nexora-sidebar { width: 100% !important; max-width: 100% !important; }
+.zynora-sidebar { width: 100% !important; max-width: 100% !important; }
 
 /* ================= لوحة الكلاندر: طقم واحد للوضعين =========================
    كان هنا طقمٌ مشروطٌ بـ`html[data-theme="light"]` فقط، فبالوضع الداكن تبقى
-   اللوحة على تيل `nexora-calendar-v18` القديم (`rgba(25,211,224,…)`) وذهبه
+   اللوحة على تيل `zynora-calendar-v18` القديم (`rgba(25,211,224,…)`) وذهبه
    المثبّت (`#F6D98D`) — أي **لوحتان بهويّتين** حسب الوضع، وكلتاهما تتجاهلان
    سلايت-بلو. الآن قاعدةٌ واحدة بالتوكنز تخدم الوضعين، فيتطابق الكلاندر مع
    نفسه ومع بقية النظام أيّاً كان الوضع أو لون الشركة بمحرّك الهوية.

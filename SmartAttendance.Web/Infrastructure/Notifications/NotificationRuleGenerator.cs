@@ -8,7 +8,7 @@ using SmartAttendance.Web.Pages.HrSettings;
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
 /// <summary>
-/// مولّد مركز الإشعارات: يقرأ قواعد <c>NexoraNotificationRules</c> المفعّلة يومياً،
+/// مولّد مركز الإشعارات: يقرأ قواعد <c>ZynoraNotificationRules</c> المفعّلة يومياً،
 /// يطابقها بموظفي الشركة (عيد ميلاد · ذكرى عمل · قرب انتهاء العقد · قرب انتهاء فترة
 /// التجربة)، ويُطلق إشعاراً فعلياً لكل حدث جديد: صندوق داخل النظام (<see cref="UserNotification"/>)
 /// لكل مستلم + دفع Web-Push لأجهزته. يمنع التكرار بجدول أحداث بمفتاح فريد لكل حدث
@@ -76,28 +76,6 @@ public static class NotificationRuleGenerator
 
     public sealed record GenerationResult(int NewEvents, int NotificationsCreated, int PushDelivered);
 
-    public static async Task EnsureEventLogAsync(ApplicationDbContext db)
-    {
-        await HrmsDatabase.ExecuteAsync(
-            db,
-            """
-IF OBJECT_ID('NexoraNotificationEvents', 'U') IS NULL
-BEGIN
-    CREATE TABLE NexoraNotificationEvents
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        EventKey nvarchar(200) NOT NULL,
-        RuleKind nvarchar(40) NOT NULL,
-        SubjectEmployeeId int NOT NULL,
-        RecipientCount int NOT NULL DEFAULT(0),
-        PushDelivered int NOT NULL DEFAULT(0),
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME())
-    );
-    CREATE UNIQUE INDEX UX_NexoraNotifEvents_Key ON NexoraNotificationEvents (EventKey);
-END;
-""");
-    }
-
     /// <summary>
     /// يشغّل دورة توليد لتاريخ محدد (تاريخ بغداد). idempotent: كل حدث جديد فقط يُطلق ويُسجَّل.
     /// </summary>
@@ -106,7 +84,6 @@ END;
         CancellationToken cancellationToken = default)
     {
         await HrSettingsStore.EnsureTablesAsync(db);
-        await EnsureEventLogAsync(db);
 
         // القواعد المفعّلة المدعومة v1
         var rules = (await HrSettingsStore.LoadNotificationRulesAsync(db))
@@ -182,7 +159,7 @@ WHERE IsActive = 1 AND IsDeleted = 0;
         // الأحداث المُطلَقة سابقاً (منع التكرار)
         var firedKeys = (await HrmsDatabase.QueryAsync(
             db,
-            "SELECT EventKey FROM NexoraNotificationEvents;",
+            "SELECT EventKey FROM ZynoraNotificationEvents;",
             _ => { },
             reader => HrmsDatabase.GetString(reader, "EventKey")))
             .ToHashSet();
@@ -302,7 +279,7 @@ VALUES (@Title, @Message, N'HR', @Url);
             await HrmsDatabase.ExecuteAsync(
                 db,
                 """
-INSERT INTO NexoraNotificationEvents (EventKey, RuleKind, SubjectEmployeeId, RecipientCount, PushDelivered)
+INSERT INTO ZynoraNotificationEvents (EventKey, RuleKind, SubjectEmployeeId, RecipientCount, PushDelivered)
 VALUES (@Key, @Kind, @Emp, @Recipients, @Push);
 """,
                 command =>

@@ -17,7 +17,7 @@ public sealed class ApprovalAdministrationSurfaceTests
         Assert.Contains("data-nav-area=\"settings\"", layout, StringComparison.Ordinal);
         Assert.Contains("/AuditLogs/Index", layout, StringComparison.Ordinal);
         Assert.Contains("data-zy-command-search", layout, StringComparison.Ordinal);
-        Assert.Contains(".nexora-nav a[href]", search, StringComparison.Ordinal);
+        Assert.Contains(".zynora-nav a[href]", search, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", search, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -3,7 +3,7 @@
 
 @section Styles {
     <link rel="stylesheet"
-          href="~/css/nexora-setup-pages.css"
+          href="~/css/zynora-setup-pages.css"
           asp-append-version="true" />
 
     <link rel="stylesheet"
@@ -595,19 +595,31 @@
 
                 <div class="zy-pos-form-grid">
 
-                    <label class="zy-pos-field zy-pos-field--wide">
-
-                        <span>
-                            اسم المنصب
-                            <b>*</b>
-                        </span>
-
-                        <input asp-for="Input.ArabicName"
-                               required
-                               maxlength="200"
-                               placeholder="مثال: مشرف عمليات الموارد البشرية" />
-
-                    </label>
+                    <div class="zy-pos-field zy-pos-field--wide">
+                        <span>اسم المنصب ووصفه حسب لغات الشركة</span>
+                        <div class="zy-pos-form-grid">
+                            @for (var index = 0; index < Model.PositionTranslations.Count; index++)
+                            {
+                                var language = Model.PositionTranslations[index];
+                                <fieldset class="zy-pos-field zy-pos-field--wide" dir="@language.Direction" lang="@language.CultureCode">
+                                    <legend>
+                                        <strong data-zy-no-localize>@language.NativeName</strong>
+                                        <small>@language.CultureCode · @(language.IsDefault ? "اللغة الأساسية" : "لغة إضافية")</small>
+                                    </legend>
+                                    <input type="hidden" asp-for="PositionTranslations[index].CultureCode" />
+                                    <label class="zy-pos-field">
+                                        <span>اسم المنصب @(language.IsRequired ? "*" : "")</span>
+                                        <input asp-for="PositionTranslations[index].Name" maxlength="200" dir="@language.Direction" />
+                                    </label>
+                                    <label class="zy-pos-field">
+                                        <span>وصف مختصر</span>
+                                        <textarea asp-for="PositionTranslations[index].Description" rows="2" maxlength="1000" dir="@language.Direction"></textarea>
+                                    </label>
+                                </fieldset>
+                            }
+                            <span asp-validation-for="PositionTranslations" class="zy-pos-validation"></span>
+                        </div>
+                    </div>
 
 
                     <label class="zy-pos-field">
@@ -698,21 +710,6 @@
                         </div>
 
                     </div>
-
-
-                    <label class="zy-pos-field zy-pos-field--wide">
-
-                        <span>
-                            وصف مختصر
-                        </span>
-
-                        <textarea asp-for="Input.Description"
-                                  rows="2"
-                                  maxlength="1000"
-                                  placeholder="ملخص مختصر عن طبيعة المنصب...">
-                        </textarea>
-
-                    </label>
 
 
                     <label class="zy-pos-check">
@@ -1057,84 +1054,36 @@
 
 
         <div class="zy-pos-job-body">
-
-            <label class="zy-pos-field zy-pos-field--wide">
-
-                <span>هدف المنصب</span>
-
-                <textarea asp-for="Input.JobPurpose"
-                          form="positionEditorForm"
-                          rows="3"
-                          maxlength="2000"
-                          placeholder="ما الغرض من هذا المنصب؟">
-                </textarea>
-
-            </label>
-
-
-            <label class="zy-pos-field zy-pos-field--wide">
-
-                <span>
-                    المهام والمسؤوليات
-                </span>
-
-                <textarea asp-for="Input.KeyResponsibilities"
-                          form="positionEditorForm"
-                          rows="5"
-                          maxlength="4000"
-                          placeholder="اكتب المهام والمسؤوليات الرئيسية...">
-                </textarea>
-
-            </label>
-
-
-            <label class="zy-pos-field">
-
-                <span>
-                    المتطلبات
-                </span>
-
-                <textarea asp-for="Input.JobRequirements"
-                          form="positionEditorForm"
-                          rows="4"
-                          maxlength="3000"
-                          placeholder="الخبرة، المؤهل، اللغات...">
-                </textarea>
-
-            </label>
-
-
-            <label class="zy-pos-field">
-
-                <span>
-                    المهارات المطلوبة
-                </span>
-
-                <textarea asp-for="Input.RequiredSkills"
-                          form="positionEditorForm"
-                          rows="4"
-                          maxlength="3000"
-                          placeholder="المهارات الفنية والشخصية...">
-                </textarea>
-
-            </label>
-
-
-            <label class="zy-pos-field zy-pos-field--wide">
-
-                <span>
-                    KPI
-                </span>
-
-                <textarea asp-for="Input.JobKpis"
-                          form="positionEditorForm"
-                          rows="4"
-                          maxlength="3000"
-                          placeholder="مؤشرات الأداء الرئيسية للمنصب...">
-                </textarea>
-
-            </label>
-
+            @for (var index = 0; index < Model.PositionTranslations.Count; index++)
+            {
+                var language = Model.PositionTranslations[index];
+                <fieldset class="zy-pos-field zy-pos-field--wide" dir="@language.Direction" lang="@language.CultureCode">
+                    <legend>
+                        <strong data-zy-no-localize>@language.NativeName</strong>
+                        <small>@language.CultureCode</small>
+                    </legend>
+                    <label class="zy-pos-field zy-pos-field--wide">
+                        <span>هدف المنصب</span>
+                        <textarea asp-for="PositionTranslations[index].JobPurpose" form="positionEditorForm" rows="3" maxlength="2000" dir="@language.Direction"></textarea>
+                    </label>
+                    <label class="zy-pos-field zy-pos-field--wide">
+                        <span>المهام والمسؤوليات</span>
+                        <textarea asp-for="PositionTranslations[index].KeyResponsibilities" form="positionEditorForm" rows="5" maxlength="4000" dir="@language.Direction"></textarea>
+                    </label>
+                    <label class="zy-pos-field">
+                        <span>المتطلبات</span>
+                        <textarea asp-for="PositionTranslations[index].JobRequirements" form="positionEditorForm" rows="4" maxlength="3000" dir="@language.Direction"></textarea>
+                    </label>
+                    <label class="zy-pos-field">
+                        <span>المهارات المطلوبة</span>
+                        <textarea asp-for="PositionTranslations[index].RequiredSkills" form="positionEditorForm" rows="4" maxlength="3000" dir="@language.Direction"></textarea>
+                    </label>
+                    <label class="zy-pos-field zy-pos-field--wide">
+                        <span>KPI</span>
+                        <textarea asp-for="PositionTranslations[index].JobKpis" form="positionEditorForm" rows="4" maxlength="3000" dir="@language.Direction"></textarea>
+                    </label>
+                </fieldset>
+            }
         </div>
 
 
@@ -1602,11 +1551,11 @@
                 "إضافة منصب وظيفي";
         }
 
-        if (window.NexoraSelect &&
-            typeof window.NexoraSelect.refreshAll === "function") {
+        if (window.ZynoraSelect &&
+            typeof window.ZynoraSelect.refreshAll === "function") {
 
             window.setTimeout(
-                () => window.NexoraSelect.refreshAll(),
+                () => window.ZynoraSelect.refreshAll(),
                 30
             );
         }
@@ -2138,14 +2087,14 @@
         document.documentElement.classList.remove(
             "modal-open",
             "nx-modal-open",
-            "nexora-modal-open",
+            "zynora-modal-open",
             "nx-setup-modal-open"
         );
 
         document.body.classList.remove(
             "modal-open",
             "nx-modal-open",
-            "nexora-modal-open",
+            "zynora-modal-open",
             "nx-setup-modal-open"
         );
 

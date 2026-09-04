@@ -70,7 +70,7 @@
 
 ## 4) المقابل عندنا
 
-`/HrSettings/ProbationPeriod` + مفاتيح `Probation.*` بـ`NexoraHrSettings`،
+`/HrSettings/ProbationPeriod` + مفاتيح `Probation.*` بـ`ZynoraHrSettings`،
 ويستهلكها `NotificationRuleGenerator.ProbationEnd(...)` لتنبيه قرب انتهاء التجربة.
 
 | العنصر | كيان | عندنا |

@@ -224,7 +224,7 @@
     /* Print header + settings */
     .rep-print-head { display:none; }
     @media print {
-        .nexora-sidebar, .nexora-topbar, .page-header .hrms-inline-form, .hrms-pager, form, .hrms-slideover { display:none !important; }
+        .zynora-sidebar, .zynora-topbar, .page-header .hrms-inline-form, .hrms-pager, form, .hrms-slideover { display:none !important; }
         .rep-print-head.on { display:flex !important; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid var(--zy-migrated-color-0e684e5160); }
         .rep-print-head img { height:36px; }
         .rep-print-head-text { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }

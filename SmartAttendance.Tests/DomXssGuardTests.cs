@@ -43,7 +43,7 @@ public sealed class DomXssGuardTests
     [Fact]
     public void AnnouncementStudio_RendersPollOptionAsTextNotHtml()
     {
-        var js = Js("nexora-announcement-studio-dynamic.js");
+        var js = Js("zynora-announcement-studio-dynamic.js");
         Assert.Contains("label.textContent = opt", js);
         Assert.DoesNotContain("<small>${opt}</small>", js);
     }

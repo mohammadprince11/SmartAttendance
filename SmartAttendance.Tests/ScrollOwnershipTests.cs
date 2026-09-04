@@ -8,7 +8,7 @@ namespace SmartAttendance.Tests;
 ///
 /// **العطل الذي وُلد منه**: القوقعة كانت تقفل <c>html</c>/<c>body</c> بارتفاع
 /// الشاشة و<c>overflow: hidden</c>، وتضع الصفحة داخل مُمرِّرٍ متداخل هو
-/// <c>&lt;main class="nexora-content"&gt;</c>. فصار للصفحة الواحدة سلوكان: مُمرِّر
+/// <c>&lt;main class="zynora-content"&gt;</c>. فصار للصفحة الواحدة سلوكان: مُمرِّر
 /// داخليّ بسطح المكتب، وتمرير مستندٍ عاديّ تحت 980px (لأن استعلام الوسائط كان
 /// يفكّ القفل). ومعه: التصاقات الصفحات تموت داخل المُمرِّر، والتمرير الأصلي
 /// للمتصفح (لوحة المفاتيح · استعادة الموضع · <c>#anchor</c>) يخاطب حاويةً غير
@@ -22,9 +22,9 @@ public class ScrollOwnershipTests
     /// <summary>الأصناف التي تُشكّل عمود القوقعة بين الجذر والصفحة.</summary>
     private static readonly string[] ShellClasses =
     [
-        ".nexora-shell",
-        ".nexora-main",
-        ".nexora-content"
+        ".zynora-shell",
+        ".zynora-main",
+        ".zynora-content"
     ];
 
     /// <summary>
@@ -125,8 +125,8 @@ public class ScrollOwnershipTests
             .Any(part => part is "html" or "body");
 
     /// <summary>
-    /// المُحدِّد يضبط الصنف نفسه لا وريثاً له: <c>.nexora-content</c> نعم،
-    /// و<c>.nexora-content .zy-card</c> لا (البطاقة قد تمرّر بداخلها بحرّية).
+    /// المُحدِّد يضبط الصنف نفسه لا وريثاً له: <c>.zynora-content</c> نعم،
+    /// و<c>.zynora-content .zy-card</c> لا (البطاقة قد تمرّر بداخلها بحرّية).
     /// </summary>
     private static bool SelectorTargets(string selector, string cls) =>
         selector

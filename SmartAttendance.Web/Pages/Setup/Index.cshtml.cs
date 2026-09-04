@@ -610,7 +610,7 @@ public class IndexModel : PageModel
         };
     }
 
-    // NEXORA_ACTIVE_CUTOFF_TYPE_UI_START
+    // ZYNORA_ACTIVE_CUTOFF_TYPE_UI_START
     public string? GetActiveCutoffTypeOwner(
         PayrollCutoffType policyType,
         int currentPolicyId = 0)
@@ -711,7 +711,7 @@ public class IndexModel : PageModel
         return Enum.GetValues<PayrollCutoffType>()
             .Any(x => GetActiveCutoffTypeOwner(x, currentPolicyId) == null);
     }
-    // NEXORA_ACTIVE_CUTOFF_TYPE_UI_END
+    // ZYNORA_ACTIVE_CUTOFF_TYPE_UI_END
 
     private async Task<bool> LoadSetupAsync(int companyId)
     {

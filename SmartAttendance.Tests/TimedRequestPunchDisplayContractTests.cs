@@ -64,7 +64,7 @@ public sealed class TimedRequestPunchDisplayContractTests
     [Fact]
     public void EmployeePortal_MobileLayout_KeepsHeroCompactAndPreventsTextAutosizing()
     {
-        var css = ReadWeb("wwwroot/css/nexora-employee-experience.css");
+        var css = ReadWeb("wwwroot/css/zynora-employee-experience.css");
 
         Assert.Contains("-webkit-text-size-adjust:100%", css, StringComparison.Ordinal);
         Assert.Contains("@media(max-width:620px)", css, StringComparison.Ordinal);

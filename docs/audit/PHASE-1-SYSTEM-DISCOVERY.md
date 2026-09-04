@@ -363,7 +363,7 @@ Source → CI (build+tests+audit) → [يدويّ] scripts/deploy/Publish-Zynora
 | 3 | `SmartAttendance.API` مشروع ويب ثانٍ لا يشير إليه أحد ولا يُنشر | `Program.cs` 23 سطراً · مجلد `Controllers/` فارغ |
 | 4 | أربع طرق متوازية لتغيير المخطط (21 هجرة EF + 46 هجرة SQL + 390 شفاء ذاتي + 920 SQL خام) | يفسّر 170 جدولاً مقابل 41 `DbSet` |
 | 5 | `ZynoraPortal.apk` المنشور بـ`/app.apk` حجمه **24 كيلوبايت** | حجمٌ لا يطابق تطبيقاً فعلياً — يستحق تحقّقاً |
-| 6 | ملفّان `.css.disabled_20260706_*` مكوميتان | `wwwroot/css/nexora-sidebar-menu-cleanup.css.disabled_*` |
+| 6 | ملفّان `.css.disabled_20260706_*` مكوميتان | `wwwroot/css/zynora-sidebar-menu-cleanup.css.disabled_*` |
 | 7 | `.graphify_root` شارد داخل مكتبة طرف ثالث | `wwwroot/lib/ag-grid/graphify-out/.graphify_root` |
 | 8 | مرفوع مستخدم مكوميت | `wwwroot/uploads/disciplinary-forms/a4-form_20260706202516835.pdf` |
 | 9 | `E2E` بلا مرجع مشروع و`Tests` يشير لـ`Web` (أعلى طبقة) | `*.csproj` |

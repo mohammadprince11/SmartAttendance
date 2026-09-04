@@ -87,7 +87,7 @@ public sealed class UnifiedPageDesignContractTests
         Assert.DoesNotMatch(new Regex(@"#[0-9a-f]{3,8}\b|rgba?\(", RegexOptions.IgnoreCase), rules);
         Assert.DoesNotMatch(new Regex(@"(?<![-\w])(left|right)\s*:", RegexOptions.IgnoreCase), rules);
         Assert.DoesNotMatch(new Regex(@"\b(margin|padding|border)-(left|right)\b", RegexOptions.IgnoreCase), rules);
-        Assert.DoesNotMatch(new Regex(@"\.(zhr|hrms|nxr|nxex|nexora|ps|ats|dat)-", RegexOptions.IgnoreCase), rules);
+        Assert.DoesNotMatch(new Regex(@"\.(zhr|hrms|nxr|nxex|zynora|ps|ats|dat)-", RegexOptions.IgnoreCase), rules);
     }
 
     [Fact]
@@ -117,11 +117,11 @@ public sealed class UnifiedPageDesignContractTests
             Assert.Contains(token, themeContract, StringComparison.Ordinal);
         }
 
-        Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group.ky-open > .nexora-nav-group-links",
+        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group.ky-open > .zynora-nav-group-links",
             navigation, StringComparison.Ordinal);
-        Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group-links .ky-back",
+        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group-links .ky-back",
             navigation, StringComparison.Ordinal);
-        Assert.Contains("html[data-theme=\"light\"] .nexora-nav-group-links .ky-drawer-title",
+        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group-links .ky-drawer-title",
             navigation, StringComparison.Ordinal);
     }
 
@@ -145,13 +145,13 @@ public sealed class UnifiedPageDesignContractTests
         Assert.Contains("zynora-logo-horizontal-light.svg", login, StringComparison.Ordinal);
         Assert.DoesNotContain("login-logo", login, StringComparison.Ordinal);
         Assert.Contains("zy-login-shell", layout, StringComparison.Ordinal);
-        Assert.Contains(".zy-login-shell .nexora-content", refresh, StringComparison.Ordinal);
+        Assert.Contains(".zy-login-shell .zynora-content", refresh, StringComparison.Ordinal);
         Assert.Contains("padding: 0 !important", refresh, StringComparison.Ordinal);
         Assert.Contains("min-height: 100dvh !important", refresh, StringComparison.Ordinal);
 
         foreach (var selector in new[]
                  {
-                     ".nexora-sidebar", ".nexora-topbar", ".zy-ui-contract .zy-card",
+                     ".zynora-sidebar", ".zynora-topbar", ".zy-ui-contract .zy-card",
                      ".zy-ui-contract .zy-table", ".login-stage", ".login-visual"
                  })
         {
@@ -185,8 +185,8 @@ public sealed class UnifiedPageDesignContractTests
         var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
 
         Assert.Contains("<span>احتساب الرواتب</span>", layout, StringComparison.Ordinal);
-        Assert.DoesNotContain("/Payroll/Runs\" class=\"nexora-nav-link ky-drawer-title", layout, StringComparison.Ordinal);
-        Assert.Contains("/Payroll/Runs\" class=\"nexora-nav-link @(", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Payroll/Runs\" class=\"zynora-nav-link ky-drawer-title", layout, StringComparison.Ordinal);
+        Assert.Contains("/Payroll/Runs\" class=\"zynora-nav-link @(", layout, StringComparison.Ordinal);
     }
 
     [Fact]

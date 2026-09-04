@@ -2,17 +2,17 @@
 @model SmartAttendance.Web.Pages.Companies.CreateModel
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-setup-pages.css" asp-append-version="true" />
 }
 
 @{
     ViewData["Title"] = "إضافة شركة";
 }
 
-<div class="nexora-setup-page nx-setup-form-page">
-    <section class="nexora-setup-hero">
+<div class="zynora-setup-page nx-setup-form-page">
+    <section class="zynora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">إعداد الشركة</span>
+            <span class="zynora-setup-kicker">إعداد الشركة</span>
             <h1>إضافة شركة</h1>
             <p>هذه الصفحة احتياطية، ويمكنك الإضافة مباشرة من النافذة المنبثقة في صفحة الشركات.</p>
         </div>
@@ -24,12 +24,12 @@
         <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
     }
 
-    <section class="nexora-setup-card">
+    <section class="zynora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <div class="nx-setup-form-grid">
                 <label class="nx-setup-field">
                     <span>اسم الشركة</span>
-                    <input asp-for="Company.Name" placeholder="مثال: نيكسورا" />
+                    <input asp-for="Company.Name" placeholder="مثال: زينورا" />
                     <span asp-validation-for="Company.Name" class="text-danger"></span>
                 </label>
 

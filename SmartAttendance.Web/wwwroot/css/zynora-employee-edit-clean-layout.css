@@ -1,0 +1,779 @@
+/* ZYNORA_EMPLOYEE_EDIT_FINAL_ORDER_START */
+
+.nxr-edit-final-page {
+    display: grid;
+    gap: 16px;
+}
+
+.nxr-edit-final-hero,
+.nxr-edit-final-summary,
+.nxr-edit-final-card {
+    border: 1px solid rgba(34, 211, 238, .20);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 92% 8%, rgba(34, 211, 238, .09), transparent 34%),
+        linear-gradient(180deg, rgba(8, 30, 48, .64), rgba(5, 18, 32, .72));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.nxr-edit-final-hero {
+    padding: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+}
+
+.nxr-edit-final-hero span,
+.nxr-edit-final-card-head span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 27px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(215, 168, 79, .32);
+    background: rgba(215, 168, 79, .08);
+    color: #f3cd7a;
+    font-size: 11px;
+    font-weight: 1000;
+    margin-bottom: 8px;
+}
+
+.nxr-edit-final-hero h1,
+.nxr-edit-final-card-head h2 {
+    margin: 0 0 4px;
+    color: #eefaff;
+    font-size: 22px;
+    font-weight: 1000;
+}
+
+.nxr-edit-final-hero p,
+.nxr-edit-final-card-head p {
+    margin: 0;
+    color: #9fb5c8;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.nxr-edit-final-hero-actions,
+.nxr-edit-final-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.nxr-edit-btn {
+    min-height: 40px;
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, .20);
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 1000;
+    cursor: pointer;
+}
+
+.nxr-edit-btn.primary {
+    background: linear-gradient(135deg, var(--color-primary), #2dd4bf);
+    color: #04202a;
+    border-color: rgba(34, 211, 238, .60);
+}
+
+.nxr-edit-btn.secondary,
+.nxr-edit-btn.ghost {
+    background: rgba(255,255,255,.035);
+    color: #eaf7ff;
+}
+
+.nxr-edit-final-summary {
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.nxr-edit-final-summary img {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    object-fit: cover;
+    border: 1px solid rgba(34, 211, 238, .24);
+}
+
+.nxr-edit-final-summary h2 {
+    margin: 0 0 8px;
+    color: #eefaff;
+    font-size: 18px;
+    font-weight: 1000;
+}
+
+.nxr-edit-final-summary p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nxr-edit-final-summary span {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    background: rgba(2, 10, 20, .30);
+    color: #9fb5c8;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.nxr-edit-final-summary strong {
+    color: var(--color-primary-text);
+    margin-inline-start: 4px;
+}
+
+.nxr-edit-final-card {
+    padding: 18px;
+}
+
+.nxr-edit-final-card-head {
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, .14);
+}
+
+.nxr-edit-photo-status-row {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr) 280px;
+    gap: 16px;
+    align-items: center;
+    padding: 14px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 22px;
+    background: rgba(2, 10, 20, .28);
+}
+
+.nxr-edit-photo-box {
+    width: 104px;
+    height: 104px;
+    border-radius: 22px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px dashed rgba(34, 211, 238, .40);
+    background: rgba(2, 10, 20, .45);
+}
+
+.nxr-edit-photo-box input {
+    display: none;
+}
+
+.nxr-edit-photo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nxr-edit-photo-info {
+    display: grid;
+    gap: 4px;
+}
+
+.nxr-edit-photo-info strong {
+    color: #eefaff;
+    font-weight: 1000;
+}
+
+.nxr-edit-photo-info span,
+.nxr-edit-photo-info small {
+    color: #9fb5c8;
+    font-weight: 800;
+}
+
+.nxr-edit-status-near-photo {
+    display: grid;
+    gap: 8px;
+}
+
+.nxr-edit-status-near-photo > label:first-child,
+.nxr-edit-field label {
+    color: #d7a84f;
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-edit-status-switch {
+    min-height: 44px;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 211, 238, .26);
+    background: rgba(34, 211, 238, .08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 14px;
+    color: #eefaff;
+    font-size: 13px;
+    font-weight: 1000;
+}
+
+.nxr-edit-status-switch input {
+    width: 26px;
+    height: 26px;
+    accent-color: var(--color-primary);
+}
+
+.nxr-edit-final-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px 16px;
+    align-items: end;
+}
+
+.nxr-edit-field {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.nxr-span-2 {
+    grid-column: span 2;
+}
+
+.nxr-edit-field input,
+.nxr-edit-field select {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(34, 211, 238, .18);
+    background: rgba(2, 10, 20, .55);
+    color: #eefaff;
+    padding: 0 13px;
+    box-sizing: border-box;
+    outline: none;
+    font-weight: 900;
+}
+
+.nxr-edit-field input:focus,
+.nxr-edit-field select:focus {
+    border-color: rgba(34, 211, 238, .70);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10);
+}
+
+.nxr-native-select {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+    max-height: 42px !important;
+}
+
+.nxr-edit-field span {
+    color: #f87171;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.nxr-edit-final-actions {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(148, 163, 184, .14);
+    justify-content: flex-start;
+}
+
+.nxr-edit-alert {
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-weight: 900;
+}
+
+.nxr-edit-alert.danger {
+    border: 1px solid rgba(248, 113, 113, .36);
+    background: rgba(127, 29, 29, .18);
+    color: #fecaca;
+}
+
+@media (max-width: 1400px) {
+    .nxr-edit-final-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1050px) {
+    .nxr-edit-photo-status-row {
+        grid-template-columns: 116px minmax(0, 1fr);
+    }
+
+    .nxr-edit-status-near-photo {
+        grid-column: 1 / -1;
+    }
+
+    .nxr-edit-final-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nxr-span-2 {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 720px) {
+    .nxr-edit-final-hero,
+    .nxr-edit-final-summary {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nxr-edit-photo-status-row {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+    }
+
+    .nxr-edit-photo-box {
+        justify-self: center;
+    }
+
+    .nxr-edit-final-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nxr-span-2 {
+        grid-column: span 1;
+    }
+
+    .nxr-edit-final-actions,
+    .nxr-edit-final-hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* ZYNORA_EMPLOYEE_EDIT_FINAL_ORDER_END */
+
+/* ZYNORA_EDIT_DROPDOWN_OVERRIDE_START */
+
+.nxr-edit-final-card .nxos span,
+.nxr-edit-final-card .nxos__menu span,
+.nxr-edit-final-card .nxos .nxos__value,
+.nxr-edit-final-card .nxos .nxos__arrow {
+    color: #eefaff !important;
+}
+
+.nxr-edit-final-card .nxos__arrow::before {
+    color: transparent !important;
+}
+
+.nxr-edit-final-card .nxos__option {
+    color: #eefaff !important;
+}
+
+.nxr-edit-final-card .nxos__option:hover,
+.nxr-edit-final-card .nxos__option.is-hovered {
+    background: rgba(34, 211, 238, .14) !important;
+    border-color: rgba(34, 211, 238, .26) !important;
+}
+
+/* ZYNORA_EDIT_DROPDOWN_OVERRIDE_END */
+
+/* ZYNORA_FIX11A_EDIT_PAGE_PREMIUM_POLISH_START */
+.nxr-edit-final-page {
+    max-width: 1240px !important;
+    margin-inline: auto !important;
+    display: grid !important;
+    gap: 18px !important;
+}
+
+.nxr-edit-final-hero,
+.nxr-edit-final-summary,
+.nxr-edit-final-card {
+    border-radius: 24px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, .12), transparent 34%),
+        linear-gradient(135deg, rgba(8, 31, 50, .90), rgba(4, 16, 28, .98)) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .22) !important;
+}
+
+.nxr-edit-final-hero {
+    padding: 22px 24px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 18px !important;
+}
+
+.nxr-edit-final-hero h1 {
+    margin: 6px 0 4px !important;
+    font-size: clamp(28px, 3vw, 42px) !important;
+    line-height: 1.15 !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-edit-final-hero p {
+    margin: 0 !important;
+    color: #a9bfd2 !important;
+    font-weight: 850 !important;
+}
+
+.nxr-edit-final-hero-actions {
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+}
+
+.nxr-edit-final-summary {
+    padding: 16px 18px !important;
+    display: grid !important;
+    grid-template-columns: 76px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 14px !important;
+}
+
+.nxr-edit-final-summary img {
+    width: 76px !important;
+    height: 76px !important;
+    border-radius: 20px !important;
+    object-fit: cover !important;
+    border: 1px solid rgba(34, 211, 238, .34) !important;
+    box-shadow: 0 16px 36px rgba(34, 211, 238, .12) !important;
+}
+
+.nxr-edit-final-summary h2 {
+    margin: 0 0 6px !important;
+    font-size: 22px !important;
+    line-height: 1.3 !important;
+    color: #f5f9ff !important;
+}
+
+.nxr-edit-final-summary p {
+    margin: 0 !important;
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+.nxr-edit-final-summary p span {
+    border: 1px solid rgba(73, 111, 151, .22) !important;
+    background: rgba(5, 19, 32, .46) !important;
+    border-radius: 999px !important;
+    padding: 6px 10px !important;
+    color: #91aabe !important;
+    font-weight: 900 !important;
+}
+
+.nxr-edit-final-summary p strong {
+    color: var(--color-primary-text) !important;
+}
+
+.nxr-edit-final-form {
+    display: grid !important;
+    gap: 18px !important;
+}
+
+.nxr-edit-final-card {
+    padding: 22px !important;
+    overflow: visible !important;
+}
+
+.nxr-edit-final-card-head {
+    padding-bottom: 14px !important;
+    margin-bottom: 18px !important;
+    border-bottom: 1px solid rgba(143, 166, 187, .14) !important;
+}
+
+.nxr-edit-final-card-head span {
+    color: #f5c96b !important;
+    font-weight: 1000 !important;
+    letter-spacing: .04em !important;
+    text-transform: uppercase !important;
+}
+
+.nxr-edit-final-card-head h2 {
+    margin: 6px 0 4px !important;
+    color: #f5f9ff !important;
+    font-size: 28px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-edit-final-card-head p {
+    margin: 0 !important;
+    color: #9fb8c9 !important;
+    font-weight: 850 !important;
+}
+
+.nxr-edit-photo-status-row {
+    display: grid !important;
+    grid-template-columns: 104px minmax(150px, .7fr) minmax(300px, 1.3fr) minmax(180px, 230px) !important;
+    gap: 14px !important;
+    align-items: stretch !important;
+    padding: 14px !important;
+    border: 1px solid rgba(73, 111, 151, .18) !important;
+    border-radius: 20px !important;
+    background: rgba(3, 16, 28, .26) !important;
+    margin-bottom: 18px !important;
+}
+
+.nxr-edit-photo-box {
+    width: 104px !important;
+    height: 104px !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    border: 1px dashed rgba(34, 211, 238, .34) !important;
+}
+
+.nxr-edit-photo-box img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+.nxr-edit-photo-info,
+.nxr-edit-status-near-photo {
+    display: grid !important;
+    align-content: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+}
+
+.nxr-edit-photo-info strong,
+.nxr-edit-status-near-photo label:first-child {
+    color: #f5f9ff !important;
+    font-size: 16px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-edit-photo-info span,
+.nxr-edit-photo-info small {
+    color: #91aabe !important;
+    font-weight: 850 !important;
+}
+
+.nxr-edit-signature-card {
+    display: grid !important;
+    align-content: center !important;
+    gap: 9px !important;
+    min-width: 0 !important;
+    padding: 13px !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: 16px !important;
+    background: var(--surface-raised) !important;
+    box-shadow: var(--elevation-sm) !important;
+}
+
+.nxr-edit-signature-heading {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.nxr-edit-signature-heading > div {
+    display: grid !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+}
+
+.nxr-edit-signature-heading strong {
+    color: var(--text-default) !important;
+    font-size: 15px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-edit-signature-heading span,
+.nxr-edit-signature-card > small,
+.nxr-edit-signature-preview figcaption {
+    color: var(--text-muted) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+.nxr-edit-signature-icon {
+    display: inline-grid !important;
+    place-items: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    flex: 0 0 36px !important;
+    border-radius: 11px !important;
+    background: var(--interactive-primary-soft) !important;
+    color: var(--brand-primary-bright) !important;
+    font-size: 18px !important;
+}
+
+.nxr-edit-signature-picker {
+    display: grid !important;
+    grid-template-columns: max-content minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 44px !important;
+    padding: 5px !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 13px !important;
+    background: var(--surface-input) !important;
+    cursor: pointer !important;
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease !important;
+}
+
+.nxr-edit-signature-picker:hover,
+.nxr-edit-signature-picker:focus-within {
+    border-color: var(--brand-primary-bright) !important;
+    box-shadow: var(--interactive-focus-ring) !important;
+    transform: translateY(-1px) !important;
+}
+
+.nxr-edit-signature-input {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.nxr-edit-signature-picker-action {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 34px !important;
+    padding-inline: 12px !important;
+    border-radius: 9px !important;
+    background: var(--brand-primary) !important;
+    color: var(--text-on-primary) !important;
+    font-size: 12px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-edit-signature-file-name {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    color: var(--text-muted) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.nxr-edit-signature-preview {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+}
+
+.nxr-edit-signature-preview .zyu-dbe95fd5b2ba {
+    margin: 0 !important;
+    border: 1px solid var(--border-default) !important;
+}
+
+.nxr-edit-final-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+}
+
+.nxr-edit-field {
+    min-width: 0 !important;
+    display: grid !important;
+    gap: 8px !important;
+}
+
+.nxr-edit-field.nxr-span-2 {
+    grid-column: span 2 !important;
+}
+
+.nxr-edit-field label {
+    color: #f5c96b !important;
+    font-size: 13px !important;
+    font-weight: 1000 !important;
+}
+
+.nxr-edit-field input:not([type="checkbox"]),
+.nxr-edit-field select,
+.nxr-edit-field textarea,
+.nxr-edit-field .nxos__button {
+    width: 100% !important;
+    min-height: 50px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(34, 211, 238, .22) !important;
+    background: rgba(3, 16, 28, .50) !important;
+    color: #f5f9ff !important;
+    font-weight: 950 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03) !important;
+}
+
+.nxr-edit-field textarea {
+    min-height: 112px !important;
+    resize: vertical !important;
+}
+
+.nxr-edit-field input:focus,
+.nxr-edit-field select:focus,
+.nxr-edit-field textarea:focus,
+.nxr-edit-field .nxos__button:focus {
+    outline: none !important;
+    border-color: rgba(34, 211, 238, .62) !important;
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, .12) !important;
+}
+
+.nxr-edit-field span[data-valmsg-for],
+.nxr-edit-field span.field-validation-error {
+    color: #fb7185 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+.nxr-edit-final-actions {
+    display: flex !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+    margin-top: 18px !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(73, 111, 151, .22) !important;
+    background: rgba(3, 16, 28, .34) !important;
+}
+
+.nxr-edit-btn {
+    min-height: 48px !important;
+    min-width: 148px !important;
+    border-radius: 16px !important;
+    font-weight: 1000 !important;
+}
+
+@media (max-width: 1200px) {
+    .nxr-edit-final-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .nxr-edit-photo-status-row {
+        grid-template-columns: 96px minmax(0, 1fr) !important;
+    }
+
+    .nxr-edit-signature-card,
+    .nxr-edit-status-near-photo {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .nxr-edit-final-page {
+        max-width: 100% !important;
+    }
+
+    .nxr-edit-final-hero {
+        display: grid !important;
+    }
+
+    .nxr-edit-final-summary,
+    .nxr-edit-photo-status-row,
+    .nxr-edit-final-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .nxr-edit-field.nxr-span-2 {
+        grid-column: span 1 !important;
+    }
+}
+/* ZYNORA_FIX11A_EDIT_PAGE_PREMIUM_POLISH_END */

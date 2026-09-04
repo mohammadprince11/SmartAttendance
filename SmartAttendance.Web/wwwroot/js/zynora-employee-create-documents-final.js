@@ -1,0 +1,387 @@
+/* ZYNORA Employee Create Documents - Final */
+(function () {
+    "use strict";
+
+    const documentTypes = [
+        ["National ID", "البطاقة الوطنية"],
+        ["Residence Card", "بطاقة السكن"],
+        ["Passport", "جواز السفر"],
+        ["Health Card", "البطاقة الصحية"],
+        ["Work Permit", "إجازة العمل"],
+        ["Contract", "العقد"],
+        ["Photo", "الصورة الشخصية"],
+        ["Certificate", "الشهادة"],
+        ["Other", "أخرى"]
+    ];
+
+    function qs(selector, root) {
+        return (root || document).querySelector(selector);
+    }
+
+    function qsa(selector, root) {
+        return Array.from((root || document).querySelectorAll(selector));
+    }
+
+    function escapeText(value) {
+        return (value || "").replace(/[&<>'"]/g, function (char) {
+            return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char];
+        });
+    }
+
+    function createOptions(selectedValue) {
+        return documentTypes.map(function (item) {
+            const value = item[0];
+            const label = item[1];
+            const selected = value === selectedValue ? " selected" : "";
+            return `<option value="${escapeText(value)}"${selected}>${escapeText(label)}</option>`;
+        }).join("");
+    }
+
+    function initDocumentsModal() {
+        const form = qs("#employee-create-form");
+        const modal = qs("[data-nxr-documents-modal]");
+        const list = qs("[data-nxr-documents-list]");
+        const preview = qs("[data-nxr-documents-preview]");
+        const count = qs("[data-nxr-documents-count]");
+        const validation = qs("[data-nxr-documents-validation]");
+
+        if (!form || !modal || !list) return;
+
+        function rows() {
+            return qsa(".nxr-document-row", list);
+        }
+
+        function showValidation(message) {
+            if (!validation) return;
+
+            validation.textContent = message;
+            validation.hidden = false;
+            validation.classList.add("open");
+        }
+
+        function hideValidation() {
+            if (!validation) return;
+
+            validation.textContent = "";
+            validation.hidden = true;
+            validation.classList.remove("open");
+        }
+
+        function openModal(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            if (rows().length === 0) addRow();
+            hideValidation();
+            modal.classList.add("open");
+            modal.setAttribute("aria-hidden", "false");
+            document.body.style.overflow = "hidden";
+            return false;
+        }
+
+        function closeModal(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            const isSaveAction = event &&
+                event.currentTarget &&
+                event.currentTarget.closest &&
+                event.currentTarget.closest(".nxr-documents-modal-actions");
+
+            if (isSaveAction) {
+                updateSummary();
+
+                if (!hasSelectedFiles()) {
+                    showValidation("\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0644\u0641 \u0648\u0627\u062d\u062f \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0642\u0628\u0644 \u0627\u0644\u062d\u0641\u0638.");
+                    return false;
+                }
+            }
+            hideValidation();
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden", "true");
+            document.body.style.overflow = "";
+            updateSummary();
+            return false;
+        }
+
+        function updateIndexes() {
+            rows().forEach(function (row, index) {
+                const type = qs("[data-document-type]", row);
+                const required = qs("[data-document-required]", row);
+                const file = qs("[data-document-file]", row);
+
+                if (type) type.name = `InitialDocumentTypes[${index}]`;
+                if (required) required.name = `InitialDocumentRequired[${index}]`;
+                if (file) {
+                    file.name = `InitialDocumentFiles[${index}]`;
+                    file.id = `InitialDocumentFiles_${index}`;
+                }
+            });
+        }
+
+        function selectedRows() {
+            return rows().map(function (row) {
+                const type = qs("[data-document-type]", row);
+                const required = qs("[data-document-required]", row);
+                const file = qs("[data-document-file]", row);
+                const typeText = type && type.selectedOptions.length ? type.selectedOptions[0].textContent.trim() : "مستمسك";
+                const requiredText = required && required.value === "Required" ? "مطلوب" : "اختياري";
+                const fileName = file && file.files && file.files.length ? file.files[0].name : "بدون ملف";
+                return { typeText, requiredText, fileName, hasFile: file && file.files && file.files.length > 0 };
+            });
+        }
+
+        function hasSelectedFiles() {
+            return selectedRows().some(function (item) {
+                return item.hasFile;
+            });
+        }
+        function updateSummary() {
+            updateIndexes();
+            const selected = selectedRows();
+            const withFiles = selected.filter(x => x.hasFile);
+
+            if (count) count.textContent = String(withFiles.length);
+
+            if (!preview) return;
+
+            if (withFiles.length === 0) {
+                preview.textContent = "لم يتم اختيار أي مستمسك بعد.";
+                return;
+            }
+
+            preview.innerHTML = withFiles.map(function (item) {
+                return `<div><strong>${escapeText(item.typeText)}</strong> - ${escapeText(item.requiredText)} - ${escapeText(item.fileName)}</div>`;
+            }).join("");
+        }
+
+        function addRow(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            const index = rows().length;
+            const row = document.createElement("div");
+            row.className = "nxr-document-row";
+            row.innerHTML = `
+                <div>
+                    <label>نوع المستمسك</label>
+                    <select data-document-type name="InitialDocumentTypes[${index}]">
+                        ${createOptions(index === 0 ? "National ID" : "Other")}
+                    </select>
+                </div>
+                <div>
+                    <label>الحالة</label>
+                    <select data-document-required name="InitialDocumentRequired[${index}]">
+                        <option value="Required">مطلوب</option>
+                        <option value="Optional">اختياري</option>
+                    </select>
+                </div>
+                <div>
+                    <label>اختيار الملف</label>
+                    <button type="button" class="nxr-document-file-trigger" data-document-file-trigger>&#1575;&#1582;&#1578;&#1610;&#1575;&#1585; &#1605;&#1604;&#1601;</button>
+                    <input id="InitialDocumentFiles_${index}" type="file" class="nxr-document-file-input" name="InitialDocumentFiles[${index}]" data-document-file accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" />
+                    <div class="nxr-document-file-name" data-document-file-name></div>
+                </div>
+                <button type="button" class="nxr-document-remove" data-document-remove aria-label="حذف المستمسك">×</button>
+            `;
+
+            list.appendChild(row);
+            updateSummary();
+            const file = qs("[data-document-file]", row);
+            if (file) setTimeout(function () { file.focus(); }, 30);
+            return false;
+        }
+
+        qsa("[data-nxr-documents-open]").forEach(function (button) {
+            button.type = "button";
+            button.addEventListener("click", openModal);
+        });
+
+        qsa("[data-nxr-documents-close]", modal).forEach(function (button) {
+            button.type = "button";
+            button.addEventListener("click", closeModal);
+        });
+
+        qsa("[data-nxr-document-add]").forEach(function (button) {
+            button.type = "button";
+            button.addEventListener("click", addRow);
+        });
+
+        modal.addEventListener("click", function (event) {
+            if (event.target === modal) closeModal(event);
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && modal.classList.contains("open")) closeModal(event);
+        });
+
+        list.addEventListener("click", function (event) {
+            const trigger = event.target.closest("[data-document-file-trigger]");
+            if (!trigger) return;
+
+            event.preventDefault();
+            const row = trigger.closest(".nxr-document-row");
+            const file = row ? qs("[data-document-file]", row) : null;
+            if (file) file.click();
+        });
+        list.addEventListener("click", function (event) {
+            const remove = event.target.closest("[data-document-remove]");
+            if (!remove) return;
+            event.preventDefault();
+            const row = remove.closest(".nxr-document-row");
+            if (row) row.remove();
+            updateSummary();
+        });
+
+        list.addEventListener("change", function () {
+            updateSummary();
+
+            if (hasSelectedFiles()) {
+                hideValidation();
+            }
+        });
+
+        list.addEventListener("change", function (event) {
+            if (!event.target.matches("[data-document-file]")) return;
+
+            const row = event.target.closest(".nxr-document-row");
+            const trigger = row ? qs("[data-document-file-trigger]", row) : null;
+            if (!trigger) return;
+
+            if (event.target.files && event.target.files.length) {
+                trigger.textContent = event.target.files[0].name;
+                trigger.classList.add("is-selected");
+            } else {
+                trigger.textContent = "\u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0644\u0641";
+                trigger.classList.remove("is-selected");
+            }
+        });
+        list.addEventListener("change", function (event) {
+            const row = event.target.closest(".nxr-document-row");
+            if (!row) return;
+            const file = qs("[data-document-file]", row);
+            const label = qs("[data-document-file-name]", row);
+            if (label && file && file.files && file.files.length) {
+                label.textContent = file.files[0].name;
+            } else if (label) {
+                label.textContent = "";
+            }
+            updateSummary();
+        });
+
+        form.addEventListener("submit", function () {
+            updateIndexes();
+            updateSummary();
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", initDocumentsModal);
+})();
+
+// ZYNORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_START
+(function () {
+    function qs(selector, scope) {
+        return (scope || document).querySelector(selector);
+    }
+
+    function qsa(selector, scope) {
+        return Array.prototype.slice.call((scope || document).querySelectorAll(selector));
+    }
+
+    function getModal() {
+        return qs("#nxrDocumentsModal") || qs("[data-nxr-documents-modal]");
+    }
+
+    function attachModalFieldsToForm(modal) {
+        var form = qs("#employee-create-form");
+        if (!modal || !form || !form.id) {
+            return;
+        }
+
+        qsa("input, select, textarea", modal).forEach(function (field) {
+            if (field.name && field.getAttribute("form") !== form.id) {
+                field.setAttribute("form", form.id);
+            }
+        });
+    }
+
+    function centerDocumentModal() {
+        var modal = getModal();
+
+        if (!modal || !document.body) {
+            return;
+        }
+
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+
+        modal.classList.add("nxr-documents-modal-centered-fix");
+        attachModalFieldsToForm(modal);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", centerDocumentModal);
+    } else {
+        centerDocumentModal();
+    }
+
+    document.addEventListener("click", function (event) {
+        if (event.target && event.target.closest && event.target.closest("[data-nxr-documents-open]")) {
+            centerDocumentModal();
+            setTimeout(centerDocumentModal, 0);
+            setTimeout(centerDocumentModal, 80);
+        }
+    }, true);
+
+    window.ZynoraCenterDocumentsModal = centerDocumentModal;
+})();
+// ZYNORA_FIX05K_DOCUMENT_MODAL_CENTER_ONLY_END
+
+// ZYNORA_FIX12D_DOCUMENT_MODAL_NO_FREEZE_START
+(function () {
+    "use strict";
+
+    function normalizeSelectedFile(input) {
+        if (!input) return;
+
+        var row = input.closest(".nxr-document-row");
+        if (!row) return;
+
+        var trigger = row.querySelector("[data-document-file-trigger]");
+        var fileNameLabel = row.querySelector("[data-document-file-name]");
+
+        if (fileNameLabel) {
+            fileNameLabel.textContent = "";
+            fileNameLabel.hidden = true;
+            fileNameLabel.style.display = "none";
+        }
+
+        if (!trigger) return;
+
+        if (input.files && input.files.length) {
+            var selectedFileName = input.files[0].name;
+            trigger.textContent = "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0644\u0641";
+            trigger.title = selectedFileName;
+            trigger.setAttribute("aria-label", "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0644\u0641: " + selectedFileName);
+            trigger.classList.add("is-selected");
+        } else {
+            trigger.textContent = "\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641";
+            trigger.removeAttribute("title");
+            trigger.setAttribute("aria-label", "\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641");
+            trigger.classList.remove("is-selected");
+        }
+    }
+
+    document.addEventListener("change", function (event) {
+        if (!event.target || !event.target.matches("[data-document-file]")) return;
+        normalizeSelectedFile(event.target);
+    }, false);
+})();
+// ZYNORA_FIX12D_DOCUMENT_MODAL_NO_FREEZE_END

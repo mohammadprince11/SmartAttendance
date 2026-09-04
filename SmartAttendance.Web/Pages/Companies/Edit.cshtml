@@ -2,17 +2,17 @@
 @model SmartAttendance.Web.Pages.Companies.EditModel
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-setup-pages.css" asp-append-version="true" />
 }
 
 @{
     ViewData["Title"] = "تعديل شركة";
 }
 
-<div class="nexora-setup-page nx-setup-form-page">
-    <section class="nexora-setup-hero">
+<div class="zynora-setup-page nx-setup-form-page">
+    <section class="zynora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">إعداد الشركة</span>
+            <span class="zynora-setup-kicker">إعداد الشركة</span>
             <h1>تعديل شركة</h1>
             <p>تحديث بيانات الشركة الأساسية.</p>
         </div>
@@ -24,16 +24,22 @@
         <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
     }
 
-    <section class="nexora-setup-card">
+    <section class="zynora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <input type="hidden" asp-for="Company.Id" />
             <input type="hidden" asp-for="Company.Code" />
 
             <div class="nx-setup-form-grid">
-                <label class="nx-setup-field">
-                    <span>اسم الشركة</span>
-                    <input asp-for="Company.Name" />
-                </label>
+                @for (var index = 0; index < Model.NameTranslations.Count; index++)
+                {
+                    var language = Model.NameTranslations[index];
+                    <label class="nx-setup-field" dir="@language.Direction" lang="@language.CultureCode">
+                        <span>اسم الشركة — <b data-zy-no-localize>@language.NativeName</b> @(language.IsRequired ? "*" : "")</span>
+                        <input type="hidden" asp-for="NameTranslations[index].CultureCode" />
+                        <input asp-for="NameTranslations[index].Name" dir="@language.Direction" />
+                    </label>
+                }
+                <span asp-validation-for="NameTranslations" class="text-danger nx-setup-field-wide"></span>
 
                 <label class="nx-setup-field">
                     <span>البريد الإلكتروني</span>

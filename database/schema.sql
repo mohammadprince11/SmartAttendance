@@ -1,4 +1,4 @@
--- NEXORA SmartAttendance clean database objects for Employee Engagement
+-- ZYNORA SmartAttendance clean database objects for Employee Engagement
 -- Safe schema only. No real employee data.
 
 IF OBJECT_ID('EmployeePortalAnnouncements', 'U') IS NULL

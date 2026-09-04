@@ -10,7 +10,7 @@
 }
 @section Styles { <link rel="stylesheet" href="~/css/zynora-people.css" asp-append-version="true" /> }
 <link rel="stylesheet" href="~/css/pages/index-9de51f6552.css" asp-append-version="true" />
-<script src="~/js/nexora-employee-row-click.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-employee-row-click.js" asp-append-version="true" defer></script>
 
 <div class="zhr-container">
     <h1 class="zy-page-title">قائمة الموظفين</h1>
@@ -182,8 +182,8 @@
                 <div class="zhr-import-row">
                     <span class="zhr-label zyu-38965f9b18ca">أرفق ملف</span>
                     <span class="zhr-import-links">
-                        <a asp-page-handler="Template">تحميل القالب</a>
-                        <a asp-page-handler="TemplateData">تحميل البيانات</a>
+                        <a asp-page-handler="Template" asp-route-companyId="@Model.CompanyId">تحميل القالب</a>
+                        <a asp-page-handler="TemplateData" asp-route-companyId="@Model.CompanyId">تحميل البيانات</a>
                     </span>
                 </div>
 

@@ -21,7 +21,7 @@
     .ros-pub.no { background: var(--zy-migrated-color-0fbcda6aa7); color: var(--sa-muted, var(--zy-muted)); }
     .ros-alert { padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid var(--zy-migrated-color-ab4e1fef3b); background: var(--zy-migrated-color-39bb173a0d); }
 
-    /* الاسم لا يحتوي «card/panel/form» عمداً: قاعدة nexora-calendar العامة تفرض overflow:visible!important على أي كلاس يحوي تلك الكلمات */
+    /* الاسم لا يحتوي «card/panel/form» عمداً: قاعدة zynora-calendar العامة تفرض overflow:visible!important على أي كلاس يحوي تلك الكلمات */
     .ros-grid-scroll { border: 1px solid var(--zy-migrated-color-b9678111e3); border-radius: 18px; overflow: auto; background: var(--sa-surface, var(--zy-migrated-color-8c7f75b04e)); max-height: 66vh; }
     .ros-grid { border-collapse: separate; border-spacing: 0; font-size: 11.5px; user-select: none; }
     .ros-grid th, .ros-grid td { border-bottom: 1px solid var(--zy-migrated-color-ee3e8e9d25); border-inline-start: 1px solid var(--zy-migrated-color-6aac8b85c4); white-space: nowrap; }

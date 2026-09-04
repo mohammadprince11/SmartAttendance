@@ -4,7 +4,7 @@ namespace SmartAttendance.Web.Infrastructure.Security;
 
 public static class PeopleAccessContext
 {
-    private const string SystemUserIdItemKey = "NEXORA.PeopleAccess.SystemUserId";
+    private const string SystemUserIdItemKey = "ZYNORA.PeopleAccess.SystemUserId";
 
     public static void SetSystemUserId(HttpContext context, int? systemUserId)
     {

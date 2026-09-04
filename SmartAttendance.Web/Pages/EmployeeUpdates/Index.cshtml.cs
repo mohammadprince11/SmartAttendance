@@ -39,7 +39,7 @@ public class IndexModel : PageModel
     public UpdateEmployee SelectedEmployee { get; private set; } = UpdateEmployee.Empty;
     public List<UpdateEmployee> Employees { get; private set; } = new();
     public List<DepartmentOption> Departments { get; private set; } = new();
-    public List<string> PositionOptions { get; private set; } = new(); // NEXORA_FIX14G_LOOKUP_PROPERTIES
+    public List<string> PositionOptions { get; private set; } = new(); // ZYNORA_FIX14G_LOOKUP_PROPERTIES
     public List<string> NationalityOptions { get; private set; } = new();
     public List<EmployeeLookupOption> ManagerOptions { get; private set; } = new();
     public List<UpdateSection> Sections { get; private set; } = BuildSections();
@@ -177,7 +177,7 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
         return Page();
     }
 
-    // NEXORA_FIX14B_STAGE_METHOD_START
+    // ZYNORA_FIX14B_STAGE_METHOD_START
     public async Task<IActionResult> OnPostStageAsync(
         int employeeId, string sectionKey, DateTime? effectiveDate, string? note, bool isRetroactive = false)
     {
@@ -296,7 +296,7 @@ VALUES
         StatusMessage = $"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0642\u0641\u0644\u0629 EU{DateTime.UtcNow:yy}-{batchId}. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0633\u0631\u064A\u0627\u0646: {resolvedEffectiveDate:dd/MM/yyyy}.";
         return RedirectToPage(new { employeeId, tab = "confirm", section = "employee-master" });
     }
-    // NEXORA_FIX14B_STAGE_METHOD_END
+    // ZYNORA_FIX14B_STAGE_METHOD_END
     public async Task<IActionResult> OnPostLockAsync(int batchId, int employeeId)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
@@ -408,16 +408,16 @@ WHERE Id = @BatchId AND Status = 'Open';
         return RedirectToPage(new { employeeId, tab = "confirm" });
     }
 
-    // NEXORA_FIX14B_MOVEMENT_COLUMNS_START
+    // ZYNORA_FIX14B_MOVEMENT_COLUMNS_START
     // Compatibility shim. EffectiveDate is owned by migration 20260826-21.
     private Task EnsureMovementColumnsAsync() => Task.CompletedTask;
-    // NEXORA_FIX14B_MOVEMENT_COLUMNS_END
+    // ZYNORA_FIX14B_MOVEMENT_COLUMNS_END
     private async Task LoadPageAsync(int? employeeId, string? tab, string? section)
     {
         await EmployeeUpdateSchema.EnsureAsync(_dbContext);
         await EnsureMovementColumnsAsync();
 
-        Sections = await BuildSectionsWithDynamicFieldsAsync(); // NEXORA_FIX14A_LOAD_DYNAMIC_SECTIONS
+        Sections = await BuildSectionsWithDynamicFieldsAsync(); // ZYNORA_FIX14A_LOAD_DYNAMIC_SECTIONS
 Tab = NormalizeTab(tab);
         ActiveSectionKey = NormalizeSection(section);
 
@@ -431,7 +431,7 @@ Tab = NormalizeTab(tab);
         }
 
         SelectedEmployee = await LoadEmployeeAsync(SelectedEmployeeId) ?? UpdateEmployee.Empty;
-        PositionOptions = await LoadPositionOptionsAsync(SelectedEmployee.Position); // NEXORA_FIX14G_LOAD_LOOKUPS
+        PositionOptions = await LoadPositionOptionsAsync(SelectedEmployee.Position); // ZYNORA_FIX14G_LOAD_LOOKUPS
         NationalityOptions = await LoadNationalityOptionsAsync();
         ManagerOptions = await LoadActiveManagersAsync(SelectedEmployeeId);
         CurrentValues = await BuildCurrentValuesAsync(SelectedEmployeeId);
@@ -522,7 +522,7 @@ ORDER BY b.Name, d.Name;
             });
     }
 
-    // NEXORA_FIX14G_LOOKUP_METHODS_START
+    // ZYNORA_FIX14G_LOOKUP_METHODS_START
     private async Task<List<string>> LoadPositionOptionsAsync(string? currentPosition)
     {
         return await HrmsDatabase.QueryAsync(
@@ -669,7 +669,7 @@ ORDER BY e.FullName, e.EmployeeNo;
                 Name = HrmsDatabase.GetString(reader, "Name").Trim(' ', '-')
             });
     }
-    // NEXORA_FIX14G_LOOKUP_METHODS_END
+    // ZYNORA_FIX14G_LOOKUP_METHODS_END
     private async Task<Dictionary<string, string>> BuildCurrentValuesAsync(int employeeId)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -689,7 +689,7 @@ SELECT TOP 1
     HireDate,
     BirthDate,
     ISNULL(IsActive, 0) AS IsActive,
-    ISNULL(DepartmentId, 0) AS DepartmentId -- NEXORA_FIX14G_EMPLOYEE_VALUES_QUERY
+    ISNULL(DepartmentId, 0) AS DepartmentId -- ZYNORA_FIX14G_EMPLOYEE_VALUES_QUERY
 FROM Employees
 WHERE Id = @EmployeeId;
 """,
@@ -754,7 +754,7 @@ WHERE EmployeeId = @EmployeeId;
                 if (!values.ContainsKey(customKey))
                 {
                     values[customKey] = HrmsDatabase.GetString(reader, "FieldValue");
-                } // NEXORA_FIX14G_SAFE_CUSTOM_VALUES
+                } // ZYNORA_FIX14G_SAFE_CUSTOM_VALUES
                 return true;
             });
 
@@ -919,7 +919,7 @@ ORDER BY Id;
             case "Position":
                 employee.Position = value ?? string.Empty;
                 break;
-            case "Nationality": // NEXORA_FIX14G_APPLY_NATIONALITY
+            case "Nationality": // ZYNORA_FIX14G_APPLY_NATIONALITY
                 employee.Nationality = value ?? string.Empty;
                 break;
             case "DirectManagerId":
@@ -1054,7 +1054,7 @@ END;
             return Departments.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
         }
 
-        if (key.Equals("DirectManagerId", StringComparison.OrdinalIgnoreCase)) // NEXORA_FIX14G_DISPLAY_MANAGER
+        if (key.Equals("DirectManagerId", StringComparison.OrdinalIgnoreCase)) // ZYNORA_FIX14G_DISPLAY_MANAGER
         {
             return ManagerOptions.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
         }
@@ -1180,7 +1180,7 @@ END;
         };
     }
 
-    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_START
+    // ZYNORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_START
     private async Task<List<UpdateSection>> BuildSectionsWithDynamicFieldsAsync()
     {
         var sections = BuildSections();
@@ -1325,8 +1325,8 @@ END
             _ => "text"
         };
     }
-    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_END
-    // NEXORA_FIX14C_STAGE_BLOCKS_START
+    // ZYNORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_END
+    // ZYNORA_FIX14C_STAGE_BLOCKS_START
     private static List<UpdateSection> BuildStageBlocks(List<UpdateSection> sections)
     {
         var result = new List<UpdateSection>();
@@ -1456,7 +1456,7 @@ END
 
         return result;
     }
-    // NEXORA_FIX14C_STAGE_BLOCKS_END
+    // ZYNORA_FIX14C_STAGE_BLOCKS_END
     private Dictionary<string, UpdateField> BuildFieldDictionary()
     {
         return BuildSections()
@@ -1465,7 +1465,7 @@ END
             .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
     }
 
-    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_START
+    // ZYNORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_START
     private sealed class DynamicUpdateFieldDefinition
     {
         public string SectionKey { get; set; } = string.Empty;
@@ -1474,7 +1474,7 @@ END
         public string FieldType { get; set; } = "text";
         public int SortOrder { get; set; }
     }
-    // NEXORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_END
+    // ZYNORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_END
     public record UpdateSection(string Key, string Name, string Description, List<UpdateField> Fields);
     public record UpdateField(string Key, string Label, string Target, string InputType, string Placeholder);
 
@@ -1495,13 +1495,13 @@ END
         public string Name { get; set; } = string.Empty;
     }
 
-    // NEXORA_FIX14G_LOOKUP_RECORD_START
+    // ZYNORA_FIX14G_LOOKUP_RECORD_START
     public class EmployeeLookupOption
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
-    // NEXORA_FIX14G_LOOKUP_RECORD_END
+    // ZYNORA_FIX14G_LOOKUP_RECORD_END
 
     public class UpdateBatch
     {

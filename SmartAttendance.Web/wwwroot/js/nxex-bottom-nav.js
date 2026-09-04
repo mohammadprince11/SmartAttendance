@@ -1,5 +1,5 @@
 /* الشريط السفلي للموبايل: درج «المزيد» + منتقي «طلب جديد» + سلوك الأقسام كتطبيق.
- * تفعيل التبويب نفسه يتولّاه nexora-employee-experience.js عبر [data-nxex-tab]. */
+ * تفعيل التبويب نفسه يتولّاه zynora-employee-experience.js عبر [data-nxex-tab]. */
 (() => {
   const pageEl = document.querySelector('[data-nxex-page]');
   const moreSet = new Set(['profile', 'pulse', 'feedback', 'performance']);

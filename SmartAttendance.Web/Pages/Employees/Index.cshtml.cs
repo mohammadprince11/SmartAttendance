@@ -268,7 +268,8 @@ public class IndexModel : PageModel
         }
 
         return BuildTemplateFile(
-            await _importEngine.BuildTemplateWorkbookAsync(),
+            await _importEngine.BuildTemplateWorkbookAsync(
+                companyId: CompanyId),
             "Zynora_Employees_Template");
     }
 
@@ -288,7 +289,8 @@ public class IndexModel : PageModel
         return BuildTemplateFile(
             await _importEngine.BuildTemplateWorkbookAsync(
                 includeData: true,
-                exportScope),
+                exportScope,
+                CompanyId),
             "Zynora_Employees_Data");
     }
 
@@ -444,7 +446,12 @@ public class IndexModel : PageModel
                 originalFileName,
                 importScope);
 
-            TempData["SuccessMessage"] = result.Message;
+            var messageKey =
+                result.CreatedCount > 0 || result.UpdatedCount > 0
+                    ? "SuccessMessage"
+                    : "ErrorMessage";
+
+            TempData[messageKey] = result.Message;
         }
         catch (Exception exception)
         {

@@ -39,9 +39,9 @@
     }
     @if (activeTab == "designer")
     {
-        <link rel="stylesheet" href="~/css/nexora-disciplinary-rules.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/nexora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/nexora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/zynora-disciplinary-rules.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/zynora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/zynora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
     }
 }
 
@@ -598,7 +598,7 @@
                                 <form method="post" asp-page-handler="CreateTextBlock" class="zyw-form-grid">
                                     <div>
                                         <label>المنطقة</label>
-                                        <select data-nexora-select="true" name="area">
+                                        <select data-zynora-select="true" name="area">
                                             <option value="Header">الهيدر</option>
                                             <option value="Body" selected>المتن</option>
                                             <option value="Footer">الفوتر</option>
@@ -606,7 +606,7 @@
                                     </div>
                                     <div>
                                         <label>نوع الخط</label>
-                                        <select data-nexora-select="true" name="fontFamily">
+                                        <select data-zynora-select="true" name="fontFamily">
                                             @foreach (var font in Model.FontFamilies)
                                             {
                                                 <option value="@font">@font</option>
@@ -635,7 +635,7 @@
                                     </div>
                                     <div>
                                         <label>المحاذاة</label>
-                                        <select data-nexora-select="true" name="textAlign">
+                                        <select data-zynora-select="true" name="textAlign">
                                             <option value="right" selected>يمين</option>
                                             <option value="center">وسط</option>
                                             <option value="left">يسار</option>
@@ -678,7 +678,7 @@
                                                 <input type="hidden" name="id" value="@block.Id" />
                                                 <div>
                                                     <label>المنطقة</label>
-                                                    <select data-nexora-select="true" name="area">
+                                                    <select data-zynora-select="true" name="area">
                                                         <option value="Header" selected="@(block.Area == "Header")">الهيدر</option>
                                                         <option value="Body" selected="@(block.Area == "Body")">المتن</option>
                                                         <option value="Footer" selected="@(block.Area == "Footer")">الفوتر</option>
@@ -686,7 +686,7 @@
                                                 </div>
                                                 <div>
                                                     <label>نوع الخط</label>
-                                                    <select data-nexora-select="true" name="fontFamily">
+                                                    <select data-zynora-select="true" name="fontFamily">
                                                         @foreach (var font in Model.FontFamilies)
                                                         {
                                                             <option value="@font" selected="@(block.FontFamily == font)">@font</option>
@@ -715,7 +715,7 @@
                                                 </div>
                                                 <div>
                                                     <label>المحاذاة</label>
-                                                    <select data-nexora-select="true" name="textAlign">
+                                                    <select data-zynora-select="true" name="textAlign">
                                                         <option value="right" selected="@(block.TextAlign == "right")">يمين</option>
                                                         <option value="center" selected="@(block.TextAlign == "center")">وسط</option>
                                                         <option value="left" selected="@(block.TextAlign == "left")">يسار</option>
@@ -1003,7 +1003,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
     </main>
 </section>
 
-<script src="~/js/nexora-disciplinary-rules.js" asp-append-version="true"></script>
+<script src="~/js/zynora-disciplinary-rules.js" asp-append-version="true"></script>
 
 @if (activeTab == "library")
 {
@@ -1017,11 +1017,11 @@ else if (Model.Settings.A4FormFileType == "Pdf")
 
 
 
-<script src="~/js/nexora-a4-custom-file-picker-v13-1.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-a4-custom-file-picker-v13-1.js" asp-append-version="true" defer></script>
 
 
-<!-- NEXORA_REMOVE_DISCIPLINARY_PREVIEW_START -->
-<script src="~/js/nexora-disciplinary-remove-preview.js" asp-append-version="true"></script>
-<!-- NEXORA_REMOVE_DISCIPLINARY_PREVIEW_END --><!-- NEXORA_REMOVE_DISCIPLINARY_HEADER_FOOTER_START -->
-<script src="/js/nexora-disciplinary-remove-header-footer.js"></script>
-<!-- NEXORA_REMOVE_DISCIPLINARY_HEADER_FOOTER_END -->
+<!-- ZYNORA_REMOVE_DISCIPLINARY_PREVIEW_START -->
+<script src="~/js/zynora-disciplinary-remove-preview.js" asp-append-version="true"></script>
+<!-- ZYNORA_REMOVE_DISCIPLINARY_PREVIEW_END --><!-- ZYNORA_REMOVE_DISCIPLINARY_HEADER_FOOTER_START -->
+<script src="/js/zynora-disciplinary-remove-header-footer.js"></script>
+<!-- ZYNORA_REMOVE_DISCIPLINARY_HEADER_FOOTER_END -->

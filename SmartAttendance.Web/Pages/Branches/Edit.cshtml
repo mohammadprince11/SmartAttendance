@@ -2,7 +2,7 @@
 @model SmartAttendance.Web.Pages.Branches.EditModel
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-setup-pages.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-branches-theme-v2.css" asp-append-version="true" />
 }
 
@@ -10,10 +10,10 @@
     ViewData["Title"] = "تعديل موقع عمل";
 }
 
-<div class="nexora-setup-page nx-setup-form-page">
-    <section class="nexora-setup-hero">
+<div class="zynora-setup-page nx-setup-form-page">
+    <section class="zynora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
+            <span class="zynora-setup-kicker">&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
             <h1>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644;</h1>
             <p>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0642;&#x0639; &#x0648;&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0627;&#x0644;&#x062A;&#x0627;&#x0628;&#x0639; &#x0644;&#x0647;&#x0627;.</p>
         </div>
@@ -25,14 +25,14 @@
         <div class="alert-danger nx-setup-alert-danger">@Model.ErrorMessage</div>
     }
 
-    <section class="nexora-setup-card">
+    <section class="zynora-setup-card">
         <form method="post" class="nx-setup-modal-form">
             <input type="hidden" asp-for="Branch.Id" />
 
             <div class="nx-setup-form-grid">
                 <label class="nx-setup-field">
                     <span>&#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</span>
-                    <select asp-for="Branch.CompanyId" data-nexora-select="true">
+                    <select asp-for="Branch.CompanyId" data-zynora-select="true">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</option>
                         @foreach (var company in Model.Companies)
                         {
@@ -42,22 +42,36 @@
                     <span asp-validation-for="Branch.CompanyId" class="text-danger"></span>
                 </label>
 
-                <label class="nx-setup-field">
-                    <span>&#x0627;&#x0633;&#x0645; &#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</span>
-                    <input asp-for="Branch.Name" />
-                    <span asp-validation-for="Branch.Name" class="text-danger"></span>
-                </label>
-
-                <label class="nx-setup-field nx-setup-field-wide">
-                    <span>&#x0627;&#x0644;&#x0639;&#x0646;&#x0648;&#x0627;&#x0646;</span>
-                    <input asp-for="Branch.Address" />
-                    <span asp-validation-for="Branch.Address" class="text-danger"></span>
-                </label>
-
                 <label class="nx-setup-check">
                     <input asp-for="Branch.IsActive" />
                     <span>&#x0627;&#x0644;&#x0645;&#x0648;&#x0642;&#x0639; &#x0641;&#x0639;&#x0627;&#x0644; &#x0648;&#x064A;&#x0645;&#x0643;&#x0646; &#x0627;&#x0633;&#x062A;&#x062E;&#x062F;&#x0627;&#x0645;&#x0647; &#x062F;&#x0627;&#x062E;&#x0644; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</span>
                 </label>
+            </div>
+
+            <div class="nx-setup-form-grid">
+                @for (var index = 0; index < Model.Translations.Count; index++)
+                {
+                    var item = Model.Translations[index];
+                    <fieldset class="zynora-setup-card nx-setup-field-wide" dir="@item.Direction" lang="@item.CultureCode">
+                        <legend>
+                            <strong data-zy-no-localize>@item.NativeName</strong>
+                            <small>@item.CultureCode · @(item.IsDefault ? "اللغة الأساسية" : "لغة إضافية")</small>
+                        </legend>
+                        <input type="hidden" asp-for="Translations[index].CompanyId" />
+                        <input type="hidden" asp-for="Translations[index].CultureCode" />
+                        <div class="nx-setup-form-grid">
+                            <label class="nx-setup-field">
+                                <span>اسم موقع العمل @(item.IsRequired ? "*" : "")</span>
+                                <input asp-for="Translations[index].Name" dir="@item.Direction" />
+                            </label>
+                            <label class="nx-setup-field">
+                                <span>العنوان</span>
+                                <input asp-for="Translations[index].Address" dir="@item.Direction" />
+                            </label>
+                        </div>
+                    </fieldset>
+                }
+                <span asp-validation-for="Translations" class="text-danger nx-setup-field-wide"></span>
             </div>
 
             <div class="nx-setup-modal__actions">

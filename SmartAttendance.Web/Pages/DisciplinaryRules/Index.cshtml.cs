@@ -1135,7 +1135,7 @@ VALUES
     private async Task LoadPageAsync(string? tab, int? categoryId)
     {
         await DisciplinarySchema.EnsureAsync(_dbContext);
-        // NEXORA: auto seed disabled for clean database reset.
+        // ZYNORA: auto seed disabled for clean database reset.
         Tab = NormalizeTab(tab);
         SelectedCategoryId = categoryId.GetValueOrDefault();
         Settings = await LoadSettingsAsync();

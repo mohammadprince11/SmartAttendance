@@ -1,0 +1,595 @@
+﻿
+/* ==========================================================
+   ZYNORA — EMPLOYEE CREATE
+   DYNAMIC EMPLOYEE NAME LANGUAGES V1
+
+   DesignLab approved pattern:
+   - Company languages are dynamic.
+   - One full-width card per language.
+   - Four name fields per language.
+   - Plain language metadata.
+   - No hard-coded AR / EN / KU layout.
+   ========================================================== */
+
+
+/* ==========================================================
+   MULTILINGUAL AREA
+   ========================================================== */
+
+.nxr-basic-grid > .zy-employee-multilingual,
+.zy-employee-multilingual {
+
+    grid-column:
+        1 / -1 !important;
+
+    display:
+        grid !important;
+
+    gap:
+        18px !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        4px 0 2px !important;
+
+    padding:
+        0 !important;
+
+    box-sizing:
+        border-box !important;
+}
+
+
+/* ==========================================================
+   COMPANY LANGUAGE GROUP
+   ========================================================== */
+
+.zy-employee-language-company {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        1fr !important;
+
+    gap:
+        18px !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+}
+
+
+/*
+   Important:
+   SelectedCompanyId logic already uses hidden.
+*/
+.zy-employee-language-company[hidden] {
+
+    display:
+        none !important;
+}
+
+
+/* ==========================================================
+   LANGUAGE CARD
+   ========================================================== */
+
+.zy-employee-language-card {
+
+    display:
+        block !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        18px 20px 20px !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1px solid
+        rgba(217,225,232,.09) !important;
+
+    border-radius:
+        16px !important;
+
+    background:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   LANGUAGE HEADER — PLAIN TEXT
+   ========================================================== */
+
+.zy-employee-language-card > legend {
+
+    float:
+        none !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        baseline !important;
+
+    gap:
+        8px !important;
+
+    width:
+        auto !important;
+
+    max-width:
+        100% !important;
+
+    margin:
+        0 0 17px !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    box-shadow:
+        none !important;
+
+    line-height:
+        1.25 !important;
+}
+
+
+/* RTL language */
+.zy-employee-language-card[dir="rtl"] > legend {
+
+    direction:
+        rtl !important;
+
+    text-align:
+        right !important;
+}
+
+
+/* LTR language */
+.zy-employee-language-card[dir="ltr"] > legend {
+
+    direction:
+        ltr !important;
+
+    text-align:
+        left !important;
+}
+
+
+/* Native language name */
+.zy-employee-language-card > legend > span {
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    color:
+        #E9EEF4 !important;
+
+    font-size:
+        14px !important;
+
+    line-height:
+        1.25 !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+/*
+   ar-IQ · اللغة الأساسية · مطلوبة
+   Text only — no badges.
+*/
+.zy-employee-language-card > legend > small {
+
+    display:
+        inline !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    border-radius:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    color:
+        #7F8E9E !important;
+
+    font-size:
+        9.5px !important;
+
+    line-height:
+        1.25 !important;
+
+    font-weight:
+        650 !important;
+
+    white-space:
+        normal !important;
+}
+
+
+/* ==========================================================
+   FOUR NAME FIELDS
+   ========================================================== */
+
+.zy-employee-language-fields {
+
+    display:
+        grid !important;
+
+    grid-template-columns:
+        repeat(4, minmax(0,1fr)) !important;
+
+    gap:
+        18px !important;
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    align-items:
+        start !important;
+}
+
+
+/* ==========================================================
+   FIELD
+   ========================================================== */
+
+.zy-employee-language-fields > label {
+
+    display:
+        grid !important;
+
+    gap:
+        8px !important;
+
+    min-width:
+        0 !important;
+
+    margin:
+        0 !important;
+}
+
+
+/* Field title */
+.zy-employee-language-fields > label > span {
+
+    display:
+        block !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 2px !important;
+
+    color:
+        #A7B4C1 !important;
+
+    font-size:
+        11px !important;
+
+    line-height:
+        1.35 !important;
+
+    font-weight:
+        750 !important;
+}
+
+
+/* Input */
+.zy-employee-language-fields input[type="text"] {
+
+    width:
+        100% !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        44px !important;
+
+    padding:
+        9px 13px !important;
+
+    box-sizing:
+        border-box !important;
+
+    border:
+        1px solid
+        rgba(217,225,232,.13) !important;
+
+    border-radius:
+        11px !important;
+
+    background:
+        #111B2A !important;
+
+    background-image:
+        none !important;
+
+    color:
+        #E9EEF4 !important;
+
+    font-family:
+        inherit !important;
+
+    font-size:
+        12.5px !important;
+
+    outline:
+        none !important;
+
+    box-shadow:
+        none !important;
+
+    transition:
+        border-color .14s ease,
+        box-shadow .14s ease !important;
+}
+
+
+/* RTL values */
+.zy-employee-language-card[dir="rtl"]
+.zy-employee-language-fields input {
+
+    direction:
+        rtl !important;
+
+    text-align:
+        right !important;
+}
+
+
+/* LTR values */
+.zy-employee-language-card[dir="ltr"]
+.zy-employee-language-fields input {
+
+    direction:
+        ltr !important;
+
+    text-align:
+        left !important;
+}
+
+
+/* Focus */
+.zy-employee-language-fields input[type="text"]:focus {
+
+    border-color:
+        #6F8DA8 !important;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(111,141,168,.10) !important;
+}
+
+
+/* ==========================================================
+   REQUIRED
+   ========================================================== */
+
+.zy-employee-language-fields
+input[required] {
+
+    border-inline-start-color:
+        rgba(111,141,168,.30) !important;
+}
+
+
+/* ==========================================================
+   LANGUAGE CONFIGURATION ERROR
+   ========================================================== */
+
+.zy-employee-language-missing {
+
+    padding:
+        14px 16px !important;
+
+    border:
+        1px solid
+        rgba(190,137,37,.18) !important;
+
+    border-radius:
+        13px !important;
+
+    background:
+        rgba(190,137,37,.055) !important;
+
+    color:
+        #B8A47C !important;
+
+    font-size:
+        11px !important;
+
+    line-height:
+        1.65 !important;
+}
+
+
+.zy-employee-language-missing a {
+
+    color:
+        #9DB4C8 !important;
+
+    font-weight:
+        750 !important;
+
+    text-decoration:
+        none !important;
+}
+
+
+/* ==========================================================
+   OLD MULTILINGUAL SURFACE CLEANUP
+   ========================================================== */
+
+.zy-employee-multilingual,
+.zy-employee-language-company {
+
+    background:
+        transparent !important;
+
+    border:
+        0 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ==========================================================
+   TABLET
+   ========================================================== */
+
+@media (max-width: 950px) {
+
+    .zy-employee-language-fields {
+
+        grid-template-columns:
+            repeat(2, minmax(0,1fr)) !important;
+    }
+}
+
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media (max-width: 560px) {
+
+    .zy-employee-language-card {
+
+        padding:
+            16px !important;
+    }
+
+
+    .zy-employee-language-fields {
+
+        grid-template-columns:
+            1fr !important;
+
+        gap:
+            14px !important;
+    }
+
+
+    .zy-employee-language-card > legend {
+
+        align-items:
+            flex-start !important;
+
+        flex-direction:
+            column !important;
+
+        gap:
+            4px !important;
+    }
+}
+
+
+/* ==========================================================
+   LIGHT MODE
+   ========================================================== */
+
+html[data-theme="light"]
+.zy-employee-language-card {
+
+    background:
+        #FFFFFF !important;
+
+    border-color:
+        rgba(35,55,75,.12) !important;
+}
+
+
+html[data-theme="light"]
+.zy-employee-language-card > legend > span {
+
+    color:
+        #182334 !important;
+}
+
+
+html[data-theme="light"]
+.zy-employee-language-card > legend > small {
+
+    color:
+        #748293 !important;
+}
+
+
+html[data-theme="light"]
+.zy-employee-language-fields > label > span {
+
+    color:
+        #556476 !important;
+}
+
+
+html[data-theme="light"]
+.zy-employee-language-fields input[type="text"] {
+
+    background:
+        #F8FAFC !important;
+
+    color:
+        #172333 !important;
+
+    border-color:
+        rgba(35,55,75,.14) !important;
+}
+

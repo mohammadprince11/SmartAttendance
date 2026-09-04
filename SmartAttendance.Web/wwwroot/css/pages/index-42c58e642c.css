@@ -1,12 +1,12 @@
 /* Source: Pages/Companies/Index.cshtml */
-/* NEXORA_FIX19A_V2_COMPANIES_UI_START */
-[data-setup-page="companies"] .nexora-setup-table th,
-[data-setup-page="companies"] .nexora-setup-table td {
+/* ZYNORA_FIX19A_V2_COMPANIES_UI_START */
+[data-setup-page="companies"] .zynora-setup-table th,
+[data-setup-page="companies"] .zynora-setup-table td {
     vertical-align: middle !important;
 }
 
-[data-setup-page="companies"] .nexora-setup-table th:last-child,
-[data-setup-page="companies"] .nexora-setup-table td:last-child {
+[data-setup-page="companies"] .zynora-setup-table th:last-child,
+[data-setup-page="companies"] .zynora-setup-table td:last-child {
     width: 220px !important;
     min-width: 220px !important;
     text-align: center !important;
@@ -31,15 +31,15 @@
     margin: 0 !important;
 }
 
-[data-setup-page="companies"] .nexora-setup-search {
+[data-setup-page="companies"] .zynora-setup-search {
     align-items: end !important;
 }
 
-[data-setup-page="companies"] .nexora-setup-search input[type="search"] {
+[data-setup-page="companies"] .zynora-setup-search input[type="search"] {
     min-height: 48px !important;
 }
 
-[data-setup-page="companies"] .nexora-setup-card-head {
+[data-setup-page="companies"] .zynora-setup-card-head {
     align-items: flex-start !important;
 }
 
@@ -50,7 +50,7 @@
 #company-create-modal .nx-setup-field:first-child {
     grid-column: auto !important;
 }
-/* NEXORA_FIX19A_V2_COMPANIES_UI_END */
+/* ZYNORA_FIX19A_V2_COMPANIES_UI_END */
 
 /* Static inline utilities migrated from Pages/Companies/Index.cshtml */
 

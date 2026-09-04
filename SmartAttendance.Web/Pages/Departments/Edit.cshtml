@@ -3,7 +3,7 @@
 
 @section Styles {
     <link rel="stylesheet"
-          href="~/css/nexora-setup-pages.css"
+          href="~/css/zynora-setup-pages.css"
           asp-append-version="true" />
 
     <style>
@@ -102,11 +102,11 @@
     ViewData["Title"] = "تعديل قسم";
 }
 
-<div class="nexora-setup-page nx-setup-form-page">
+<div class="zynora-setup-page nx-setup-form-page">
 
-    <section class="nexora-setup-hero">
+    <section class="zynora-setup-hero">
         <div>
-            <span class="nexora-setup-kicker">
+            <span class="zynora-setup-kicker">
                 الأقسام
             </span>
 
@@ -132,7 +132,7 @@
         </div>
     }
 
-    <section class="nexora-setup-card">
+    <section class="zynora-setup-card">
 
         <form method="post"
               id="department-edit-form"
@@ -151,7 +151,7 @@
                     <span>الشركة</span>
 
                     <select asp-for="Department.CompanyId"
-                            data-nexora-select="true">
+                            data-zynora-select="true">
 
                         <option value="">
                             اختر الشركة

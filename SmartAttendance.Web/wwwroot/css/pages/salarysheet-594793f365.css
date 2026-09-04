@@ -30,7 +30,7 @@
     .ss-empty { padding:60px 20px; text-align:center; color:var(--sa-muted,var(--zy-muted)); font-weight:900; font-size:15px; }
 
     @media print {
-        .ss-bar, .nexora-nav, .nexora-topbar, header, nav, aside { display:none !important; }
+        .ss-bar, .zynora-nav, .zynora-topbar, header, nav, aside { display:none !important; }
         .ss-card { border:none; }
         body, .ss-page { background:var(--zy-white) !important; color:var(--zy-black) !important; }
     }

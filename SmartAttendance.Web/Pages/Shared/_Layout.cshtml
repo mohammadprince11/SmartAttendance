@@ -35,11 +35,11 @@
             try {
                 [
                     "SmartAttendance.Sidebar",
-                    "NEXORA.Sidebar.State",
-                    "NEXORA.Sidebar.Final.Working",
-                    "NEXORA.SidebarMode.Final",
-                    "NEXORA.V2.Sidebar",
-                    "NEXORA.Sidebar",
+                    "ZYNORA.Sidebar.State",
+                    "ZYNORA.Sidebar.Final.Working",
+                    "ZYNORA.SidebarMode.Final",
+                    "ZYNORA.V2.Sidebar",
+                    "ZYNORA.Sidebar",
                     "SidebarCollapsed",
                     "sidebar",
                     "ZYNORA.Theme"
@@ -83,21 +83,21 @@
         <link rel="apple-touch-icon" href="~/brand/zynora-symbol-1024.png" />
     }
     <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-reference-redesign-v3.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-ui-stabilization-phase1.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-calendar-v18.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-global-scroll-system.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-reference-redesign-v3.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-ui-stabilization-phase1.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-calendar-v18.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-global-scroll-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-select-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-theme-contract.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-migrated-color-tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/_layout-8952eebe4e.css" asp-append-version="true" />
     @* Design System v1 الموحد (كلاسات zy-*): مرجع إعادة التصميم صفحة-صفحة — إضافي لا يمس القديم *@
     <link rel="stylesheet" href="~/css/zynora-design-system.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/nexora-brand.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-brand.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
-    <link rel="stylesheet" href="~/css/nexora-button-interactions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-button-interactions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-checkbox.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-file-input.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-kayan-nav.css" asp-append-version="true" />
@@ -247,7 +247,7 @@
             return currentPath == normalized || currentPath.StartsWith(normalized + "/", StringComparison.OrdinalIgnoreCase);
         };
 
-        Func<string, string> ActiveClass = path => IsCurrent(path) ? "active nexora-active" : "";
+        Func<string, string> ActiveClass = path => IsCurrent(path) ? "active zynora-active" : "";
 
         var employeesOpen = IsUnder("/Employees") || IsUnder("/Contracts") || IsUnder("/Acknowledgments") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
         @* المجموعة تُفتح على أي شاشة حضور — لا على السبع الأُوَل وحدها. الشاشات
@@ -266,43 +266,43 @@
         var payrollOpen = IsUnder("/Payroll");
     }
 
-    <div class="nexora-shell">
-        <aside class="nexora-sidebar" id="zy-mobile-navigation" aria-label="@T["القائمة الجانبية"]">
-            <div class="nexora-brand-card">
+    <div class="zynora-shell">
+        <aside class="zynora-sidebar" id="zy-mobile-navigation" aria-label="@T["القائمة الجانبية"]">
+            <div class="zynora-brand-card">
                 @* الشعار عرض فقط (لا رابط) — وحرف Z نفسه هو زر الطي: خطوطه الثلاثة
                    تتحول بأنميشن إلى ثلاث خطوط أفقية عند الانكماش. *@
                 @* الشعار عرض فقط لا رابط — التنقل للرئيسية من بند «لوحة البيانات» *@
-                <div class="nexora-brand-link" aria-label="@brandName">
-                    <img class="nexora-brand-logo"
+                <div class="zynora-brand-link" aria-label="@brandName">
+                    <img class="zynora-brand-logo"
                          src="@(string.IsNullOrWhiteSpace(companyTheme.LogoPath) ? Url.Content("~/brand/zynora-logo-horizontal-light.svg") : companyTheme.LogoPath)"
                          alt="@brandName" />
-                    <span class="nexora-brand-tagline">
+                    <span class="zynora-brand-tagline">
                         Smarter People. Stronger Business.
                         @* رقم الإصدار — يزيد مع كل تعديل نعمله (v.1 ← v.2 ← ...) *@
-                        <span class="nexora-brand-version zyu-3c4b6eac2c1a">v.21</span>
+                        <span class="zynora-brand-version zyu-3c4b6eac2c1a">v.21</span>
                     </span>
                 </div>
             </div>
 
             @if (isLoggedIn)
             {
-                <nav class="nexora-nav nexora-stable-nav" aria-label="القائمة الرئيسية">
-                    <!-- NEXORA_SAFE_MAIN_MENU_START -->
-                <a asp-page="/Index" class="nexora-nav-link nexora-root-link @ActiveClass("/Index")" data-nav-area="dashboard" data-sidebar-label="&#x0644;&#x0648;&#x062D;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;">
-                    <span class="nexora-nav-dot"></span>
+                <nav class="zynora-nav zynora-stable-nav" aria-label="القائمة الرئيسية">
+                    <!-- ZYNORA_SAFE_MAIN_MENU_START -->
+                <a asp-page="/Index" class="zynora-nav-link zynora-root-link @ActiveClass("/Index")" data-nav-area="dashboard" data-sidebar-label="&#x0644;&#x0648;&#x062D;&#x0629; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;">
+                    <span class="zynora-nav-dot"></span>
                     <span>لوحة البيانات</span>
                 </a>
 
                 @if ((hasVisiblePeopleNavigation || accessProfile?.HasPagesRole == true) && CanModule("People"))
                 {
-                    <details name="nexora-main-menu" class="nexora-nav-group" @(employeesOpen ? "open" : "")>
+                    <details name="zynora-main-menu" class="zynora-nav-group" @(employeesOpen ? "open" : "")>
                         <summary data-nav-area="people" data-sidebar-label="&#x0623;&#x0634;&#x062E;&#x0627;&#x0635;">
-                            <span class="nexora-nav-dot gold"></span>
-                            <span class="nexora-nav-text">أشخاص</span>
-                            <span class="nexora-chevron"></span>
+                            <span class="zynora-nav-dot gold"></span>
+                            <span class="zynora-nav-text">أشخاص</span>
+                            <span class="zynora-chevron"></span>
                         </summary>
                         @* بنية درج كيان: عنوان المجموعة أول صف + روابط مباشرة + أكورديونات فرعية حصرية (قسم 20 بالدراسة) *@
-                        <div class="nexora-nav-group-links" data-ky-title="أشخاص">
+                        <div class="zynora-nav-group-links" data-ky-title="أشخاص">
                             @*
                                 ⭐ ترتيب هذا الدرج **يطابق مودل أشخاص بكيان** (فحص حيّ 2026-08-01):
                                 رسومات بيانية · عرض الموظفين · عمليات م.ب. · الهياكل التنظيمية ·
@@ -318,14 +318,14 @@
                                بعده بصفّين. فمن ضغط على «أشخاص» ظنّاً أنه عنوان
                                القسم وجد نفسه بقائمة الموظفين. والعنوان يبقى بلا
                                `ActiveClass` أيضاً: العنوان لا «يُنشَّط». *@
-                            <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2">
+                            <div class="zynora-nav-link ky-drawer-title" role="heading" aria-level="2">
                                 <span>أشخاص</span>
                             </div>
 
                             @* ① الداشبورد أول القائمة كما بكيان — كان مدفوناً بالمرتبة السابعة *@
                             @if (canUseLegacyPeopleAdministration)
                             {
-                                <a href="/Employees/PeopleDashboard" class="nexora-nav-link @(IsUnder("/Employees/PeopleDashboard") ? "active nexora-active" : "")">
+                                <a href="/Employees/PeopleDashboard" class="zynora-nav-link @(IsUnder("/Employees/PeopleDashboard") ? "active zynora-active" : "")">
                                     <span>رسومات بيانية</span>
                                 </a>
                             }
@@ -333,7 +333,7 @@
                             @* ② عرض الموظفين *@
                             @if (canViewPeopleDirectory)
                             {
-                                <a asp-page="/Employees/Index" class="nexora-nav-link @ActiveClass("/Employees/Index")">
+                                <a asp-page="/Employees/Index" class="zynora-nav-link @ActiveClass("/Employees/Index")">
                                     <span>عرض الموظفين</span>
                                 </a>
                             }
@@ -353,10 +353,10 @@
                                         مطّردة بكل مودلهم، طُبِّقت هنا على النماذج والإقرارات.
                                     *@
                                     <div class="ky-acc-body">
-                                        <a asp-page="/Engagement/Index" class="nexora-nav-link @(IsUnder("/Engagement") ? "active nexora-active" : "")">
+                                        <a asp-page="/Engagement/Index" class="zynora-nav-link @(IsUnder("/Engagement") ? "active zynora-active" : "")">
                                             <span>تفاعل الموظفين</span>
                                         </a>
-                                        <a asp-page="/EmployeeUpdates/Index" class="nexora-nav-link @(IsUnder("/EmployeeUpdates") ? "active nexora-active" : "")">
+                                        <a asp-page="/EmployeeUpdates/Index" class="zynora-nav-link @(IsUnder("/EmployeeUpdates") ? "active zynora-active" : "")">
                                             <span>تحديثات الموظف</span>
                                         </a>
 
@@ -364,19 +364,19 @@
                                         <details class="ky-acc" @(IsUnder("/Contracts") ? "open" : "")>
                                             <summary><span>عقود الموظفين</span><span class="ky-acc-chev"></span></summary>
                                             <div class="ky-acc-body">
-                                                <a asp-page="/Contracts/Index" class="nexora-nav-link @(IsUnder("/Contracts/Index") ? "active nexora-active" : "")">
+                                                <a asp-page="/Contracts/Index" class="zynora-nav-link @(IsUnder("/Contracts/Index") ? "active zynora-active" : "")">
                                                     <span>سجلّ العقود</span>
                                                 </a>
-                                                <a asp-page="/Contracts/Movements" class="nexora-nav-link @(IsUnder("/Contracts/Movements") ? "active nexora-active" : "")">
+                                                <a asp-page="/Contracts/Movements" class="zynora-nav-link @(IsUnder("/Contracts/Movements") ? "active zynora-active" : "")">
                                                     <span>تحديثات العقود</span>
                                                 </a>
                                             </div>
                                         </details>
 
-                                        <a asp-page="/Forms/Submissions" class="nexora-nav-link @(IsUnder("/Forms/Submissions") ? "active nexora-active" : "")">
+                                        <a asp-page="/Forms/Submissions" class="zynora-nav-link @(IsUnder("/Forms/Submissions") ? "active zynora-active" : "")">
                                             <span>متابعة الطلبات المخصصة</span>
                                         </a>
-                                        <a asp-page="/EmployeeTasks/Index" class="nexora-nav-link @(IsUnder("/EmployeeTasks") ? "active nexora-active" : "")">
+                                        <a asp-page="/EmployeeTasks/Index" class="zynora-nav-link @(IsUnder("/EmployeeTasks") ? "active zynora-active" : "")">
                                             <span>إدارة مهام الموظفين</span>
                                         </a>
 
@@ -384,28 +384,28 @@
                                            **تبويباً داخل شاشة المخالفات** لا صفحةً مستقلّة، فبقي
                                            فرعٌ واحد — وقسمٌ بفرعٍ واحد ليس قسماً، بل نقرةٌ زائدة
                                            تخفي وجهتها. فصار رابطاً مباشراً. *@
-                                        <a asp-page="/Violations/Index" class="nexora-nav-link @(IsUnder("/Violations") ? "active nexora-active" : "")">
+                                        <a asp-page="/Violations/Index" class="zynora-nav-link @(IsUnder("/Violations") ? "active zynora-active" : "")">
                                             <span>المخالفات</span>
                                         </a>
 
-                                        <a asp-page="/AssetsManagement/Index" class="nexora-nav-link @(IsUnder("/AssetsManagement") ? "active nexora-active" : "")">
+                                        <a asp-page="/AssetsManagement/Index" class="zynora-nav-link @(IsUnder("/AssetsManagement") ? "active zynora-active" : "")">
                                             <span>إدارة العهد</span>
                                         </a>
-                                        <a asp-page="/Employees/Evaluations" class="nexora-nav-link">
+                                        <a asp-page="/Employees/Evaluations" class="zynora-nav-link">
                                             <span>متابعة تقييمات</span>
                                         </a>
-                                        <a asp-page="/Payroll/TerminationSettlement" class="nexora-nav-link">
+                                        <a asp-page="/Payroll/TerminationSettlement" class="zynora-nav-link">
                                             <span>إنهاء الموظف — تسوية الفروقات</span>
                                         </a>
-                                        <a asp-page="/Employees/TemporaryHeads" class="nexora-nav-link">
+                                        <a asp-page="/Employees/TemporaryHeads" class="zynora-nav-link">
                                             <span>تخصيص رئيس الوحدة المؤقت</span>
                                         </a>
 
                                         @* بلا نظير بقائمة كيان — أُبقيت آخر القسم لأنها تشغيلية عندنا *@
-                                        <a asp-page="/LeaveBalances/Index" class="nexora-nav-link @(IsUnder("/LeaveBalances") ? "active nexora-active" : "")">
+                                        <a asp-page="/LeaveBalances/Index" class="zynora-nav-link @(IsUnder("/LeaveBalances") ? "active zynora-active" : "")">
                                             <span>أرصدة الإجازات</span>
                                         </a>
-                                        <a asp-page="/Alerts/Index" class="nexora-nav-link @(IsUnder("/Alerts") ? "active nexora-active" : "")">
+                                        <a asp-page="/Alerts/Index" class="zynora-nav-link @(IsUnder("/Alerts") ? "active zynora-active" : "")">
                                             <span>التنبيهات والانتهاءات</span>
                                         </a>
                                     </div>
@@ -418,13 +418,13 @@
                                 <details class="ky-acc" @(IsUnder("/Organization") || IsUnder("/OrgStructures") ? "open" : "")>
                                     <summary><span>الهياكل التنظيمية</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
-                                        <a asp-page="/Organization/Index" class="nexora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active nexora-active" : "")">
+                                        <a asp-page="/Organization/Index" class="zynora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active zynora-active" : "")">
                                             <span>وحدات العمل</span>
                                         </a>
-                                        <a href="/Organization/Index#tab=chart" class="nexora-nav-link @(IsUnder("/Organization/Chart") ? "active nexora-active" : "")">
+                                        <a href="/Organization/Index#tab=chart" class="zynora-nav-link @(IsUnder("/Organization/Chart") ? "active zynora-active" : "")">
                                             <span>الهيكل الإداري</span>
                                         </a>
-                                        <a href="/OrgStructures" class="nexora-nav-link @(IsUnder("/OrgStructures") ? "active nexora-active" : "")">
+                                        <a href="/OrgStructures" class="zynora-nav-link @(IsUnder("/OrgStructures") ? "active zynora-active" : "")">
                                             <span>الهياكل الثلاث المتوازية</span>
                                         </a>
                                     </div>
@@ -437,16 +437,16 @@
                                 <details class="ky-acc" @(IsUnder("/EmployeeDocuments") || IsUnder("/Documents") || IsUnder("/CompanyDocuments") ? "open" : "")>
                                     <summary><span>مركز الوثائق</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
-                                        <a asp-page="/EmployeeDocuments/Index" class="nexora-nav-link @(IsUnder("/EmployeeDocuments") ? "active nexora-active" : "")">
+                                        <a asp-page="/EmployeeDocuments/Index" class="zynora-nav-link @(IsUnder("/EmployeeDocuments") ? "active zynora-active" : "")">
                                             <span>أرشيف وثائق الموظف</span>
                                         </a>
-                                        <a asp-page="/Documents/Generate" class="nexora-nav-link @(IsUnder("/Documents/Generate") ? "active nexora-active" : "")">
+                                        <a asp-page="/Documents/Generate" class="zynora-nav-link @(IsUnder("/Documents/Generate") ? "active zynora-active" : "")">
                                             <span>توليد وثائق الموظفين</span>
                                         </a>
-                                        <a asp-page="/Documents/Requests" class="nexora-nav-link @(IsUnder("/Documents/Requests") ? "active nexora-active" : "")">
+                                        <a asp-page="/Documents/Requests" class="zynora-nav-link @(IsUnder("/Documents/Requests") ? "active zynora-active" : "")">
                                             <span>طلبات الوثائق</span>
                                         </a>
-                                        <a asp-page="/CompanyDocuments/Index" class="nexora-nav-link @(IsUnder("/CompanyDocuments") ? "active nexora-active" : "")">
+                                        <a asp-page="/CompanyDocuments/Index" class="zynora-nav-link @(IsUnder("/CompanyDocuments") ? "active zynora-active" : "")">
                                             <span>وثائق الشركة وفئاتها</span>
                                         </a>
                                     </div>
@@ -456,10 +456,10 @@
                                 <details class="ky-acc" @(IsUnder("/BadgeCenter") ? "open" : "")>
                                     <summary><span>مركز بطاقات الموظفين</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
-                                        <a href="/Documents/Templates?kind=Badge" class="nexora-nav-link">
+                                        <a href="/Documents/Templates?kind=Badge" class="zynora-nav-link">
                                             <span>قوالب البطاقات</span>
                                         </a>
-                                        <a href="/BadgeCenter" class="nexora-nav-link @(IsUnder("/BadgeCenter") ? "active nexora-active" : "")">
+                                        <a href="/BadgeCenter" class="zynora-nav-link @(IsUnder("/BadgeCenter") ? "active zynora-active" : "")">
                                             <span>بطاقات الموظفين وطباعتها</span>
                                         </a>
                                     </div>
@@ -467,7 +467,7 @@
 
                                 @* ⑦ التقارير — رابط صريح لا asp-page: AddPageRoute لمسار /AttendanceReports
                                    يجعل توليد الرابط بالاسم يختار المسار المُضاف، فنثبّت مسار الأشخاص يدوياً. *@
-                                <a href="/PeopleReports" class="nexora-nav-link @(IsUnder("/PeopleReports") ? "active nexora-active" : "")">
+                                <a href="/PeopleReports" class="zynora-nav-link @(IsUnder("/PeopleReports") ? "active zynora-active" : "")">
                                     <span>التقارير</span>
                                 </a>
 
@@ -484,17 +484,17 @@
                                         وكانت **غائبة عن القائمة**.
                                     *@
                                     <div class="ky-acc-body">
-                                        <a asp-page="/Forms/Index" class="nexora-nav-link @(IsUnder("/Forms/Index") ? "active nexora-active" : "")">
+                                        <a asp-page="/Forms/Index" class="zynora-nav-link @(IsUnder("/Forms/Index") ? "active zynora-active" : "")">
                                             <span>طلبات الموظفين المخصصة</span>
                                         </a>
 
                                         <details class="ky-acc" @(IsUnder("/HrSettings/ViolationConfiguration") || IsUnder("/DisciplinaryRules") ? "open" : "")>
                                             <summary><span>إعدادات المخالفات</span><span class="ky-acc-chev"></span></summary>
                                             <div class="ky-acc-body">
-                                                <a asp-page="/HrSettings/ViolationConfiguration" class="nexora-nav-link @(IsUnder("/HrSettings/ViolationConfiguration") ? "active nexora-active" : "")">
+                                                <a asp-page="/HrSettings/ViolationConfiguration" class="zynora-nav-link @(IsUnder("/HrSettings/ViolationConfiguration") ? "active zynora-active" : "")">
                                                     <span>التهيئة</span>
                                                 </a>
-                                                <a asp-page="/DisciplinaryRules/Index" class="nexora-nav-link @(IsUnder("/DisciplinaryRules") ? "active nexora-active" : "")">
+                                                <a asp-page="/DisciplinaryRules/Index" class="zynora-nav-link @(IsUnder("/DisciplinaryRules") ? "active zynora-active" : "")">
                                                     <span>قائمة المخالفات وقواعدها</span>
                                                 </a>
                                             </div>
@@ -503,57 +503,57 @@
                                         <details class="ky-acc" @(IsUnder("/Acknowledgments") ? "open" : "")>
                                             <summary><span>إقرارات الموظفين</span><span class="ky-acc-chev"></span></summary>
                                             <div class="ky-acc-body">
-                                                <a asp-page="/Acknowledgments/Index" class="nexora-nav-link @(IsUnder("/Acknowledgments/Index") ? "active nexora-active" : "")">
+                                                <a asp-page="/Acknowledgments/Index" class="zynora-nav-link @(IsUnder("/Acknowledgments/Index") ? "active zynora-active" : "")">
                                                     <span>قوالب الإقرارات</span>
                                                 </a>
-                                                <a asp-page="/Acknowledgments/Tracking" class="nexora-nav-link @(IsUnder("/Acknowledgments/Tracking") ? "active nexora-active" : "")">
+                                                <a asp-page="/Acknowledgments/Tracking" class="zynora-nav-link @(IsUnder("/Acknowledgments/Tracking") ? "active zynora-active" : "")">
                                                     <span>متابعة الإقرارات</span>
                                                 </a>
                                             </div>
                                         </details>
 
                                         @* بلا نظير بإعدادات كيان — عندهم منشئ الوثائق بمودل الإعدادات العام *@
-                                        <a asp-page="/Documents/Templates" class="nexora-nav-link @(IsUnder("/Documents/Templates") ? "active nexora-active" : "")">
+                                        <a asp-page="/Documents/Templates" class="zynora-nav-link @(IsUnder("/Documents/Templates") ? "active zynora-active" : "")">
                                             <span>منشئ الوثائق</span>
                                         </a>
-                                        <a asp-page="/HrSettings/Formulas" class="nexora-nav-link @(IsUnder("/HrSettings/Formulas") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/Formulas" class="zynora-nav-link @(IsUnder("/HrSettings/Formulas") ? "active zynora-active" : "")">
                                             <span>مختبر الصيغ</span>
                                         </a>
-                                        @* NEXORA_EMPLOYEE_PROFILE_SETTINGS_NAV_LINK *@
-                                        <a asp-page="/EmployeeProfileSettings/Index" class="nexora-nav-link @(IsUnder("/EmployeeProfileSettings") ? "active nexora-active" : "")">
+                                        @* ZYNORA_EMPLOYEE_PROFILE_SETTINGS_NAV_LINK *@
+                                        <a asp-page="/EmployeeProfileSettings/Index" class="zynora-nav-link @(IsUnder("/EmployeeProfileSettings") ? "active zynora-active" : "")">
                                             <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</span>
                                         </a>
-                                        <a asp-page="/HrSettings/ProbationPeriod" class="nexora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/ProbationPeriod" class="zynora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active zynora-active" : "")">
                                             <span>فترة التجربة</span>
                                         </a>
-                                        <a asp-page="/HrSettings/NoticePeriod" class="nexora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/NoticePeriod" class="zynora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active zynora-active" : "")">
                                             <span>فترة الإنذار</span>
                                         </a>
-                                        <a asp-page="/HrSettings/SelfServiceSettings" class="nexora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/SelfServiceSettings" class="zynora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active zynora-active" : "")">
                                             <span>إعدادات الخدمة الذاتية</span>
                                         </a>
-                                        <a asp-page="/HrSettings/TerminationReasons" class="nexora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/TerminationReasons" class="zynora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active zynora-active" : "")">
                                             <span>أسباب الإيقاف</span>
                                         </a>
-                                        <a asp-page="/HrSettings/NotificationCenter" class="nexora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/NotificationCenter" class="zynora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active zynora-active" : "")">
                                             <span>مركز الإشعارات</span>
                                         </a>
-                                        <a asp-page="/HrSettings/Lookups" class="nexora-nav-link @(IsUnder("/HrSettings/Lookups") ? "active nexora-active" : "")">
+                                        <a asp-page="/HrSettings/Lookups" class="zynora-nav-link @(IsUnder("/HrSettings/Lookups") ? "active zynora-active" : "")">
                                             <span>القوائم المرجعية</span>
                                         </a>
-                                        <a href="/HrSettings/EmployeeCodeSchema" class="nexora-nav-link @(IsUnder("/HrSettings/EmployeeCodeSchema") ? "active nexora-active" : "")">
+                                        <a href="/HrSettings/EmployeeCodeSchema" class="zynora-nav-link @(IsUnder("/HrSettings/EmployeeCodeSchema") ? "active zynora-active" : "")">
                                             <span>مخطط رمز الموظف</span>
                                         </a>
-                                        <a href="/HrSettings/FieldControl" class="nexora-nav-link @(IsUnder("/HrSettings/FieldControl") ? "active nexora-active" : "")">
+                                        <a href="/HrSettings/FieldControl" class="zynora-nav-link @(IsUnder("/HrSettings/FieldControl") ? "active zynora-active" : "")">
                                             <span>استوديو الحقول</span>
                                         </a>
-                                        <a href="/HrSettings/ApprovalTemplates" class="nexora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active nexora-active" : "")">
+                                        <a href="/HrSettings/ApprovalTemplates" class="zynora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active zynora-active" : "")">
                                             <span>قوالب الموافقات</span>
                                         </a>
-                                        <a href="/HrSettings/EntityFields" class="nexora-nav-link @(IsUnder("/HrSettings/EntityFields") ? "active nexora-active" : "")">
+                                        <a href="/HrSettings/EntityFields" class="zynora-nav-link @(IsUnder("/HrSettings/EntityFields") ? "active zynora-active" : "")">
                                             <span>حقول الكيانات</span>
                                         </a>
-                                        <a href="/HrSettings/EmployeeGroups" class="nexora-nav-link @(IsUnder("/HrSettings/EmployeeGroups") ? "active nexora-active" : "")">
+                                        <a href="/HrSettings/EmployeeGroups" class="zynora-nav-link @(IsUnder("/HrSettings/EmployeeGroups") ? "active zynora-active" : "")">
                                             <span>مجموعات الموظفين</span>
                                         </a>
                                     </div>
@@ -563,7 +563,7 @@
                             @if (canManagePeoplePermissions)
                             {
                                 @* كانت معنونة «بطاقات الموظفين» وهي عن الصلاحيات — تسمية مضلِّلة رُصدت بدراسة مركز البطاقات. *@
-                                <a asp-page="/EmployeePermissions/Index" class="nexora-nav-link @(IsUnder("/EmployeePermissions") ? "active nexora-active" : "")">
+                                <a asp-page="/EmployeePermissions/Index" class="zynora-nav-link @(IsUnder("/EmployeePermissions") ? "active zynora-active" : "")">
                                     <span>صلاحيات الموظفين</span>
                                 </a>
                             }
@@ -573,11 +573,11 @@
 
                 @if (CanModule("Attendance"))
                 {
-                <details name="nexora-main-menu" class="nexora-nav-group" @(attendanceOpen ? "open" : "")>
+                <details name="zynora-main-menu" class="zynora-nav-group" @(attendanceOpen ? "open" : "")>
                     <summary data-nav-area="attendance" data-sidebar-label="&#x0627;&#x0644;&#x062D;&#x0636;&#x0648;&#x0631; &#x0648;&#x0627;&#x0644;&#x0627;&#x0646;&#x0635;&#x0631;&#x0627;&#x0641;">
-                        <span class="nexora-nav-dot gold"></span>
-                        <span class="nexora-nav-text">الحضور والانصراف</span>
-                        <span class="nexora-chevron"></span>
+                        <span class="zynora-nav-dot gold"></span>
+                        <span class="zynora-nav-text">الحضور والانصراف</span>
+                        <span class="zynora-chevron"></span>
                     </summary>
                     @* ─────────────────────────────────────────────────────────────
                        بنية كيان لمودل «تسجيل الحضور» — ثماني مجموعات بترتيبها الحيّ
@@ -593,7 +593,7 @@
                        استيراد البصمات · الأجهزة · مفاتيح البصمة · الشفتات القديمة) لم
                        تُحذف — أُسندت للمجموعة التي تنتمي لها وظيفياً.
                        ───────────────────────────────────────────────────────────── *@
-                    <div class="nexora-nav-group-links" data-ky-title="الحضور والانصراف">
+                    <div class="zynora-nav-group-links" data-ky-title="الحضور والانصراف">
 
                         @* عنوان الدرج **اسم قسمٍ لا رابط** — نفس تصحيح مجموعة «أشخاص»
                            أعلاه: `.ky-drawer-title` يأخذ `cursor:default` بالـCSS،
@@ -601,14 +601,14 @@
                            فوضعُ شاشةٍ حقيقية بهذه الخانة يجعلها تبدو غير قابلة للنقر
                            ولا يُغلق الدرج إن نُقرت. العنوان يبقى بلا `IsUnder` أيضاً:
                            العنوان لا «يُنشَّط». *@
-                        <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2">
+                        <div class="zynora-nav-link ky-drawer-title" role="heading" aria-level="2">
                             <span>الحضور والانصراف</span>
                         </div>
 
                         @* ١) رسومات بيانية — صفحة المودل الرئيسية عند كيان، فهي أول رابط. *@
                         @if (CanRoute("/attendancedashboard"))
                         {
-                            <a href="/AttendanceDashboard" class="nexora-nav-link @(IsUnder("/AttendanceDashboard") ? "active nexora-active" : "")">
+                            <a href="/AttendanceDashboard" class="zynora-nav-link @(IsUnder("/AttendanceDashboard") ? "active zynora-active" : "")">
                                 <span>نظرة عامة</span>
                             </a>
                         }
@@ -638,7 +638,7 @@
                              الوجهة أوّل عرضٍ يسمح به مسارُ المستخدم (لا توجيه قسريّ لممنوع). *@
                         @if (manageUrl != null)
                         {
-                            <a href="@manageUrl" class="nexora-nav-link @(manageActive ? "active nexora-active" : "")">
+                            <a href="@manageUrl" class="zynora-nav-link @(manageActive ? "active zynora-active" : "")">
                                 <span>إدارة الحضور</span>
                             </a>
                         }
@@ -647,7 +647,7 @@
                              _AttendanceApprovalViews. الوجهة أوّل فترةٍ مسموحة. *@
                         @if (approvalUrl != null)
                         {
-                            <a href="@approvalUrl" class="nexora-nav-link @(approvalActive ? "active nexora-active" : "")">
+                            <a href="@approvalUrl" class="zynora-nav-link @(approvalActive ? "active zynora-active" : "")">
                                 <span>اعتماد الحضور</span>
                             </a>
                         }
@@ -655,7 +655,7 @@
                         @* ④ الإجراءات المقترحة — مفهوم مستقل. *@
                         @if (CanRoute("/attendancerecommendations"))
                         {
-                            <a href="/AttendanceRecommendations" class="nexora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active nexora-active" : "")">
+                            <a href="/AttendanceRecommendations" class="zynora-nav-link @(IsUnder("/AttendanceRecommendations") ? "active zynora-active" : "")">
                                 <span>الإجراءات المقترحة</span>
                             </a>
                         }
@@ -663,7 +663,7 @@
                         @* العمل من المنزل — عرضٌ للقراءة؛ يبقى ظاهراً كي لا تُخفى وظيفة (القسم 11). *@
                         @if (CanRoute("/workfromhome"))
                         {
-                            <a href="/WorkFromHome" class="nexora-nav-link @(IsUnder("/WorkFromHome") ? "active nexora-active" : "")">
+                            <a href="/WorkFromHome" class="zynora-nav-link @(IsUnder("/WorkFromHome") ? "active zynora-active" : "")">
                                 <span>العمل من المنزل</span>
                             </a>
                         }
@@ -671,7 +671,7 @@
                         @* ⑤ طلبات البصمة المفقودة — شاشة واحدة. *@
                         @if (CanRoute("/missingpunchrequests"))
                         {
-                            <a href="/MissingPunchRequests" class="nexora-nav-link @(IsUnder("/MissingPunchRequests") ? "active nexora-active" : "")">
+                            <a href="/MissingPunchRequests" class="zynora-nav-link @(IsUnder("/MissingPunchRequests") ? "active zynora-active" : "")">
                                 <span>طلبات البصمة المفقودة</span>
                             </a>
                         }
@@ -685,23 +685,23 @@
                                 <div class="ky-acc-body">
                                     @if (CanRoute("/shiftassignments"))
                                     {
-                                        <a href="/ShiftAssignments" class="nexora-nav-link @(IsUnder("/ShiftAssignments") ? "active nexora-active" : "")"><span>مناوبات العمل الثابتة</span></a>
+                                        <a href="/ShiftAssignments" class="zynora-nav-link @(IsUnder("/ShiftAssignments") ? "active zynora-active" : "")"><span>مناوبات العمل الثابتة</span></a>
                                     }
                                     @if (CanRoute("/shiftoverrides"))
                                     {
-                                        <a href="/ShiftOverrides" class="nexora-nav-link @(IsUnder("/ShiftOverrides") ? "active nexora-active" : "")"><span>التعديلات المؤقتة</span></a>
+                                        <a href="/ShiftOverrides" class="zynora-nav-link @(IsUnder("/ShiftOverrides") ? "active zynora-active" : "")"><span>التعديلات المؤقتة</span></a>
                                     }
                                     @if (CanRoute("/roster"))
                                     {
-                                        <a href="/Roster" class="nexora-nav-link @(IsUnder("/Roster") ? "active nexora-active" : "")"><span>جدولة المناوبات</span></a>
+                                        <a href="/Roster" class="zynora-nav-link @(IsUnder("/Roster") ? "active zynora-active" : "")"><span>جدولة المناوبات</span></a>
                                     }
                                     @if (CanRoute("/shiftrules"))
                                     {
-                                        <a href="/ShiftRules" class="nexora-nav-link @(IsUnder("/ShiftRules") ? "active nexora-active" : "")"><span>قواعد المناوبات</span></a>
+                                        <a href="/ShiftRules" class="zynora-nav-link @(IsUnder("/ShiftRules") ? "active zynora-active" : "")"><span>قواعد المناوبات</span></a>
                                     }
                                     @if (CanRoute("/periodrules"))
                                     {
-                                        <a href="/PeriodRules" class="nexora-nav-link @(IsUnder("/PeriodRules") ? "active nexora-active" : "")"><span>القواعد الفترية</span></a>
+                                        <a href="/PeriodRules" class="zynora-nav-link @(IsUnder("/PeriodRules") ? "active zynora-active" : "")"><span>القواعد الفترية</span></a>
                                     }
                                 </div>
                             </details>
@@ -710,7 +710,7 @@
                         @* ٧) التقارير — شاشة واحدة. *@
                         @if (CanRoute("/attendancereports"))
                         {
-                            <a href="/AttendanceReports" class="nexora-nav-link @(IsUnder("/AttendanceReports") ? "active nexora-active" : "")">
+                            <a href="/AttendanceReports" class="zynora-nav-link @(IsUnder("/AttendanceReports") ? "active zynora-active" : "")">
                                 <span>التقارير</span>
                             </a>
                         }
@@ -727,15 +727,15 @@
                                 <div class="ky-acc-body">
                                     @if (CanRoute("/attendancesettings"))
                                     {
-                                        <a href="/AttendanceSettings" class="nexora-nav-link @(IsUnder("/AttendanceSettings") ? "active nexora-active" : "")"><span>التهيئة</span></a>
+                                        <a href="/AttendanceSettings" class="zynora-nav-link @(IsUnder("/AttendanceSettings") ? "active zynora-active" : "")"><span>التهيئة</span></a>
                                     }
                                     @if (CanRoute("/shifttypes"))
                                     {
-                                        <a href="/ShiftTypes" class="nexora-nav-link @(IsUnder("/ShiftTypes") ? "active nexora-active" : "")"><span>تهيئة المناوبات</span></a>
+                                        <a href="/ShiftTypes" class="zynora-nav-link @(IsUnder("/ShiftTypes") ? "active zynora-active" : "")"><span>تهيئة المناوبات</span></a>
                                     }
                                     @if (CanRoute("/devices"))
                                     {
-                                        <a asp-page="/Devices/Index" class="nexora-nav-link @(IsUnder("/Devices") ? "active nexora-active" : "")"><span>الأجهزة</span></a>
+                                        <a asp-page="/Devices/Index" class="zynora-nav-link @(IsUnder("/Devices") ? "active zynora-active" : "")"><span>الأجهزة</span></a>
                                     }
                                     @* «استيراد البصمات» حُذف من القائمة: `/AttendanceImports`
                                        مجرّد إعادة توجيه لـ`/AttendanceOperations?Tab=import`،
@@ -744,15 +744,15 @@
                                        بالقاعدة كمصدر إكسل النظامي. *@
                                     @if (CanRoute("/biometrickeys"))
                                     {
-                                        <a href="/BiometricKeys" class="nexora-nav-link @(IsUnder("/BiometricKeys") ? "active nexora-active" : "")"><span>اعتماد مفاتيح البصمة/الوجه</span></a>
+                                        <a href="/BiometricKeys" class="zynora-nav-link @(IsUnder("/BiometricKeys") ? "active zynora-active" : "")"><span>اعتماد مفاتيح البصمة/الوجه</span></a>
                                     }
                                     @if (CanRoute("/holidays"))
                                     {
-                                        <a asp-page="/Holidays/Index" class="nexora-nav-link @(IsUnder("/Holidays") ? "active nexora-active" : "")"><span>أيام العطل</span></a>
+                                        <a asp-page="/Holidays/Index" class="zynora-nav-link @(IsUnder("/Holidays") ? "active zynora-active" : "")"><span>أيام العطل</span></a>
                                     }
                                     @if (CanRoute("/employeegeolocations"))
                                     {
-                                        <a href="/EmployeeGeoLocations" class="nexora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active nexora-active" : "")"><span>المواقع الجغرافية للموظفين</span></a>
+                                        <a href="/EmployeeGeoLocations" class="zynora-nav-link @(IsUnder("/EmployeeGeoLocations") ? "active zynora-active" : "")"><span>المواقع الجغرافية للموظفين</span></a>
                                     }
                                 </div>
                             </details>
@@ -763,60 +763,60 @@
 
                 @if (CanModule("Payroll"))
                 {
-                <details name="nexora-main-menu" class="nexora-nav-group" @(payrollOpen ? "open" : "")>
+                <details name="zynora-main-menu" class="zynora-nav-group" @(payrollOpen ? "open" : "")>
                     <summary data-nav-area="payroll" data-sidebar-label="&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;">
-                        <span class="nexora-nav-dot gold"></span>
-                        <span class="nexora-nav-text">&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;</span>
-                        <span class="nexora-chevron"></span>
+                        <span class="zynora-nav-dot gold"></span>
+                        <span class="zynora-nav-text">&#x0627;&#x0644;&#x0631;&#x0648;&#x0627;&#x062A;&#x0628;</span>
+                        <span class="zynora-chevron"></span>
                     </summary>
                     @* عمليات الرواتب اليومية أولاً ← أكورديونات (حركات/التزامات) ← الإعدادات آخر شيء *@
-                    <div class="nexora-nav-group-links" data-ky-title="الرواتب">
-                        <a asp-page="/Payroll/Runs" class="nexora-nav-link @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active nexora-active" : "")">
+                    <div class="zynora-nav-group-links" data-ky-title="الرواتب">
+                        <a asp-page="/Payroll/Runs" class="zynora-nav-link @(IsUnder("/Payroll/Runs") || IsUnder("/Payroll/RunDetail") ? "active zynora-active" : "")">
                             <span>احتساب الرواتب</span>
                         </a>
-                        <a asp-page="/Payroll/Analytics" class="nexora-nav-link @(IsUnder("/Payroll/Analytics") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/Analytics" class="zynora-nav-link @(IsUnder("/Payroll/Analytics") ? "active zynora-active" : "")">
                             <span>رسوم الرواتب</span>
                         </a>
-                        <a asp-page="/Payroll/PayslipInquiry" class="nexora-nav-link @(IsUnder("/Payroll/PayslipInquiry") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/PayslipInquiry" class="zynora-nav-link @(IsUnder("/Payroll/PayslipInquiry") ? "active zynora-active" : "")">
                             <span>استعلام القسائم</span>
                         </a>
-                        <a asp-page="/Payroll/Simulator" class="nexora-nav-link @(IsUnder("/Payroll/Simulator") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/Simulator" class="zynora-nav-link @(IsUnder("/Payroll/Simulator") ? "active zynora-active" : "")">
                             <span>نظام المحاكاة</span>
                         </a>
-                        <a asp-page="/Payroll/TransactionsAuditor" class="nexora-nav-link @(IsUnder("/Payroll/TransactionsAuditor") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/TransactionsAuditor" class="zynora-nav-link @(IsUnder("/Payroll/TransactionsAuditor") ? "active zynora-active" : "")">
                             <span>مدقق الحركات</span>
                         </a>
                         @* رابط صريح لا asp-page: AddPageRoute لمسار /PayrollReports (نفس صفحة PeopleReports بمصادر الرواتب) *@
-                        <a href="/PayrollReports" class="nexora-nav-link @(IsUnder("/PayrollReports") ? "active nexora-active" : "")">
+                        <a href="/PayrollReports" class="zynora-nav-link @(IsUnder("/PayrollReports") ? "active zynora-active" : "")">
                             <span>تقارير الرواتب</span>
                         </a>
-                        <a asp-page="/Payroll/SalarySheet" class="nexora-nav-link @(IsUnder("/Payroll/SalarySheet") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/SalarySheet" class="zynora-nav-link @(IsUnder("/Payroll/SalarySheet") ? "active zynora-active" : "")">
                             <span>كشف الرواتب</span>
                         </a>
-                        <a asp-page="/Payroll/FinancialRequests" class="nexora-nav-link @(IsUnder("/Payroll/FinancialRequests") ? "active nexora-active" : "")">
+                        <a asp-page="/Payroll/FinancialRequests" class="zynora-nav-link @(IsUnder("/Payroll/FinancialRequests") ? "active zynora-active" : "")">
                             <span>مركز الطلبات المالية</span>
                         </a>
 
                         <details class="ky-acc" @(IsUnder("/Payroll/Transactions") || IsUnder("/Payroll/Overtime") || IsUnder("/Payroll/SalaryDaysAdjustment") || IsUnder("/Payroll/LeaveEncashment") ? "open" : "")>
                             <summary><span>الحركات الشهرية</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
-                                <a href="/Payroll/Transactions?type=Income" class="nexora-nav-link"><span>حركات الدخل</span></a>
-                                <a href="/Payroll/Transactions?type=Deduction" class="nexora-nav-link"><span>حركات الاقتطاع</span></a>
-                                <a asp-page="/Payroll/Overtime" class="nexora-nav-link @(IsUnder("/Payroll/Overtime") ? "active nexora-active" : "")"><span>العمل الإضافي</span></a>
-                                <a asp-page="/Payroll/SalaryDaysAdjustment" class="nexora-nav-link @(IsUnder("/Payroll/SalaryDaysAdjustment") ? "active nexora-active" : "")"><span>تعديل أيام الراتب</span></a>
-                                <a asp-page="/Payroll/LeaveEncashment" class="nexora-nav-link @(IsUnder("/Payroll/LeaveEncashment") ? "active nexora-active" : "")"><span>بدل إجازة</span></a>
+                                <a href="/Payroll/Transactions?type=Income" class="zynora-nav-link"><span>حركات الدخل</span></a>
+                                <a href="/Payroll/Transactions?type=Deduction" class="zynora-nav-link"><span>حركات الاقتطاع</span></a>
+                                <a asp-page="/Payroll/Overtime" class="zynora-nav-link @(IsUnder("/Payroll/Overtime") ? "active zynora-active" : "")"><span>العمل الإضافي</span></a>
+                                <a asp-page="/Payroll/SalaryDaysAdjustment" class="zynora-nav-link @(IsUnder("/Payroll/SalaryDaysAdjustment") ? "active zynora-active" : "")"><span>تعديل أيام الراتب</span></a>
+                                <a asp-page="/Payroll/LeaveEncashment" class="zynora-nav-link @(IsUnder("/Payroll/LeaveEncashment") ? "active zynora-active" : "")"><span>بدل إجازة</span></a>
                             </div>
                         </details>
 
                         <details class="ky-acc" @(IsUnder("/Payroll/Loans") || IsUnder("/Payroll/Raises") || IsUnder("/Payroll/EndOfService") || IsUnder("/PayrollProvisions") ? "open" : "")>
                             <summary><span>التزامات ومستحقات الموظف</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
-                                <a asp-page="/Payroll/Loans" class="nexora-nav-link @(IsUnder("/Payroll/Loans") ? "active nexora-active" : "")"><span>القروض والسُّلف</span></a>
-                                <a asp-page="/Payroll/Raises" class="nexora-nav-link @(IsUnder("/Payroll/Raises") ? "active nexora-active" : "")"><span>زيادات الراتب</span></a>
-                                <a asp-page="/Payroll/EndOfService" class="nexora-nav-link @(IsUnder("/Payroll/EndOfService") ? "active nexora-active" : "")"><span>نهاية الخدمة</span></a>
-                                <a href="/PayrollProvisions" class="nexora-nav-link @(IsUnder("/PayrollProvisions") ? "active nexora-active" : "")"><span>حساب الاحتياطي</span></a>
-                                <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="nexora-nav-link"><span>تحديث المعلومات المالية</span></a>
-                                <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="nexora-nav-link"><span>معلومات الدفع</span></a>
+                                <a asp-page="/Payroll/Loans" class="zynora-nav-link @(IsUnder("/Payroll/Loans") ? "active zynora-active" : "")"><span>القروض والسُّلف</span></a>
+                                <a asp-page="/Payroll/Raises" class="zynora-nav-link @(IsUnder("/Payroll/Raises") ? "active zynora-active" : "")"><span>زيادات الراتب</span></a>
+                                <a asp-page="/Payroll/EndOfService" class="zynora-nav-link @(IsUnder("/Payroll/EndOfService") ? "active zynora-active" : "")"><span>نهاية الخدمة</span></a>
+                                <a href="/PayrollProvisions" class="zynora-nav-link @(IsUnder("/PayrollProvisions") ? "active zynora-active" : "")"><span>حساب الاحتياطي</span></a>
+                                <a asp-page="/EmployeeUpdates/Index" asp-route-section="financial" class="zynora-nav-link"><span>تحديث المعلومات المالية</span></a>
+                                <a asp-page="/EmployeeUpdates/Index" asp-route-section="payment" class="zynora-nav-link"><span>معلومات الدفع</span></a>
                             </div>
                         </details>
 
@@ -828,11 +828,11 @@
                         <details class="ky-acc" @(IsUnder("/Payroll/SalaryItems") || IsUnder("/Payroll/Settings") || IsUnder("/Payroll/BankTemplates") || IsUnder("/Payroll/SalaryScale") || IsUnder("/Payroll/ExchangeRates") ? "open" : "")>
                             <summary><span>إعدادات الرواتب</span><span class="ky-acc-chev"></span></summary>
                             <div class="ky-acc-body">
-                                <a asp-page="/Payroll/SalaryItems" class="nexora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active nexora-active" : "")"><span>عناصر الراتب</span></a>
-                                <a asp-page="/Payroll/Settings" class="nexora-nav-link @(IsUnder("/Payroll/Settings") ? "active nexora-active" : "")"><span>الضريبة والضمان</span></a>
-                                <a asp-page="/Payroll/ExchangeRates" class="nexora-nav-link @(IsUnder("/Payroll/ExchangeRates") ? "active nexora-active" : "")"><span>أسعار الصرف</span></a>
-                                <a asp-page="/Payroll/BankTemplates" class="nexora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active nexora-active" : "")"><span>قوالب ملفات البنوك</span></a>
-                                <a asp-page="/Payroll/SalaryScale" class="nexora-nav-link @(IsUnder("/Payroll/SalaryScale") ? "active nexora-active" : "")"><span>سلم الرواتب</span></a>
+                                <a asp-page="/Payroll/SalaryItems" class="zynora-nav-link @(IsUnder("/Payroll/SalaryItems") ? "active zynora-active" : "")"><span>عناصر الراتب</span></a>
+                                <a asp-page="/Payroll/Settings" class="zynora-nav-link @(IsUnder("/Payroll/Settings") ? "active zynora-active" : "")"><span>الضريبة والضمان</span></a>
+                                <a asp-page="/Payroll/ExchangeRates" class="zynora-nav-link @(IsUnder("/Payroll/ExchangeRates") ? "active zynora-active" : "")"><span>أسعار الصرف</span></a>
+                                <a asp-page="/Payroll/BankTemplates" class="zynora-nav-link @(IsUnder("/Payroll/BankTemplates") ? "active zynora-active" : "")"><span>قوالب ملفات البنوك</span></a>
+                                <a asp-page="/Payroll/SalaryScale" class="zynora-nav-link @(IsUnder("/Payroll/SalaryScale") ? "active zynora-active" : "")"><span>سلم الرواتب</span></a>
                             </div>
                         </details>
                     </div>
@@ -841,23 +841,23 @@
 
                 @if (CanRoute("/Approvals"))
                 {
-                    <details name="nexora-main-menu" class="nexora-nav-group" @(requestsOpen ? "open" : "")>
+                    <details name="zynora-main-menu" class="zynora-nav-group" @(requestsOpen ? "open" : "")>
                         <summary data-nav-area="approvals" data-sidebar-label="الموافقات">
-                            <span class="nexora-nav-dot"></span>
-                            <span class="nexora-nav-text">الموافقات</span>
-                            <span class="nexora-chevron"></span>
+                            <span class="zynora-nav-dot"></span>
+                            <span class="zynora-nav-text">الموافقات</span>
+                            <span class="zynora-chevron"></span>
                         </summary>
-                        <div class="nexora-nav-group-links" data-ky-title="الموافقات">
-                            <div class="nexora-nav-link ky-drawer-title" role="heading" aria-level="2"><span>الموافقات</span></div>
-                            <a asp-page="/Approvals/Index" class="nexora-nav-link @(IsCurrent("/Approvals") || IsCurrent("/Approvals/Index") ? "active nexora-active" : "")"><span>مركز الموافقات</span></a>
-                            <a href="/Approvals?Source=SelfService" class="nexora-nav-link"><span>طلبات الخدمة الذاتية</span></a>
-                            <a href="/Approvals?Source=Admin" class="nexora-nav-link"><span>طلبات المشرفين</span></a>
-                            <a asp-page="/Approvals/Reports" class="nexora-nav-link @(IsUnder("/Approvals/Reports") ? "active nexora-active" : "")"><span>تقارير الموافقات</span></a>
+                        <div class="zynora-nav-group-links" data-ky-title="الموافقات">
+                            <div class="zynora-nav-link ky-drawer-title" role="heading" aria-level="2"><span>الموافقات</span></div>
+                            <a asp-page="/Approvals/Index" class="zynora-nav-link @(IsCurrent("/Approvals") || IsCurrent("/Approvals/Index") ? "active zynora-active" : "")"><span>مركز الموافقات</span></a>
+                            <a href="/Approvals?Source=SelfService" class="zynora-nav-link"><span>طلبات الخدمة الذاتية</span></a>
+                            <a href="/Approvals?Source=Admin" class="zynora-nav-link"><span>طلبات المشرفين</span></a>
+                            <a asp-page="/Approvals/Reports" class="zynora-nav-link @(IsUnder("/Approvals/Reports") ? "active zynora-active" : "")"><span>تقارير الموافقات</span></a>
                             @if (isAdminRole)
                             {
-                                <a asp-page="/Approvals/Committees" class="nexora-nav-link @(IsUnder("/Approvals/Committees") ? "active nexora-active" : "")"><span>اللجان ومجموعاتها</span></a>
-                                <a asp-page="/HrSettings/ApprovalTemplates" class="nexora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active nexora-active" : "")"><span>قوالب الموافقات</span></a>
-                                <a href="/HrSettings/ApprovalTemplates#approval-delegations" class="nexora-nav-link"><span>تفضيلات التفويض</span></a>
+                                <a asp-page="/Approvals/Committees" class="zynora-nav-link @(IsUnder("/Approvals/Committees") ? "active zynora-active" : "")"><span>اللجان ومجموعاتها</span></a>
+                                <a asp-page="/HrSettings/ApprovalTemplates" class="zynora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active zynora-active" : "")"><span>قوالب الموافقات</span></a>
+                                <a href="/HrSettings/ApprovalTemplates#approval-delegations" class="zynora-nav-link"><span>تفضيلات التفويض</span></a>
                             }
                         </div>
                     </details>
@@ -865,26 +865,26 @@
 
                 @if (isAdminRole)
                 {
-                    <details name="nexora-main-menu" class="nexora-nav-group" @(settingsOpen ? "open" : "")>
+                    <details name="zynora-main-menu" class="zynora-nav-group" @(settingsOpen ? "open" : "")>
                         <summary data-nav-area="settings" data-sidebar-label="الإعدادات">
-                            <span class="nexora-nav-dot gold"></span>
-                            <span class="nexora-nav-text">الإعدادات</span>
-                            <span class="nexora-chevron"></span>
+                            <span class="zynora-nav-dot gold"></span>
+                            <span class="zynora-nav-text">الإعدادات</span>
+                            <span class="zynora-chevron"></span>
                         </summary>
-                        <div class="nexora-nav-group-links" data-ky-title="الإعدادات">
-                            <a asp-page="/Settings/Index" class="nexora-nav-link ky-drawer-title @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active nexora-active" : "")"><span>مركز الإعدادات</span></a>
-                            <a asp-page="/Setup/Index" class="nexora-nav-link @(IsUnder("/Setup") ? "active nexora-active" : "")"><span>تهيئة الشركة</span></a>
-                            <a asp-page="/UserAccess/Index" class="nexora-nav-link @(IsUnder("/UserAccess") ? "active nexora-active" : "")"><span>إدارة المستخدمين</span></a>
-                            <a asp-page="/AccessRoles/Index" class="nexora-nav-link @(IsUnder("/AccessRoles") ? "active nexora-active" : "")"><span>أدوار الوصول</span></a>
-                            <a asp-page="/AuditLogs/Index" class="nexora-nav-link @(IsUnder("/AuditLogs") ? "active nexora-active" : "")"><span>سجل التدقيق</span></a>
-                            <a asp-page="/Settings/Dictionary" class="nexora-nav-link @(IsUnder("/Settings/Dictionary") ? "active nexora-active" : "")"><span>قاموس اللغات</span></a>
-                            <a asp-page="/Settings/DataLanguages" class="nexora-nav-link @(IsUnder("/Settings/DataLanguages") ? "active nexora-active" : "")"><span>لغات بيانات الشركة</span></a>
-                            <a asp-page="/Branding/Index" class="nexora-nav-link @(IsUnder("/Branding") ? "active nexora-active" : "")"><span>الهوية والثيم</span></a>
-                            <a asp-page="/Integrations/Webhooks" class="nexora-nav-link @(IsUnder("/Integrations") ? "active nexora-active" : "")"><span>التكاملات</span></a>
+                        <div class="zynora-nav-group-links" data-ky-title="الإعدادات">
+                            <a asp-page="/Settings/Index" class="zynora-nav-link ky-drawer-title @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active zynora-active" : "")"><span>مركز الإعدادات</span></a>
+                            <a asp-page="/Setup/Index" class="zynora-nav-link @(IsUnder("/Setup") ? "active zynora-active" : "")"><span>تهيئة الشركة</span></a>
+                            <a asp-page="/UserAccess/Index" class="zynora-nav-link @(IsUnder("/UserAccess") ? "active zynora-active" : "")"><span>إدارة المستخدمين</span></a>
+                            <a asp-page="/AccessRoles/Index" class="zynora-nav-link @(IsUnder("/AccessRoles") ? "active zynora-active" : "")"><span>أدوار الوصول</span></a>
+                            <a asp-page="/AuditLogs/Index" class="zynora-nav-link @(IsUnder("/AuditLogs") ? "active zynora-active" : "")"><span>سجل التدقيق</span></a>
+                            <a asp-page="/Settings/Dictionary" class="zynora-nav-link @(IsUnder("/Settings/Dictionary") ? "active zynora-active" : "")"><span>قاموس اللغات</span></a>
+                            <a asp-page="/Settings/DataLanguages" class="zynora-nav-link @(IsUnder("/Settings/DataLanguages") ? "active zynora-active" : "")"><span>لغات بيانات الشركة</span></a>
+                            <a asp-page="/Branding/Index" class="zynora-nav-link @(IsUnder("/Branding") ? "active zynora-active" : "")"><span>الهوية والثيم</span></a>
+                            <a asp-page="/Integrations/Webhooks" class="zynora-nav-link @(IsUnder("/Integrations") ? "active zynora-active" : "")"><span>التكاملات</span></a>
                         </div>
                     </details>
                 }
-                    <!-- NEXORA_SAFE_MAIN_MENU_END -->
+                    <!-- ZYNORA_SAFE_MAIN_MENU_END -->
                 </nav>
             }
         </aside>
@@ -895,9 +895,9 @@
                 aria-label="@T["إغلاق القائمة"]"
                 tabindex="-1"></button>
 
-        <div class="nexora-main">
-            <header class="nexora-topbar">
-                <div class="nexora-topbar-left">
+        <div class="zynora-main">
+            <header class="zynora-topbar">
+                <div class="zynora-topbar-left">
                     @if (isLoggedIn)
                     {
                         <button type="button"
@@ -913,8 +913,8 @@
                     }
                     <div>
                         @* عنوان دلاليّ: كان `div` فلم يكن لأي صفحة عنوانٌ من المستوى الأول، و`/Employees` وحدها بلا h1 خاصّ. أُبقي العنصر والصنف كما هما (صفر أثر بصري) وأُضيف الدلالة بـARIA. *@
-                        <div class="nexora-page-title" role="heading" aria-level="1">@pageTitle</div>
-                        <div class="nexora-page-subtitle">زينورا · عمليات موارد بشرية ذكية</div>
+                        <div class="zynora-page-title" role="heading" aria-level="1">@pageTitle</div>
+                        <div class="zynora-page-subtitle">زينورا · عمليات موارد بشرية ذكية</div>
                     </div>
                 </div>
 
@@ -930,7 +930,7 @@
                     </div>
                 }
 
-                <div class="nexora-controls">
+                <div class="zynora-controls">
                     @if (isLoggedIn)
                     {
                         @await Component.InvokeAsync("NotificationBell")
@@ -1056,12 +1056,12 @@
                     }
                     else
                     {
-                        <a asp-page="/Account/Login" class="nexora-pill-button">@T["دخول"]</a>
+                        <a asp-page="/Account/Login" class="zynora-pill-button">@T["دخول"]</a>
                     }
                 </div>
             </header>
 
-            <main class="nexora-content zy-scope zy-ui-contract">
+            <main class="zynora-content zy-scope zy-ui-contract">
                 @RenderBody()
             </main>
         </div>
@@ -1112,15 +1112,15 @@
     <script src="~/js/zynora-command-search.js" asp-append-version="true" defer></script>
     <script src="~/js/zynora-user-menu.js" asp-append-version="true" defer></script>
     <script src="~/js/zynora-runtime-localization.js" asp-append-version="true" defer></script>
-    <script src="~/js/nexora-ui-stabilization-phase1.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-ui-stabilization-phase1.js" asp-append-version="true"></script>
     <script src="~/js/zynora-employee-picker.js" asp-append-version="true" defer></script>
     @await RenderSectionAsync("Scripts", required: false)
-<script src="~/js/nexora-calendar-v18.js" asp-append-version="true" defer></script>
-<script src="~/js/nexora-month-picker-v1.js" asp-append-version="true" defer></script>
-<script src="~/js/nexora-country-nationality-link.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-setup-modals.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-select-system.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-employee-updates-accounting-format.js" asp-append-version="true"></script>
+<script src="~/js/zynora-calendar-v18.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-month-picker-v1.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-country-nationality-link.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-setup-modals.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-select-system.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-employee-updates-accounting-format.js" asp-append-version="true"></script>
     <script src="~/js/zynora-confirm.js" asp-append-version="true"></script>
     <script src="~/js/zynora-ux-guards.js" asp-append-version="true"></script>
 </body>

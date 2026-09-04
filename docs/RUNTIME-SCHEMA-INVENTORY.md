@@ -38,8 +38,8 @@ EmployeeShiftTypes · EmployeeTasks · EmployeeUpdateBatches
 EmployeeUpdateChanges · EmployeeViolationCases · EmployeeWebAuthnCredentials
 EmployeeWeekAttendance · FinancialRequestDetails · GeoLocations
 HrEntityFieldDefs · HrEntityFieldValues · HrFieldControls · HrTaskTemplates
-LeaveBalances · MissingPunchRequests · NexoraHrSettings
-NexoraNotificationEvents · NexoraNotificationRules · NexoraTerminationReasons
+LeaveBalances · MissingPunchRequests · ZynoraHrSettings
+ZynoraNotificationEvents · ZynoraNotificationRules · ZynoraTerminationReasons
 PayrollGosiProfiles · PayrollRunLineComponents · PayrollRunLines · PayrollRuns
 PayrollTaxBrackets · PayrollTaxProfiles · PayrollTransactions
 PeriodRuleSlices · PeriodRules · PunchSemantics · PushSubscriptions

@@ -84,12 +84,12 @@
         body * { visibility:hidden !important; }
         .ps, .ps * { visibility:visible !important; }
         /* 2) اطوِ ارتفاع القوقعة فعلياً كي لا تدفع صفحة بيضاء ثانية. */
-        .nexora-sidebar, .nexora-topbar, .pq-bar, .ps-actions { display:none !important; }
+        .zynora-sidebar, .zynora-topbar, .pq-bar, .ps-actions { display:none !important; }
         html, body { height:auto !important; min-height:0 !important; overflow:visible !important;
             margin:0 !important; background:var(--zy-white) !important; color:var(--zy-migrated-color-eeb78a41df) !important; }
-        /* أسبقية أعلى (html body …) لتجاوز خلفية ثيم الموقع الداكنة على .nexora-main
+        /* أسبقية أعلى (html body …) لتجاوز خلفية ثيم الموقع الداكنة على .zynora-main
            (radial-gradient + var(--zy-bg))؛ إلغاء صورة التدرّج صراحةً كي لا تُطبع سوداء. */
-        html body .nexora-shell, html body .nexora-main, html body .nexora-content,
+        html body .zynora-shell, html body .zynora-main, html body .zynora-content,
         html body .pq-page, html body .pq-card {
             display:block !important; height:auto !important; min-height:0 !important;
             overflow:visible !important; margin:0 !important; padding:0 !important;

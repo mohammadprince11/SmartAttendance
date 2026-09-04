@@ -496,7 +496,7 @@ html[dir="rtl"] .hrms-slideover.open { transform: translateX(0); }
 }
 
 /* سكربت الكاليندر يعلّم سلسلة أسلاف حقل التاريخ بـ nxcal-ready، ويفكّ
-   `nexora-calendar-v18.css` قصَّها — لو نُزع القصّ عن جسم السلايد لضاع زرّ الحفظ
+   `zynora-calendar-v18.css` قصَّها — لو نُزع القصّ عن جسم السلايد لضاع زرّ الحفظ
    بالنماذج الطويلة. قاعدة أخصّ بنفس القوة تُبقي له تمريره؛ منبثقة التقويم تبقى
    ظاهرة داخل مساحة التمرير.
    ملاحظة (2026-08-07): فكّ القصّ صار **لحظياً** (مشروطاً بـ`html.nxcal-open`) بدل
@@ -767,7 +767,7 @@ html[data-theme="light"] body .dat-num, html[data-theme="light"] body .mat-num {
 }
 
 /* الحقول: عرضٌ مرن بدل 100%. بلا هذا يبقى كلٌّ منها بعرض الأب فيلتفّ لسطرٍ
-   وحده — أي أن flex وحده لا يكفي، لأن `nexora-select-system` يفرض
+   وحده — أي أن flex وحده لا يكفي، لأن `zynora-select-system` يفرض
    `width:100% !important` على غلاف المنسدلة. */
 .hrms-inline-form > .nxcs-select,
 .hrms-inline-form > .nxcal,

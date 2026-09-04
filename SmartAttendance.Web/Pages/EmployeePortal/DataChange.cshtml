@@ -127,7 +127,7 @@
                         }
                         else if (f.Kind == "select")
                         {
-                            @* قائمة النظام (nexora-select-system يُفعّل أي select) *@
+                            @* قائمة النظام (zynora-select-system يُفعّل أي select) *@
                             var sel = Pref(f.Key);
                             <select name="new_@f.Key" class="nxr-native-select">
                                 <option value="">— لا تغيير —</option>
@@ -165,8 +165,8 @@
 </section>
 
 @section Scripts {
-    <link rel="stylesheet" href="~/css/nexora-select-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-select-system.css" asp-append-version="true" />
     <script src="~/js/nxex-datachange.js" asp-append-version="true"></script>
-    <script src="~/js/nexora-select-system.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-select-system.js" asp-append-version="true"></script>
     <script src="~/js/nxex-subpage-nav.js" asp-append-version="true"></script>
 }

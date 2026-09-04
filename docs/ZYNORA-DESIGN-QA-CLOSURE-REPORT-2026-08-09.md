@@ -21,7 +21,7 @@ The application still ships **many overlapping CSS generations** (40+ stylesheet
 
 ## 3. Design System Architecture (current, inventoried)
 
-Authoritative-intent files already present: `zynora-tokens.css` (design tokens), `zynora-design-system.css` (components), `zynora-legacy-bridge.css` (compat), `nexora-brand.css` (shell/nav), `hrms-core.css`. Competing/legacy generations still loaded include `app.css`, `nexora-reference-redesign-v3.css`, `nexora-ui-stabilization-phase1.css`, and ~30 page-specific stylesheets (`nexora-setup-pages.css` 2859 lines, `nexora-announcement-studio-dynamic.css` 2278, `positions.css` 2132, `nexora-employee-*` families, `z360-profile.css`, etc.). **Ownership is not yet cleanly separated** — this is the core debt and remains open.
+Authoritative-intent files already present: `zynora-tokens.css` (design tokens), `zynora-design-system.css` (components), `zynora-legacy-bridge.css` (compat), `zynora-brand.css` (shell/nav), `hrms-core.css`. Competing/legacy generations still loaded include `app.css`, `zynora-reference-redesign-v3.css`, `zynora-ui-stabilization-phase1.css`, and ~30 page-specific stylesheets (`zynora-setup-pages.css` 2859 lines, `zynora-announcement-studio-dynamic.css` 2278, `positions.css` 2132, `zynora-employee-*` families, `z360-profile.css`, etc.). **Ownership is not yet cleanly separated** — this is the core debt and remains open.
 
 ## 4. CSS Consolidation
 
@@ -59,7 +59,7 @@ None migrated this pass (Holidays/Devices/LeaveRequests/AttendanceRecords remain
 
 ## 11. Remaining Technical Debt
 
-- **BLOCKER (for a READY verdict)** — Multiple competing design systems still loaded (`app.css` + `nexora-ui-stabilization-phase1.css` + page CSS) with global `!important` element overrides; canonical `zy-*` components not adopted across pages. This is the central task and is unfinished.
+- **BLOCKER (for a READY verdict)** — Multiple competing design systems still loaded (`app.css` + `zynora-ui-stabilization-phase1.css` + page CSS) with global `!important` element overrides; canonical `zy-*` components not adopted across pages. This is the central task and is unfinished.
 - **HIGH** — Direct brand/status colors in business pages; dark/light parity not re-verified; typography density audit (Phase 12); touch-target sizing (Phase 13); sidebar teal vs slate-blue (Phase 15).
 - **MEDIUM** — Inline-style removal across Razor pages; table-contract unification; validation-UX consistency.
 - **LOW** — Body-visibility flash gating review (Phase 24); terminology consistency sweep.

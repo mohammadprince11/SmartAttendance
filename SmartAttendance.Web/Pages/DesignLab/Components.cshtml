@@ -1,0 +1,3206 @@
+﻿@page "/DesignLab/Components"
+@model SmartAttendance.Web.Pages.DesignLab.ComponentsModel
+
+@{
+    ViewData["Title"] = "مكتبة مكونات ZYNORA";
+}
+
+<link rel="stylesheet"
+      href="~/css/zynora-component-lab.css"
+      asp-append-version="true" />
+
+<link rel="stylesheet"
+      href="~/css/zynora-component-lab-datetime-v2.css"
+      asp-append-version="true" />
+
+<div class="zcl-page" dir="rtl">
+
+    <header class="zcl-header">
+        <div class="zcl-header-copy">
+            <span class="zcl-kicker">PHASE 0 · UI FOUNDATION</span>
+
+            <h1>مكتبة مكونات ZYNORA</h1>
+
+            <p>
+                هذه الصفحة هي مصدر الحقيقة البصري قبل إعادة تصميم صفحات النظام.
+                لا نعتمد أي صفحة أعمال قبل تثبيت المكونات الأساسية هنا.
+            </p>
+        </div>
+
+        <div class="zcl-header-actions">
+
+            <div class="zcl-review-state">
+                <strong>قيد المراجعة</strong>
+            </div>
+
+            <a href="/DesignLab"
+               class="zy-btn zy-btn--ghost zy-btn--sm">
+                مختبر المقاسات
+            </a>
+
+            <a href="/DesignPreview"
+               class="zy-btn zy-btn--ghost zy-btn--sm">
+                المعاينة السابقة
+            </a>
+
+        </div>
+    </header>
+
+
+    <section class="zcl-contract">
+
+        <div>
+            <strong>القاعدة</strong>
+            <span>Reference → ZYNORA → Review → Approve → Lock</span>
+        </div>
+
+        <div>
+            <strong>الاتجاه</strong>
+            <span>RTL + LTR</span>
+        </div>
+
+        <div>
+            <strong>الثيم</strong>
+            <span>Dark + Light</span>
+        </div>
+
+        <div>
+            <strong>الشاشات</strong>
+            <span>Desktop + Tablet + Mobile</span>
+        </div>
+
+    </section>
+
+
+    <div class="zcl-layout">
+
+        <!-- ================================================= -->
+        <!-- NAVIGATION -->
+        <!-- ================================================= -->
+
+        <aside class="zcl-nav">
+
+            <div class="zcl-nav-title">
+                COMPONENTS
+            </div>
+
+            <a href="#principles">
+                <span>00</span>
+                الأساس
+            </a>
+
+            <a href="#buttons" class="active">
+                <span>01</span>
+                الأزرار
+            </a>
+
+            <a href="#inputs">
+                <span>02</span>
+                الحقول
+            </a>
+
+            <a href="#selection">
+                <span>03</span>
+                الاختيارات
+            </a>
+
+            <a href="#datetime">
+                <span>04</span>
+                التاريخ والوقت
+            </a>
+
+            <a href="#cards">
+                <span>05</span>
+                البطاقات والحالات
+            </a>
+
+            <a href="#tables">
+                <span>06</span>
+                الجداول
+            </a>
+
+            <a href="#overlays">
+                <span>07</span>
+                Modal / Drawer
+            </a>
+
+            <a href="#feedback">
+                <span>08</span>
+                التنبيهات والحالات
+            </a>
+
+        </aside>
+
+
+        <!-- ================================================= -->
+        <!-- CONTENT -->
+        <!-- ================================================= -->
+
+        <main class="zcl-content">
+
+
+            <!-- ================================================= -->
+            <!-- 00 FOUNDATION -->
+            <!-- ================================================= -->
+
+            <section class="zcl-section" id="principles">
+
+                <div class="zcl-section-head">
+
+                    <div>
+                        <span class="zcl-number">00</span>
+                        <h2>قواعد النظام البصري</h2>
+
+                        <p>
+                            أي مكون نعتمده هنا يصبح المرجع لجميع صفحات ZYNORA.
+                        </p>
+                    </div>
+
+                    <span class="zcl-status zcl-status-review">
+                        تحت المراجعة
+                    </span>
+
+                </div>
+
+
+                <div class="zcl-principles">
+
+                    <article>
+                        <strong>هوية واحدة</strong>
+                        <p>
+                            لا ألوان أو Radius أو Shadows مستقلة داخل كل صفحة.
+                        </p>
+                    </article>
+
+                    <article>
+                        <strong>سلوك واحد</strong>
+                        <p>
+                            نفس الحقل ونفس الزر يتصرفان بنفس الطريقة في كل النظام.
+                        </p>
+                    </article>
+
+                    <article>
+                        <strong>حالات كاملة</strong>
+                        <p>
+                            Default · Hover · Focus · Disabled · Error · Loading
+                        </p>
+                    </article>
+
+                    <article>
+                        <strong>اعتماد قبل التعميم</strong>
+                        <p>
+                            لا يُنقل المكون للصفحات قبل الموافقة عليه هنا.
+                        </p>
+                    </article>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ================================================= -->
+            <!-- 01 BUTTONS -->
+            <!-- ================================================= -->
+
+            <section class="zcl-section" id="buttons">
+
+                <div class="zcl-section-head">
+
+                    <div>
+                        <span class="zcl-number">01</span>
+                        <h2>Button System</h2>
+
+                        <p>
+                            أول مكون سنثبته نهائياً في ZYNORA.
+                        </p>
+                    </div>
+
+                    <span class="zcl-status zcl-status-first">
+                        أول مراجعة
+                    </span>
+
+                </div>
+
+
+                <div class="zcl-demo-block">
+
+                    <div class="zcl-demo-title">
+                        الاستخدام الدلالي
+                    </div>
+
+                    <div class="zcl-row">
+
+                        <button type="button"
+                                class="zy-btn zy-btn--primary">
+                            حفظ التغييرات
+                        </button>
+
+                        <button type="button"
+                                class="zy-btn zy-btn--secondary">
+                            إجراء ثانوي
+                        </button>
+
+                        <button type="button"
+                                class="zy-btn zy-btn--ghost">
+                            رجوع
+                        </button>
+
+                        <button type="button"
+                                class="zy-btn zy-btn--danger">
+                            حذف
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="zcl-grid-2">
+
+                    <div class="zcl-demo-block">
+
+                        <div class="zcl-demo-title">
+                            الأحجام
+                        </div>
+
+                        <div class="zcl-row">
+
+                            <button type="button"
+                                    class="zy-btn zy-btn--primary zy-btn--sm">
+                                صغير
+                            </button>
+
+                            <button type="button"
+                                    class="zy-btn zy-btn--primary">
+                                قياسي
+                            </button>
+
+                            <button type="button"
+                                    class="zy-btn zy-btn--primary zy-btn--lg">
+                                كبير
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="zcl-demo-block">
+
+                        <div class="zcl-demo-title">
+                            حالات النظام
+                        </div>
+
+                        <div class="zcl-row">
+
+                            <button type="button"
+                                    class="zy-btn zy-btn--primary">
+                                متاح
+                            </button>
+
+                            <button type="button"
+                                    class="zy-btn zy-btn--primary"
+                                    disabled>
+                                معطّل
+                            </button>
+
+                            <button type="button"
+                                    class="zy-btn zy-btn--secondary zcl-loading"
+                                    disabled>
+                                <span></span>
+                                جاري الحفظ
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="zcl-decision">
+
+                    <strong>قرار مطلوب لاحقاً</strong>
+
+                    <span>
+                        Height · Radius · Font Weight · Padding · Icon Size ·
+                        Hover · Focus · Loading
+                    </span>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ================================================= -->
+            <!-- 02 INPUTS -->
+            <!-- ================================================= -->
+
+            <section class="zcl-section" id="inputs">
+
+                <div class="zcl-section-head">
+
+                    <div>
+                        <span class="zcl-number">02</span>
+                        <h2>Fields & Inputs</h2>
+
+                        <p>
+                            الحقول النصية والرقمية والبحث والنصوص الطويلة.
+                        </p>
+                    </div>
+
+                    <span class="zcl-status">
+                        Pending
+                    </span>
+
+                </div>
+
+
+                <div class="zcl-form-grid">
+
+                    <div class="zy-field">
+
+                        <label class="zy-label">
+                            اسم الموظف
+                            <span class="zy-req">*</span>
+                        </label>
+
+                        <input class="zy-input"
+                               type="text"
+                               placeholder="اكتب اسم الموظف" />
+
+                        <span class="zy-help">
+                            الاسم كما يظهر في الملف الوظيفي
+                        </span>
+
+                    </div>
+
+
+                    <div class="zy-field">
+
+                        <label class="zy-label">
+                            بحث
+                        </label>
+
+                        <input class="zy-input"
+                               type="search"
+                               placeholder="ابحث بالاسم أو الرمز..." />
+
+                    </div>
+
+
+                    <div class="zy-field">
+
+                        <label class="zy-label">
+                            رقم
+                        </label>
+
+                        <input class="zy-input"
+                               type="number"
+                               value="1200" />
+
+                    </div>
+
+
+                    <div class="zy-field">
+
+                        <label class="zy-label">
+                            للقراءة فقط
+                        </label>
+
+                        <input class="zy-input"
+                               type="text"
+                               value="0015-Seen"
+                               readonly />
+
+                    </div>
+
+
+                    <div class="zy-field">
+
+                        <label class="zy-label">
+                            معطّل
+                        </label>
+
+                        <input class="zy-input"
+                               type="text"
+                               value="غير متاح"
+                               disabled />
+
+                    </div>
+
+
+                    <div class="zy-field zy-field--invalid">
+
+                        <label class="zy-label">
+                            حقل يحتوي خطأ
+                        </label>
+
+                        <input class="zy-input"
+                               type="text"
+                               value="" />
+
+                        <span class="zy-error">
+                            هذا الحقل مطلوب
+                        </span>
+
+                    </div>
+
+
+                    <div class="zy-field zcl-span-2">
+
+                        <label class="zy-label">
+                            ملاحظات
+                        </label>
+
+                        <textarea class="zy-textarea"
+                                  rows="4"
+                                  placeholder="اكتب الملاحظات هنا..."></textarea>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ================================================= -->
+            <!-- 03 SELECTION -->
+            <!-- ================================================= -->
+
+            <section class="zcl-section" id="selection">
+
+                <div class="zcl-section-head">
+
+                    <div>
+                        <span class="zcl-number">03</span>
+                        <h2>Selection Controls</h2>
+
+                        <p>
+                            Dropdown · Checkbox · Radio · Toggle
+                        </p>
+                    </div>
+
+                    <span class="zcl-status">
+                        Pending
+                    </span>
+
+                </div>
+
+
+                <div class="zcl-grid-2">
+
+                    <div class="zcl-demo-block">
+
+                        <div class="zcl-demo-title">
+                            Select / Dropdown
+                        </div>
+
+                        <div class="zy-field">
+
+                            <label class="zy-label">
+                                القسم
+                            </label>
+
+                            <div class="zcl3-select"
+     data-zcl3-select>
+
+    <button type="button"
+            class="zcl3-select-trigger"
+            data-zcl3-trigger
+            aria-haspopup="listbox"
+            aria-expanded="false">
+
+        <span class="zcl3-select-value"
+              data-zcl3-value>
+            الموارد البشرية
+        </span>
+
+        <span class="zcl3-select-chevron"
+              aria-hidden="true">
+            <svg viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="1.8"
+                 stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="m7 10 5 5 5-5"></path>
+            </svg>
+        </span>
+
+    </button>
+
+
+    <div class="zcl3-select-menu"
+         data-zcl3-menu
+         role="listbox"
+         hidden>
+
+        <button type="button"
+                class="zcl3-select-option is-selected"
+                role="option"
+                aria-selected="true"
+                data-value="hr">
+            الموارد البشرية
+        </button>
+
+        <button type="button"
+                class="zcl3-select-option"
+                role="option"
+                aria-selected="false"
+                data-value="finance">
+            المالية
+        </button>
+
+        <button type="button"
+                class="zcl3-select-option"
+                role="option"
+                aria-selected="false"
+                data-value="operations">
+            العمليات
+        </button>
+
+        <button type="button"
+                class="zcl3-select-option"
+                role="option"
+                aria-selected="false"
+                data-value="sales">
+            المبيعات
+        </button>
+
+    </div>
+
+</div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="zcl-demo-block">
+
+                        <div class="zcl-demo-title">
+                            Checkbox
+                        </div>
+
+                        <div class="zcl-stack">
+
+                            <label class="zy-check">
+                                <input type="checkbox" checked />
+                                موظف نشط
+                            </label>
+
+                            <label class="zy-check">
+                                <input type="checkbox" />
+                                يتطلب موافقة
+                            </label>
+
+                            <label class="zy-check">
+                                <input type="checkbox" disabled />
+                                خيار معطّل
+                            </label>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="zcl-demo-block">
+
+                        <div class="zcl-demo-title">
+                            Radio
+                            <small>يحتاج مكون ZYNORA رسمي</small>
+                        </div>
+
+                        <div class="zcl-stack zcl-radio">
+
+                            <label>
+                                <input type="radio"
+                                       name="contract"
+                                       checked />
+                                دوام كامل
+                            </label>
+
+                            <label>
+                                <input type="radio"
+                                       name="contract" />
+                                دوام جزئي
+                            </label>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="zcl-demo-block">
+
+                        <div class="zcl-demo-title">
+                            Toggle
+                        </div>
+
+                        <div class="zcl-toggle-row">
+
+                            <span class="zy-toggle">
+                                <input type="checkbox" checked />
+                                <i></i>
+                            </span>
+
+                            <div>
+                                <strong>تفعيل الخاصية</strong>
+                                <small>
+                                    المثال يستخدم مكون ZYNORA الحالي
+                                </small>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ================================================= -->
+            <!-- 04 DATE / TIME -->
+            <!-- ================================================= -->
+
+            <section class="zcl-section" id="datetime">
+
+    <div class="zcl-section-head">
+
+        <div>
+            <span class="zcl-number">04</span>
+            <h2>التاريخ والوقت</h2>
+            <p>
+                مكونات ZYNORA الموحدة لاختيار التاريخ، الشهر والوقت.
+            </p>
+        </div>
+
+        <span class="zcl-status">
+            قيد التصميم
+        </span>
+
+    </div>
+
+
+    <div class="zdt2-stage">
+
+        <div class="zdt2-stage-head">
+
+            <div>
+                <strong>ZYNORA Date & Time</strong>
+                <span>
+                    بدون أي نافذة أصلية من Windows أو Chrome.
+                </span>
+            </div>
+
+            <small>DATE · MONTH · TIME</small>
+
+        </div>
+
+
+        <div class="zdt2-grid">
+
+
+            <!-- ================= DATE ================= -->
+
+            <div class="zdt2-field zdt2-date">
+
+                <label>التاريخ</label>
+
+                <button type="button"
+                        class="zdt2-trigger">
+
+                    <span class="zdt2-value">
+                        اختر التاريخ
+                    </span>
+
+                    <span class="zdt2-trigger-icon">
+
+                        <svg viewBox="0 0 24 24"
+                             fill="none"
+                             stroke="currentColor"
+                             stroke-width="1.8"
+                             stroke-linecap="round"
+                             stroke-linejoin="round">
+
+                            <rect x="3" y="5"
+                                  width="18"
+                                  height="16"
+                                  rx="3"></rect>
+
+                            <path d="M8 3v4M16 3v4M3 10h18"></path>
+
+                        </svg>
+
+                    </span>
+
+                </button>
+
+
+                <div class="zdt2-popover zdt2-date-panel"
+                     hidden>
+
+                    <div class="zdt2-panel-head">
+
+                        <button type="button"
+                                class="zdt2-nav"
+                                data-date-prev>
+                            ‹
+                        </button>
+
+                        <div class="zdt2-date-period">
+
+    <button type="button"
+            class="zdt2-period-button"
+            data-date-month-label
+            title="اختيار الشهر">
+    </button>
+
+    <button type="button"
+            class="zdt2-period-button"
+            data-date-year-label
+            title="اختيار السنة">
+    </button>
+
+</div>
+
+                        <button type="button"
+                                class="zdt2-nav"
+                                data-date-next>
+                            ›
+                        </button>
+
+                    </div>
+
+
+                    <div class="zdt2-week">
+
+                        <span>أحد</span>
+                        <span>اثن</span>
+                        <span>ثلا</span>
+                        <span>أرب</span>
+                        <span>خمي</span>
+                        <span>جمع</span>
+                        <span>سبت</span>
+
+                    </div>
+
+
+                    <div class="zdt2-days"
+                         data-date-days>
+                    </div>
+
+
+                    <div class="zdt2-panel-foot">
+
+                        <button type="button"
+                                data-date-clear>
+                            مسح
+                        </button>
+
+                        <button type="button"
+                                data-date-today>
+                            اليوم
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ================= MONTH ================= -->
+
+            <div class="zdt2-field zdt2-month">
+
+                <label>الشهر</label>
+
+                <button type="button"
+                        class="zdt2-trigger">
+
+                    <span class="zdt2-value">
+                        اختر الشهر
+                    </span>
+
+                    <span class="zdt2-trigger-icon">
+
+                        <svg viewBox="0 0 24 24"
+                             fill="none"
+                             stroke="currentColor"
+                             stroke-width="1.8"
+                             stroke-linecap="round"
+                             stroke-linejoin="round">
+
+                            <circle cx="12"
+                                    cy="12"
+                                    r="9"></circle>
+
+                            <path d="M12 7v5l3 2"></path>
+
+                        </svg>
+
+                    </span>
+
+                </button>
+
+
+                <div class="zdt2-popover zdt2-month-panel"
+                     hidden>
+
+                    <div class="zdt2-panel-head">
+
+                        <button type="button"
+                                class="zdt2-nav"
+                                data-month-prev>
+                            ‹
+                        </button>
+
+                        <strong data-month-year></strong>
+
+                        <button type="button"
+                                class="zdt2-nav"
+                                data-month-next>
+                            ›
+                        </button>
+
+                    </div>
+
+
+                    <div class="zdt2-months"
+                         data-month-grid>
+                    </div>
+
+
+                    <div class="zdt2-panel-foot">
+
+                        <button type="button"
+                                data-month-clear>
+                            مسح
+                        </button>
+
+                        <button type="button"
+                                data-month-current>
+                            الشهر الحالي
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ================= TIME ================= -->
+
+            <div class="zdt2-field zdt2-time">
+
+                <label>الوقت</label>
+
+                <button type="button"
+                        class="zdt2-trigger">
+
+                    <span class="zdt2-value">
+                        اختر الوقت
+                    </span>
+
+                    <span class="zdt2-trigger-icon">
+
+                        <svg viewBox="0 0 24 24"
+                             fill="none"
+                             stroke="currentColor"
+                             stroke-width="1.8"
+                             stroke-linecap="round"
+                             stroke-linejoin="round">
+
+                            <circle cx="12"
+                                    cy="12"
+                                    r="9"></circle>
+
+                            <path d="M12 7v5l3 2"></path>
+
+                        </svg>
+
+                    </span>
+
+                </button>
+
+
+                <div class="zdt2-popover zdt2-time-panel"
+                     hidden>
+
+                    <div class="zdt2-time-title">
+
+                        <span>اختيار الوقت</span>
+
+                        <strong data-time-preview>
+                            --:--
+                        </strong>
+
+                    </div>
+
+
+                    <div class="zdt2-time-columns">
+
+                        <div>
+
+                            <span class="zdt2-time-label">
+                                الساعة
+                            </span>
+
+                            <div class="zdt2-time-list"
+                                 data-time-hours>
+                            </div>
+
+                        </div>
+
+
+                        <div>
+
+                            <span class="zdt2-time-label">
+                                الدقيقة
+                            </span>
+
+                            <div class="zdt2-time-list"
+                                 data-time-minutes>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="zdt2-panel-foot">
+
+                        <button type="button"
+                                data-time-clear>
+                            مسح
+                        </button>
+
+                        <button type="button"
+                                data-time-now>
+                            الآن
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<script src="~/js/zynora-component-lab-datetime-v2.js"
+        asp-append-version="true"
+        defer></script>
+<section class="zcl-section" id="cards">
+
+    <div class="zcl-section-head">
+        <div>
+            <span class="zcl-number">05</span>
+            <h2>البطاقات والحالات</h2>
+            <p>نبني مكونات البطاقات خطوة بخطوة قبل اعتمادها للنظام.</p>
+        </div>
+
+        <span class="zcl-status">
+            قيد التصميم
+        </span>
+    </div>
+
+    <div class="zc5-stage">
+
+        <div class="zc5-stage-head">
+            <div>
+                <strong>بطاقة المعلومات</strong>
+                <span>النموذج الأساسي للبطاقات داخل ZYNORA</span>
+            </div>
+
+            <small>CONTENT CARD</small>
+        </div>
+
+        <article class="zc5-info-card">
+
+            <div class="zc5-info-icon">
+                <svg viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+                    <path d="M8 9h8"></path>
+                    <path d="M8 13h5"></path>
+                </svg>
+            </div>
+
+            <div class="zc5-info-copy">
+
+                <span class="zc5-info-type">
+                    معلومات
+                </span>
+
+                <h3>
+                    بيانات الموظف
+                </h3>
+
+                <p>
+                    تعرض هذه البطاقة مجموعة معلومات مرتبطة ضمن سياق واحد
+                    بدون تقسيمات أو عناصر بصرية زائدة.
+                </p>
+
+            </div>
+
+        </article>
+
+    </div>
+
+</section>
+<section class="zcl-section" id="tables">
+
+                <div class="zcl-section-head">
+
+                    <div>
+                        <span class="zcl-number">06</span>
+                        <h2>Table System</h2>
+
+                        <p>
+                            الجدول سيكون من أهم مكونات ZYNORA لأنه يتكرر في أغلب الصفحات.
+                        </p>
+                    </div>
+
+                    <span class="zcl-status">
+                        Pending
+                    </span>
+
+                </div>
+
+
+                <div class="zcl-table-toolbar">
+
+                    <div class="zy-field zcl-search">
+                        <input class="zy-input"
+                               type="search"
+                               placeholder="بحث في الجدول..." />
+                    </div>
+
+                    <button class="zy-btn zy-btn--secondary zy-btn--sm"
+                            type="button">
+                        تصفية
+                    </button>
+
+                    <button class="zy-btn zy-btn--secondary zy-btn--sm"
+                            type="button">
+                        تصدير
+                    </button>
+
+                </div>
+
+
+                <div class="zy-table-wrap">
+
+                    <table class="zy-table">
+
+                        <thead>
+                            <tr>
+                                <th>رمز الموظف</th>
+                                <th>الموظف</th>
+                                <th>القسم</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            <tr>
+                                <td>0015-Seen</td>
+
+                                <td>
+                                    <strong>Hasan Tariq Ali</strong>
+                                </td>
+
+                                <td>Operations</td>
+
+                                <td><span class="zcl-table-status zcl-table-status--active">Active</span></td>
+
+                                <td>
+                                    <div class="zcl-row-actions">
+
+                                        <button type="button"
+                                                class="zy-btn zy-btn--ghost zy-btn--sm">
+                                            عرض
+                                        </button>
+
+                                        <button type="button"
+                                                class="zy-btn zy-btn--ghost zy-btn--sm">
+                                            تعديل
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <tr>
+                                <td>0075-BDI</td>
+
+                                <td>
+                                    <strong>موظف تجريبي</strong>
+                                </td>
+
+                                <td>Finance</td>
+
+                                <td><span class="zcl-table-status zcl-table-status--pending">Pending</span></td>
+
+                                <td>
+                                    <div class="zcl-row-actions">
+
+                                        <button type="button"
+                                                class="zy-btn zy-btn--ghost zy-btn--sm">
+                                            عرض
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <div class="zy-pagination zcl-pagination">
+
+                    <button type="button"
+                            class="zy-btn zy-btn--ghost zy-btn--sm">
+                        السابق
+                    </button>
+
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+
+                    <button type="button"
+                            class="zy-btn zy-btn--ghost zy-btn--sm">
+                        التالي
+                    </button>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ================================================= -->
+            <!-- 07 OVERLAYS -->
+            <!-- ================================================= -->
+
+            <section class="zcl-section" id="overlays">
+
+    <div class="zcl-section-head">
+        <div>
+            <span class="zcl-number">07</span>
+            <h2>Modal & Drawer</h2>
+            <p>Modal للعمل القصير، وDrawer للتفاصيل الموسعة.</p>
+        </div>
+
+        <span class="zcl-status">
+            قيد المراجعة
+        </span>
+    </div>
+
+
+    <div class="zcl7-grid">
+
+
+        <!-- =================================================
+             MODAL
+             ================================================= -->
+
+        <div class="zcl7-demo">
+
+            <div class="zcl7-demo-label">
+                MODAL
+            </div>
+
+            <article class="zcl7-panel zcl7-modal">
+
+                <header class="zcl7-modal-head">
+
+                    <h3>
+                        تعديل البيانات
+                    </h3>
+
+                    <button type="button"
+                            class="zcl7-close">
+                        إغلاق
+                    </button>
+
+                </header>
+
+
+                <div class="zcl7-modal-body">
+
+                    <label>
+                        المسمى
+                    </label>
+
+                    <input type="text"
+                           value="HR Specialist"
+                           readonly />
+
+                </div>
+
+
+                <footer class="zcl7-modal-foot">
+
+                    <button type="button"
+                            class="zcl7-btn zcl7-btn--primary">
+                        حفظ
+                    </button>
+
+                    <button type="button"
+                            class="zcl7-btn zcl7-btn--secondary">
+                        إلغاء
+                    </button>
+
+                </footer>
+
+            </article>
+
+        </div>
+
+
+
+        <!-- =================================================
+             DRAWER
+             ================================================= -->
+
+        <div class="zcl7-demo">
+
+            <div class="zcl7-demo-label">
+                DRAWER
+            </div>
+
+            <article class="zcl7-panel zcl7-drawer">
+
+                <header class="zcl7-drawer-head">
+
+                    <h3>
+                        تفاصيل الموظف
+                    </h3>
+
+                    <span>
+                        Seen-0015
+                    </span>
+
+                </header>
+
+
+                <div class="zcl7-row">
+
+                    <span>
+                        القسم
+                    </span>
+
+                    <strong>
+                        Operations
+                    </strong>
+
+                </div>
+
+
+                <div class="zcl7-row">
+
+                    <span>
+                        المنصب
+                    </span>
+
+                    <strong>
+                        Logistic Representative
+                    </strong>
+
+                </div>
+
+
+                <div class="zcl7-row">
+
+                    <span>
+                        الحالة
+                    </span>
+
+                    <span class="zcl7-status zcl7-status--active">
+                        Active
+                    </span>
+
+                </div>
+
+            </article>
+
+        </div>
+
+    </div>
+
+</section>
+<section class="zcl-section" id="feedback">
+
+    <div class="zcl-section-head">
+
+        <div>
+            <span class="zcl-number">08</span>
+
+            <h2>Feedback & Empty States</h2>
+
+            <p>
+                حالات النجاح والتنبيه والخطأ والمعلومات،
+                بالإضافة إلى الحالات الفارغة والتحميل.
+            </p>
+        </div>
+
+        <span class="zcl-status">
+            قيد المراجعة
+        </span>
+
+    </div>
+
+
+    <div class="zcl8-body">
+
+
+        <!-- =================================================
+             FEEDBACK STATES
+             ================================================= -->
+
+        <div class="zcl8-group">
+
+            <div class="zcl8-group-head">
+
+                <div>
+                    <strong>رسائل النظام</strong>
+
+                    <span>
+                        تستخدم لإعطاء المستخدم نتيجة واضحة بعد إجراء أو حدث.
+                    </span>
+                </div>
+
+                <small>
+                    FEEDBACK
+                </small>
+
+            </div>
+
+
+            <div class="zcl8-feedback-grid">
+
+
+                <!-- SUCCESS -->
+
+                <article class="zcl8-feedback zcl8-feedback--success">
+
+                    <div class="zcl8-icon">
+                        ✓
+                    </div>
+
+                    <div class="zcl8-copy">
+
+                        <strong>
+                            تم الحفظ
+                        </strong>
+
+                        <p>
+                            تم تحديث البيانات بنجاح.
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <!-- WARNING -->
+
+                <article class="zcl8-feedback zcl8-feedback--warning">
+
+                    <div class="zcl8-icon">
+                        !
+                    </div>
+
+                    <div class="zcl8-copy">
+
+                        <strong>
+                            تنبيه
+                        </strong>
+
+                        <p>
+                            توجد بيانات تحتاج إلى مراجعة.
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <!-- ERROR -->
+
+                <article class="zcl8-feedback zcl8-feedback--danger">
+
+                    <div class="zcl8-icon">
+                        ×
+                    </div>
+
+                    <div class="zcl8-copy">
+
+                        <strong>
+                            تعذر التنفيذ
+                        </strong>
+
+                        <p>
+                            يرجى مراجعة الحقول المطلوبة.
+                        </p>
+
+                    </div>
+
+                </article>
+
+
+                <!-- INFO -->
+
+                <article class="zcl8-feedback zcl8-feedback--info">
+
+                    <div class="zcl8-icon">
+                        i
+                    </div>
+
+                    <div class="zcl8-copy">
+
+                        <strong>
+                            معلومة
+                        </strong>
+
+                        <p>
+                            هذه المعلومة تساعد المستخدم على إكمال الإجراء.
+                        </p>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             EMPTY + LOADING
+             ================================================= -->
+
+        <div class="zcl8-states-grid">
+
+
+            <!-- EMPTY -->
+
+            <article class="zcl8-state">
+
+                <div class="zcl8-state-icon">
+                    ○
+                </div>
+
+                <strong>
+                    لا توجد بيانات
+                </strong>
+
+                <p>
+                    استخدم Empty State واضحاً بدل عرض جدول فارغ
+                    عندما لا توجد سجلات.
+                </p>
+
+                <button type="button"
+                        class="zcl8-action">
+                    إضافة أول سجل
+                </button>
+
+            </article>
+
+
+
+            <!-- LOADING -->
+
+            <article class="zcl8-state">
+
+                <div class="zcl8-loading-icon">
+                    <span></span>
+                </div>
+
+                <strong>
+                    جاري تحميل البيانات
+                </strong>
+
+                <p>
+                    استخدم حالة تحميل واضحة عندما يحتاج المحتوى
+                    إلى وقت قبل ظهوره.
+                </p>
+
+                <div class="zcl8-loading-lines">
+                    <i></i>
+                    <i></i>
+                    <i></i>
+                </div>
+
+            </article>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="zcl-section" id="multilingual">
+
+    <div class="zcl-section-head">
+
+        <div>
+            <span class="zcl-number">09</span>
+
+            <h2>Dynamic Multilingual Inputs</h2>
+
+            <p>
+                حقول متعددة اللغات تعتمد على لغات بيانات الشركة
+                بدون تثبيت عدد أو أسماء لغات داخل الصفحة.
+            </p>
+        </div>
+
+        <span class="zcl-status">
+            قيد التصميم
+        </span>
+
+    </div>
+
+
+    <div class="zcl9-body">
+
+
+        <!-- =================================================
+             COMPONENT INTRO
+             ================================================= -->
+
+        <div class="zcl9-intro">
+
+            <div>
+
+                <strong>
+                    حقل متعدد اللغات
+                </strong>
+
+                <span>
+                    مثال: اسم القسم أو المسمى أو الوصف.
+                </span>
+
+            </div>
+
+
+            <div class="zcl9-progress">
+
+                <span>
+                    اكتمال الترجمات
+                </span>
+
+                <strong data-zcl9-progress>
+                    3 / 5
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             LANGUAGE BAR
+             ================================================= -->
+
+        <div class="zcl9-language-bar"
+             role="tablist"
+             aria-label="لغات بيانات الشركة">
+
+
+            <button type="button"
+                    class="zcl9-language is-active"
+                    data-zcl9-lang="ar"
+                    data-dir="rtl"
+                    data-primary="true"
+                    data-required="true">
+
+                <span class="zcl9-language-code">
+                    AR
+                </span>
+
+                <span class="zcl9-language-name">
+                    العربية
+                </span>
+
+                <span class="zcl9-language-state zcl9-language-state--primary">
+                    أساسية
+                </span>
+
+            </button>
+
+
+            <button type="button"
+                    class="zcl9-language"
+                    data-zcl9-lang="en"
+                    data-dir="ltr"
+                    data-primary="false"
+                    data-required="true">
+
+                <span class="zcl9-language-code">
+                    EN
+                </span>
+
+                <span class="zcl9-language-name">
+                    English
+                </span>
+
+                <span class="zcl9-language-state zcl9-language-state--required">
+                    مطلوب
+                </span>
+
+            </button>
+
+
+            <button type="button"
+                    class="zcl9-language"
+                    data-zcl9-lang="fr"
+                    data-dir="ltr"
+                    data-primary="false"
+                    data-required="false">
+
+                <span class="zcl9-language-code">
+                    FR
+                </span>
+
+                <span class="zcl9-language-name">
+                    Français
+                </span>
+
+                <span class="zcl9-language-state">
+                    اختياري
+                </span>
+
+            </button>
+
+
+            <button type="button"
+                    class="zcl9-language"
+                    data-zcl9-lang="ku"
+                    data-dir="rtl"
+                    data-primary="false"
+                    data-required="false">
+
+                <span class="zcl9-language-code">
+                    KU
+                </span>
+
+                <span class="zcl9-language-name">
+                    کوردی
+                </span>
+
+                <span class="zcl9-language-state">
+                    اختياري
+                </span>
+
+            </button>
+
+
+            <button type="button"
+                    class="zcl9-language"
+                    data-zcl9-lang="tr"
+                    data-dir="ltr"
+                    data-primary="false"
+                    data-required="false">
+
+                <span class="zcl9-language-code">
+                    TR
+                </span>
+
+                <span class="zcl9-language-name">
+                    Türkçe
+                </span>
+
+                <span class="zcl9-language-state">
+                    اختياري
+                </span>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- =================================================
+             ACTIVE LANGUAGE HEADER
+             ================================================= -->
+
+        <div class="zcl9-active-head">
+
+            <div>
+
+                <span>
+                    اللغة الحالية
+                </span>
+
+                <strong data-zcl9-current-language>
+                    العربية
+                </strong>
+
+            </div>
+
+
+            <div class="zcl9-direction"
+                 data-zcl9-direction>
+                RTL
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             FIELDS
+             ================================================= -->
+
+        <div class="zcl9-fields">
+
+
+            <!-- TEXT -->
+
+            <div class="zcl9-field">
+
+                <div class="zcl9-label-row">
+
+                    <label for="zcl9-name">
+                        اسم القسم
+                    </label>
+
+                    <span class="zcl9-requirement"
+                          data-zcl9-requirement>
+                        مطلوب
+                    </span>
+
+                </div>
+
+
+                <input id="zcl9-name"
+                       class="zcl9-input"
+                       type="text"
+                       autocomplete="off"
+                       data-zcl9-name
+                       dir="rtl"
+                       value="الموارد البشرية"
+                       placeholder="اكتب اسم القسم" />
+
+
+                <div class="zcl9-field-foot">
+
+                    <span data-zcl9-helper>
+                        هذه هي اللغة الأساسية لبيانات الشركة.
+                    </span>
+
+                    <span data-zcl9-name-count>
+                        15 / 120
+                    </span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- TEXTAREA -->
+
+            <div class="zcl9-field">
+
+                <div class="zcl9-label-row">
+
+                    <label for="zcl9-description">
+                        الوصف
+                    </label>
+
+                    <span class="zcl9-requirement zcl9-requirement--optional">
+                        اختياري
+                    </span>
+
+                </div>
+
+
+                <textarea id="zcl9-description"
+                          class="zcl9-textarea"
+                          rows="4"
+                          data-zcl9-description
+                          dir="rtl"
+                          placeholder="اكتب وصفاً مختصراً للقسم">إدارة شؤون الموظفين والعمليات المتعلقة بالموارد البشرية.</textarea>
+
+
+                <div class="zcl9-field-foot">
+
+                    <span>
+                        يدعم النصوص الطويلة لكل لغة بشكل مستقل.
+                    </span>
+
+                    <span data-zcl9-description-count>
+                        59 / 500
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             TRANSLATION STATUS
+             ================================================= -->
+
+        <div class="zcl9-status-panel">
+
+            <div class="zcl9-status-copy">
+
+                <strong data-zcl9-status-title>
+                    الترجمة مكتملة
+                </strong>
+
+                <span data-zcl9-status-text>
+                    الحقول المطلوبة باللغة العربية مكتملة.
+                </span>
+
+            </div>
+
+
+            <span class="zcl9-status-badge is-complete"
+                  data-zcl9-status-badge>
+                مكتمل
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             RULE
+             ================================================= -->
+
+        <div class="zcl9-rule">
+
+            <strong>
+                قاعدة ZYNORA
+            </strong>
+
+            <span>
+                اللغة الأساسية تظهر أولاً دائماً، واللغات الأخرى
+                تُنشأ تلقائياً حسب Company Languages.
+                لا توجد AR / EN / KU ثابتة داخل تصميم الصفحة.
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="zcl-section"
+         id="employee-name-languages">
+
+    <div class="zcl-section-head">
+
+        <div>
+            <span class="zcl-number">10</span>
+
+            <h2>Employee Name Languages</h2>
+
+            <p>
+                كل لغة بيانات نشطة تظهر كبطاقة مستقلة لاسم الموظف.
+            </p>
+        </div>
+
+        <span class="zcl-status">
+            قيد التصميم
+        </span>
+
+    </div>
+
+
+    <div class="zcl10-body">
+
+
+        <!-- =================================================
+             INTRO
+             ================================================= -->
+
+        <div class="zcl10-intro">
+
+            <div>
+
+                <strong>
+                    الاسم متعدد اللغات
+                </strong>
+
+                <span>
+                    تحدد الشركة لغات الإدخال، وكل لغة مضافة تنشئ
+                    بطاقة مستقلة لأجزاء اسم الموظف.
+                </span>
+
+            </div>
+
+
+            <div class="zcl10-add-wrap">
+
+                <button type="button"
+                        class="zcl10-add"
+                        data-zcl10-add
+                        aria-expanded="false">
+
+                    <span>+</span>
+                    إضافة لغة
+
+                </button>
+
+
+                <div class="zcl10-language-menu"
+                     data-zcl10-menu
+                     hidden>
+
+                    <button type="button"
+                            data-add-language="fr">
+                        <span>Français</span>
+                        <small>fr-FR</small>
+                    </button>
+
+                    <button type="button"
+                            data-add-language="ku">
+                        <span>کوردی</span>
+                        <small>ku-IQ</small>
+                    </button>
+
+                    <button type="button"
+                            data-add-language="tr">
+                        <span>Türkçe</span>
+                        <small>tr-TR</small>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             ACTIVE LANGUAGE SUMMARY
+             ================================================= -->
+
+        <div class="zcl10-language-summary">
+
+            <span>
+                لغات الاسم الحالية
+            </span>
+
+            <div class="zcl10-summary-list"
+                 data-zcl10-summary>
+
+                <span class="is-primary">
+                    العربية · أساسية
+                </span>
+
+                <span class="is-required">
+                    English · مطلوبة
+                </span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             LANGUAGE CARDS
+             ================================================= -->
+
+        <div class="zcl10-grid"
+             data-zcl10-grid>
+
+
+            <!-- ARABIC -->
+
+            <article class="zcl10-card"
+                     data-language-card="ar"
+                     dir="rtl">
+
+                <header class="zcl10-card-head">
+
+                    <div>
+
+                        <strong>
+                            العربية
+                        </strong>
+
+                        <span>
+                            ar-IQ
+                        </span>
+
+                    </div>
+
+
+                    <div class="zcl10-tags">
+
+                        <span class="zcl10-tag zcl10-tag--primary">
+                            اللغة الأساسية
+                        </span>
+
+                        <span class="zcl10-tag zcl10-tag--required">
+                            مطلوبة
+                        </span>
+
+                    </div>
+
+                </header>
+
+
+                <div class="zcl10-fields">
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            الاسم الأول *
+                        </label>
+
+                        <input type="text"
+                               dir="rtl"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            الاسم الثاني
+                        </label>
+
+                        <input type="text"
+                               dir="rtl"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            الاسم الثالث
+                        </label>
+
+                        <input type="text"
+                               dir="rtl"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            اللقب *
+                        </label>
+
+                        <input type="text"
+                               dir="rtl"
+                               autocomplete="off" />
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+
+            <!-- ENGLISH -->
+
+            <article class="zcl10-card"
+                     data-language-card="en"
+                     dir="ltr">
+
+                <header class="zcl10-card-head">
+
+                    <div>
+
+                        <strong>
+                            English
+                        </strong>
+
+                        <span>
+                            en-US
+                        </span>
+
+                    </div>
+
+
+                    <div class="zcl10-tags">
+
+                        <span class="zcl10-tag zcl10-tag--required">
+                            لغة إضافية · مطلوبة
+                        </span>
+
+                    </div>
+
+                </header>
+
+
+                <div class="zcl10-fields">
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            First Name *
+                        </label>
+
+                        <input type="text"
+                               dir="ltr"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            Middle Name
+                        </label>
+
+                        <input type="text"
+                               dir="ltr"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            Third Name
+                        </label>
+
+                        <input type="text"
+                               dir="ltr"
+                               autocomplete="off" />
+
+                    </div>
+
+
+                    <div class="zcl10-field">
+
+                        <label>
+                            Last Name *
+                        </label>
+
+                        <input type="text"
+                               dir="ltr"
+                               autocomplete="off" />
+
+                    </div>
+
+                </div>
+
+            </article>
+
+        </div>
+
+
+
+        <!-- =================================================
+             DESIGN RULE
+             ================================================= -->
+
+        <div class="zcl10-rule">
+
+            <strong>
+                قاعدة المكوّن
+            </strong>
+
+            <span>
+                لا توجد أسماء لغات ثابتة داخل صفحة الموظف.
+                البطاقات تُنشأ من Company Languages،
+                وكل لغة مضافة تظهر كبطاقة جديدة تلقائياً.
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+</main>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ZYNORA_BLOCK_PALETTE_FORCE_V2_START -->
+
+<style>
+
+/* ==========================================================
+   ZYNORA COMPONENT LAB — FINAL BLOCK PALETTE
+   ========================================================== */
+
+.zcl-page {
+    --lab-page:      #101521;
+    --lab-section:   #131C2B;
+    --lab-block:     #182131;
+    --lab-inner:     #111B2A;
+    --lab-border:    rgba(217,225,232,.08);
+    --lab-border-2:  rgba(217,225,232,.13);
+}
+
+
+/* ==========================================================
+   SECTIONS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app .zcl-page .zcl-section {
+    background: var(--lab-section) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.012) !important;
+}
+
+
+/* ==========================================================
+   00 — FOUNDATION BLOCKS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#principles .zcl-principles article {
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   01 — BUTTON SYSTEM
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-demo-block,
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-grid-2 > .zcl-demo-block {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-decision {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+}
+
+
+/* ==========================================================
+   02 — INPUTS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#inputs .zcl-demo-block {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+/* ==========================================================
+   03 — SELECTION CONTROLS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#selection .zcl-demo-block {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+/* Select itself remains darker than its block */
+
+html[data-theme="dark"] body.zy-app
+#selection select,
+
+html[data-theme="dark"] body.zy-app
+#selection .zy-select {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+}
+
+
+/* ==========================================================
+   04 — DATE / MONTH / TIME
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#datetime .zdt2-stage {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.012) !important;
+}
+
+
+/* ==========================================================
+   05 — CARDS
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#cards .zc5-stage {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#cards .zc5-info-card {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+
+    box-shadow:
+        0 8px 20px rgba(0,0,0,.08) !important;
+}
+
+
+/* ==========================================================
+   06 — TABLES
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#tables .zy-table-wrap {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+/* ==========================================================
+   07 — MODAL / DRAWER
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#overlays .zcl-modal-frame,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zcl-drawer-frame {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+
+    box-shadow: none !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-modal__header,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-modal__body,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-modal__footer,
+
+html[data-theme="dark"] body.zy-app
+#overlays .zcl-drawer-head {
+
+    background: transparent !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+html[data-theme="dark"] body.zy-app
+#overlays .zy-input {
+
+    background: var(--lab-inner) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border-2) !important;
+}
+
+
+/* ==========================================================
+   08 — FEEDBACK
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#feedback .zcl-empty {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+
+    border-color: var(--lab-border) !important;
+}
+
+
+/* ==========================================================
+   HOVER MUST NOT BRING THE OLD BLUE BACK
+   ========================================================== */
+
+html[data-theme="dark"] body.zy-app
+#principles .zcl-principles article:hover,
+
+html[data-theme="dark"] body.zy-app
+#buttons .zcl-demo-block:hover,
+
+html[data-theme="dark"] body.zy-app
+#selection .zcl-demo-block:hover,
+
+html[data-theme="dark"] body.zy-app
+#cards .zc5-stage:hover {
+
+    background: var(--lab-block) !important;
+    background-image: none !important;
+}
+
+</style>
+
+<!-- ZYNORA_BLOCK_PALETTE_FORCE_V2_END -->
+
+
+
+<!-- ZYNORA_OVERLAYS_FINAL_V1_START -->
+
+<style>
+
+/* ==========================================================
+   07 — MODAL / DRAWER FINAL DESIGN
+   ========================================================== */
+
+#overlays {
+    --ov-block: #182131;
+    --ov-inner: #111B2A;
+    --ov-line: rgba(217,225,232,.08);
+    --ov-line-strong: rgba(217,225,232,.13);
+    --ov-text: #E8EDF3;
+    --ov-muted: #96A3B2;
+}
+
+
+/* ----------------------------------------------------------
+   PREVIEW AREA
+   ---------------------------------------------------------- */
+
+#overlays .zcl-overlay-preview {
+    display: grid !important;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+
+    gap: 18px !important;
+
+    padding: 20px !important;
+
+    background: transparent !important;
+}
+
+
+/* ----------------------------------------------------------
+   MODAL + DRAWER PANELS
+   ---------------------------------------------------------- */
+
+#overlays .zcl-modal-frame,
+#overlays .zcl-drawer-frame {
+
+    min-height: 290px !important;
+
+    background:
+        var(--ov-block) !important;
+
+    border:
+        1px solid
+        var(--ov-line) !important;
+
+    border-radius:
+        16px !important;
+
+    overflow:
+        hidden !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* ----------------------------------------------------------
+   TITLES ABOVE PANELS
+   ---------------------------------------------------------- */
+
+#overlays .zcl-overlay-label,
+#overlays .zcl-demo-title {
+
+    margin-bottom:
+        10px !important;
+
+    color:
+        var(--ov-muted) !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        850 !important;
+
+    letter-spacing:
+        .1em !important;
+}
+
+
+/* ==========================================================
+   MODAL
+   ========================================================== */
+
+#overlays .zy-modal__header {
+
+    min-height:
+        64px !important;
+
+    padding:
+        16px 18px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        space-between !important;
+
+    gap:
+        16px !important;
+
+    border-bottom:
+        1px solid
+        var(--ov-line) !important;
+
+    background:
+        transparent !important;
+}
+
+
+#overlays .zy-modal__header h3,
+#overlays .zy-modal__header h2 {
+
+    margin:
+        0 !important;
+
+    color:
+        var(--ov-text) !important;
+
+    font-size:
+        17px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+#overlays .zy-modal__body {
+
+    padding:
+        20px 18px !important;
+
+    background:
+        transparent !important;
+}
+
+
+#overlays .zy-modal__body label {
+
+    display:
+        block !important;
+
+    margin-bottom:
+        8px !important;
+
+    color:
+        var(--ov-muted) !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        700 !important;
+}
+
+
+#overlays .zy-modal__body input,
+#overlays .zy-modal__body .zy-input {
+
+    width:
+        100% !important;
+
+    min-height:
+        44px !important;
+
+    padding-inline:
+        13px !important;
+
+    background:
+        var(--ov-inner) !important;
+
+    border:
+        1px solid
+        var(--ov-line-strong) !important;
+
+    border-radius:
+        11px !important;
+
+    color:
+        var(--ov-text) !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+#overlays .zy-modal__footer {
+
+    min-height:
+        66px !important;
+
+    padding:
+        12px 18px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        flex-start !important;
+
+    gap:
+        10px !important;
+
+    border-top:
+        1px solid
+        var(--ov-line) !important;
+
+    background:
+        rgba(0,0,0,.035) !important;
+}
+
+
+/* ==========================================================
+   DRAWER
+   ========================================================== */
+
+#overlays .zcl-drawer-head {
+
+    padding:
+        18px !important;
+
+    border-bottom:
+        1px solid
+        var(--ov-line) !important;
+
+    background:
+        transparent !important;
+}
+
+
+#overlays .zcl-drawer-head strong {
+
+    display:
+        block !important;
+
+    margin-bottom:
+        4px !important;
+
+    color:
+        var(--ov-text) !important;
+
+    font-size:
+        15px !important;
+
+    font-weight:
+        850 !important;
+}
+
+
+#overlays .zcl-drawer-head span {
+
+    color:
+        var(--ov-muted) !important;
+
+    font-size:
+        11px !important;
+}
+
+
+/* كل صف بالـDrawer */
+
+#overlays .zcl-drawer-frame > div:not(.zcl-drawer-head) {
+
+    min-height:
+        50px !important;
+
+    padding:
+        13px 18px !important;
+
+    box-sizing:
+        border-box !important;
+}
+
+
+/* الفواصل */
+
+#overlays .zcl-drawer-frame > div:not(:last-child) {
+
+    border-bottom:
+        1px solid
+        var(--ov-line) !important;
+}
+
+
+/* Labels */
+
+#overlays .zcl-drawer-frame [class*="label"],
+#overlays .zcl-drawer-frame dt {
+
+    color:
+        var(--ov-muted) !important;
+}
+
+
+/* Values */
+
+#overlays .zcl-drawer-frame [class*="value"],
+#overlays .zcl-drawer-frame dd,
+#overlays .zcl-drawer-frame strong {
+
+    color:
+        var(--ov-text) !important;
+}
+
+
+/* ==========================================================
+   REMOVE OLD STATUS DOT COMPLETELY
+   ========================================================== */
+
+#overlays .zy-badge__dot,
+#overlays .zy-badge > span:empty {
+
+    display:
+        none !important;
+
+    width:
+        0 !important;
+
+    height:
+        0 !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+#overlays .zy-badge::before,
+#overlays .zy-badge::after {
+
+    display:
+        none !important;
+
+    content:
+        none !important;
+}
+
+
+/* Active badge */
+
+#overlays .zy-badge {
+
+    width:
+        max-content !important;
+
+    min-width:
+        0 !important;
+
+    min-height:
+        30px !important;
+
+    padding:
+        6px 11px !important;
+
+    display:
+        inline-flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    gap:
+        0 !important;
+
+    border-radius:
+        999px !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* specifically Active */
+
+#overlays .zy-badge--success {
+
+    color:
+        #63C88D !important;
+
+    background:
+        rgba(70,155,105,.12) !important;
+
+    border:
+        1px solid
+        rgba(70,155,105,.18) !important;
+}
+
+
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
+
+#overlays .zy-btn {
+
+    min-height:
+        40px !important;
+
+    padding-inline:
+        15px !important;
+
+    border-radius:
+        10px !important;
+
+    font-size:
+        12px !important;
+
+    font-weight:
+        750 !important;
+
+    box-shadow:
+        none !important;
+}
+
+
+/* primary */
+
+#overlays .zy-btn--primary {
+
+    background:
+        #557A9D !important;
+
+    border-color:
+        #557A9D !important;
+}
+
+
+/* secondary / close */
+
+#overlays .zy-btn--ghost,
+#overlays .zy-btn--secondary {
+
+    background:
+        #18273A !important;
+
+    border-color:
+        var(--ov-line-strong) !important;
+
+    color:
+        #D9E2EA !important;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@@media (max-width: 800px) {
+
+    #overlays .zcl-overlay-preview {
+
+        grid-template-columns:
+            1fr !important;
+    }
+}
+
+</style>
+
+<!-- ZYNORA_OVERLAYS_FINAL_V1_END -->
+
+
+<!-- ZYNORA_OVERLAY_ACTIVE_CLEAN_V2_START -->
+
+<style>
+
+#overlays .zcl-overlay-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: max-content !important;
+    min-width: 0 !important;
+    min-height: 28px !important;
+
+    padding: 6px 11px !important;
+
+    border-radius: 999px !important;
+
+    font-size: 10.5px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+
+    gap: 0 !important;
+
+    box-sizing: border-box !important;
+
+    box-shadow: none !important;
+}
+
+
+#overlays .zcl-overlay-status--active {
+    color: #63C88D !important;
+
+    background:
+        rgba(70,155,105,.12) !important;
+
+    border:
+        1px solid
+        rgba(70,155,105,.18) !important;
+}
+
+
+/* ممنوع أي دائرة أو pseudo-element */
+#overlays .zcl-overlay-status::before,
+#overlays .zcl-overlay-status::after {
+    display: none !important;
+    content: none !important;
+}
+
+</style>
+
+<!-- ZYNORA_OVERLAY_ACTIVE_CLEAN_V2_END -->
+
+
+
+
+
+<!-- ZYNORA_TOGGLE_CLICK_V2_START -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const selection =
+        document.getElementById("selection");
+
+    if (!selection) return;
+
+
+    /*
+     * Find the Toggle demo block only.
+     * We do not modify the normal Checkbox block.
+     */
+    const blocks =
+        Array.from(
+            selection.querySelectorAll(
+                ".zcl-demo-block, .zcl-showcase-group, .zcl-grid-2 > div"
+            )
+        );
+
+
+    const toggleBlock =
+        blocks.find(function (block) {
+
+            const text =
+                (block.textContent || "").trim();
+
+            return (
+                text.includes("Toggle") ||
+                text.includes("تفعيل الخاصية")
+            );
+        });
+
+
+    if (!toggleBlock) {
+        console.warn(
+            "ZYNORA Toggle block was not found."
+        );
+        return;
+    }
+
+
+    const input =
+        toggleBlock.querySelector(
+            'input[type="checkbox"]'
+        );
+
+
+    if (!input) {
+        console.warn(
+            "ZYNORA Toggle checkbox was not found."
+        );
+        return;
+    }
+
+
+    toggleBlock.classList.add(
+        "zcl-toggle-clickable"
+    );
+
+
+    /*
+     * If the click already happened on the real input
+     * or its label, browser handles it normally.
+     * Otherwise clicking anywhere in the Toggle row
+     * changes the switch.
+     */
+    toggleBlock.addEventListener(
+        "click",
+        function (event) {
+
+            if (input.disabled) return;
+
+
+            if (
+                event.target === input ||
+                event.target.closest("label")
+            ) {
+                return;
+            }
+
+
+            if (
+                event.target.closest(
+                    "button, a, select, textarea"
+                )
+            ) {
+                return;
+            }
+
+
+            input.checked =
+                !input.checked;
+
+
+            input.dispatchEvent(
+                new Event(
+                    "change",
+                    {
+                        bubbles: true
+                    }
+                )
+            );
+        }
+    );
+
+});
+</script>
+
+<!-- ZYNORA_TOGGLE_CLICK_V2_END -->
+
+
+<script src="~/js/zynora-component-lab-selection-v3.js"
+        asp-append-version="true"
+        defer></script>
+
+<script src="~/js/zynora-component-lab-multilingual-v1.js"
+        asp-append-version="true"
+        defer></script>
+
+
+<script src="~/js/zynora-component-lab-employee-names-v1.js"
+        asp-append-version="true"
+        defer></script>
+

@@ -3,7 +3,7 @@
 @using SmartAttendance.Domain.Enums
 
 @section Styles {
-    <link rel="stylesheet" href="~/css/nexora-setup-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-setup-pages.css" asp-append-version="true" />
 }
 
 @{
@@ -18,8 +18,8 @@
     var companyDeactivationLocked = Model.IsCompanyDeactivationLocked;
 }
 
-@* NEXORA_ACTIVE_CUTOFF_TYPE_MARKUP_START *@<div class="nexora-setup-page nx-company-setup-page">
-    <section class="nexora-setup-hero nx-company-setup-hero">
+@* ZYNORA_ACTIVE_CUTOFF_TYPE_MARKUP_START *@<div class="zynora-setup-page nx-company-setup-page">
+    <section class="zynora-setup-hero nx-company-setup-hero">
         <div>
             <h1>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0648;&#x0647;&#x064A;&#x0643;&#x0644; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</h1>
             <p>&#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0647;&#x0648;&#x064A;&#x0629; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;&#x060C; &#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x060C; &#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;&#x060C; &#x0648;&#x0633;&#x064A;&#x0627;&#x0633;&#x0627;&#x062A; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642; &#x0645;&#x0646; &#x0645;&#x0643;&#x0627;&#x0646; &#x0648;&#x0627;&#x062D;&#x062F;.</p>
@@ -57,7 +57,7 @@
 
     @if (!hasCompanies)
     {
-        <section class="nexora-setup-card nx-company-empty">
+        <section class="zynora-setup-card nx-company-empty">
             <div class="nx-company-empty-mark">N</div>
             <h2>&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0634;&#x0631;&#x0643;&#x0629; &#x0628;&#x0639;&#x062F;</h2>
             <p>&#x0623;&#x0636;&#x0641; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0627;&#x0644;&#x0623;&#x0648;&#x0644;&#x0649;&#x060C; &#x062B;&#x0645; &#x0627;&#x0631;&#x062C;&#x0639; &#x0644;&#x0625;&#x0643;&#x0645;&#x0627;&#x0644; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0634;&#x0639;&#x0627;&#x0631; &#x0648;&#x0627;&#x0644;&#x0628;&#x0644;&#x062F; &#x0648;&#x0633;&#x064A;&#x0627;&#x0633;&#x0627;&#x062A; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642;.</p>
@@ -92,8 +92,8 @@
             </article>
         </section>
 
-        <section id="company-profile" class="nexora-setup-card nx-company-section">
-            <div class="nexora-setup-card-head">
+        <section id="company-profile" class="zynora-setup-card nx-company-section">
+            <div class="zynora-setup-card-head">
                 <div>
                     <strong>&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;</strong>
                     <small>&#x0627;&#x0644;&#x0647;&#x0648;&#x064A;&#x0629; &#x0627;&#x0644;&#x0631;&#x0633;&#x0645;&#x064A;&#x0629; &#x0648;&#x0627;&#x0644;&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x062D;&#x0644;&#x064A;&#x0629; &#x0644;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;.</small>
@@ -153,7 +153,7 @@
 
                     <label class="nx-setup-field">
                         <span>&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</span>
-                        <select asp-for="Profile.CountryCode" asp-items="Model.CountryOptions" data-nexora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;">
+                        <select asp-for="Profile.CountryCode" asp-items="Model.CountryOptions" data-zynora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;">
                             <option value="">--</option>
                         </select>
                         <span asp-validation-for="Profile.CountryCode" class="text-danger"></span>
@@ -161,7 +161,7 @@
 
                     <label class="nx-setup-field" id="company-currency">
                         <span>&#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x0629;</span>
-                        <select asp-for="Profile.CurrencyCode" asp-items="Model.CurrencyOptions" data-nexora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x0629;">
+                        <select asp-for="Profile.CurrencyCode" asp-items="Model.CurrencyOptions" data-zynora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x0629;">
                             <option value="">--</option>
                         </select>
                         <span asp-validation-for="Profile.CurrencyCode" class="text-danger"></span>
@@ -169,7 +169,7 @@
 
                     <label class="nx-setup-field nx-setup-field-wide">
                         <span>&#x0627;&#x0644;&#x0645;&#x0646;&#x0637;&#x0642;&#x0629; &#x0627;&#x0644;&#x0632;&#x0645;&#x0646;&#x064A;&#x0629;</span>
-                        <select asp-for="Profile.TimeZoneId" asp-items="Model.TimeZoneOptions" data-nexora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0645;&#x0646;&#x0637;&#x0642;&#x0629; &#x0627;&#x0644;&#x0632;&#x0645;&#x0646;&#x064A;&#x0629;">
+                        <select asp-for="Profile.TimeZoneId" asp-items="Model.TimeZoneOptions" data-zynora-native="true" data-searchable-select data-search-placeholder="&#x0627;&#x0628;&#x062D;&#x062B; &#x0639;&#x0646; &#x0627;&#x0644;&#x0645;&#x0646;&#x0637;&#x0642;&#x0629; &#x0627;&#x0644;&#x0632;&#x0645;&#x0646;&#x064A;&#x0629;">
                             <option value="">--</option>
                         </select>
                         <span asp-validation-for="Profile.TimeZoneId" class="text-danger"></span>
@@ -221,14 +221,14 @@
         </section>
 
 
-        <section id="work-locations" class="nexora-setup-card nx-company-section">
-            <div class="nexora-setup-card-head">
+        <section id="work-locations" class="zynora-setup-card nx-company-section">
+            <div class="zynora-setup-card-head">
                 <div>
                     <strong>&#x0645;&#x0648;&#x0627;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0648;&#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639;</strong>
                     <small>&#x0623;&#x0636;&#x0641; &#x0627;&#x0644;&#x0645;&#x0643;&#x062A;&#x0628; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x060C; &#x0627;&#x0644;&#x0641;&#x0631;&#x0648;&#x0639;&#x060C; &#x0627;&#x0644;&#x0645;&#x0634;&#x0627;&#x0631;&#x064A;&#x0639;&#x060C; &#x0623;&#x0648; &#x0646;&#x0642;&#x0627;&#x0637; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644; &#x0627;&#x0644;&#x062A;&#x0627;&#x0628;&#x0639;&#x0629; &#x0644;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629;.</small>
                 </div>
 
-                <div class="nexora-setup-actions">
+                <div class="zynora-setup-actions">
                     <a asp-page="/Branches/Import" asp-route-companyId="@setup.CompanyId" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
                     <button type="button"
                             class="nx-setup-btn nx-setup-btn-primary"
@@ -246,8 +246,8 @@
                 </div>
             }
 
-            <div class="nexora-setup-table-wrap">
-                <table class="nexora-setup-table">
+            <div class="zynora-setup-table-wrap">
+                <table class="zynora-setup-table">
                     <thead>
                         <tr>
                             <th>&#x0645;&#x0648;&#x0642;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;</th>
@@ -324,14 +324,14 @@
             </div>
         </section>
 
-        <section id="departments" class="nexora-setup-card nx-company-section">
-            <div class="nexora-setup-card-head">
+        <section id="departments" class="zynora-setup-card nx-company-section">
+            <div class="zynora-setup-card-head">
                 <div>
                     <strong>&#x0627;&#x0644;&#x0623;&#x0642;&#x0633;&#x0627;&#x0645;</strong>
                     <small>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645; &#x064A;&#x062A;&#x0628;&#x0639; &#x0644;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0648;&#x064A;&#x0645;&#x0643;&#x0646; &#x0627;&#x0633;&#x062A;&#x062E;&#x062F;&#x0627;&#x0645;&#x0647; &#x0641;&#x064A; &#x0623;&#x0643;&#x062B;&#x0631; &#x0645;&#x0646; &#x0645;&#x0648;&#x0642;&#x0639; &#x0639;&#x0645;&#x0644;.</small>
                 </div>
 
-                <div class="nexora-setup-actions">
+                <div class="zynora-setup-actions">
                     <a asp-page="/Departments/Import" asp-route-companyId="@setup.CompanyId" class="nx-setup-btn nx-setup-btn-secondary">&#x0627;&#x0633;&#x062A;&#x064A;&#x0631;&#x0627;&#x062F; Excel</a>
                     <button type="button"
                             class="nx-setup-btn nx-setup-btn-primary"
@@ -341,8 +341,8 @@
                 </div>
             </div>
 
-            <div class="nexora-setup-table-wrap">
-                <table class="nexora-setup-table">
+            <div class="zynora-setup-table-wrap">
+                <table class="zynora-setup-table">
                     <thead>
                         <tr>
                             <th>&#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</th>
@@ -416,8 +416,8 @@
             </div>
         </section>
 
-        <section id="cutoff-policies" class="nexora-setup-card nx-company-section">
-            <div class="nexora-setup-card-head">
+        <section id="cutoff-policies" class="zynora-setup-card nx-company-section">
+            <div class="zynora-setup-card-head">
                 <div>
                     <strong>&#x0633;&#x064A;&#x0627;&#x0633;&#x0627;&#x062A; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642;</strong>
                     <small>&#x062D;&#x062F;&#x062F; &#x0641;&#x062A;&#x0631;&#x0629; &#x0627;&#x0644;&#x0627;&#x062D;&#x062A;&#x0633;&#x0627;&#x0628; &#x0648;&#x0623;&#x0646;&#x0648;&#x0627;&#x0639; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x062F;&#x0627;&#x062E;&#x0644; &#x0643;&#x0644; &#x0633;&#x064A;&#x0627;&#x0633;&#x0629;.</small>
@@ -438,8 +438,8 @@
                 </div>
             </div>
 
-            <div class="nexora-setup-table-wrap">
-                <table class="nexora-setup-table nx-cutoff-policy-table">
+            <div class="zynora-setup-table-wrap">
+                <table class="zynora-setup-table nx-cutoff-policy-table">
                     <thead>
                         <tr>
                             <th>&#x0627;&#x0644;&#x0627;&#x0633;&#x0645;</th>
@@ -570,7 +570,7 @@
             </div>
         </div>
 
-        @* NEXORA_SETUP_ENTITY_MODALS_START *@
+        @* ZYNORA_SETUP_ENTITY_MODALS_START *@
         <div id="setup-branch-edit-modal"
              class="nx-setup-modal nx-setup-entity-modal"
              aria-hidden="true"
@@ -841,7 +841,7 @@
                 </form>
             </div>
         </div>
-        @* NEXORA_SETUP_ENTITY_MODALS_END *@
+        @* ZYNORA_SETUP_ENTITY_MODALS_END *@
 
         <div id="cutoff-policy-modal" class="nx-setup-modal @(Model.OpenPolicyModal ? "is-open" : "")" aria-hidden="@(Model.OpenPolicyModal ? "false" : "true")" data-auto-open="@(Model.OpenPolicyModal ? "true" : "false")">
             <div class="nx-setup-modal__panel" role="dialog" aria-modal="true" aria-labelledby="cutoff-policy-title">
@@ -967,7 +967,7 @@
     }
 </div>
 
-@* NEXORA_CUTOFF_DELETE_MODAL_START *@
+@* ZYNORA_CUTOFF_DELETE_MODAL_START *@
 <div id="cutoff-delete-modal"
      class="nx-setup-modal"
      aria-hidden="true"
@@ -1009,8 +1009,8 @@
         </div>
     </div>
 </div>
-@* NEXORA_CUTOFF_DELETE_MODAL_END *@
+@* ZYNORA_CUTOFF_DELETE_MODAL_END *@
 
 @section Scripts {
-    <script src="~/js/nexora-company-setup.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-company-setup.js" asp-append-version="true"></script>
 }

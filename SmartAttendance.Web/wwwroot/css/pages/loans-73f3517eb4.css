@@ -25,7 +25,7 @@
     /* شريط «ترحيل المستحق»: كل العناصر بنفس الارتفاع (42px مطابق للمنتقي المخصّص) */
     .ln-post { align-items:center; gap:8px; }
     .ln-post input, .ln-post button { min-height:42px; box-sizing:border-box; }
-    /* منتقي الشهر مبنيّ كـ nexora-select (width:100%!important) — نُقيّده لعرض رقمين */
+    /* منتقي الشهر مبنيّ كـ zynora-select (width:100%!important) — نُقيّده لعرض رقمين */
     .ln-post .nxcs-select { width:74px !important; min-width:74px !important; max-width:74px !important; flex:0 0 74px !important; }
     /* الفلاتر متجاورة في سطر واحد */
     .ln-filters { flex-wrap:nowrap; align-items:center; }

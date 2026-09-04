@@ -1058,7 +1058,7 @@ html[data-theme="dark"] .z360-hero {
     gap: 14px;
     min-height: 0;
     padding: 16px 17px;
-    /* !important يتغلب على قاعدة عامة في nexora-calendar-v18.css
+    /* !important يتغلب على قاعدة عامة في zynora-calendar-v18.css
        تفرض overflow:visible على أي عنصر يحوي "section" في اسم صنفه */
     overflow-y: auto !important;
     align-content: start;

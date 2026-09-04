@@ -322,7 +322,7 @@ public class SetupService : ISetupService
 
         try
         {
-            // NEXORA_ACTIVE_CUTOFF_TYPE_GUARD_START
+            // ZYNORA_ACTIVE_CUTOFF_TYPE_GUARD_START
             var conflictingAssignments = await _dbContext.PayrollCutoffPolicyTypes
                 .AsNoTracking()
                 .Where(x =>
@@ -357,7 +357,7 @@ public class SetupService : ISetupService
                     conflictPolicies +
                     ".");
             }
-            // NEXORA_ACTIVE_CUTOFF_TYPE_GUARD_END
+            // ZYNORA_ACTIVE_CUTOFF_TYPE_GUARD_END
 
             if (policy.PolicyTypes.Count > 0)
             {

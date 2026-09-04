@@ -947,7 +947,7 @@ public class MasterDataImportService : IMasterDataImportService
     }
 
 
-    // NEXORA_FIX22A_GETANY_HELPER
+    // ZYNORA_FIX22A_GETANY_HELPER
     private static string GetAny(FileRow row, params string[] columnNames)
     {
         return GetAny(row.Values, columnNames);
@@ -1038,7 +1038,7 @@ public class MasterDataImportService : IMasterDataImportService
     }
 
 
-    // NEXORA_FIX22A_UNIQUE_IMPORT_CODE
+    // ZYNORA_FIX22A_UNIQUE_IMPORT_CODE
     private static string GenerateUniqueImportCode(string prefix, IEnumerable<string> existingCodes)
     {
         var existing = existingCodes

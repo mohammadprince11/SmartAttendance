@@ -18,7 +18,7 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class AttendanceSalaryLink
 {
-    /// <summary>مفتاح الإعداد بـ<c>NexoraHrSettings</c>.</summary>
+    /// <summary>مفتاح الإعداد بـ<c>ZynoraHrSettings</c>.</summary>
     public const string ModeKey = "Payroll.AttendanceLink";
 
     /// <summary>بلا بيانات حضور ⟹ يُدفع الأساسي كاملاً (مع إعلان) — السلوك القائم.</summary>

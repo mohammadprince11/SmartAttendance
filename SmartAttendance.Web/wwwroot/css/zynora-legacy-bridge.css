@@ -3,7 +3,7 @@
    ----------------------------------------------------------------------------
    لماذا ملف منفصل بدل تعديل الملفات القديمة:
 
-   جُرّب التعديل المباشر على nexora-setup-pages.css مرّتين وفشل مرّتين. السبب أن
+   جُرّب التعديل المباشر على zynora-setup-pages.css مرّتين وفشل مرّتين. السبب أن
    ألوان النص وألوان السطح موزّعة على **قواعد منفصلة** بالملف، فأي تحويل ميكانيكي
    يصلح طرفاً ويكسر الآخر: تحويل النصوص وحدها ترك نصّاً داكناً على بطاقة داكنة،
    وتحويل الأسطح وحدها ترك نصّاً أبيض على سطح فاتح (ارتفعت المشاكل من 33 إلى 82).
@@ -20,15 +20,15 @@
    قياس 2026-07-31: 33 عنصراً دون حدّ القراءة، أسوأها عنوان الصفحة نفسه (1.12:1)
    وأسماء الفروع والأقسام — نصوص بيضاء من عهد القوقعة الداكنة على أسطح فاتحة. */
 
-.nexora-setup-hero h1,
-.nexora-setup-card-head strong,
+.zynora-setup-hero h1,
+.zynora-setup-card-head strong,
 .nx-company-setup-summary strong,
 .nx-company-logo-card > strong {
     color: var(--color-text-primary);
 }
 
-.nexora-setup-hero p,
-.nexora-setup-card-head small,
+.zynora-setup-hero p,
+.zynora-setup-card-head small,
 .nx-company-setup-summary span,
 .nx-company-setup-page .nx-setup-pagination__summary,
 .nx-company-selector label,
@@ -55,7 +55,7 @@
 }
 
 /* زر الخروج بالشريط العلوي — أحمر باهت (4.02:1) */
-.nexora-logout-button {
+.zynora-logout-button {
     color: var(--color-danger);
 }
 
@@ -76,8 +76,8 @@
    يجعله يرث لون نصّ الحقل فيخرج `#E6E6E6` بهذه الصفحة وحدها وسط 7 صفحات على
    الرمادي الثانوي (قيس حيّاً 2026-08-02). وتخصصية هذه القاعدة (0,5,1) بسبب
    الـ`:not` الخمسة، فلا يغلبها محدِّدٌ معقول بملف المنسدلة — الاستثناء هنا أصحّ. */
-.nexora-setup-page,
-.nexora-setup-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]):not(.nxcs-caret) {
+.zynora-setup-page,
+.zynora-setup-page *:not([class*="btn"]):not(button):not([class*="status"]):not([class*="badge"]):not([class*="pill"]):not(.nxcs-caret) {
     background-color: transparent !important;
     background-image: none !important;
     color: inherit !important;
@@ -85,7 +85,7 @@
 }
 
 /* 2) إعادة البناء: الصفحة والأسطح والنصوص من التوكنز */
-.nexora-setup-page {
+.zynora-setup-page {
     background: var(--color-background) !important;
     color: var(--color-text-primary) !important;
     font-family: var(--font-family);
@@ -93,43 +93,43 @@
     line-height: var(--lh-body);
 }
 
-.nexora-setup-page .nexora-setup-card,
-.nexora-setup-page .nx-setup-field,
-.nexora-setup-page .nx-setup-check,
-.nexora-setup-page .nx-company-logo-card,
-.nexora-setup-page .nx-company-selector,
-.nexora-setup-page .nx-company-setup-nav,
-.nexora-setup-page .nx-setup-pagination,
-.nexora-setup-page table {
+.zynora-setup-page .zynora-setup-card,
+.zynora-setup-page .nx-setup-field,
+.zynora-setup-page .nx-setup-check,
+.zynora-setup-page .nx-company-logo-card,
+.zynora-setup-page .nx-company-selector,
+.zynora-setup-page .nx-company-setup-nav,
+.zynora-setup-page .nx-setup-pagination,
+.zynora-setup-page table {
     background-color: var(--color-surface) !important;
     border: 1px solid var(--color-border) !important;
 }
 
-.nexora-setup-page thead th { background-color: var(--color-background) !important; color: var(--color-text-secondary) !important; }
-.nexora-setup-page tbody tr:hover td { background-color: var(--color-primary-soft) !important; }
+.zynora-setup-page thead th { background-color: var(--color-background) !important; color: var(--color-text-secondary) !important; }
+.zynora-setup-page tbody tr:hover td { background-color: var(--color-primary-soft) !important; }
 
 /* النصّ الثانوي يستعيد تمييزه بعد التصفير */
-.nexora-setup-page small,
-.nexora-setup-page label,
-.nexora-setup-page .nx-policy-note,
-.nexora-setup-page .nx-setup-pagination__summary,
-.nexora-setup-page .nexora-setup-hero p,
-.nexora-setup-page .nx-company-setup-summary span { color: var(--color-text-secondary) !important; }
+.zynora-setup-page small,
+.zynora-setup-page label,
+.zynora-setup-page .nx-policy-note,
+.zynora-setup-page .nx-setup-pagination__summary,
+.zynora-setup-page .zynora-setup-hero p,
+.zynora-setup-page .nx-company-setup-summary span { color: var(--color-text-secondary) !important; }
 
-.nexora-setup-page h1 { font-size: var(--fs-page-title); }
-.nexora-setup-page h2, .nexora-setup-page .nexora-setup-card-head strong { font-size: var(--fs-card-title); }
+.zynora-setup-page h1 { font-size: var(--fs-page-title); }
+.zynora-setup-page h2, .zynora-setup-page .zynora-setup-card-head strong { font-size: var(--fs-card-title); }
 
 /* 3) العناصر الدلالية: ألوانها من التوكنز لا من العهد الداكن */
-.nexora-setup-page .btn-table.btn-delete { background: var(--color-danger-soft) !important; color: var(--color-danger) !important; }
-.nexora-setup-page .btn-table:not(.btn-delete) { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
-.nexora-setup-page [class*="status"].is-active,
-.nexora-setup-page .nx-setup-status { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
-.nexora-setup-page .nx-company-setup-nav a.is-active { background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important; }
+.zynora-setup-page .btn-table.btn-delete { background: var(--color-danger-soft) !important; color: var(--color-danger) !important; }
+.zynora-setup-page .btn-table:not(.btn-delete) { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+.zynora-setup-page [class*="status"].is-active,
+.zynora-setup-page .nx-setup-status { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+.zynora-setup-page .nx-company-setup-nav a.is-active { background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important; }
 
 /* الشارات كانت مستثناة من التصفير (لأن لها دلالة لونية) فبقيت بألوان العهد
    الداكن: خلفية داكنة ونصّ داكن معاً (1.21:1). تُعطى ألوان دلالية من التوكنز. */
-.nexora-setup-page [class*="badge"],
-.nexora-setup-page [class*="pill"] {
+.zynora-setup-page [class*="badge"],
+.zynora-setup-page [class*="pill"] {
     background: var(--color-primary-soft) !important;
     color: var(--color-primary-text) !important;
     border-color: color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
@@ -137,10 +137,10 @@
 
 /* المنتقيات (البلد/العملة/المنطقة الزمنية…): وسمها <button> فاستُثنيت من التصفير
    مع الأزرار الدلالية وبقيت داكنة. هي حقول إدخال لا أزرار إجراء — فتُعامل كحقل. */
-.nexora-setup-page .nx-search-select__button,
-.nexora-setup-page .nx-search-select,
-.nexora-setup-page [class*="search-select"] > button,
-.nexora-setup-page select {
+.zynora-setup-page .nx-search-select__button,
+.zynora-setup-page .nx-search-select,
+.zynora-setup-page [class*="search-select"] > button,
+.zynora-setup-page select {
     background: var(--color-surface) !important;
     background-image: none !important;
     color: var(--color-text-primary) !important;
@@ -149,47 +149,47 @@
     font-size: var(--fs-body) !important;
 }
 
-.nexora-setup-page .nx-search-select__button:hover,
-.nexora-setup-page [class*="search-select"] > button:hover {
+.zynora-setup-page .nx-search-select__button:hover,
+.zynora-setup-page [class*="search-select"] > button:hover {
     border-color: var(--color-primary-strong) !important;
 }
 
 /* لوحة الخيارات المنسدلة وعناصرها */
-.nexora-setup-page [class*="search-select"] [class*="panel"],
-.nexora-setup-page [class*="search-select"] [class*="menu"],
-.nexora-setup-page [class*="search-select"] [class*="option"],
-.nexora-setup-page [class*="search-select"] input {
+.zynora-setup-page [class*="search-select"] [class*="panel"],
+.zynora-setup-page [class*="search-select"] [class*="menu"],
+.zynora-setup-page [class*="search-select"] [class*="option"],
+.zynora-setup-page [class*="search-select"] input {
     background: var(--color-surface) !important;
     color: var(--color-text-primary) !important;
     border-color: var(--color-border) !important;
 }
 
-.nexora-setup-page [class*="search-select"] [class*="option"]:hover,
-.nexora-setup-page [class*="search-select"] [class*="option"][aria-selected="true"] {
+.zynora-setup-page [class*="search-select"] [class*="option"]:hover,
+.zynora-setup-page [class*="search-select"] [class*="option"][aria-selected="true"] {
     background: var(--color-primary-soft) !important;
     color: var(--color-primary-text) !important;
 }
 
 /* آخر الأسطح الداكنة بالصفحة: أزرار التنقّل بين الصفحات وزر إغلاق النافذة
    (وسمها <button> فاستُثنيت من التصفير). */
-.nexora-setup-page .nx-setup-pagination__button,
-.nexora-setup-page [class*="pagination"] button,
-.nexora-setup-page .nx-setup-modal__close {
+.zynora-setup-page .nx-setup-pagination__button,
+.zynora-setup-page [class*="pagination"] button,
+.zynora-setup-page .nx-setup-modal__close {
     background: var(--color-surface) !important;
     color: var(--color-text-primary) !important;
     border: 1px solid var(--color-border-strong) !important;
 }
 
-.nexora-setup-page .nx-setup-pagination__button:hover,
-.nexora-setup-page [class*="pagination"] button:hover,
-.nexora-setup-page .nx-setup-modal__close:hover {
+.zynora-setup-page .nx-setup-pagination__button:hover,
+.zynora-setup-page [class*="pagination"] button:hover,
+.zynora-setup-page .nx-setup-modal__close:hover {
     background: var(--color-primary-soft) !important;
     color: var(--color-primary-text) !important;
     border-color: var(--color-primary-strong) !important;
 }
 
-.nexora-setup-page [class*="pagination"] button[aria-current],
-.nexora-setup-page [class*="pagination"] button.is-active {
+.zynora-setup-page [class*="pagination"] button[aria-current],
+.zynora-setup-page [class*="pagination"] button.is-active {
     background: var(--color-primary-strong) !important;
     color: var(--color-on-primary) !important;
     border-color: var(--color-primary-strong) !important;
@@ -198,7 +198,7 @@
 /* ============================================================================
    نافذة «تعديل سياسة العلق» وأخواتها بـ/Setup
    ثلاثة أعراض من لقطة محمد: شريط إجراءات داكن أسفل النافذة · هالة تيل ضخمة حول
-   الحقل المركَّز · نصّ تلميح باهت. النافذة خارج .nexora-setup-page أحياناً
+   الحقل المركَّز · نصّ تلميح باهت. النافذة خارج .zynora-setup-page أحياناً
    (تُلحق بالـbody) فتُستهدف بمحدّداتها مباشرة لا بنطاق الصفحة.
    ============================================================================ */
 
@@ -273,7 +273,7 @@
     font-size: var(--fs-small) !important;
 }
 
-/* قواعد النافذة أعلاه خسرت أمام قاعدة التصفير: تخصصية `.nexora-setup-page *:not(…)`
+/* قواعد النافذة أعلاه خسرت أمام قاعدة التصفير: تخصصية `.zynora-setup-page *:not(…)`
    أعلى منها، والاثنتان !important — فالأعلى تخصصية تفوز مهما كان الترتيب.
    نكرّر الكلاس لرفع التخصصية (نفس الحيلة المستعملة بمكوّنات zy-* مع الستايل القديم). */
 
@@ -315,7 +315,7 @@
    ----------------------------------------------------------------------------
    قياس 2026-07-31: 40 عنصراً دون الحدّ + 5 مجموعات أسطح داكنة. الملف المسؤول
    `positions.css` (2132 سطراً) مكتوب كلّه لقوقعة داكنة وبلا قسم فاتح — نفس حالة
-   `nexora-setup-pages.css` تماماً، فتُطبَّق الوصفة نفسها لا المطاردة قاعدةً-قاعدة.
+   `zynora-setup-pages.css` تماماً، فتُطبَّق الوصفة نفسها لا المطاردة قاعدةً-قاعدة.
    ============================================================================ */
 
 /* 1) التصفير */
@@ -794,4 +794,323 @@ html body
 }
 
 /* ZYNORA_DEPARTMENT_DELETE_MODAL_V1_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_EMPLOYEES_BG_FINAL_V24
+   Final cascade layer — match /Positions background to /Employees
+   ========================================================== */
+
+/*
+   IMPORTANT:
+   This file loads AFTER RenderBody/page CSS,
+   therefore this is the final authoritative override.
+*/
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page) {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-shell,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-main,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-content {
+
+    background:
+        var(--surface-app, #0B1020) !important;
+
+    background-color:
+        var(--surface-app, #0B1020) !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* صفحة Positions نفسها تبقى شفافة فوق خلفية Employees */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* إزالة أي Glow خارجي */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-shell::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-shell::after,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-main::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-main::after,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-content::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-content::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+
+    background:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_EMPLOYEES_BG_FINAL_V24_END */
+
+
+/* ==========================================================
+   ZYNORA_POSITIONS_EMPLOYEES_EXACT_PARITY_V25
+
+   Measured with Playwright:
+   Employees app background = #101521
+   Employees card background = #182131
+
+   Positions previously:
+   app  = #0B1020
+   card = #0F1A2E
+   ========================================================== */
+
+
+/* ==========================================================
+   APPLICATION BACKGROUND
+   exact Employees value
+   ========================================================== */
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page),
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-shell,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-main {
+
+    background-color:
+        #101521 !important;
+
+    background:
+        #101521 !important;
+
+    background-image:
+        none !important;
+}
+
+
+/*
+   Employees .zynora-content is transparent.
+   Make Positions behave identically.
+*/
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-content {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page {
+
+    background:
+        transparent !important;
+
+    background-color:
+        transparent !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* ==========================================================
+   MAIN SURFACES
+   exact Employees card value
+   ========================================================== */
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-hero,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-kpis article,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-card {
+
+    background:
+        #182131 !important;
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Filter surface */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-filters {
+
+    background:
+        #182131 !important;
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Table container */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table-wrap {
+
+    background:
+        #182131 !important;
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+
+    border-color:
+        rgba(217,225,232,.08) !important;
+}
+
+
+/* Header row */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table thead,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table thead tr,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table thead th {
+
+    background-color:
+        #182131 !important;
+
+    background-image:
+        none !important;
+}
+
+
+/* Rows stay on same Employees surface family */
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table tbody td {
+
+    background-color:
+        #182131 !important;
+}
+
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-table tbody tr:hover td {
+
+    background-color:
+        #1C2738 !important;
+}
+
+
+/* ==========================================================
+   REMOVE OLD GLOWS
+   ========================================================== */
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zy-pos-page::after,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-main::before,
+
+html[data-theme="dark"]
+body.zy-app:has(.zy-pos-page)
+.zynora-main::after {
+
+    content:
+        none !important;
+
+    display:
+        none !important;
+}
+
+
+/* ZYNORA_POSITIONS_EMPLOYEES_EXACT_PARITY_V25_END */
+
 

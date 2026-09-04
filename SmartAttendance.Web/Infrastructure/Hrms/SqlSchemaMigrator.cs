@@ -2641,6 +2641,122 @@ IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SelfServiceRequests') AND name='IX_SelfServiceRequests_Source')
     EXEC sp_executesql N'CREATE INDEX IX_SelfServiceRequests_Source ON SelfServiceRequests(RequestSource,Status,CreatedAt);';
 """),
+
+        // Production-safe ZYNORA brand compatibility. The preflight covers every
+        // legacy/current pair before any DDL, so a conflict leaves all four tables
+        // untouched. Renames and clean-install creation then commit atomically.
+        new(
+            "20260904-01-zynora-brand-table-compatibility",
+            """
+SET XACT_ABORT ON;
+
+DECLARE @LegacyPrefix sysname = N'Ne' + N'xora';
+DECLARE @LegacyHrSettings sysname = N'dbo.' + @LegacyPrefix + N'HrSettings';
+DECLARE @LegacyTerminationReasons sysname = N'dbo.' + @LegacyPrefix + N'TerminationReasons';
+DECLARE @LegacyNotificationRules sysname = N'dbo.' + @LegacyPrefix + N'NotificationRules';
+DECLARE @LegacyNotificationEvents sysname = N'dbo.' + @LegacyPrefix + N'NotificationEvents';
+
+IF (OBJECT_ID(@LegacyHrSettings, 'U') IS NOT NULL AND OBJECT_ID(N'dbo.ZynoraHrSettings', 'U') IS NOT NULL)
+   OR (OBJECT_ID(@LegacyTerminationReasons, 'U') IS NOT NULL AND OBJECT_ID(N'dbo.ZynoraTerminationReasons', 'U') IS NOT NULL)
+   OR (OBJECT_ID(@LegacyNotificationRules, 'U') IS NOT NULL AND OBJECT_ID(N'dbo.ZynoraNotificationRules', 'U') IS NOT NULL)
+   OR (OBJECT_ID(@LegacyNotificationEvents, 'U') IS NOT NULL AND OBJECT_ID(N'dbo.ZynoraNotificationEvents', 'U') IS NOT NULL)
+BEGIN
+    THROW 51031, 'ZYNORA schema conflict: a legacy and current brand table both exist. No automatic merge or deletion was attempted.', 1;
+END;
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(@LegacyHrSettings, 'U') IS NOT NULL
+        EXEC sys.sp_rename @objname = @LegacyHrSettings, @newname = N'ZynoraHrSettings', @objtype = N'OBJECT';
+
+    IF OBJECT_ID(@LegacyTerminationReasons, 'U') IS NOT NULL
+        EXEC sys.sp_rename @objname = @LegacyTerminationReasons, @newname = N'ZynoraTerminationReasons', @objtype = N'OBJECT';
+
+    IF OBJECT_ID(@LegacyNotificationRules, 'U') IS NOT NULL
+        EXEC sys.sp_rename @objname = @LegacyNotificationRules, @newname = N'ZynoraNotificationRules', @objtype = N'OBJECT';
+
+    IF OBJECT_ID(@LegacyNotificationEvents, 'U') IS NOT NULL
+        EXEC sys.sp_rename @objname = @LegacyNotificationEvents, @newname = N'ZynoraNotificationEvents', @objtype = N'OBJECT';
+
+    IF OBJECT_ID(N'dbo.ZynoraHrSettings', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.ZynoraHrSettings
+        (
+            SettingKey nvarchar(160) NOT NULL CONSTRAINT PK_ZynoraHrSettings PRIMARY KEY,
+            SettingValue nvarchar(max) NULL,
+            UpdatedAt datetime2 NOT NULL CONSTRAINT DF_ZynoraHrSettings_UpdatedAt DEFAULT(SYSUTCDATETIME())
+        );
+    END;
+
+    IF OBJECT_ID(N'dbo.ZynoraTerminationReasons', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.ZynoraTerminationReasons
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ZynoraTerminationReasons PRIMARY KEY,
+            Name nvarchar(180) NOT NULL,
+            IsMandatory bit NOT NULL CONSTRAINT DF_ZynoraTerminationReasons_IsMandatory DEFAULT(0),
+            RequiresSelfService bit NOT NULL CONSTRAINT DF_ZynoraTerminationReasons_RequiresSelfService DEFAULT(1),
+            EndOfServicePercent decimal(18,2) NOT NULL CONSTRAINT DF_ZynoraTerminationReasons_EndOfServicePercent DEFAULT(100),
+            IsActive bit NOT NULL CONSTRAINT DF_ZynoraTerminationReasons_IsActive DEFAULT(1),
+            CreatedAt datetime2 NOT NULL CONSTRAINT DF_ZynoraTerminationReasons_CreatedAt DEFAULT(SYSUTCDATETIME())
+        );
+    END;
+
+    IF OBJECT_ID(N'dbo.ZynoraNotificationRules', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.ZynoraNotificationRules
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ZynoraNotificationRules PRIMARY KEY,
+            Name nvarchar(220) NOT NULL,
+            IsEnabled bit NOT NULL CONSTRAINT DF_ZynoraNotificationRules_IsEnabled DEFAULT(0),
+            Audience nvarchar(80) NULL,
+            DaysBefore int NOT NULL CONSTRAINT DF_ZynoraNotificationRules_DaysBefore DEFAULT(0),
+            TriggerDescription nvarchar(500) NULL,
+            SelectedItems nvarchar(500) NULL,
+            SupervisorName nvarchar(220) NULL,
+            DisplayOrder int NOT NULL CONSTRAINT DF_ZynoraNotificationRules_DisplayOrder DEFAULT(100),
+            CreatedAt datetime2 NOT NULL CONSTRAINT DF_ZynoraNotificationRules_CreatedAt DEFAULT(SYSUTCDATETIME())
+        );
+    END;
+
+    IF OBJECT_ID(N'dbo.ZynoraNotificationEvents', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.ZynoraNotificationEvents
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ZynoraNotificationEvents PRIMARY KEY,
+            EventKey nvarchar(200) NOT NULL,
+            RuleKind nvarchar(40) NOT NULL,
+            SubjectEmployeeId int NOT NULL,
+            RecipientCount int NOT NULL CONSTRAINT DF_ZynoraNotificationEvents_RecipientCount DEFAULT(0),
+            PushDelivered int NOT NULL CONSTRAINT DF_ZynoraNotificationEvents_PushDelivered DEFAULT(0),
+            CreatedAt datetime2 NOT NULL CONSTRAINT DF_ZynoraNotificationEvents_CreatedAt DEFAULT(SYSUTCDATETIME())
+        );
+        CREATE UNIQUE INDEX UX_ZynoraNotifEvents_Key ON dbo.ZynoraNotificationEvents(EventKey);
+    END;
+
+    DECLARE @LegacyEventIndex sysname = N'UX_' + @LegacyPrefix + N'NotifEvents_Key';
+    IF EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.ZynoraNotificationEvents')
+          AND name = @LegacyEventIndex)
+       AND NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.ZynoraNotificationEvents')
+          AND name = N'UX_ZynoraNotifEvents_Key')
+    BEGIN
+        DECLARE @LegacyEventIndexObject nvarchar(776) = N'dbo.ZynoraNotificationEvents.' + QUOTENAME(@LegacyEventIndex);
+        EXEC sys.sp_rename @objname = @LegacyEventIndexObject, @newname = N'UX_ZynoraNotifEvents_Key', @objtype = N'INDEX';
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
     };
 
     /// <summary>
