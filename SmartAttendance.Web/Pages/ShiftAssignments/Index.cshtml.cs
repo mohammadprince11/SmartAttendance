@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.ShiftAssignments;
@@ -51,6 +52,28 @@ public class IndexModel : PageModel
             var allowedIds = await EmployeeCompanyGuard.FilterEmployeesInScopeAsync(
                 _dbContext, all.Select(r => r.EmployeeId), scope, HttpContext.RequestAborted);
             all = all.Where(r => allowedIds.Contains(r.EmployeeId)).ToList();
+        }
+
+        var localizedEmployeeRows =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    _dbContext,
+                    all.Select(item => item.EmployeeId),
+                    HttpContext.RequestAborted);
+
+        foreach (var row in all)
+        {
+            if (!localizedEmployeeRows.TryGetValue(
+                    row.EmployeeId,
+                    out var display))
+            {
+                continue;
+            }
+
+            row.EmployeeName = display.FullName;
+            row.Position = display.Position ?? string.Empty;
+            row.Department = display.DepartmentName;
+            row.Branch = display.BranchName;
         }
 
         AssignedCount = all.Count(r => r.ShiftTypeId != null);

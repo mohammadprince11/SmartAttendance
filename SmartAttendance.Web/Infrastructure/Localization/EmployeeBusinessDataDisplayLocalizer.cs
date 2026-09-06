@@ -8,6 +8,13 @@ using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Localization;
 
+public sealed record EmployeeBusinessDisplay(
+    int EmployeeId,
+    string FullName,
+    string BranchName,
+    string DepartmentName,
+    string? Position);
+
 /// <summary>
 /// يختار بيانات الشركة المترجمة حسب لغة واجهة المستخدم الحالية.
 /// هذا يخص بيانات الأعمال فقط (اسم الموظف/الشركة/الموقع/القسم/المنصب)،
@@ -68,6 +75,82 @@ public static class EmployeeBusinessDataDisplayLocalizer
                 : item.Fallback);
     }
 
+    public static async Task<IReadOnlyDictionary<int, EmployeeBusinessDisplay>>
+        GetEmployeeBusinessDataAsync(
+            ApplicationDbContext db,
+            IEnumerable<int> employeeIds,
+            CancellationToken cancellationToken = default)
+    {
+        var ids = employeeIds
+            .Where(id => id > 0)
+            .Distinct()
+            .ToArray();
+
+        if (ids.Length == 0)
+        {
+            return new Dictionary<int, EmployeeBusinessDisplay>();
+        }
+
+        var items = await db.Employees
+            .AsNoTracking()
+            .Where(item => ids.Contains(item.Id))
+            .Select(item => new EmployeeListViewModel
+            {
+                Id = item.Id,
+                EmployeeNo = item.EmployeeNo,
+                FullName = item.FullName,
+                CompanyId = item.CompanyId ?? item.Branch.CompanyId,
+                BranchId = item.BranchId,
+                DepartmentId = item.DepartmentId,
+                PositionId = item.PositionId,
+                Position = item.Position,
+                BranchName = item.Branch.Name,
+                DepartmentName = item.Department.Name
+            })
+            .ToListAsync(cancellationToken);
+
+        await LocalizeEmployeeListAsync(
+            db,
+            items,
+            cancellationToken);
+
+        return items.ToDictionary(
+            item => item.Id,
+            item => new EmployeeBusinessDisplay(
+                item.Id,
+                item.FullName,
+                item.BranchName,
+                item.DepartmentName,
+                item.Position));
+    }
+
+    public static async Task<
+        IReadOnlyDictionary<(int CompanyId, int EntityId), string>>
+        GetEntityNamesAsync(
+            ApplicationDbContext db,
+            string entityType,
+            IEnumerable<(
+                int CompanyId,
+                int EntityId,
+                string Fallback)> source,
+            CancellationToken cancellationToken = default)
+    {
+        var items = source
+            .Where(item =>
+                item.CompanyId > 0 &&
+                item.EntityId > 0)
+            .Select(item => new DisplayNameTarget(
+                item.CompanyId,
+                item.EntityId,
+                item.Fallback))
+            .ToList();
+
+        return await ResolveNamesAsync(
+            db,
+            entityType,
+            items,
+            cancellationToken);
+    }
     public static async Task LocalizeBranchesAsync(
         ApplicationDbContext db,
         IEnumerable<BranchListViewModel> branches,

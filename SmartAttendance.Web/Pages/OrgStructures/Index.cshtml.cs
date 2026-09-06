@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.OrgStructures;
@@ -56,6 +57,24 @@ public class IndexModel : PageModel
             .ToListAsync())
             .Where(x => scope.Allows(x.Id))
             .ToList();
+
+        var localizedCompanyNames =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetCompanyNamesAsync(
+                    _db,
+                    Companies.Select(item =>
+                        (item.Id, item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var company in Companies)
+        {
+            if (localizedCompanyNames.TryGetValue(
+                    company.Id,
+                    out var localizedName))
+            {
+                company.Name = localizedName;
+            }
+        }
 
         CompanyId = CompanySelectionContext.Resolve(HttpContext, CompanyId, Companies.Select(x => x.Id).ToArray());
         if (CompanyId is not > 0) return;
