@@ -1,45 +1,65 @@
 @page
 @model SmartAttendance.Web.Pages.VerifyModel
+@using System.Globalization
+@using SmartAttendance.Web.Infrastructure.Localization
+@inject ILocalizationDictionaryService LocalizationDictionary
 @{
     Layout = null;
-    ViewData["Title"] = "التحقق من وثيقة";
+
+    var currentCulture = CultureInfo.CurrentUICulture;
+    var configuredLanguage = await LocalizationDictionary.FindLanguageAsync(
+        currentCulture.Name,
+        HttpContext.RequestAborted);
+
+    var currentDirection =
+        configuredLanguage?.Direction
+        ??
+        (currentCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr");
+
+    ViewData["Title"] = T["التحقق من وثيقة"];
 }
 <link rel="stylesheet" href="~/css/pages/verify-d7f0fd1224.css" asp-append-version="true" />
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="@currentCulture.Name" dir="@currentDirection">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>التحقق من وثيقة</title>
+    <title>@T["التحقق من وثيقة"]</title>
     <link rel="stylesheet" href="~/css/zynora-design-tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/zynora-unified-pages.css" asp-append-version="true" />
     <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
-    </head>
+</head>
 <body class="zy-app">
     <main class="vf zy-scope zy-ui-contract">
-        <h1>التحقق من وثيقة</h1>
+        <h1>@T["التحقق من وثيقة"]</h1>
         <p class="sub">
-            أدخل رمز التحقق المطبوع على الوثيقة، وعامل التحقق المرافق له،
-            للتأكّد من أنها صادرة فعلاً عن هذه الجهة ولم تُسحب.
+            @T["أدخل رمز التحقق المطبوع على الوثيقة، وعامل التحقق المرافق له، للتأكّد من أنها صادرة فعلاً عن هذه الجهة ولم تُسحب."]
         </p>
 
         @if (Model.Submitted)
         {
             <div class="res @(Model.Success ? "ok" : "no")">
-                <b>@Model.Message</b>
+                <b>
+                    @(string.IsNullOrWhiteSpace(Model.Message)
+                        ? string.Empty
+                        : T[Model.Message].Value)
+                </b>
 
                 @if (Model.Success)
                 {
                     <dl>
-                        <dt>نوع الوثيقة</dt>
+                        <dt>@T["نوع الوثيقة"]</dt>
                         <dd>@Model.DocumentType</dd>
-                        <dt>صادرة لـ</dt>
+
+                        <dt>@T["صادرة لـ"]</dt>
                         <dd>@Model.EmployeeName</dd>
-                        <dt>تاريخ الإصدار</dt>
+
+                        <dt>@T["تاريخ الإصدار"]</dt>
                         <dd>@Model.IssuedOn?.ToString("yyyy/MM/dd")</dd>
+
                         @if (Model.ValidUntil is { } until)
                         {
-                            <dt>صالحة للتحقق حتى</dt>
+                            <dt>@T["صالحة للتحقق حتى"]</dt>
                             <dd>@until.ToString("yyyy/MM/dd")</dd>
                         }
                     </dl>
@@ -49,19 +69,26 @@
 
         <form method="post">
             <label>
-                رمز التحقق
-                <input asp-for="Token" dir="ltr" placeholder="ABCD-EFGH-JKMN" autocomplete="off" />
+                @T["رمز التحقق"]
+                <input asp-for="Token"
+                       dir="ltr"
+                       placeholder="ABCD-EFGH-JKMN"
+                       autocomplete="off" />
             </label>
+
             <label>
-                عامل التحقق (الرقم الوطني أو رمز PIN)
-                <input asp-for="Factor" dir="ltr" placeholder="—" autocomplete="off" />
+                @T["عامل التحقق (الرقم الوطني أو رمز PIN)"]
+                <input asp-for="Factor"
+                       dir="ltr"
+                       placeholder="—"
+                       autocomplete="off" />
             </label>
-            <button type="submit">تحقّق</button>
+
+            <button type="submit">@T["تحقّق"]</button>
         </form>
 
         <p class="note">
-            هذه الصفحة تُثبت أصالة الوثيقة فقط — لا تعرض محتواها ولا بيانات الموظف
-            المالية. وإن تعذّر التحقق فراجع الجهة المُصدِرة مباشرةً.
+            @T["هذه الصفحة تُثبت أصالة الوثيقة فقط — لا تعرض محتواها ولا بيانات الموظف المالية. وإن تعذّر التحقق فراجع الجهة المُصدِرة مباشرةً."]
         </p>
     </main>
 </body>

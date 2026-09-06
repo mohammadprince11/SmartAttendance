@@ -1,6 +1,8 @@
-﻿@using SmartAttendance.Web
+@using SmartAttendance.Web
 @using SmartAttendance.Web.Infrastructure.Security
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<SharedResource> T
 @namespace SmartAttendance.Web.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@addTagHelper SmartAttendance.Web.Infrastructure.Localization.LocalizationHtmlTagHelper, SmartAttendance.Web
+@addTagHelper SmartAttendance.Web.Infrastructure.Localization.LocalizationRuntimeScriptTagHelper, SmartAttendance.Web
