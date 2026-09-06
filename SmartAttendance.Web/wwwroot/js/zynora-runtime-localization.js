@@ -5,9 +5,26 @@
     var culture = root.lang || "ar-IQ";
     if (culture.toLowerCase().startsWith("ar")) return;
 
-    var ignoredParents = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
+    // Elements whose contents must never be rewritten.
+    // TEXTAREA is intentionally NOT here: its UI attributes (placeholder/title/
+    // aria-label) are localizable, while its value/text content is user data.
+    var ignoredElements = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE"]);
+    var ignoredTextParents = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
     var translatedMarker = "data-zy-localized";
-    var attributes = ["placeholder", "title", "aria-label", "data-sidebar-label", "data-ky-title", "value"];
+    var attributes = [
+        "placeholder",
+        "title",
+        "aria-label",
+        "aria-description",
+        "alt",
+        "data-sidebar-label",
+        "data-ky-title",
+        "data-title",
+        "data-tooltip",
+        "data-original-title",
+        "data-bs-original-title",
+        "value"
+    ];
     var catalog = Object.create(null);
     var composedKeys = [];
     var templateKeys = [];
@@ -91,8 +108,10 @@
     }
 
     function translateElement(element) {
-        if (!(element instanceof Element) || ignoredParents.has(element.tagName) || isExcluded(element)) return;
+        if (!(element instanceof Element) || ignoredElements.has(element.tagName) || isExcluded(element)) return;
 
+        // Translate UI-facing attributes even on controls whose value/content is
+        // user-entered data (notably TEXTAREA placeholders and accessibility text).
         attributes.forEach(function (name) {
             if (!element.hasAttribute(name)) return;
             if (name === "value" && !(element instanceof HTMLInputElement && /^(button|submit|reset)$/i.test(element.type))) return;
@@ -101,11 +120,13 @@
             if (translated !== original) element.setAttribute(name, translated);
         });
 
-        Array.from(element.childNodes).forEach(function (node) {
-            if (node.nodeType !== Node.TEXT_NODE) return;
-            var translated = translateValue(node.nodeValue);
-            if (translated !== node.nodeValue) node.nodeValue = translated;
-        });
+        if (!ignoredTextParents.has(element.tagName)) {
+            Array.from(element.childNodes).forEach(function (node) {
+                if (node.nodeType !== Node.TEXT_NODE) return;
+                var translated = translateValue(node.nodeValue);
+                if (translated !== node.nodeValue) node.nodeValue = translated;
+            });
+        }
 
         element.setAttribute(translatedMarker, "true");
     }
@@ -113,18 +134,18 @@
     function translateTree(node) {
         if (isExcluded(node)) return;
         if (node.nodeType === Node.TEXT_NODE) {
-            if (node.parentElement && !ignoredParents.has(node.parentElement.tagName)) {
+            if (node.parentElement && !ignoredTextParents.has(node.parentElement.tagName)) {
                 var translated = translateValue(node.nodeValue);
                 if (translated !== node.nodeValue) node.nodeValue = translated;
             }
             return;
         }
-        if (!(node instanceof Element) || ignoredParents.has(node.tagName)) return;
+        if (!(node instanceof Element) || ignoredElements.has(node.tagName)) return;
         translateElement(node);
         node.querySelectorAll("*").forEach(translateElement);
     }
 
-    fetch("/Culture/Catalog?culture=" + encodeURIComponent(culture) + "&v=20260828-3", {
+    fetch("/Culture/Catalog?culture=" + encodeURIComponent(culture) + "&v=20260906-p2", {
         cache: "no-store",
         credentials: "same-origin",
         headers: { "Accept": "application/json" }
