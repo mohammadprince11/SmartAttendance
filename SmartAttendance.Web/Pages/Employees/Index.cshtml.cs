@@ -1,3 +1,4 @@
+using SmartAttendance.Web.Infrastructure.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Branches.ViewModels;
@@ -24,6 +25,7 @@ public class IndexModel : PageModel
     private readonly SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService _effectiveScopeService;
     private readonly IWebHostEnvironment _environment;
     private readonly EmployeeBootstrapImportEngine _importEngine;
+    private readonly ApplicationDbContext _dbContext;
 
     public IndexModel(
         IEmployeeService employeeService,
@@ -39,6 +41,7 @@ public class IndexModel : PageModel
         _effectiveScopeService = effectiveScopeService;
         _environment = environment;
         _importEngine = new EmployeeBootstrapImportEngine(dbContext);
+        _dbContext = dbContext;
     }
 
     public List<EmployeeListViewModel> Employees { get; set; } = new();
@@ -136,6 +139,11 @@ public class IndexModel : PageModel
             .ThenBy(x => x.Code)
             .ToList();
 
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeCompaniesAsync(
+            _dbContext,
+            allCompanies,
+            HttpContext.RequestAborted);
+
         CompanyOptions = directoryScope.IsUnrestricted &&
                          !directoryScope.HasAnyDenial
             ? allCompanies
@@ -182,11 +190,29 @@ public class IndexModel : PageModel
             .OrderBy(x => x.Name)
             .ToList();
 
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeBranchesAsync(
+            _dbContext,
+            BranchOptions,
+            HttpContext.RequestAborted);
+
+        BranchOptions = BranchOptions
+            .OrderBy(item => item.Name)
+            .ToList();
+
         DepartmentOptions = (await _employeeService
                 .GetDepartmentsForDropdownAsync(
                     CompanyId.Value,
                     directoryScope))
             .OrderBy(x => x.Name)
+            .ToList();
+
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeDepartmentsAsync(
+            _dbContext,
+            DepartmentOptions,
+            HttpContext.RequestAborted);
+
+        DepartmentOptions = DepartmentOptions
+            .OrderBy(item => item.Name)
             .ToList();
 
         BranchId = BranchId.HasValue &&
@@ -224,6 +250,11 @@ public class IndexModel : PageModel
                 PageNumber = PageNumber,
                 PageSize = PageSize
             });
+
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeEmployeeListAsync(
+            _dbContext,
+            result.Items,
+            HttpContext.RequestAborted);
 
         var profileScope = await _permissionAuthorizationService
             .GetPeopleDataScopeAsync(
@@ -455,7 +486,24 @@ public class IndexModel : PageModel
         }
         catch (Exception exception)
         {
-            TempData["ErrorMessage"] = exception.Message;
+            // في Development نُظهر السبب الجذري الحقيقي بدل رسالة EF العامة.
+            var root = exception;
+            while (root.InnerException is not null)
+            {
+                root = root.InnerException;
+            }
+
+            if (_environment.IsDevelopment())
+            {
+                Console.Error.WriteLine("EMPLOYEE IMPORT FAILED:");
+                Console.Error.WriteLine(exception);
+                TempData["ErrorMessage"] = root.Message;
+            }
+            else
+            {
+                TempData["ErrorMessage"] =
+                    "تعذر استيراد الموظفين بسبب خطأ في حفظ البيانات. راجع سجل النظام.";
+            }
         }
 
         return RedirectToPage("./Index", new { CompanyId });

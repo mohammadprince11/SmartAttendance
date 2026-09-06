@@ -98,6 +98,24 @@ public class EditModel : PageModel
     /// <summary>إعدادات الحقول الكاملة (إخفاء/تسمية/ترتيب) — تطبّقها الواجهة.</summary>
     public Dictionary<string, EmployeeFieldControl.FieldSetting> FieldSettings { get; set; } = new();
 
+
+    private async Task LocalizeBusinessLookupsAsync()
+    {
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeBranchesAsync(
+            _dbContext,
+            Branches,
+            HttpContext.RequestAborted);
+
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeDepartmentsAsync(
+            _dbContext,
+            Departments,
+            HttpContext.RequestAborted);
+
+        await EmployeeBusinessDataDisplayLocalizer.LocalizePositionsAsync(
+            _dbContext,
+            PositionOptions,
+            HttpContext.RequestAborted);
+    }
     private async Task LoadLookupsAsync()
     {
         ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
@@ -128,6 +146,7 @@ public class EditModel : PageModel
         await LoadEmployeeNameTranslationsAsync(companyId, false);
 
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
+        await LocalizeBusinessLookupsAsync();
         CurrentPhotoPath = await GetEmployeePhotoPathAsync(Employee.Id);
         CurrentSignatureUrl = await GetSignatureUrlAsync(Employee.Id);
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
@@ -151,6 +170,7 @@ public class EditModel : PageModel
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
+        await LocalizeBusinessLookupsAsync();
         CurrentPhotoPath = Employee.Id > 0 ? await GetEmployeePhotoPathAsync(Employee.Id) : string.Empty;
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id > 0 ? Employee.Id : 0);
 

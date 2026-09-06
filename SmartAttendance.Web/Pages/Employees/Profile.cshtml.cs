@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -344,6 +346,11 @@ public partial class ProfileModel : PageModel
             @"
 SELECT TOP 1
     e.Id,
+    COALESCE(NULLIF(e.CompanyId, 0), b.CompanyId, 0) AS CompanyId,
+    e.BranchId AS BranchId,
+    e.DepartmentId AS DepartmentId,
+    e.PositionId AS PositionId,
+    e.DirectManagerId AS DirectManagerId,
     e.EmployeeNo,
     e.FullName,
     ISNULL(e.NationalId, '') AS NationalId,
@@ -391,6 +398,11 @@ WHERE
             reader => new EmployeeProfileCard
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
+                BranchId = HrmsDatabase.GetInt(reader, "BranchId"),
+                DepartmentId = HrmsDatabase.GetInt(reader, "DepartmentId"),
+                PositionId = reader["PositionId"] is DBNull ? null : Convert.ToInt32(reader["PositionId"]),
+                DirectManagerId = reader["DirectManagerId"] is DBNull ? null : Convert.ToInt32(reader["DirectManagerId"]),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 FullName = HrmsDatabase.GetString(reader, "FullName"),
                 NationalId = HrmsDatabase.GetString(reader, "NationalId"),
@@ -423,9 +435,245 @@ WHERE
                 DirectManager = HrmsDatabase.GetString(reader, "DirectManager")
             });
 
-        return rows.FirstOrDefault();
+        var employee = rows.FirstOrDefault();
+
+        if (employee is not null)
+        {
+            await LocalizeEmployeeProfileAsync(employee);
+        }
+
+        return employee;
     }
 
+
+    private async Task LocalizeEmployeeProfileAsync(
+        EmployeeProfileCard employee)
+    {
+        if (employee.CompanyId <= 0)
+        {
+            return;
+        }
+
+        var languages = await _dbContext.CompanyLanguages
+            .AsNoTracking()
+            .Where(item =>
+                item.CompanyId == employee.CompanyId &&
+                item.IsActive &&
+                !item.IsDeleted)
+            .Select(item => new
+            {
+                item.CultureCode,
+                item.IsDefault
+            })
+            .ToListAsync(HttpContext.RequestAborted);
+
+        if (languages.Count == 0)
+        {
+            return;
+        }
+
+        static string NormalizeCulture(string? culture)
+        {
+            if (string.IsNullOrWhiteSpace(culture))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                return CultureInfo.GetCultureInfo(culture.Trim()).Name;
+            }
+            catch (CultureNotFoundException)
+            {
+                return culture.Trim();
+            }
+        }
+
+        static string LanguageFamily(string? culture)
+        {
+            var normalized = NormalizeCulture(culture);
+            var separator = normalized.IndexOf('-');
+
+            return separator > 0
+                ? normalized[..separator]
+                : normalized;
+        }
+
+        var requested = NormalizeCulture(
+            CultureInfo.CurrentUICulture.Name);
+        var requestedFamily = LanguageFamily(requested);
+
+        var configured = languages
+            .Select(item => new
+            {
+                CultureCode = NormalizeCulture(item.CultureCode),
+                item.IsDefault
+            })
+            .ToList();
+
+        var fallback = configured
+            .FirstOrDefault(item => item.IsDefault)
+            ?.CultureCode;
+
+        var preferred = configured
+            .FirstOrDefault(item =>
+                item.CultureCode.Equals(
+                    requested,
+                    StringComparison.OrdinalIgnoreCase))
+            ?.CultureCode;
+
+        preferred ??= configured
+            .FirstOrDefault(item =>
+                LanguageFamily(item.CultureCode).Equals(
+                    requestedFamily,
+                    StringComparison.OrdinalIgnoreCase))
+            ?.CultureCode;
+
+        preferred ??= fallback;
+
+        var cultures = new[] { preferred, fallback }
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (cultures.Length == 0)
+        {
+            return;
+        }
+
+        var employeeIds = new[]
+            {
+                employee.Id,
+                employee.DirectManagerId ?? 0
+            }
+            .Where(id => id > 0)
+            .Distinct()
+            .ToArray();
+
+        var entityIds = new[]
+            {
+                employee.CompanyId,
+                employee.BranchId,
+                employee.DepartmentId,
+                employee.PositionId ?? 0
+            }
+            .Where(id => id > 0)
+            .Distinct()
+            .ToArray();
+
+        var values = await _dbContext.LocalizedEntityValues
+            .AsNoTracking()
+            .Where(item =>
+                item.CompanyId == employee.CompanyId &&
+                cultures.Contains(item.CultureCode) &&
+                !item.IsDeleted &&
+                (
+                    (item.EntityType == "Employee" &&
+                     employeeIds.Contains(item.EntityId)) ||
+                    ((item.EntityType == "Company" ||
+                      item.EntityType == "Branch" ||
+                      item.EntityType == "Department" ||
+                      item.EntityType == "Position") &&
+                     entityIds.Contains(item.EntityId))
+                ))
+            .ToListAsync(HttpContext.RequestAborted);
+
+        string? Pick(
+            string entityType,
+            int entityId,
+            string fieldName)
+        {
+            string? Find(string? culture) =>
+                string.IsNullOrWhiteSpace(culture)
+                    ? null
+                    : values.FirstOrDefault(item =>
+                        item.EntityType == entityType &&
+                        item.EntityId == entityId &&
+                        item.FieldName.Equals(
+                            fieldName,
+                            StringComparison.OrdinalIgnoreCase) &&
+                        item.CultureCode.Equals(
+                            culture,
+                            StringComparison.OrdinalIgnoreCase))
+                        ?.Value;
+
+            return Find(preferred) ?? Find(fallback);
+        }
+
+        string? EmployeeFullName(int employeeId)
+        {
+            var fullName = Pick(
+                "Employee",
+                employeeId,
+                "FullName");
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return fullName;
+            }
+
+            var parts = new[]
+            {
+                Pick("Employee", employeeId, "FirstName"),
+                Pick("Employee", employeeId, "SecondName"),
+                Pick("Employee", employeeId, "ThirdName"),
+                Pick("Employee", employeeId, "LastName")
+            };
+
+            var composed = string.Join(
+                " ",
+                parts
+                    .Where(part => !string.IsNullOrWhiteSpace(part))
+                    .Select(part => part!.Trim()));
+
+            return string.IsNullOrWhiteSpace(composed)
+                ? null
+                : composed;
+        }
+
+        employee.FullName =
+            EmployeeFullName(employee.Id) ??
+            employee.FullName;
+
+        employee.CompanyName =
+            Pick(
+                "Company",
+                employee.CompanyId,
+                "Name") ??
+            employee.CompanyName;
+
+        employee.BranchName =
+            Pick(
+                "Branch",
+                employee.BranchId,
+                "Name") ??
+            employee.BranchName;
+
+        employee.DepartmentName =
+            Pick(
+                "Department",
+                employee.DepartmentId,
+                "Name") ??
+            employee.DepartmentName;
+
+        if (employee.PositionId.HasValue)
+        {
+            employee.Position =
+                Pick(
+                    "Position",
+                    employee.PositionId.Value,
+                    "Name") ??
+                employee.Position;
+        }
+
+        if (employee.DirectManagerId.HasValue)
+        {
+            employee.DirectManager =
+                EmployeeFullName(
+                    employee.DirectManagerId.Value) ??
+                employee.DirectManager;
+        }
+    }
     private async Task LoadAttendanceAsync(int employeeId)
     {
         // نفس حارس بقية قارئي اليوميات (`MonthAttendanceStore` · `WeekAttendanceStore`
@@ -790,7 +1038,17 @@ ORDER BY CreatedAt DESC;",
     {
         public int Id { get; set; }
 
-        public string EmployeeNo { get; set; } = string.Empty;
+
+        public int CompanyId { get; set; }
+
+        public int BranchId { get; set; }
+
+        public int DepartmentId { get; set; }
+
+        public int? PositionId { get; set; }
+
+        public int? DirectManagerId { get; set; }
+public string EmployeeNo { get; set; } = string.Empty;
 
         public string FullName { get; set; } = string.Empty;
 

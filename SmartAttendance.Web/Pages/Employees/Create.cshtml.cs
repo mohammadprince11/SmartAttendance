@@ -123,6 +123,36 @@ public class CreateModel : PageModel
     /// <summary>إعدادات الحقول الكاملة (إخفاء/تسمية/ترتيب) — تطبّقها الواجهة.</summary>
     public Dictionary<string, EmployeeFieldControl.FieldSetting> FieldSettings { get; set; } = new();
 
+
+    private async Task LocalizeBusinessLookupsAsync()
+    {
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeBranchesAsync(
+            _dbContext,
+            Branches,
+            HttpContext.RequestAborted);
+
+        await EmployeeBusinessDataDisplayLocalizer.LocalizeDepartmentsAsync(
+            _dbContext,
+            Departments,
+            HttpContext.RequestAborted);
+
+        await EmployeeBusinessDataDisplayLocalizer.LocalizePositionsAsync(
+            _dbContext,
+            PositionOptions,
+            HttpContext.RequestAborted);
+
+        var companyNames =
+            await EmployeeBusinessDataDisplayLocalizer.GetCompanyNamesAsync(
+                _dbContext,
+                CompanyOptions.Select(item => (item.Id, item.Name)),
+                HttpContext.RequestAborted);
+
+        CompanyOptions = CompanyOptions
+            .Select(item => companyNames.TryGetValue(item.Id, out var name)
+                ? item with { Name = name }
+                : item)
+            .ToList();
+    }
     private async Task LoadLookupsAsync()
     {
         ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
@@ -138,6 +168,7 @@ public class CreateModel : PageModel
         await ResolveSelectedCompanyAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
+        await LocalizeBusinessLookupsAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
         FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
@@ -159,6 +190,7 @@ public class CreateModel : PageModel
         await ResolveSelectedCompanyAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
+        await LocalizeBusinessLookupsAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
         FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_dbContext);
@@ -348,7 +380,7 @@ public class CreateModel : PageModel
                 StringComparer.OrdinalIgnoreCase);
 
         CompaniesMissingLanguageSetup = [];
-        foreach (var companyId in Branches.Select(item => item.CompanyId).Where(id => id > 0).Distinct())
+        foreach (var companyId in CompanyOptions.Select(item => item.Id).Where(id => id > 0).Distinct())
         {
             var languages = await _dataLocalization.GetLanguagesAsync(
                 companyId,
@@ -405,17 +437,11 @@ public class CreateModel : PageModel
 
     private async Task ResolveSelectedCompanyAsync()
     {
-        var branches = Branches.ToList();
-        Branches = branches;
-        var companyIds = branches
-            .Select(item => item.CompanyId)
-            .Where(id => id > 0)
-            .Distinct()
-            .ToArray();
         CompanyOptions = await _dbContext.Companies
             .AsNoTracking()
-            .Where(item => companyIds.Contains(item.Id) && item.IsActive && !item.IsDeleted)
+            .Where(item => item.IsActive && !item.IsDeleted)
             .OrderBy(item => item.Name)
+            .ThenBy(item => item.Code)
             .Select(item => new EmployeeCompanyChoice(item.Id, item.Name))
             .ToListAsync(HttpContext.RequestAborted);
 

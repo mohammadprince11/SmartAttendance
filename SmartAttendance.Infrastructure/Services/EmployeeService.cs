@@ -199,6 +199,7 @@ public class EmployeeService : IEmployeeService
                     Phone = x.Phone,
                     Email = x.Email,
                     Position = x.Position,
+                    PositionId = x.PositionId,
                     HireDate = x.HireDate,
                     IsActive = x.IsActive,
                     CompanyId = x.Branch.CompanyId,
