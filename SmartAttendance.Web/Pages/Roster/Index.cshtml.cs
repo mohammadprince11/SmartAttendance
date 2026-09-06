@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Roster;
 
@@ -87,6 +88,26 @@ public class IndexModel : PageModel
             .Skip((PageNumber - 1) * PageSize).Take(PageSize)
             .Select(e => new EmpRow(e.Id, e.EmployeeNo, e.FullName, e.Department.Name))
             .ToListAsync();
+
+        var localizedRosterEmployees =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    _dbContext,
+                    Employees.Select(item => item.Id),
+                    HttpContext.RequestAborted);
+
+        Employees = Employees
+            .Select(item =>
+                localizedRosterEmployees.TryGetValue(
+                    item.Id,
+                    out var display)
+                    ? new EmpRow(
+                        item.Id,
+                        item.No,
+                        display.FullName,
+                        display.DepartmentName)
+                    : item)
+            .ToList();
 
         Cells = await RosterStore.GetCellsAsync(_dbContext, await _companyScope.GetAsync(), year, month);
         PublishedAt = await RosterStore.PublishedAtAsync(_dbContext, year, month);
