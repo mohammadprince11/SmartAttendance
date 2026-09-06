@@ -652,4 +652,19 @@
   <data name="الكود، الاسم، القسم..." xml:space="preserve"><value>Code, name, department...</value></data>
   <data name="مسح الفلاتر" xml:space="preserve"><value>Clear filters</value></data>
   <data name="عدد الأسطر في الصفحة" xml:space="preserve"><value>Rows per page</value></data>
+  <data name="ما ينتظرك" xml:space="preserve"><value>Needs your attention</value></data>
+  <data name="+ بدء عملية" xml:space="preserve"><value>+ Start process</value></data>
+  <data name="+ فئة جديدة" xml:space="preserve"><value>+ New category</value></data>
+  <data name="تقارير جاهزة لكل بيانات مودل الأشخاص + باني تقارير مخصص." xml:space="preserve"><value>Ready-made reports for all People data + a custom report builder.</value></data>
+  <data name="تسلسل المدراء المباشرين للموظفين الفعالين — مبني من &quot;المدير المباشر&quot;." xml:space="preserve"><value>Direct-manager hierarchy for active employees — built from &quot;Direct manager&quot;.</value></data>
+  <data name="+ شركة" xml:space="preserve"><value>+ Company</value></data>
+  <data name="+ مجموعة قواعد جديدة" xml:space="preserve"><value>+ New rule group</value></data>
+  <data name="+ إضافة خطوة" xml:space="preserve"><value>+ Add step</value></data>
+  <data name="الفلاتر" xml:space="preserve"><value>Filters</value></data>
+  <data name="اسم المنصب" xml:space="preserve"><value>Position name</value></data>
+  <data name="نظامية" xml:space="preserve"><value>Standard</value></data>
+  <data name="تُخصم" xml:space="preserve"><value>Deducted</value></data>
+  <data name="فترة غلق الحضور المطبَّقة" xml:space="preserve"><value>Applied attendance cutoff period</value></data>
+  <data name="لا يمكن حذف منصب مرتبط بموظفين" xml:space="preserve"><value>A position linked to employees cannot be deleted.</value></data>
+  <data name="الملف يقبل .xlsx أو .csv أو .tsv" xml:space="preserve"><value>The file accepts .xlsx, .csv, or .tsv.</value></data>
 </root>

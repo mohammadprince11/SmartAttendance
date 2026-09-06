@@ -96,6 +96,6 @@ public sealed class LocalizationRuntimeScriptTagHelper : TagHelper
         }
 
         output.PostContent.AppendHtml(
-            "<script src=\"/js/zynora-runtime-localization.js?v=20260906-p2\" defer></script>");
+            "<script src=\"/js/zynora-runtime-localization.js?v=20260907-p4\" defer></script>");
     }
 }
