@@ -119,7 +119,7 @@ public sealed class LocalizationCatalogQualityContractTests
     }
 
     [Fact]
-    public void RuntimeBridge_UsesP5VersionMarker()
+    public void RuntimeBridge_UsesP6VersionMarker()
     {
         var root = FindRoot();
 
@@ -138,12 +138,12 @@ public sealed class LocalizationCatalogQualityContractTests
             "LocalizationShellTagHelpers.cs");
 
         Assert.Contains(
-            "20260907-p5",
+            "20260908-p6",
             runtime,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "/js/zynora-runtime-localization.js?v=20260907-p5",
+            "/js/zynora-runtime-localization.js?v=20260908-p6",
             shell,
             StringComparison.Ordinal);
     }

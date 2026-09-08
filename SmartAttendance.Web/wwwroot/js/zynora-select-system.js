@@ -33,6 +33,33 @@
         return (option.textContent || option.label || option.value || "").trim();
     }
 
+    function cleanAccessibleText(element) {
+        if (!element || !element.cloneNode) return "";
+
+        var clone = element.cloneNode(true);
+
+        clone.querySelectorAll(
+            "select, option, input, textarea, button, script, style"
+        ).forEach(function (child) {
+            child.remove();
+        });
+
+        return (clone.textContent || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 180);
+    }
+
+    function humanizeTechnicalName(value) {
+        return String(value || "")
+            .replace(/^.*\./, "")
+            .replace(/[_-]+/g, " ")
+            .replace(/([a-z])([A-Z])/g, "$1 $2")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 180);
+    }
+
     function selectVariant(select) {
         var value = select && select.dataset
             ? (select.dataset.zynoraSelectVariant || "")
@@ -214,18 +241,36 @@
         if (trigger) {
             var accessibleLabel = select.getAttribute("aria-label");
             if (!accessibleLabel && select.id) {
-                var explicitLabel = Array.prototype.find.call(document.querySelectorAll("label[for]"), function (label) {
-                    return label.getAttribute("for") === select.id;
-                });
-                accessibleLabel = explicitLabel && explicitLabel.textContent;
+                var explicitLabel = Array.prototype.find.call(
+                    document.querySelectorAll("label[for]"),
+                    function (label) {
+                        return label.getAttribute("for") === select.id;
+                    });
+                accessibleLabel = cleanAccessibleText(explicitLabel);
             }
             if (!accessibleLabel) {
                 var containingLabel = select.closest("label");
-                accessibleLabel = containingLabel && containingLabel.textContent;
+                accessibleLabel = cleanAccessibleText(containingLabel);
             }
-            if (!accessibleLabel) accessibleLabel = select.getAttribute("title") || select.name || currentText;
-            accessibleLabel = (accessibleLabel || "").replace(/\s+/g, " ").trim();
-            if (accessibleLabel) trigger.setAttribute("aria-label", accessibleLabel);
+            if (!accessibleLabel) {
+                accessibleLabel = select.getAttribute("title") || "";
+            }
+            if (!accessibleLabel) {
+                accessibleLabel = humanizeTechnicalName(
+                    select.name || select.id);
+            }
+            if (!accessibleLabel) {
+                accessibleLabel = currentText;
+            }
+
+            accessibleLabel = (accessibleLabel || "")
+                .replace(/\s+/g, " ")
+                .trim()
+                .slice(0, 180);
+
+            if (accessibleLabel) {
+                trigger.setAttribute("aria-label", accessibleLabel);
+            }
 
             if (trigger.disabled !== !!select.disabled) {
                 trigger.disabled = !!select.disabled;

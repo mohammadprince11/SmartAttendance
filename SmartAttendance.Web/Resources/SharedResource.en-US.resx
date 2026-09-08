@@ -470,7 +470,7 @@
   <data name="الأربعاء" xml:space="preserve"><value>Wednesday</value></data>
   <data name="الخميس" xml:space="preserve"><value>Thursday</value></data>
   <data name="السبت" xml:space="preserve"><value>Saturday</value></data>
-  <data name="طاب يومك، {0}" xml:space="preserve"><value>Good day, {0}</value></data>
+  <data name="طاب يومك، {0}" xml:space="preserve"><value>Good afternoon, {0}</value></data>
   <data name="{0} موظفاً نشطاً" xml:space="preserve"><value>{0} active employees</value></data>
   <data name="الموظفون النشطون · موظف" xml:space="preserve"><value>Active employees · employee</value></data>
   <data name="حاضرون اليوم · موظف" xml:space="preserve"><value>Present today · employee</value></data>
@@ -667,4 +667,110 @@
   <data name="فترة غلق الحضور المطبَّقة" xml:space="preserve"><value>Applied attendance cutoff period</value></data>
   <data name="لا يمكن حذف منصب مرتبط بموظفين" xml:space="preserve"><value>A position linked to employees cannot be deleted.</value></data>
   <data name="الملف يقبل .xlsx أو .csv أو .tsv" xml:space="preserve"><value>The file accepts .xlsx, .csv, or .tsv.</value></data>
+  <data name="صباح الخير، {0}" xml:space="preserve"><value>Good morning, {0}</value></data>
+  <data name="مساء الخير، {0}" xml:space="preserve"><value>Good evening, {0}</value></data>
+  <data name="افتراضياً ({0} → {1}) — حدّد تواريخك للتوسيع، أو" xml:space="preserve"><value>Default ({0} → {1}) — choose dates to expand the range, or</value></data>
+  <data name="الأرصدة لسنة {0} — {1}" xml:space="preserve"><value>Balances for {0} — {1}</value></data>
+  <data name="{0} ({1}) — سنة {2}" xml:space="preserve"><value>{0} ({1}) — Year {2}</value></data>
+  <data name="لا بدلات إجازة لفترة {0} — أضف بـ«+ بدل إجازة»." xml:space="preserve"><value>No leave encashments for {0} — add one with “+ Leave encashment”.</value></data>
+  <data name="لا حركات عمل إضافي لفترة {0} — أضف بـ«+ عمل إضافي»." xml:space="preserve"><value>No overtime transactions for {0} — add one with “+ Overtime”.</value></data>
+  <data name="لا تعديلات أيام لفترة {0} — أضف بـ«+ تعديل أيام»." xml:space="preserve"><value>No day adjustments for {0} — add one with “+ Day adjustment”.</value></data>
+  <data name="لا حركات دخل لفترة {0} — أضف بـ«+ حركة جديدة»." xml:space="preserve"><value>No income transactions for {0} — add one with “+ New transaction”.</value></data>
+  <data name="يوجد {0} موظّف بلا حساب دخول — يُعرض منهم {1} فقط لأداء أفضل. ابحث بالاسم أو الكود بالأعلى لإيجاد موظّفٍ بعينه، أو الصق أكواد الموظّفين في أداة كلمة المرور لإنشاء حساباتهم دفعةً واحدة." xml:space="preserve"><value>There are {0} employees without sign-in accounts — only {1} are shown for better performance. Search by name or code above to find a specific employee, or paste employee codes into the password tool to create their accounts in bulk.</value></data>
+  <data name="المعامل = ساعات العمل الفعلية ÷ (أيام العمل × {0} ساعة)، مقصوصاً إلى 100% (الزائد أوفرتايم ببند مستقل)." xml:space="preserve"><value>Factor = actual worked hours ÷ (workdays × {0} hours), capped at 100% (excess is overtime in a separate item).</value></data>
+  <data name="· شرائح: {0}" xml:space="preserve"><value>· Brackets: {0}</value></data>
+  <data name="{0} · {1} · ظاهرة" xml:space="preserve"><value>{0} · {1} · Visible</value></data>
+  <data name="تخصصية" xml:space="preserve"><value>Specialist</value></data>
+  <data name="قيادية" xml:space="preserve"><value>Leadership</value></data>
+  <data name="مساندة" xml:space="preserve"><value>Support</value></data>
+  <data name="إدارة عليا" xml:space="preserve"><value>Senior Management</value></data>
+  <data name="إدارة وسطى" xml:space="preserve"><value>Middle Management</value></data>
+  <data name="إشرافي" xml:space="preserve"><value>Supervisory</value></data>
+  <data name="تنفيذي" xml:space="preserve"><value>Executive</value></data>
+  <data name="الفئة" xml:space="preserve"><value>Category</value></data>
+  <data name="كل الفئات" xml:space="preserve"><value>All categories</value></data>
+  <data name="بدون فئة" xml:space="preserve"><value>No category</value></data>
+  <data name="المستوى" xml:space="preserve"><value>Level</value></data>
+  <data name="كل المستويات" xml:space="preserve"><value>All levels</value></data>
+  <data name="بدون مستوى" xml:space="preserve"><value>No level</value></data>
+  <data name="+ ملف" xml:space="preserve"><value>+ Profile</value></data>
+  <data name="إسناد جديد" xml:space="preserve"><value>New assignment</value></data>
+  <data name="+ إسناد جديد" xml:space="preserve"><value>+ New assignment</value></data>
+  <data name="ترجمة العربية" xml:space="preserve"><value>Arabic translation</value></data>
+  <data name="سنوية — مستحق" xml:space="preserve"><value>Annual — Entitled</value></data>
+  <data name="مرضية — مستحق" xml:space="preserve"><value>Sick — Entitled</value></data>
+  <data name="جوهري — لا يُخفى" xml:space="preserve"><value>Core — cannot be hidden</value></data>
+  <data name="خاضع·إجمالي·نسبي" xml:space="preserve"><value>Subject·Gross·Proportional</value></data>
+  <data name="إظهار/إخفاء الحقل" xml:space="preserve"><value>Show/hide field</value></data>
+  <data name="قوالب «طلب إجازة»" xml:space="preserve"><value>“Leave request” templates</value></data>
+  <data name="حالة فارغة + تحميل" xml:space="preserve"><value>Empty state + loading</value></data>
+  <data name="جوهري — إلزامي دائماً" xml:space="preserve"><value>Core — always required</value></data>
+  <data name="افتراضياً = كود الموظف" xml:space="preserve"><value>Default = employee code</value></data>
+  <data name="تسجيل بصمة الآن — دخول" xml:space="preserve"><value>Punch now — Check in</value></data>
+  <data name="تسجيل بصمة الآن — خروج" xml:space="preserve"><value>Punch now — Check out</value></data>
+  <data name="➕ نوع جديد في «العرضية»" xml:space="preserve"><value>➕ New type in “Ad hoc”</value></data>
+  <data name="➕ نوع جديد في «الإجازات»" xml:space="preserve"><value>➕ New type in “Leaves”</value></data>
+  <data name="قالب التعيين (Onboarding)" xml:space="preserve"><value>Onboarding template</value></data>
+  <data name="➕ نوع جديد في «المغادرات»" xml:space="preserve"><value>➕ New type in “Permissions”</value></data>
+  <data name="+ طلب جديد بالخدمة الذاتية" xml:space="preserve"><value>+ New self-service request</value></data>
+  <data name="قالب الإنهاء (Offboarding)" xml:space="preserve"><value>Offboarding template</value></data>
+  <data name="➕ نوع جديد في «الأوفرتايم»" xml:space="preserve"><value>➕ New type in “Overtime”</value></data>
+  <data name="إصدار مفتاح attendance.write" xml:space="preserve"><value>Issue attendance.write key</value></data>
+  <data name="قوالب «تعديل معلومات الموظف»" xml:space="preserve"><value>“Employee information change” templates</value></data>
+  <data name="من تاريخ — فارغ = بداية السنة" xml:space="preserve"><value>From date — blank = start of year</value></data>
+  <data name="إلى تاريخ — فارغ = نهاية السنة" xml:space="preserve"><value>To date — blank = end of year</value></data>
+  <data name="صفر = بلا سقف (السلوك القائم)." xml:space="preserve"><value>Zero = no cap (current behavior).</value></data>
+  <data name="المدة (اتركه فارغاً = كالأمّ 90)" xml:space="preserve"><value>Duration (leave blank = parent value 90)</value></data>
+  <data name="حقول «العائلة والمعالون» المخصصة" xml:space="preserve"><value>Custom “Family &amp; Dependents” fields</value></data>
+  <data name="لا توجد عقود — أضف أول عقد من زر +." xml:space="preserve"><value>No contracts — add the first contract with the + button.</value></data>
+  <data name="حدد الموظف للإستعلام عن قسيمة الراتب" xml:space="preserve"><value>Select an employee to view the payslip</value></data>
+  <data name="استيراد من إكسل (رمز الموظف + الأيام)" xml:space="preserve"><value>Import from Excel (employee code + days)</value></data>
+  <data name="استيراد من إكسل (رمز الموظف + القيمة)" xml:space="preserve"><value>Import from Excel (employee code + value)</value></data>
+  <data name="مهلة الاعتراض (يوم) — صفر = لا اعتراض" xml:space="preserve"><value>Objection window (days) — zero = no objection</value></data>
+  <data name="آخر رقم تسلسلي (الرقم الجاي = هذا + 1)" xml:space="preserve"><value>Last sequence number (next = this + 1)</value></data>
+  <data name="استيراد من إكسل (رمز الموظف + الساعات)" xml:space="preserve"><value>Import from Excel (employee code + hours)</value></data>
+  <data name="لا قوالب — أضف قالباً بـ«+ قالب جديد»." xml:space="preserve"><value>No templates — add one with “+ New template”.</value></data>
+  <data name="استيراد من إكسل (رمز الموظف + الأيام ±)" xml:space="preserve"><value>Import from Excel (employee code + days ±)</value></data>
+  <data name="لا توجد علاوات — أضف أول علاوة من زر +." xml:space="preserve"><value>No raises — add the first raise with the + button.</value></data>
+  <data name="مدّة إسقاط العقوبة (شهر) — صفر = لا تسقط" xml:space="preserve"><value>Penalty expiry period (months) — zero = never expires</value></data>
+  <data name="الصفر = بلا سقف. المرفوض والملغى لا يُحتسبان." xml:space="preserve"><value>Zero = no cap. Rejected and cancelled items are not counted.</value></data>
+  <data name="لا قواعد فترية — أضف قاعدة بـ«+ قاعدة جديدة»." xml:space="preserve"><value>No period rules — add one with “+ New rule”.</value></data>
+  <data name="لا تسويات قيد الإعداد — أضف بـ«+ تسوية نهاية خدمة»." xml:space="preserve"><value>No draft settlements — add one with “+ End-of-service settlement”.</value></data>
+  <data name="— المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة." xml:space="preserve"><value>— Matching ignores the Arabic definite article “ال” and extra spaces.</value></data>
+  <data name="— النيابة طبقةٌ فوقه تنتهي بانتهاء تاريخها تلقائياً." xml:space="preserve"><value>— Acting assignment is an overlay that ends automatically on its end date.</value></data>
+  <data name="لكل درجة كود فريد + مدى أساسي (أدنى/متوسط/أقصى). المدى" xml:space="preserve"><value>Each grade has a unique code + base range (minimum/midpoint/maximum). The range</value></data>
+  <data name="الصفر = بلا حدّ زمني. يمنع «إحياء» أيام قديمة بعد إغلاق الشهر." xml:space="preserve"><value>Zero = no time limit. Prevents “reviving” old days after the month is closed.</value></data>
+  <data name="لا زيادات قيد الانتظار — أضف بـ«+ زيادة راتب» أو زيادة جماعية." xml:space="preserve"><value>No pending raises — add one with “+ Salary raise” or use a bulk raise.</value></data>
+  <data name="شركة تجريبية" xml:space="preserve"><value>Demo company</value></data>
+  <data name="(ضمان 5%/12% + شرائح 3–15%) — راجعها مع محاسب قبل اعتماد أي مسير حقيقي." xml:space="preserve"><value>(Social security 5%/12% + 3–15% brackets) — review with an accountant before approving any real payroll.</value></data>
+  <data name="`ViolationConfigPolicy.CanObject` — تصنيف «قابلة للطعن» بتبويب الإجراءات" xml:space="preserve"><value>`ViolationConfigPolicy.CanObject` — classifies “Appealable” in the Actions tab</value></data>
+  <data name="الافتراضي — لا يتوقّف المسير عند نقص بيانات الحضور، والحالة مُعلَنة بوضوح." xml:space="preserve"><value>Default — payroll does not stop when attendance data is incomplete; the status is clearly disclosed.</value></data>
+  <data name="حدد الصفوف من Excel ثم اضغط Ctrl + C، وبعدها الصقها هنا باستخدام Ctrl + V." xml:space="preserve"><value>Select the rows in Excel, press Ctrl + C, then paste them here with Ctrl + V.</value></data>
+  <data name="ارفع Excel Template أو الصق البيانات. المطلوب فقط: PositionName و CompanyCode." xml:space="preserve"><value>Upload the Excel template or paste the data. Required only: PositionName and CompanyCode.</value></data>
+  <data name="تقارير حضور جاهزة (تفصيلية وشهرية) من يوميات المحرك الرسمي + باني تقارير مخصص." xml:space="preserve"><value>Ready attendance reports (detailed and monthly) from the official engine daily records + a custom report builder.</value></data>
+  <data name="إنشاء حساب «موظف» لكل الموظّفين الفعّالين بلا حساب (اسم المستخدم = كود الموظّف)" xml:space="preserve"><value>Create an “Employee” account for every active employee without an account (username = employee code)</value></data>
+  <data name="المعامل = أيام الحضور الفعلية ÷ أيام العمل. من داوَم 10 من 26 يأخذ راتب 10 أيام." xml:space="preserve"><value>Factor = actual attendance days ÷ workdays. An employee who worked 10 of 26 days is paid for 10 days.</value></data>
+  <data name="تصنيف البصمات: حضور/انصراف نظاميتان + دلالات مخصصة (صلاة، استراحة، مهمة عمل...)." xml:space="preserve"><value>Punch classification: standard check-in/check-out + custom meanings (prayer, break, work task...).</value></data>
+  <data name="حدّد صف العناوين وصفوف البيانات في إكسل، اضغط Ctrl + C، ثم الصقها هنا بـ Ctrl + V." xml:space="preserve"><value>Select the header row and data rows in Excel, press Ctrl + C, then paste them here with Ctrl + V.</value></data>
+  <data name="وعاء الأوفرتايم/الإجازة غير المدفوعة يُركَّب من الأساسي وحده أو الأساسي + العلاوات" xml:space="preserve"><value>The overtime/unpaid-leave base is composed from basic salary only or basic salary + allowances</value></data>
+  <data name="الأساسي + العلاوات المؤهَّلة للأوفرتايم" xml:space="preserve"><value>Basic salary + overtime-eligible allowances</value></data>
+  <data name="الأساسي + العلاوات المؤهَّلة للإجازة" xml:space="preserve"><value>Basic salary + leave-eligible allowances</value></data>
+  <data name="مثال: 4 = لا انصراف قبل مرور 4 ساعات. الصفر يُعطّل القاعدة. يقبل الكسور (مثال 4.5)." xml:space="preserve"><value>Example: 4 = no check-out before 4 hours have passed. Zero disables the rule. Decimals are accepted (for example 4.5).</value></data>
+  <data name="من لا حساب دخول له من هذه الأكواد يُنشأ له حساب «موظف» تلقائيّاً (اسم المستخدم = كوده)." xml:space="preserve"><value>Anyone in these codes without a sign-in account gets an “Employee” account automatically (username = their code).</value></data>
+  <data name="محرك «حضور ← إجراء»: في حالة [شرط على اليومية] ← [مخالفة/ملاحظة]، يدوي بالفرز أو تلقائي." xml:space="preserve"><value>“Attendance ← Action” engine: when [daily condition] → [violation/note], either manually during sorting or automatically.</value></data>
+  <data name="— التجديد يُنشئ عقداً جديداً ويُبقي السابق، فيبقى تاريخ الموظف التعاقدي قابلاً للإجابة عنه." xml:space="preserve"><value>— Renewal creates a new contract and keeps the previous one, preserving the employee’s contract history.</value></data>
+  <data name="مكافأة نهاية الخدمة بشرائح سنوات الخدمة + بدل رصيد الإجازات + مستحقات − اقتطاعات = صافي التسوية." xml:space="preserve"><value>End-of-service benefit by service-year brackets + leave-balance encashment + entitlements − deductions = net settlement.</value></data>
+  <data name="الالتزام المتراكم بتاريخ محدّد لكل موظف نشط: مخصص نهاية الخدمة + مخصص رصيد الإجازات. تحليلي/محاسبي." xml:space="preserve"><value>Accrued liability at a specified date for each active employee: end-of-service provision + leave-balance provision. Analytical/accounting.</value></data>
+  <data name="⚠️ لا يُحتسب راتب من لا يوجد له اعتماد شهري بأيام عمل. المعامل = (أيام العمل − الغياب) ÷ أيام العمل." xml:space="preserve"><value>⚠️ No salary is calculated without an approved monthly workday record. Factor = (workdays − absences) ÷ workdays.</value></data>
+  <data name="تسلسل المدراء المباشرين للموظفين الفعالين في الشركة المحددة، مبني من &quot;المدير المباشر&quot; في ملف كل موظف." xml:space="preserve"><value>Direct-manager hierarchy for active employees in the selected company, based on “Direct manager” in each employee profile.</value></data>
+  <data name="(لوائح · نماذج · تعاميم · أدلّة) — تمييزاً عن وثائق الموظف الشخصية. الجمهور يُحدَّد بشروط، وبلا شروط تظهر للجميع." xml:space="preserve"><value>(Policies · forms · circulars · guides) — distinct from employees’ personal documents. Audience is defined by conditions; with no conditions, it appears to everyone.</value></data>
+  <data name="العقوبة الساقطة لا تُحتسب بتدرّج العقوبة اللاحق. بلا مدّة، يُعاقَب الموظف اليوم كمكرِّر بسبب مخالفةٍ عمرها ثلاث سنوات." xml:space="preserve"><value>An expired penalty is excluded from later escalation. Without an expiry period, an employee can be treated today as a repeat offender because of a three-year-old violation.</value></data>
+  <data name="يُنشأ للموظف حساب دخولٍ بدور «موظف» تلقائياً مع إضافته. كلمة المرور مطلوبة؛ اسم الدخول اختياري (افتراضياً = كود الموظف)." xml:space="preserve"><value>An “Employee” sign-in account is created automatically when the employee is added. Password is required; username is optional (default = employee code).</value></data>
+  <data name="1 = يوم بيوم (الافتراضي). 2 = يوم الغياب يُخصم بيومين نمط لوائح الجزاءات. الخصم الزائد يُطبَّق فوق التنسيب مهما كان النمط." xml:space="preserve"><value>1 = day-for-day (default). 2 = one absence day deducts two days, following disciplinary rules. Extra deduction applies on top of proration in either mode.</value></data>
+  <data name="مقاطع نمط كيان: [بادئة ثابتة] + [رقم متسلسل بعدد أرقام]. عند التفعيل، ترك حقل الكود فارغاً بصفحة إضافة الموظف يولّد الرقم التالي تلقائياً." xml:space="preserve"><value>Entity-style segments: [fixed prefix] + [sequence number with a fixed digit count]. When enabled, leaving the code blank on Add Employee generates the next number automatically.</value></data>
+  <data name="الحقول هنا تظهر تلقائياً بنموذج «العائلة والمعالون» بملف الموظف 360° وتُحفظ قيمها لكل سجل. اسحب ⠿ لإعادة الترتيب. نوع «قائمة» يحتاج الخيارات سطراً لكل خيار." xml:space="preserve"><value>Fields here appear automatically in the “Family &amp; Dependents” form in the employee 360° profile and are saved per record. Drag ⠿ to reorder. “List” fields require one option per line.</value></data>
+  <data name="تُدار المواقع وإسناد الموظفين من صفحة «المواقع الجغرافية للموظفين». موظف بلا مواقع مسنَدة لا تنطبق عليه القاعدة، وغياب إحداثيات الجهاز (رفض إذن الموقع) = رفض البصمة." xml:space="preserve"><value>Locations and employee assignments are managed from “Employee geolocations”. The rule does not apply to an employee with no assigned locations; missing device coordinates (location permission denied) = punch rejected.</value></data>
+  <data name="كل سطر داخل الورقة صار Text Layer مستقل مثل Word: العنوان، اسم الموظف، الكود، القسم، تاريخ المخالفة، العقوبة، والأثر المالي. عدّل كل واحد من قائمة &quot;طبقات النص الحالية&quot; بالأسفل." xml:space="preserve"><value>Each line on the sheet is now an independent Text Layer like Word: title, employee name, code, department, violation date, penalty, and financial impact. Edit each one from the “Current text layers” list below.</value></data>
+  <data name="مفعّل افتراضياً. «إجراء منفَّذ» = اقتراح معتمَد أو تلقائي أنشأ قضية مخالفة أو حركة مالية — إعادة تحليله تدهس قراراً بشرياً أو أثراً مالياً سبق ترحيله. الاقتراح المعلّق أو المتجاهَل لا يمنع." xml:space="preserve"><value>Enabled by default. “Executed action” = an approved or automatic suggestion that created a violation case or financial transaction — re-analysis would overwrite a human decision or an already-posted financial effect. Pending or ignored suggestions do not block.</value></data>
+  <data name="المفاتيح تُسجَّل من درج إعدادات بوابة الموظف وتُعتمد من صفحة «اعتماد مفاتيح البصمة/الوجه». موظف بلا مفتاح معتمد لا تنطبق عليه القاعدة — يمنع بصم زميل بدل زميله (مع النطاق الجغرافي: من أنت + وين أنت)." xml:space="preserve"><value>Keys are registered from the Employee Portal settings drawer and approved on “Approve biometric/face keys”. The rule does not apply to an employee without an approved key — it prevents one employee punching for another (with geofencing: who you are + where you are).</value></data>
 </root>

@@ -152,7 +152,7 @@ public sealed class RuntimeBusinessLocalizationContractTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "20260907-p5",
+            "20260908-p6",
             script,
             StringComparison.Ordinal);
     }
