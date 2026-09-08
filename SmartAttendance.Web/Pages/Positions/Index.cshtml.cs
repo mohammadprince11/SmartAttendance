@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
@@ -431,6 +431,24 @@ public class IndexModel : PageModel
             })
             .ToListAsync();
 
+        var localizedCompanyNames =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetCompanyNamesAsync(
+                    _db,
+                    Companies.Select(item =>
+                        (item.Id, item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var company in Companies)
+        {
+            if (localizedCompanyNames.TryGetValue(
+                    company.Id,
+                    out var localizedName))
+            {
+                company.Name = localizedName;
+            }
+        }
+
         if (Companies.Count == 0)
         {
             CompanyId = null;
@@ -561,8 +579,66 @@ public class IndexModel : PageModel
         }
 
         await LoadPositionTranslationsAsync(selectedCompanyId, Input.Id);
+        await LocalizePositionDisplayRowsAsync(selectedCompanyId);
     }
 
+    private async Task LocalizePositionDisplayRowsAsync(
+        int companyId)
+    {
+        if (Positions.Count == 0)
+        {
+            return;
+        }
+
+        var localizedNames =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEntityNamesAsync(
+                    _db,
+                    "Position",
+                    Positions.Select(item => (
+                        CompanyId: companyId,
+                        EntityId: item.Id,
+                        Fallback: item.ArabicName)),
+                    HttpContext.RequestAborted);
+
+        foreach (var position in Positions)
+        {
+            if (localizedNames.TryGetValue(
+                    (companyId, position.Id),
+                    out var localizedName))
+            {
+                position.ArabicName = localizedName;
+            }
+
+            position.SearchText = NormalizeSearchText(
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                        position.ArabicName,
+                        position.CompanyName,
+                        position.Category,
+                        position.Level,
+                        position.Description,
+                        position.JobPurpose,
+                        position.KeyResponsibilities,
+                        position.JobRequirements,
+                        position.RequiredSkills,
+                        position.JobKpis,
+                        position.Competencies,
+                        position.Education,
+                        position.EducationSpecialization,
+                        position.Certifications
+                    }.Where(value =>
+                        !string.IsNullOrWhiteSpace(value))));
+        }
+
+        Positions = Positions
+            .OrderByDescending(position =>
+                position.EmployeeCount)
+            .ThenBy(position => position.ArabicName)
+            .ToList();
+    }
     private async Task LoadPositionTranslationsAsync(int companyId, int positionId)
     {
         var languages = await _dataLocalization.GetLanguagesAsync(companyId, HttpContext.RequestAborted);

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Organization;
@@ -93,6 +94,24 @@ public class IndexModel : PageModel
             .Where(x => scope.Allows(x.Id))
             .ToList();
 
+        var localizedChartCompanyNames =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetCompanyNamesAsync(
+                    _dbContext,
+                    ChartCompanies.Select(item =>
+                        (item.Id, item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var company in ChartCompanies)
+        {
+            if (localizedChartCompanyNames.TryGetValue(
+                    company.Id,
+                    out var localizedName))
+            {
+                company.Name = localizedName;
+            }
+        }
+
         ChartCompanyId = CompanySelectionContext.Resolve(
             HttpContext,
             ChartCompanyId,
@@ -141,6 +160,39 @@ public class IndexModel : PageModel
         foreach (var position in Positions)
         {
             position.EmployeeCount = counts.TryGetValue(position.Id, out var c) ? c : 0;
+        }
+
+        var singleVisibleCompanyId =
+            Companies.Select(item => item.Id)
+                .Distinct()
+                .Take(2)
+                .ToArray();
+
+        if (singleVisibleCompanyId.Length == 1)
+        {
+            var localizedPositionNames =
+                await EmployeeBusinessDataDisplayLocalizer
+                    .GetEntityNamesAsync(
+                        _dbContext,
+                        "Position",
+                        Positions.Select(item => (
+                            CompanyId:
+                                singleVisibleCompanyId[0],
+                            EntityId: item.Id,
+                            Fallback: item.Name)),
+                        HttpContext.RequestAborted);
+
+            foreach (var position in Positions)
+            {
+                if (localizedPositionNames.TryGetValue(
+                        (
+                            singleVisibleCompanyId[0],
+                            position.Id),
+                        out var localizedName))
+                {
+                    position.Name = localizedName;
+                }
+            }
         }
 
         Positions = Positions
@@ -353,6 +405,46 @@ public class IndexModel : PageModel
             .OrderBy(x => x.Name)
             .ToListAsync();
 
+        var localizedCompanyRows =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetCompanyNamesAsync(
+                    _dbContext,
+                    companyRows.Select(item =>
+                        (item.Id, item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var company in companyRows)
+        {
+            if (localizedCompanyRows.TryGetValue(
+                    company.Id,
+                    out var localizedName))
+            {
+                company.Name = localizedName;
+            }
+        }
+
+        var localizedBranchRows =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEntityNamesAsync(
+                    _dbContext,
+                    "Branch",
+                    branchRows.Select(item =>
+                        (
+                            item.CompanyId,
+                            item.Id,
+                            item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var branch in branchRows)
+        {
+            if (localizedBranchRows.TryGetValue(
+                    (branch.CompanyId, branch.Id),
+                    out var localizedName))
+            {
+                branch.Name = localizedName;
+            }
+        }
+
         // الموظف مرتبط بالفرع (موقع العمل) مباشرةً عبر BranchId، وبالقسم مستقلاً؛ والأقسام
         // مشتركة بين الفروع (Departments.BranchId فارغ) فلا يصح اشتقاق فرع الموظف من قسمه.
         // نحسب الموظفين لكل (فرع، قسم) من فرع الموظف المباشر — ضمن النطاق.
@@ -377,6 +469,41 @@ public class IndexModel : PageModel
                 Count = x.Count()
             })
             .ToDictionaryAsync(x => x.DepartmentId, x => x.Count);
+
+        var departmentFallbacks =
+            departmentRows.ToDictionary(
+                item => item.Id,
+                item => item.Name);
+
+        var departmentTargets = branchDeptCounts
+            .Join(
+                branchRows,
+                count => count.BranchId,
+                branch => branch.Id,
+                (count, branch) => new
+                {
+                    branch.CompanyId,
+                    count.DepartmentId
+                })
+            .Distinct()
+            .Where(item =>
+                departmentFallbacks.ContainsKey(
+                    item.DepartmentId))
+            .Select(item => (
+                CompanyId: item.CompanyId,
+                EntityId: item.DepartmentId,
+                Fallback:
+                    departmentFallbacks[
+                        item.DepartmentId]))
+            .ToList();
+
+        var localizedDepartmentRows =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEntityNamesAsync(
+                    _dbContext,
+                    "Department",
+                    departmentTargets,
+                    HttpContext.RequestAborted);
 
         // البطاقات الإجمالية: لغير المقيَّد أعدادٌ عامّة كما كانت؛ وللمقيَّد أعدادٌ من
         // شركاته وحدها (الأقسام = المتميّزة الظاهرة لموظفيه ضمن النطاق).
@@ -417,8 +544,12 @@ public class IndexModel : PageModel
                     {
                         Id = d.Id,
                         BranchId = branch.Id,
-                        Name = d.Name,
-                        Code = d.Code,
+                        Name =
+                            localizedDepartmentRows.TryGetValue(
+                                (branch.CompanyId, d.Id),
+                                out var localizedDepartmentName)
+                                ? localizedDepartmentName
+                                : d.Name,                        Code = d.Code,
                         IsActive = d.IsActive,
                         EmployeeCount = x.Count
                     };

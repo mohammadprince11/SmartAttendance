@@ -1,6 +1,7 @@
 using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -90,6 +91,12 @@ ORDER BY e.EmployeeNo;
                 CompanyId = HrmsDatabase.GetInt(reader, "CompanyId")
             });
 
+        var localizedEmployeeData =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    db,
+                    employees.Select(item => item.Id));
+
         // 2) تجاوزات رصيد الإجازة السنوية للسنة (المستحق + المرحّل) — استعلام واحد
         var annualType = (int)Domain.Enums.LeaveType.Annual;
         var overrides = (await HrmsDatabase.QueryAsync(
@@ -144,6 +151,11 @@ ORDER BY e.EmployeeNo;
 
         foreach (var e in employees)
         {
+            var hasLocalizedDisplay =
+                localizedEmployeeData.TryGetValue(
+                    e.Id,
+                    out var localizedDisplay);
+
             var years = e.HireDate is { } hire ? EndOfServiceStore.YearsOfService(hire, asOf) : 0;
             var (eos, _) = EndOfServiceStore.ComputeGratuity(years, e.Basic);
 
@@ -157,10 +169,15 @@ ORDER BY e.EmployeeNo;
             {
                 EmployeeId = e.Id,
                 EmployeeNo = e.No,
-                EmployeeName = e.Name,
-                Department = e.Dept,
-                Branch = e.Branch,
-                HireDate = e.HireDate,
+                EmployeeName = hasLocalizedDisplay
+                    ? localizedDisplay!.FullName
+                    : e.Name,
+                Department = hasLocalizedDisplay
+                    ? localizedDisplay!.DepartmentName
+                    : e.Dept,
+                Branch = hasLocalizedDisplay
+                    ? localizedDisplay!.BranchName
+                    : e.Branch,                HireDate = e.HireDate,
                 Basic = e.Basic,
                 Years = years,
                 EosProvision = eos,

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace SmartAttendance.Web.Infrastructure.Localization;
@@ -89,6 +89,15 @@ public static partial class LocalizationSourceTextScanner
 
         source = RazorCommentRegex().Replace(source, string.Empty);
         source = HtmlCommentRegex().Replace(source, string.Empty);
+
+
+// Scan Arabic literals embedded in Razor/C# expressions before
+
+// the markup pass replaces @(...)/@Model expressions with placeholders.
+
+// Interpolated values are normalized to {0}, {1}, ... by ScanCodeText.
+
+ScanCodeText(source, keys);
 
         foreach (Match match in ScriptBlockRegex().Matches(source))
             ScanCodeText(match.Groups[1].Value, keys);

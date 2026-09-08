@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Organization;
@@ -52,6 +53,24 @@ public class ChartModel : PageModel
             .ToListAsync())
             .Where(x => scope.Allows(x.Id))
             .ToList();
+
+        var localizedCompanyNames =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetCompanyNamesAsync(
+                    _dbContext,
+                    CompanyOptions.Select(item =>
+                        (item.Id, item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var company in CompanyOptions)
+        {
+            if (localizedCompanyNames.TryGetValue(
+                    company.Id,
+                    out var localizedName))
+            {
+                company.Name = localizedName;
+            }
+        }
 
         CompanyId = CompanySelectionContext.Resolve(
             HttpContext,

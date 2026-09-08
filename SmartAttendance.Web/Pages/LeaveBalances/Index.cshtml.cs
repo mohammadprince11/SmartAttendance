@@ -6,6 +6,7 @@ using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.LeaveBalances;
@@ -133,6 +134,24 @@ public class IndexModel : PageModel
             .Select(x => new CompanyOption { Id = x.Id, Name = x.Name })
             .ToListAsync(HttpContext.RequestAborted);
 
+        var localizedCompanyNames =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetCompanyNamesAsync(
+                    _dbContext,
+                    CompanyOptions.Select(item =>
+                        (item.Id, item.Name)),
+                    HttpContext.RequestAborted);
+
+        foreach (var company in CompanyOptions)
+        {
+            if (localizedCompanyNames.TryGetValue(
+                    company.Id,
+                    out var localizedName))
+            {
+                company.Name = localizedName;
+            }
+        }
+
         if (CompanyId.HasValue && !CompanyOptions.Any(x => x.Id == CompanyId.Value))
         {
             CompanyId = null;
@@ -163,10 +182,7 @@ public class IndexModel : PageModel
             .AsNoTracking()
             .Where(e => e.IsActive
                      && !e.IsDeleted
-                     && e.Branch.CompanyId == companyId
-                     && (string.IsNullOrEmpty(search)
-                         || e.FullName.Contains(search)
-                         || e.EmployeeNo.Contains(search)))
+                     && e.Branch.CompanyId == companyId)
             .OrderBy(e => e.FullName)
             .Select(e => new
             {
@@ -176,6 +192,46 @@ public class IndexModel : PageModel
                 DepartmentName = e.Department.Name
             })
             .ToListAsync();
+
+        var localizedEmployeeRows =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    _dbContext,
+                    employees.Select(item => item.Id),
+                    HttpContext.RequestAborted);
+
+        employees = employees
+            .Select(employee =>
+            {
+                if (!localizedEmployeeRows.TryGetValue(
+                        employee.Id,
+                        out var display))
+                {
+                    return employee;
+                }
+
+                return new
+                {
+                    employee.Id,
+                    employee.EmployeeNo,
+                    FullName = display.FullName,
+                    DepartmentName =
+                        display.DepartmentName
+                };
+            })
+            .Where(employee =>
+                string.IsNullOrWhiteSpace(search) ||
+                employee.EmployeeNo.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase) ||
+                employee.FullName.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase) ||
+                employee.DepartmentName.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase))
+            .OrderBy(employee => employee.FullName)
+            .ToList();
 
         if (employees.Count == 0)
         {

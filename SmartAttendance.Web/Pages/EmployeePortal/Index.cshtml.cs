@@ -1,9 +1,11 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAttendance.Application.Announcements.Services;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.EmployeePortal;
@@ -13,6 +15,7 @@ public class IndexModel : PageModel
     private readonly ApplicationDbContext _dbContext;
     private readonly IAnnouncementService _announcementService;
     private readonly IWebHostEnvironment _environment;
+    private readonly ILocalizationDictionaryService _localizationDictionary;
 
     private readonly Web.Infrastructure.Security.IProtectedFileService _protectedFiles;
 
@@ -20,11 +23,13 @@ public class IndexModel : PageModel
         ApplicationDbContext dbContext,
         IAnnouncementService announcementService,
         IWebHostEnvironment environment,
+        ILocalizationDictionaryService localizationDictionary,
         Web.Infrastructure.Security.IProtectedFileService protectedFiles)
     {
         _dbContext = dbContext;
         _announcementService = announcementService;
         _environment = environment;
+        _localizationDictionary = localizationDictionary;
         _protectedFiles = protectedFiles;
     }
 
@@ -941,12 +946,45 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         if (employeeId <= 0)
         {
-            Employee = EmployeePortalEmployee.Empty with { FullName = "موظف تجريبي", Position = "Employee" };
+            var localizedDemoName =
+                await LocalizeUiTextAsync(
+                    "موظف تجريبي");
+
+            Employee = EmployeePortalEmployee.Empty with
+            {
+                FullName = localizedDemoName,
+                Position = "Employee"
+            };
             IsDemoMode = true;
             return;
         }
 
-        Employee = await LoadEmployeeAsync(employeeId) ?? EmployeePortalEmployee.Empty;
+        Employee = await LoadEmployeeAsync(employeeId)
+                   ?? EmployeePortalEmployee.Empty;
+
+        var localizedEmployee =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    _dbContext,
+                    new[] { employeeId },
+                    HttpContext.RequestAborted);
+
+        if (localizedEmployee.TryGetValue(
+                employeeId,
+                out var localizedDisplay))
+        {
+            Employee = Employee with
+            {
+                FullName = localizedDisplay.FullName,
+                Position = localizedDisplay.Position
+                           ?? Employee.Position,
+                DepartmentName =
+                    localizedDisplay.DepartmentName,
+                BranchName =
+                    localizedDisplay.BranchName
+            };
+        }
+
         Compensation = await LoadCompensationAsync(employeeId);
         Announcements = await LoadAnnouncementsAsync(Employee);
         Polls = await LoadPollsAsync(Employee);
@@ -1263,6 +1301,21 @@ FROM EmployeeViolationCases v WHERE v.Id = @Id AND v.EmployeeId = @EmployeeId;
         return RedirectToPage(new { tab = returnTab ?? "requests" });
     }
 
+    private async Task<string> LocalizeUiTextAsync(
+        string source)
+    {
+        var catalog =
+            await _localizationDictionary.GetCatalogAsync(
+                CultureInfo.CurrentUICulture.Name,
+                HttpContext.RequestAborted);
+
+        return catalog.TryGetValue(
+                   source,
+                   out var translated) &&
+               !string.IsNullOrWhiteSpace(translated)
+            ? translated
+            : source;
+    }
     private async Task<int> ResolveEmployeeIdAsync()
     {
         var employeeIdClaim = User.FindFirstValue("EmployeeId");

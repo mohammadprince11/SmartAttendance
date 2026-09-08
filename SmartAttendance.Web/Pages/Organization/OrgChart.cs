@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Organization;
 
@@ -81,6 +82,26 @@ public static class OrgChartBuilder
         if (employees.Count == 0)
         {
             return result;
+        }
+
+        var localizedEmployeeData =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    dbContext,
+                    employees.Select(item => item.Id));
+
+        foreach (var node in employees)
+        {
+            if (!localizedEmployeeData.TryGetValue(
+                    node.Id,
+                    out var display))
+            {
+                continue;
+            }
+
+            node.FullName = display.FullName;
+            node.Position = display.Position ?? string.Empty;
+            node.DepartmentName = display.DepartmentName;
         }
 
         var byId = employees.ToDictionary(e => e.Id);

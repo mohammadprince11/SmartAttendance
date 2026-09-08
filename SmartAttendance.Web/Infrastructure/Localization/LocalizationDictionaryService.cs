@@ -141,7 +141,17 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         if (state.Translations.TryGetValue(language.Code, out var overrides))
         {
             foreach (var pair in overrides)
+            {
+                if (IsContaminatedLtrOverride(
+                        language,
+                        pair.Key,
+                        pair.Value))
+                {
+                    continue;
+                }
+
                 catalog[pair.Key] = pair.Value;
+            }
         }
 
         var isSourceLanguage = string.Equals(
@@ -158,6 +168,39 @@ public sealed class LocalizationDictionaryService : ILocalizationDictionaryServi
         return catalog;
     }
 
+    private static bool IsContaminatedLtrOverride(
+        DictionaryLanguage language,
+        string sourceKey,
+        string translation)
+    {
+        if (!string.Equals(
+                language.Direction,
+                "ltr",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!ContainsArabicScript(sourceKey))
+        {
+            return false;
+        }
+
+        return ContainsArabicScript(translation);
+    }
+
+    private static bool ContainsArabicScript(
+        string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        return value.Any(character =>
+            character >= '\u0600' &&
+            character <= '\u06ff');
+    }
     public async Task<IReadOnlyList<DictionaryEntryRow>> GetRowsAsync(CancellationToken cancellationToken = default)
     {
         var state = await ReadStateAsync(cancellationToken);

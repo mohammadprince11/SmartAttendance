@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +16,7 @@ using SmartAttendance.Application.Setup.ViewModels;
 using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Setup;
@@ -737,7 +738,7 @@ public class IndexModel : PageModel
             return false;
         }
 
-        Branches = await _dbContext.Branches.AsNoTracking()
+        var branchRows = await _dbContext.Branches.AsNoTracking()
             .Where(branch=>!branch.IsDeleted&&branch.CompanyId==companyId)
             .OrderByDescending(x => x.IsActive)
             .ThenBy(x => x.Name)
@@ -747,7 +748,27 @@ public class IndexModel : PageModel
                 CompanyId=branch.CompanyId,CompanyName=branch.Company.Name
             }).ToListAsync(HttpContext.RequestAborted);
 
-        Departments = await _dbContext.Departments.AsNoTracking()
+        await EmployeeBusinessDataDisplayLocalizer
+            .LocalizeBranchesAsync(
+                _dbContext,
+                branchRows,
+                HttpContext.RequestAborted);
+
+        var selectedCompanyName = Companies
+            .FirstOrDefault(item => item.Id == companyId)
+            ?.Name;
+
+        foreach (var branch in branchRows)
+        {
+            if (!string.IsNullOrWhiteSpace(selectedCompanyName))
+            {
+                branch.CompanyName = selectedCompanyName;
+            }
+        }
+
+        Branches = branchRows;
+
+        var departmentRows = await _dbContext.Departments.AsNoTracking()
             .Where(department=>!department.IsDeleted&&department.CompanyId==companyId)
             .OrderByDescending(x => x.IsActive)
             .ThenBy(x => x.Name)
@@ -757,6 +778,33 @@ public class IndexModel : PageModel
                 CompanyId=department.CompanyId,CompanyName=department.Company.Name,
                 BranchId=department.BranchId??0,BranchName=department.Branch==null?string.Empty:department.Branch.Name
             }).ToListAsync(HttpContext.RequestAborted);
+
+        await EmployeeBusinessDataDisplayLocalizer
+            .LocalizeDepartmentsAsync(
+                _dbContext,
+                departmentRows,
+                HttpContext.RequestAborted);
+
+        var localizedBranches = branchRows
+            .ToDictionary(item => item.Id);
+
+        foreach (var department in departmentRows)
+        {
+            if (!string.IsNullOrWhiteSpace(selectedCompanyName))
+            {
+                department.CompanyName = selectedCompanyName;
+            }
+
+            if (department.BranchId > 0 &&
+                localizedBranches.TryGetValue(
+                    department.BranchId,
+                    out var localizedBranch))
+            {
+                department.BranchName = localizedBranch.Name;
+            }
+        }
+
+        Departments = departmentRows;
 
         var employeeAssignments = await _dbContext.Employees
             .AsNoTracking()
@@ -971,7 +1019,7 @@ public class IndexModel : PageModel
         var scope=await _companyScope.GetAsync(HttpContext.RequestAborted);
         if(scope.IsDeniedAll) return Array.Empty<CompanyListViewModel>();
         var allowed=scope.AllowedCompanyIds.ToArray();
-        return await _dbContext.Companies.AsNoTracking()
+        var companies = await _dbContext.Companies.AsNoTracking()
             .Where(company=>!company.IsDeleted&&(scope.IsUnrestricted||allowed.Contains(company.Id)))
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)
@@ -979,6 +1027,14 @@ public class IndexModel : PageModel
             {
                 Id=company.Id,Code=company.Code,Name=company.Name,Email=company.Email,Phone=company.Phone,IsActive=company.IsActive
             }).ToListAsync(HttpContext.RequestAborted);
+
+        await EmployeeBusinessDataDisplayLocalizer
+            .LocalizeCompaniesAsync(
+                _dbContext,
+                companies,
+                HttpContext.RequestAborted);
+
+        return companies;
     }
 
     private async Task<bool> CanAccessCompanyAsync(int companyId) =>

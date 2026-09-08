@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Localization;
@@ -553,9 +553,15 @@ var app = builder.Build();
 // حارس فصل البيئات — **قبل المهاجر لا بعده.** تشغيلٌ غير إنتاجي يشير لقاعدة
 // الإنتاج يعني هجرةً تلقائية وبياناتٍ تجريبية على بيانات حقيقية. يُرفض الإقلاع
 // صراحةً بدل تحذيرٍ بسجلٍّ لا يقرأه أحد.
+var allowLocalDevelopmentOnPrimaryDatabase =
+    app.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue<bool>(
+        "Development:AllowSmartAttendanceDatabase");
+
 if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
         app.Environment.EnvironmentName,
-        builder.Configuration.GetConnectionString("DefaultConnection")) is { } environmentRefusal)
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        allowLocalDevelopmentOnPrimaryDatabase) is { } environmentRefusal)
 {
     throw new InvalidOperationException(environmentRefusal);
 }

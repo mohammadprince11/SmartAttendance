@@ -652,4 +652,19 @@
   <data name="الكود، الاسم، القسم..." xml:space="preserve"><value>کۆد، ناو، بەش...</value></data>
   <data name="مسح الفلاتر" xml:space="preserve"><value>سڕینەوەی پاڵێوەرەکان</value></data>
   <data name="عدد الأسطر في الصفحة" xml:space="preserve"><value>ژمارەی ڕیزەکان لە پەڕەدا</value></data>
+  <data name="ما ينتظرك" xml:space="preserve"><value>پێویستی بە سەرنجت هەیە</value></data>
+  <data name="+ بدء عملية" xml:space="preserve"><value>+ دەستپێکردنی پرۆسە</value></data>
+  <data name="+ فئة جديدة" xml:space="preserve"><value>+ پۆلێکی نوێ</value></data>
+  <data name="تقارير جاهزة لكل بيانات مودل الأشخاص + باني تقارير مخصص." xml:space="preserve"><value>ڕاپۆرتی ئامادە بۆ هەموو داتاکانی مۆدێلی کەسان + دروستکەری ڕاپۆرتی تایبەت.</value></data>
+  <data name="تسلسل المدراء المباشرين للموظفين الفعالين — مبني من &quot;المدير المباشر&quot;." xml:space="preserve"><value>زنجیرەی بەڕێوەبەرانی ڕاستەوخۆی کارمەندانی چالاک — لە &quot;بەڕێوەبەری ڕاستەوخۆ&quot; دروستکراوە.</value></data>
+  <data name="+ شركة" xml:space="preserve"><value>+ کۆمپانیا</value></data>
+  <data name="+ مجموعة قواعد جديدة" xml:space="preserve"><value>+ کۆمەڵە یاسایەکی نوێ</value></data>
+  <data name="+ إضافة خطوة" xml:space="preserve"><value>+ زیادکردنی هەنگاو</value></data>
+  <data name="الفلاتر" xml:space="preserve"><value>فلتەرەکان</value></data>
+  <data name="اسم المنصب" xml:space="preserve"><value>ناوی پۆست</value></data>
+  <data name="نظامية" xml:space="preserve"><value>ستاندارد</value></data>
+  <data name="تُخصم" xml:space="preserve"><value>کەم دەکرێتەوە</value></data>
+  <data name="فترة غلق الحضور المطبَّقة" xml:space="preserve"><value>ماوەی داخستنی ئامادەبوونی جێبەجێکراو</value></data>
+  <data name="لا يمكن حذف منصب مرتبط بموظفين" xml:space="preserve"><value>ناتوانرێت پۆستێک بسڕدرێتەوە کە بە کارمەندانەوە بەستراوە</value></data>
+  <data name="الملف يقبل .xlsx أو .csv أو .tsv" xml:space="preserve"><value>فایلەکە .xlsx یان .csv یان .tsv وەردەگرێت</value></data>
 </root>

@@ -532,6 +532,7 @@ public sealed class EmployeeBootstrapImportEngine
 
                 employee.EmployeeNo = NormalizeIdentifier(row.EmployeeNo);
                 employee.FullName = row.FullName.Trim();
+                employee.CompanyId = company.Id;
                 employee.BranchId = branch.Id;
                 employee.DepartmentId = department.Id;
                 employee.PositionId = position.Id;
@@ -4121,9 +4122,12 @@ public sealed class EmployeeBootstrapImportEngine
                 "FirstName" or "SecondName" or "ThirdName" or "LastName")
             .ToList();
 
-        foreach (var culture in employeeValues
-                     .Select(item => item.CultureCode)
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        var employeeCultures = employeeValues
+            .Select(item => item.CultureCode)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        foreach (var culture in employeeCultures)
         {
             var cultureValues = employeeValues
                 .Where(item => item.CultureCode.Equals(
@@ -4200,13 +4204,13 @@ public sealed class EmployeeBootstrapImportEngine
                     FieldName = value.FieldName,
                     CultureCode = value.CultureCode,
                     Value = value.Value.Trim(),
-                    TranslationStatus = "Import"
+                    TranslationStatus = "Manual"
                 });
             }
             else
             {
                 row.Value = value.Value.Trim();
-                row.TranslationStatus = "Import";
+                row.TranslationStatus = "Manual";
                 row.IsDeleted = false;
                 row.UpdatedAt = DateTime.UtcNow;
             }

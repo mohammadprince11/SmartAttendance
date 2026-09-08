@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -24,17 +25,29 @@ public static class OrgStructuresBuilder
     /// <summary>البُعد الأول: وحدات الأعمال — الفرع ثم القسم بعدّاد موظفين.</summary>
     public static async Task<Node> BusinessUnitsAsync(ApplicationDbContext db, int companyId, string companyName)
     {
-        var rows = await db.Employees.AsNoTracking()
-            .Where(e => e.IsActive && !e.IsDeleted && e.Branch.CompanyId == companyId)
-            .Select(e => new { Branch = e.Branch.Name, Department = e.Department.Name })
+        var employeeIds = await db.Employees
+            .AsNoTracking()
+            .Where(e =>
+                e.IsActive &&
+                !e.IsDeleted &&
+                e.Branch.CompanyId == companyId)
+            .Select(e => e.Id)
             .ToListAsync();
 
+        var localizedBusinessEmployees =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    db,
+                    employeeIds);
+
+        var rows = localizedBusinessEmployees.Values.ToList();
+
         var root = new Node { Name = companyName, Subtitle = "وحدات الأعمال", Count = rows.Count };
-        foreach (var branchGroup in rows.GroupBy(r => string.IsNullOrWhiteSpace(r.Branch) ? "— بلا فرع —" : r.Branch)
+        foreach (var branchGroup in rows.GroupBy(r => string.IsNullOrWhiteSpace(r.BranchName) ? "— بلا فرع —" : r.BranchName)
                      .OrderByDescending(g => g.Count()))
         {
             var branchNode = new Node { Name = branchGroup.Key, Subtitle = "فرع", Count = branchGroup.Count() };
-            foreach (var deptGroup in branchGroup.GroupBy(r => string.IsNullOrWhiteSpace(r.Department) ? "— بلا قسم —" : r.Department)
+            foreach (var deptGroup in branchGroup.GroupBy(r => string.IsNullOrWhiteSpace(r.DepartmentName) ? "— بلا قسم —" : r.DepartmentName)
                          .OrderByDescending(g => g.Count()))
             {
                 branchNode.Children.Add(new Node { Name = deptGroup.Key, Subtitle = "قسم", Count = deptGroup.Count() });
@@ -47,23 +60,29 @@ public static class OrgStructuresBuilder
     /// <summary>البُعد الثالث: الهيكل الوظيفي — المنصب ثم القسم بعدّاد موظفين.</summary>
     public static async Task<Node> FunctionalAsync(ApplicationDbContext db, int companyId, string companyName)
     {
-        var rows = await db.Employees.AsNoTracking()
-            .Where(e => e.IsActive && !e.IsDeleted && e.Branch.CompanyId == companyId)
-            .Select(e => new
-            {
-                Position = e.PositionId != null
-                    ? db.HrJobPositions.Where(p => p.Id == e.PositionId).Select(p => p.ArabicName).FirstOrDefault()
-                    : e.Position,
-                Department = e.Department.Name
-            })
+        var employeeIds = await db.Employees
+            .AsNoTracking()
+            .Where(e =>
+                e.IsActive &&
+                !e.IsDeleted &&
+                e.Branch.CompanyId == companyId)
+            .Select(e => e.Id)
             .ToListAsync();
+
+        var localizedFunctionalEmployees =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    db,
+                    employeeIds);
+
+        var rows = localizedFunctionalEmployees.Values.ToList();
 
         var root = new Node { Name = companyName, Subtitle = "الهيكل الوظيفي", Count = rows.Count };
         foreach (var posGroup in rows.GroupBy(r => string.IsNullOrWhiteSpace(r.Position) ? "— بلا مسمى —" : r.Position!)
                      .OrderByDescending(g => g.Count()))
         {
             var posNode = new Node { Name = posGroup.Key, Subtitle = "مسمى وظيفي", Count = posGroup.Count() };
-            foreach (var deptGroup in posGroup.GroupBy(r => string.IsNullOrWhiteSpace(r.Department) ? "— بلا قسم —" : r.Department)
+            foreach (var deptGroup in posGroup.GroupBy(r => string.IsNullOrWhiteSpace(r.DepartmentName) ? "— بلا قسم —" : r.DepartmentName)
                          .OrderByDescending(g => g.Count()))
             {
                 posNode.Children.Add(new Node { Name = deptGroup.Key, Subtitle = "قسم", Count = deptGroup.Count() });

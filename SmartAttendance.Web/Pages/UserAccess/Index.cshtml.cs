@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.UserAccess;
@@ -178,16 +179,21 @@ public class IndexModel : PageModel
 
             if (employee != null)
             {
+                var localizedSelectedEmployee = Employees
+                    .FirstOrDefault(item => item.Id == employee.Id);
+
                 Input = new IdentityInputModel
                 {
                     EmployeeId = employee.Id,
-                    FullName = employee.FullName,
+                    FullName = localizedSelectedEmployee?.FullName
+                               ?? employee.FullName,
                     UserName = employee.EmployeeNo,
                     CompatibilityRole = "Employee",
                     IsActive = true
                 };
                 SelectedEmployeeCode = employee.EmployeeNo;
-                SelectedEmployeeName = employee.FullName;
+                SelectedEmployeeName = localizedSelectedEmployee?.FullName
+                                       ?? employee.FullName;
                 OpenCreate = true;
             }
             else
@@ -1084,17 +1090,25 @@ ORDER BY e.EmployeeNo;
         CurrentLoginId = GetCurrentLoginId();
 
         Employees = await LoadEmployeesAsync();
+        await LocalizeEmployeeOptionsAsync(Employees);
 
         // المنتقي لا يحمّل قائمة — صفٌّ واحد للموظف المرتبط إن وُجد.
         var identity = await Shared.EmployeePickerLookup.LoadAsync(
             _dbContext,
             Input.EmployeeId ?? 0);
         SelectedEmployeeCode = identity?.Code;
-        SelectedEmployeeName = identity?.Name;
+        var localizedPickerEmployee = identity is null
+            ? null
+            : Employees.FirstOrDefault(item =>
+                item.Id == (Input.EmployeeId ?? 0));
+        SelectedEmployeeName =
+            localizedPickerEmployee?.FullName
+            ?? identity?.Name;
 
         // البحث والترقيم يتمّان داخل SQL (LoadIdentityRowsAsync) فلا فلترة بالذاكرة
         // هنا — وإلا لَقصّت الصفحةَ الحاليّة (25 صفّاً) فظهر أقلّ من المتوقّع.
         Identities = await LoadIdentityRowsAsync();
+        await LocalizeIdentityRowsAsync(Identities);
 
         // الأدوار المخصّصة (تجربة): قائمة الاختيار + الأدوار المُسنَدة لكل صفٍّ ظاهر.
         AccessRoleOptions = await AccessRoleStore.ListActiveAsync(_dbContext);
@@ -1107,6 +1121,77 @@ ORDER BY e.EmployeeNo;
             systemUserIds);
     }
 
+    private async Task LocalizeEmployeeOptionsAsync(
+        IEnumerable<EmployeeOption> source)
+    {
+        var items = source.ToList();
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var localized =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    _dbContext,
+                    items.Select(item => item.Id),
+                    HttpContext.RequestAborted);
+
+        foreach (var item in items)
+        {
+            if (localized.TryGetValue(
+                    item.Id,
+                    out var display))
+            {
+                item.FullName = display.FullName;
+            }
+        }
+    }
+
+    private async Task LocalizeIdentityRowsAsync(
+        IEnumerable<IdentityRow> source)
+    {
+        var items = source
+            .Where(item => item.EmployeeId is > 0)
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var localized =
+            await EmployeeBusinessDataDisplayLocalizer
+                .GetEmployeeBusinessDataAsync(
+                    _dbContext,
+                    items.Select(item => item.EmployeeId!.Value),
+                    HttpContext.RequestAborted);
+
+        foreach (var item in items)
+        {
+            if (!localized.TryGetValue(
+                    item.EmployeeId!.Value,
+                    out var display))
+            {
+                continue;
+            }
+
+            var legacyEmployeeName = item.EmployeeName;
+            item.EmployeeName = display.FullName;
+
+            // A SystemUser may intentionally have a custom display name. Replace
+            // only text that was employee-derived, or the synthetic NoAccount row.
+            if (item.LinkStatus == IdentityLinkStatus.NoAccount ||
+                string.IsNullOrWhiteSpace(item.DisplayName) ||
+                string.Equals(
+                    item.DisplayName,
+                    legacyEmployeeName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                item.DisplayName = display.FullName;
+            }
+        }
+    }
     private async Task<bool> LoadEditorAsync(
         int loginId,
         int systemUserId)

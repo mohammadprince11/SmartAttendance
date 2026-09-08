@@ -120,7 +120,7 @@
                 <input type="hidden" asp-for="Employee.LastNameEn" />
 
                 <div class="zy-employee-multilingual" data-employee-multilingual>
-                    @foreach (var companyId in Model.Branches.Select(item => item.CompanyId).Distinct())
+                    @foreach (var companyId in Model.CompanyOptions.Select(item => item.Id).Distinct())
                     {
                         var selectedCompany = Model.SelectedCompanyId == companyId;
                         var indexes = Enumerable.Range(0, Model.EmployeeNameTranslations.Count)
