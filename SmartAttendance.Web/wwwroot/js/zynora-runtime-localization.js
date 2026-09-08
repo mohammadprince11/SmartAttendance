@@ -5,6 +5,8 @@
     var culture = root.lang || "ar-IQ";
     if (culture.toLowerCase().startsWith("ar")) return;
 
+    var targetDirection = (root.dir || "").toLowerCase();
+
     // Elements whose contents must never be rewritten.
     // TEXTAREA is intentionally NOT here: its UI attributes (placeholder/title/
     // aria-label) are localizable, while its value/text content is user data.
@@ -25,7 +27,9 @@
         "data-bs-original-title",
         "value"
     ];
+
     var catalog = Object.create(null);
+    var normalizedCatalogKeys = Object.create(null);
     var composedKeys = [];
     var templateKeys = [];
     var templateFragmentKeys = [];
@@ -33,6 +37,42 @@
 
     function escapeRegExp(value) {
         return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function normalizeLookupKey(value) {
+        return String(value || "")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function isUsableTranslation(source, translated) {
+        if (!translated || translated === source) return false;
+
+        // An LTR UI must never be made worse by emitting a half-Arabic
+        // translation. This is direction-based rather than English-specific.
+        if (targetDirection === "ltr" &&
+            arabicText.test(source) &&
+            arabicText.test(translated)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function isUsableCatalogEntry(key) {
+        return isUsableTranslation(key, catalog[key]);
+    }
+
+    function getExactCatalogTranslation(key) {
+        if (Object.prototype.hasOwnProperty.call(catalog, key)) {
+            return catalog[key];
+        }
+
+        var normalized = normalizeLookupKey(key);
+        var mappedKey = normalizedCatalogKeys[normalized];
+
+        if (!mappedKey) return null;
+        return catalog[mappedKey];
     }
 
     function buildTemplate(key) {
@@ -50,6 +90,7 @@
         }
 
         expression += escapeRegExp(key.slice(cursor)) + "$";
+
         return {
             key: key,
             expression: new RegExp(expression),
@@ -66,8 +107,6 @@
 
         while ((match = matcher.exec(key)) !== null) {
             expression += escapeRegExp(key.slice(cursor, match.index));
-            // Runtime placeholders here are dates, counts, labels or names.
-            // Bound the capture so a fragment cannot swallow an entire page.
             expression += "([\\s\\S]{1,160}?)";
             placeholders.push(Number(match[1]));
             cursor = match.index + match[0].length;
@@ -104,8 +143,13 @@
         for (var index = 0; index < templateKeys.length; index += 1) {
             var template = templateKeys[index];
             var match = template.expression.exec(key);
+
             if (!match) continue;
-            return applyTemplate(template, match);
+
+            var translated = applyTemplate(template, match);
+            if (isUsableTranslation(key, translated)) {
+                return translated;
+            }
         }
 
         return key;
@@ -120,8 +164,14 @@
                 template.expression,
                 function () {
                     var match = Array.prototype.slice.call(arguments);
+                    var translated = applyTemplate(template, match);
+
+                    if (!isUsableTranslation(match[0], translated)) {
+                        return match[0];
+                    }
+
                     changed = true;
-                    return applyTemplate(template, match);
+                    return translated;
                 });
         });
 
@@ -139,14 +189,26 @@
 
         composedKeys.forEach(function (source) {
             if (result.indexOf(source) === -1) return;
-            result = result.split(source).join(catalog[source]);
+
+            result = result
+                .split(source)
+                .join(catalog[source]);
+
             changed = true;
         });
 
-        // Do not introduce a NEW half-translated result. Composition is accepted
-        // only if it fully clears the Arabic source fragments. Exact translations
-        // are still allowed to target another Arabic-script language.
-        return changed && !arabicText.test(result) ? result : key;
+        if (!changed) return key;
+
+        // On an LTR target, composition is accepted only after every Arabic
+        // source fragment has been cleared. RTL target languages keep their
+        // script and are therefore not subject to this rule.
+        if (targetDirection === "ltr" &&
+            arabicText.test(key) &&
+            arabicText.test(result)) {
+            return key;
+        }
+
+        return result;
     }
 
     function translateValue(value) {
@@ -158,17 +220,30 @@
 
         if (!arabicText.test(key)) return value;
 
-        var translated = Object.prototype.hasOwnProperty.call(catalog, key)
-            ? catalog[key]
-            : translateTemplate(key);
+        var exact = getExactCatalogTranslation(key);
+        var translated =
+            exact !== null &&
+            isUsableTranslation(key, exact)
+                ? exact
+                : key;
 
-        // Important for templates such as:
-        //   "تسجيل بصمة الآن — {0}" -> "Punch now — دخول"
-        // The outer template is translated, but the injected value still needs
-        // one more catalog/composition pass.
-        if (translated !== key && arabicText.test(translated)) {
+        if (translated === key) {
+            translated = translateTemplate(key);
+        }
+
+        // A template can inject another Arabic catalog key into an otherwise
+        // translated sentence. Give that result one clean composition pass.
+        if (translated !== key &&
+            targetDirection === "ltr" &&
+            arabicText.test(translated)) {
             var completed = translateComposed(translated);
-            if (completed !== translated) translated = completed;
+
+            if (completed !== translated &&
+                isUsableTranslation(key, completed)) {
+                translated = completed;
+            } else {
+                translated = key;
+            }
         }
 
         if (translated === key) {
@@ -181,22 +256,38 @@
     }
 
     function translateElement(element) {
-        if (!(element instanceof Element) || ignoredElements.has(element.tagName) || isExcluded(element)) return;
+        if (!(element instanceof Element) ||
+            ignoredElements.has(element.tagName) ||
+            isExcluded(element)) {
+            return;
+        }
 
         attributes.forEach(function (name) {
             if (!element.hasAttribute(name)) return;
-            if (name === "value" && !(element instanceof HTMLInputElement && /^(button|submit|reset)$/i.test(element.type))) return;
+
+            if (name === "value" &&
+                !(element instanceof HTMLInputElement &&
+                    /^(button|submit|reset)$/i.test(element.type))) {
+                return;
+            }
 
             var original = element.getAttribute(name);
             var translated = translateValue(original);
-            if (translated !== original) element.setAttribute(name, translated);
+
+            if (translated !== original) {
+                element.setAttribute(name, translated);
+            }
         });
 
         if (!ignoredTextParents.has(element.tagName)) {
             Array.from(element.childNodes).forEach(function (node) {
                 if (node.nodeType !== Node.TEXT_NODE) return;
+
                 var translated = translateValue(node.nodeValue);
-                if (translated !== node.nodeValue) node.nodeValue = translated;
+
+                if (translated !== node.nodeValue) {
+                    node.nodeValue = translated;
+                }
             });
         }
 
@@ -207,14 +298,22 @@
         if (isExcluded(node)) return;
 
         if (node.nodeType === Node.TEXT_NODE) {
-            if (node.parentElement && !ignoredTextParents.has(node.parentElement.tagName)) {
+            if (node.parentElement &&
+                !ignoredTextParents.has(node.parentElement.tagName)) {
                 var translated = translateValue(node.nodeValue);
-                if (translated !== node.nodeValue) node.nodeValue = translated;
+
+                if (translated !== node.nodeValue) {
+                    node.nodeValue = translated;
+                }
             }
+
             return;
         }
 
-        if (!(node instanceof Element) || ignoredElements.has(node.tagName)) return;
+        if (!(node instanceof Element) ||
+            ignoredElements.has(node.tagName)) {
+            return;
+        }
 
         translateElement(node);
         node.querySelectorAll("*").forEach(translateElement);
@@ -225,8 +324,15 @@
 
         function add(value) {
             if (!value) return;
+
             var normalized = String(value).trim();
-            if (!normalized || normalized.length > 1000 || !arabicText.test(normalized)) return;
+
+            if (!normalized ||
+                normalized.length > 1000 ||
+                !arabicText.test(normalized)) {
+                return;
+            }
+
             if (values.size >= 500) return;
             values.add(normalized);
         }
@@ -235,12 +341,23 @@
 
         document.querySelectorAll("*").forEach(function (element) {
             if (values.size >= 500) return;
-            if (!(element instanceof Element) || ignoredElements.has(element.tagName) || isExcluded(element)) return;
+
+            if (!(element instanceof Element) ||
+                ignoredElements.has(element.tagName) ||
+                isExcluded(element)) {
+                return;
+            }
 
             attributes.forEach(function (name) {
                 if (values.size >= 500) return;
                 if (!element.hasAttribute(name)) return;
-                if (name === "value" && !(element instanceof HTMLInputElement && /^(button|submit|reset)$/i.test(element.type))) return;
+
+                if (name === "value" &&
+                    !(element instanceof HTMLInputElement &&
+                        /^(button|submit|reset)$/i.test(element.type))) {
+                    return;
+                }
+
                 add(element.getAttribute(name));
             });
 
@@ -248,7 +365,9 @@
 
             Array.from(element.childNodes).forEach(function (node) {
                 if (values.size >= 500) return;
-                if (node.nodeType === Node.TEXT_NODE) add(node.nodeValue);
+                if (node.nodeType === Node.TEXT_NODE) {
+                    add(node.nodeValue);
+                }
             });
         });
 
@@ -257,8 +376,11 @@
 
     function fetchBusinessAliases() {
         var values = collectArabicValues();
+
         if (values.length === 0) {
-            return Promise.resolve({ aliases: Object.create(null) });
+            return Promise.resolve({
+                aliases: Object.create(null)
+            });
         }
 
         return fetch("/Culture/BusinessCatalog", {
@@ -269,23 +391,54 @@
                 "Accept": "application/json",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ values: values })
+            body: JSON.stringify({
+                values: values
+            })
         })
             .then(function (response) {
-                if (!response.ok) return { aliases: Object.create(null) };
+                if (!response.ok) {
+                    return {
+                        aliases: Object.create(null)
+                    };
+                }
+
                 return response.json();
             })
             .catch(function () {
-                // Anonymous surfaces (login/verify) intentionally cannot access
-                // tenant business data. UI dictionary localization still proceeds.
-                return { aliases: Object.create(null) };
+                // Anonymous surfaces intentionally cannot access tenant business
+                // data. UI dictionary localization still proceeds.
+                return {
+                    aliases: Object.create(null)
+                };
             });
     }
 
     function rebuildMatchers() {
+        normalizedCatalogKeys = Object.create(null);
+
+        Object.keys(catalog).forEach(function (key) {
+            var normalized = normalizeLookupKey(key);
+
+            if (!normalized) return;
+
+            if (!Object.prototype.hasOwnProperty.call(
+                    normalizedCatalogKeys,
+                    normalized)) {
+                normalizedCatalogKeys[normalized] = key;
+                return;
+            }
+
+            // A normalized collision must never guess between two source keys.
+            if (normalizedCatalogKeys[normalized] !== key) {
+                normalizedCatalogKeys[normalized] = null;
+            }
+        });
+
         templateKeys = Object.keys(catalog)
             .filter(function (key) {
-                return arabicText.test(key) && /\{\d+\}/.test(key);
+                return arabicText.test(key) &&
+                    /\{\d+\}/.test(key) &&
+                    isUsableCatalogEntry(key);
             })
             .map(buildTemplate)
             .sort(function (left, right) {
@@ -294,7 +447,9 @@
 
         templateFragmentKeys = Object.keys(catalog)
             .filter(function (key) {
-                return arabicText.test(key) && /\{\d+\}/.test(key);
+                return arabicText.test(key) &&
+                    /\{\d+\}/.test(key) &&
+                    isUsableCatalogEntry(key);
             })
             .map(buildTemplateFragment)
             .filter(function (template) {
@@ -310,32 +465,59 @@
             .filter(function (key) {
                 return arabicText.test(key) &&
                     key.indexOf("{") === -1 &&
-                    key.length > 1;
+                    key.length > 1 &&
+                    isUsableCatalogEntry(key);
             })
             .sort(function (left, right) {
                 return right.length - left.length;
             });
     }
 
-    fetch("/Culture/Catalog?culture=" + encodeURIComponent(culture) + "&v=20260907-p4", {
+    fetch("/Culture/Catalog?culture=" +
+        encodeURIComponent(culture) +
+        "&v=20260907-p5", {
         cache: "no-store",
         credentials: "same-origin",
-        headers: { "Accept": "application/json" }
+        headers: {
+            "Accept": "application/json"
+        }
     })
         .then(function (response) {
-            if (!response.ok) throw new Error("Localization catalog request failed.");
+            if (!response.ok) {
+                throw new Error(
+                    "Localization catalog request failed."
+                );
+            }
+
             return response.json();
         })
         .then(function (payload) {
-            catalog = payload.translations || Object.create(null);
+            catalog =
+                payload.translations ||
+                Object.create(null);
+
+            targetDirection =
+                (payload.direction ||
+                    targetDirection ||
+                    "")
+                .toLowerCase();
 
             return fetchBusinessAliases()
                 .then(function (businessPayload) {
-                    var aliases = businessPayload.aliases || Object.create(null);
+                    var aliases =
+                        businessPayload.aliases ||
+                        Object.create(null);
 
                     Object.keys(aliases).forEach(function (source) {
-                        if (!Object.prototype.hasOwnProperty.call(catalog, source)) {
-                            catalog[source] = aliases[source];
+                        var translated = aliases[source];
+
+                        if (!Object.prototype.hasOwnProperty.call(
+                                catalog,
+                                source) ||
+                            !isUsableTranslation(
+                                source,
+                                catalog[source])) {
+                            catalog[source] = translated;
                         }
                     });
 
@@ -345,15 +527,28 @@
         .then(function (payload) {
             rebuildMatchers();
 
-            root.dir = payload.direction || root.dir;
-            document.title = translateValue(document.title);
+            root.dir =
+                payload.direction ||
+                root.dir;
+
+            document.title =
+                translateValue(
+                    document.title);
+
             translateTree(document.body);
 
             new MutationObserver(function (mutations) {
                 mutations.forEach(function (mutation) {
-                    mutation.addedNodes.forEach(translateTree);
-                    if (mutation.type === "characterData") translateTree(mutation.target);
-                    if (mutation.type === "attributes") translateElement(mutation.target);
+                    mutation.addedNodes.forEach(
+                        translateTree);
+
+                    if (mutation.type === "characterData") {
+                        translateTree(mutation.target);
+                    }
+
+                    if (mutation.type === "attributes") {
+                        translateElement(mutation.target);
+                    }
                 });
             }).observe(document.body, {
                 childList: true,
@@ -363,16 +558,25 @@
                 attributeFilter: attributes
             });
 
-            root.setAttribute("data-zy-localization-ready", "true");
+            root.setAttribute(
+                "data-zy-localization-ready",
+                "true");
 
-            document.dispatchEvent(new CustomEvent("zynora:localization-ready", {
-                detail: {
-                    culture: payload.culture,
-                    direction: payload.direction
-                }
-            }));
+            document.dispatchEvent(
+                new CustomEvent(
+                    "zynora:localization-ready",
+                    {
+                        detail: {
+                            culture: payload.culture,
+                            direction: payload.direction
+                        }
+                    }
+                )
+            );
         })
         .catch(function () {
-            root.setAttribute("data-zy-localization-ready", "fallback");
+            root.setAttribute(
+                "data-zy-localization-ready",
+                "fallback");
         });
 })();

@@ -60,7 +60,7 @@ public sealed class RuntimeLocalizationBridgeCoverageContractTests
     }
 
     [Fact]
-    public void StandaloneShell_UsesTheP4RuntimeBridgeVersion()
+    public void StandaloneShell_UsesTheP5RuntimeBridgeVersion()
     {
         var root = FindRoot();
         var tagHelpers = File.ReadAllText(Path.Combine(
@@ -71,7 +71,7 @@ public sealed class RuntimeLocalizationBridgeCoverageContractTests
             "LocalizationShellTagHelpers.cs"));
 
         Assert.Contains(
-            "/js/zynora-runtime-localization.js?v=20260907-p4",
+            "/js/zynora-runtime-localization.js?v=20260907-p5",
             tagHelpers,
             StringComparison.Ordinal);
     }

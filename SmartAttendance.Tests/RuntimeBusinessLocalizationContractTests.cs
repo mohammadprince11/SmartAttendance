@@ -132,17 +132,27 @@ public sealed class RuntimeBusinessLocalizationContractTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "translated !== key && arabicText.test(translated)",
+            "function isUsableTranslation",
             script,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "catalog[source] = aliases[source]",
+            "targetDirection === \"ltr\"",
             script,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "20260907-p4",
+            "arabicText.test(translated)",
+            script,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "catalog[source] = translated",
+            script,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "20260907-p5",
             script,
             StringComparison.Ordinal);
     }

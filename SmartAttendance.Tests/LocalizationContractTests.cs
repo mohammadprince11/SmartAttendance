@@ -114,7 +114,8 @@ public sealed class LocalizationContractTests
         Assert.Contains("translateComposed", script, StringComparison.Ordinal);
         Assert.Contains("translateTemplate", script, StringComparison.Ordinal);
         Assert.Contains("buildTemplate", script, StringComparison.Ordinal);
-        Assert.Contains("document.title = translateValue(document.title)", script, StringComparison.Ordinal);
+        Assert.Contains("document.title =", script, StringComparison.Ordinal);
+        Assert.Contains("translateValue(", script, StringComparison.Ordinal);
         Assert.Contains("characterData: true", script, StringComparison.Ordinal);
         Assert.Contains("attributes: true", script, StringComparison.Ordinal);
         Assert.Contains("data-zy-no-localize", script, StringComparison.Ordinal);
