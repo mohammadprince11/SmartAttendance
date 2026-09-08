@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="~/css/zynora-user-access.css" asp-append-version="true" />
 
 
-<section class="zua-page" dir="rtl">
+<section class="zua-page">
 
     @* ---------- العنوان + العدادات ---------- *@
     <header class="zua-head">
@@ -102,8 +102,7 @@
     @if (Model.NoAccountTotal > Model.NoAccountShown && Model.PageIndex <= 1)
     {
         <div class="zua-alert zyu-71745d42e472">
-            يوجد @Model.NoAccountTotal موظّف بلا حساب دخول — يُعرض منهم @Model.NoAccountShown فقط لأداء أفضل.
-            ابحث بالاسم أو الكود بالأعلى لإيجاد موظّفٍ بعينه، أو الصق أكواد الموظّفين في أداة كلمة المرور لإنشاء حساباتهم دفعةً واحدة.
+            @T["يوجد {0} موظّف بلا حساب دخول — يُعرض منهم {1} فقط لأداء أفضل. ابحث بالاسم أو الكود بالأعلى لإيجاد موظّفٍ بعينه، أو الصق أكواد الموظّفين في أداة كلمة المرور لإنشاء حساباتهم دفعةً واحدة.", Model.NoAccountTotal, Model.NoAccountShown]
         </div>
     }
 

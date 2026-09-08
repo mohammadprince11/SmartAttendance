@@ -42,8 +42,9 @@
         @if (Model.DefaultPeriodNote is { Length: > 0 })
         {
             <div class="att-period-note">
-                يعرض <b>فترة الغلق الجارية</b> افتراضياً (@Model.DefaultPeriodNote) — حدّد تواريخك للتوسيع،
-                أو <a href="?AllDates=true">اعرض كل السجلات</a> (أبطأ بكثير على جدولٍ ضخم).
+                يعرض <b>فترة الغلق الجارية</b>
+                @T["افتراضياً ({0}) — حدّد تواريخك للتوسيع، أو", Model.DefaultPeriodNote]
+                <a href="?AllDates=true">اعرض كل السجلات</a> (أبطأ بكثير على جدولٍ ضخم).
             </div>
         }
 

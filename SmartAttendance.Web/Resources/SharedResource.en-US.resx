@@ -736,7 +736,7 @@
   <data name="الصفر = بلا سقف. المرفوض والملغى لا يُحتسبان." xml:space="preserve"><value>Zero = no cap. Rejected and cancelled items are not counted.</value></data>
   <data name="لا قواعد فترية — أضف قاعدة بـ«+ قاعدة جديدة»." xml:space="preserve"><value>No period rules — add one with “+ New rule”.</value></data>
   <data name="لا تسويات قيد الإعداد — أضف بـ«+ تسوية نهاية خدمة»." xml:space="preserve"><value>No draft settlements — add one with “+ End-of-service settlement”.</value></data>
-  <data name="— المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة." xml:space="preserve"><value>— Matching ignores the Arabic definite article “ال” and extra spaces.</value></data>
+  <data name="— المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة." xml:space="preserve"><value>— Matching ignores the Arabic definite article and extra spaces.</value></data>
   <data name="— النيابة طبقةٌ فوقه تنتهي بانتهاء تاريخها تلقائياً." xml:space="preserve"><value>— Acting assignment is an overlay that ends automatically on its end date.</value></data>
   <data name="لكل درجة كود فريد + مدى أساسي (أدنى/متوسط/أقصى). المدى" xml:space="preserve"><value>Each grade has a unique code + base range (minimum/midpoint/maximum). The range</value></data>
   <data name="الصفر = بلا حدّ زمني. يمنع «إحياء» أيام قديمة بعد إغلاق الشهر." xml:space="preserve"><value>Zero = no time limit. Prevents “reviving” old days after the month is closed.</value></data>
@@ -773,4 +773,8 @@
   <data name="كل سطر داخل الورقة صار Text Layer مستقل مثل Word: العنوان، اسم الموظف، الكود، القسم، تاريخ المخالفة، العقوبة، والأثر المالي. عدّل كل واحد من قائمة &quot;طبقات النص الحالية&quot; بالأسفل." xml:space="preserve"><value>Each line on the sheet is now an independent Text Layer like Word: title, employee name, code, department, violation date, penalty, and financial impact. Edit each one from the “Current text layers” list below.</value></data>
   <data name="مفعّل افتراضياً. «إجراء منفَّذ» = اقتراح معتمَد أو تلقائي أنشأ قضية مخالفة أو حركة مالية — إعادة تحليله تدهس قراراً بشرياً أو أثراً مالياً سبق ترحيله. الاقتراح المعلّق أو المتجاهَل لا يمنع." xml:space="preserve"><value>Enabled by default. “Executed action” = an approved or automatic suggestion that created a violation case or financial transaction — re-analysis would overwrite a human decision or an already-posted financial effect. Pending or ignored suggestions do not block.</value></data>
   <data name="المفاتيح تُسجَّل من درج إعدادات بوابة الموظف وتُعتمد من صفحة «اعتماد مفاتيح البصمة/الوجه». موظف بلا مفتاح معتمد لا تنطبق عليه القاعدة — يمنع بصم زميل بدل زميله (مع النطاق الجغرافي: من أنت + وين أنت)." xml:space="preserve"><value>Keys are registered from the Employee Portal settings drawer and approved on “Approve biometric/face keys”. The rule does not apply to an employee without an approved key — it prevents one employee punching for another (with geofencing: who you are + where you are).</value></data>
+  <data name="افتراضياً ({0}) — حدّد تواريخك للتوسيع، أو" xml:space="preserve"><value>Default ({0}) — choose dates to expand the range, or</value></data>
+  <data name="· شرائح:" xml:space="preserve"><value>· Brackets:</value></data>
+  <data name="ظاهرة" xml:space="preserve"><value>Visible</value></data>
+  <data name="مخفية" xml:space="preserve"><value>Hidden</value></data>
 </root>

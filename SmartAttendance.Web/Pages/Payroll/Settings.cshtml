@@ -286,7 +286,7 @@
                         </div>
                     </div>
                     <div class="zyu-d473b3815758">
-                        إعفاء <b>@p.ExemptionAmount.ToString("0.##")</b> · شرائح:
+                        إعفاء <b>@p.ExemptionAmount.ToString("0.##")</b> @T["· شرائح:"]
                         @string.Join(" · ", p.Brackets.OrderBy(b => b.FromAmount).Select(b => $"{b.FromAmount:0}–{(b.ToAmount?.ToString("0") ?? "∞")}: {b.Rate:0.##}%"))
                     </div>
                 </div>
