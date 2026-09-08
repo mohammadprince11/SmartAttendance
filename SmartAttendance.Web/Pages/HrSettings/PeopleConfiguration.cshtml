@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="~/css/zynora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
-<section class="nxhs-page" dir="rtl">
+<section class="nxhs-page">
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>تهيئة الأشخاص</h1>
@@ -59,7 +59,7 @@
             <p class="zyp-hint">
                 القائمة كما ستُطبَّق بعد التنظيف:
                 <b>@string.Join("، ", Model.ParsedNationalities)</b>
-                — المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة.
+                @T["— المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة."]
             </p>
         }
 

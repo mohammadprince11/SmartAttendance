@@ -322,19 +322,52 @@
     function collectArabicValues() {
         var values = new Set();
 
-        function add(value) {
+        function addRaw(value) {
             if (!value) return;
 
-            var normalized = String(value).trim();
+            var normalized = String(value)
+                .replace(/\s+/g, " ")
+                .trim();
 
             if (!normalized ||
                 normalized.length > 1000 ||
-                !arabicText.test(normalized)) {
+                !arabicText.test(normalized) ||
+                values.size >= 500) {
                 return;
             }
 
-            if (values.size >= 500) return;
             values.add(normalized);
+        }
+
+        function addBusinessFragments(value) {
+            var normalized = String(value || "")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            if (!normalized || !arabicText.test(normalized)) return;
+
+            // Employee pickers commonly render "CODE — Arabic Name".
+            var codeThenName = normalized.match(
+                /^[A-Za-z0-9][A-Za-z0-9._\/-]{1,40}\s*[—-]\s*(.+)$/);
+
+            if (codeThenName && arabicText.test(codeThenName[1])) {
+                addRaw(codeThenName[1]);
+            }
+
+            // Detail headers commonly render "Arabic Name (CODE) — ...".
+            var nameThenCode = normalized.match(
+                /^(.+?)\s*\([A-Za-z0-9][A-Za-z0-9._\/-]{1,40}\)\s*[—-]/);
+
+            if (nameThenCode && arabicText.test(nameThenCode[1])) {
+                addRaw(nameThenCode[1]);
+            }
+        }
+
+        function add(value) {
+            if (!value) return;
+
+            addRaw(value);
+            addBusinessFragments(value);
         }
 
         add(document.title);
@@ -475,7 +508,7 @@
 
     fetch("/Culture/Catalog?culture=" +
         encodeURIComponent(culture) +
-        "&v=20260907-p5", {
+        "&v=20260908-p6", {
         cache: "no-store",
         credentials: "same-origin",
         headers: {

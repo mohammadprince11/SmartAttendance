@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 
-<section class="ps-page" dir="rtl">
+<section class="ps-page">
     <header class="ps-head">
         <div>
             <h1>تهيئة الضريبة والضمان</h1>
@@ -286,7 +286,7 @@
                         </div>
                     </div>
                     <div class="zyu-d473b3815758">
-                        إعفاء <b>@p.ExemptionAmount.ToString("0.##")</b> · شرائح:
+                        إعفاء <b>@p.ExemptionAmount.ToString("0.##")</b> @T["· شرائح:"]
                         @string.Join(" · ", p.Brackets.OrderBy(b => b.FromAmount).Select(b => $"{b.FromAmount:0}–{(b.ToAmount?.ToString("0") ?? "∞")}: {b.Rate:0.##}%"))
                     </div>
                 </div>

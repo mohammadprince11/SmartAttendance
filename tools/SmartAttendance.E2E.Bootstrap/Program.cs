@@ -73,6 +73,19 @@ foreach (var batch in Regex.Split(
     if (!string.IsNullOrWhiteSpace(batch)) await ExecuteAsync(db, batch);
 }
 
+// CompanyLanguages and LocalizedEntityValues are intentionally excluded from
+// EF GenerateCreateScript()/migrations. Production provisions them through the
+// explicit tenant business-data localization migration, so the disposable E2E
+// database must apply that exact schema too.
+var localizationMigrationPath = FindRepositoryFile(
+    "database",
+    "migrations",
+    "20260828-01-tenant-business-data-localization.sql");
+
+await ExecuteAsync(
+    db,
+    await File.ReadAllTextAsync(localizationMigrationPath));
+
 await SalaryItemStore.EnsureAsync(db);
 await EmployeeAllowanceSchema.EnsureAsync(db);
 await EmployeeEngagementSchema.EnsureAsync(db);
@@ -124,6 +137,41 @@ await LoginDatabase.EnsureCreatedAsync(db);
 
 Console.WriteLine("Disposable E2E database initialized.");
 Console.WriteLine(databaseBuilder.ConnectionString);
+
+static string FindRepositoryFile(params string[] parts)
+{
+    var probes = new[]
+    {
+        Directory.GetCurrentDirectory(),
+        AppContext.BaseDirectory
+    }
+    .Where(path => !string.IsNullOrWhiteSpace(path))
+    .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var probe in probes)
+    {
+        var directory = new DirectoryInfo(probe);
+
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(
+                new[] { directory.FullName }
+                    .Concat(parts)
+                    .ToArray());
+
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+    }
+
+    throw new FileNotFoundException(
+        "Could not locate the repository localization SQL migration.",
+        Path.Combine(parts));
+}
 
 static async Task ExecuteAsync(ApplicationDbContext db, string sql)
 {

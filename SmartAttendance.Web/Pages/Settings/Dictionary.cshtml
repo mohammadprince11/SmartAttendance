@@ -7,7 +7,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/zynora-dictionary.css" asp-append-version="true" />
-    
+
 
 }
 
@@ -156,7 +156,7 @@
                     <span>
                         @language.Code ·
                         @language.Direction.ToUpperInvariant() ·
-                        @(language.IsHidden ? "مخفية" : "ظاهرة")
+                        @(language.IsHidden ? T["مخفية"].Value : T["ظاهرة"].Value)
                     </span>
                 </a>
 

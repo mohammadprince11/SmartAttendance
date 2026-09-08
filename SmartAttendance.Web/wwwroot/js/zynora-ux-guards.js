@@ -44,6 +44,36 @@
         return element && (element.textContent || "").replace(/\s+/g, " ").trim();
     }
 
+    function textWithoutControls(element) {
+        if (!element || !element.cloneNode) return "";
+
+        var clone = element.cloneNode(true);
+
+        clone.querySelectorAll(
+            "input, select, option, textarea, button, script, style"
+        ).forEach(function (child) {
+            child.remove();
+        });
+
+        return textOf(clone).slice(0, 180);
+    }
+
+    function technicalControlName(control) {
+        var technicalName =
+            control.getAttribute("name") ||
+            control.id;
+
+        if (!technicalName) return "";
+
+        return technicalName
+            .replace(/^.*\./, "")
+            .replace(/[_-]+/g, " ")
+            .replace(/([a-z])([A-Z])/g, "$1 $2")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 180);
+    }
+
     function existingAccessibleName(control) {
         if (control.hasAttribute("aria-label") || control.hasAttribute("aria-labelledby")) return true;
         if (control.labels && control.labels.length && Array.prototype.some.call(control.labels, function (label) { return !!textOf(label); })) return true;
@@ -57,8 +87,8 @@
         var field = control.closest(".zy-field, .form-group, .field, [class*='-field'], [class*='__field']");
         if (field) {
             var fieldLabel = field.querySelector("label, legend, .zy-label, [class*='-label'], [class*='__label']");
-            var fieldText = textOf(fieldLabel);
-            if (fieldText) return fieldText.slice(0, 180);
+            var fieldText = textWithoutControls(fieldLabel);
+            if (fieldText) return fieldText;
         }
 
         var cell = control.closest("td, th");
@@ -72,17 +102,21 @@
             if (headingText) return headingText.slice(0, 180);
         }
 
-        var context = control.closest("[class*='row'], [class*='item'], [class*='option'], [class*='setting']");
-        var contextText = textOf(context);
-        if (contextText) return contextText.slice(0, 180);
+        var technicalName = technicalControlName(control);
+        if (technicalName) return technicalName;
 
-        var technicalName = control.getAttribute("name") || control.id;
-        if (!technicalName) return "";
-        return technicalName
-            .replace(/^.*\./, "")
-            .replace(/[_-]+/g, " ")
-            .replace(/([a-z])([A-Z])/g, "$1 $2")
-            .trim();
+        var context = control.closest(
+            "[class*='row'], [class*='item'], [class*='option'], [class*='setting']");
+
+        if (context) {
+            var contextLabel = context.querySelector(
+                "label, legend, .zy-label, [class*='-label'], [class*='__label']");
+
+            var contextText = textWithoutControls(contextLabel);
+            if (contextText) return contextText;
+        }
+
+        return "";
     }
 
     function ensureAccessibleNames(root) {
