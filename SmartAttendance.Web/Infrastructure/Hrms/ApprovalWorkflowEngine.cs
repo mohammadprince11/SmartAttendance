@@ -28,6 +28,12 @@ public static class ApprovalWorkflowEngine
         ["ShiftRequest"] = "ShiftRequest",
         ["طلب مناوبة"] = "ShiftRequest",
         ["تعديل البيانات"] = "InfoChange",
+        ["Onboarding"] = "Onboarding",
+        ["تهيئة موظف"] = "Onboarding",
+        ["تهيئة وتعيين الموظف"] = "Onboarding",
+        ["Offboarding"] = "Offboarding",
+        ["إنهاء خدمة"] = "Offboarding",
+        ["إنهاء وخروج الموظف"] = "Offboarding",
         // الطلبات المالية (FinancialRequestStore) — التسمية العربية ← مفتاح قالب اللجنة.
         ["قرض"] = "Loan",
         ["سُلفة"] = "Loan",

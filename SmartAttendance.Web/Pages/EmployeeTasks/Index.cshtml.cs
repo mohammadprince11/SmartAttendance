@@ -37,6 +37,8 @@ public class IndexModel : PageModel
     public int OpenOffboarding { get; set; }
     public int OverdueCount { get; set; }
     public int DoneThisMonth { get; set; }
+    public int PendingLifecycleApprovals { get; set; }
+    public List<EmployeeLifecycleApprovalStore.LifecycleRequestRow> LifecycleRequests { get; set; } = new();
 
     [TempData]
     public string? Message { get; set; }
@@ -45,7 +47,7 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await EmployeeTasksSchema.EnsureAsync(_dbContext);
+        await EmployeeLifecycleApprovalStore.EnsureAsync(_dbContext);
         await LoadAsync();
     }
 
@@ -59,7 +61,11 @@ public class IndexModel : PageModel
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         var allowedCompanies = scope.IsUnrestricted ? null : scope.AllowedCompanyIds.ToHashSet();
 
-        var scoped = _dbContext.EmployeeTasks.AsNoTracking().Where(t => !t.Employee.IsDeleted);
+        LifecycleRequests = await EmployeeLifecycleApprovalStore.ListAsync(_dbContext, scope);
+        PendingLifecycleApprovals = LifecycleRequests.Count(request =>
+            request.Status is "Pending" or "Draft" or "Returned" or "WaitingRevision");
+
+        var scoped = _dbContext.EmployeeTasks.AsNoTracking().Where(t => !t.IsDeleted && !t.Employee.IsDeleted);
         if (allowedCompanies is not null)
             scoped = scoped.Where(t => t.Employee.CompanyId != null && allowedCompanies.Contains(t.Employee.CompanyId.Value));
 
@@ -108,6 +114,7 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         Templates = await _dbContext.HrTaskTemplates.AsNoTracking()
+            .Where(t => !t.IsDeleted)
             .OrderBy(t => t.ProcessType).ThenBy(t => t.SortOrder).ThenBy(t => t.Id)
             .ToListAsync();
 
@@ -125,7 +132,7 @@ public class IndexModel : PageModel
     // ---- Launch a process for an employee ----
     public async Task<IActionResult> OnPostLaunchAsync(int processType, int employeeId, DateOnly? startDate)
     {
-        await EmployeeTasksSchema.EnsureAsync(_dbContext);
+        await EmployeeLifecycleApprovalStore.EnsureAsync(_dbContext);
 
         if (processType is not (1 or 2) || employeeId <= 0)
         {
@@ -133,18 +140,16 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        // حارس الملكية: لا إطلاق عملية تعيين/إنهاء لموظف خارج نطاق شركاتي.
+        // لا تبدأ Lifecycle لموظف خارج شركات المستخدم.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         if (!await EmployeeCompanyGuard.CanAccessEmployeeAsync(
-                _dbContext, employeeId, await _companyScope.GetAsync(HttpContext.RequestAborted),
-                HttpContext.RequestAborted))
+                _dbContext, employeeId, scope, HttpContext.RequestAborted))
         {
             return NotFound();
         }
 
-        // المنتقي المشترك يرسل معرّف الموظف مباشرةً. سابقاً كان حقلاً حرّاً بـ
-        // `datalist` يُرسِل نصّ «الرقم — الاسم» ويُشقّ بالخادم، فأي كتابةٍ حرّة
-        // لا تطابق صيغته كانت تُسقِط الطلب.
         var employee = await _dbContext.Employees
+            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == employeeId && !e.IsDeleted);
 
         if (employee == null)
@@ -154,48 +159,33 @@ public class IndexModel : PageModel
         }
 
         var process = (HrProcessType)processType;
-
-        var alreadyOpen = await _dbContext.EmployeeTasks
-            .AnyAsync(t => t.EmployeeId == employee.Id && t.ProcessType == process && !t.IsDone);
-
-        if (alreadyOpen)
-        {
-            Message = "توجد عملية مفتوحة من نفس النوع لهذا الموظف.";
-            return RedirectToPage();
-        }
-
-        var templates = await _dbContext.HrTaskTemplates
-            .Where(t => t.ProcessType == process && t.IsActive)
-            .OrderBy(t => t.SortOrder)
-            .ToListAsync();
-
-        if (templates.Count == 0)
-        {
-            Message = "لا توجد قوالب فعّالة لهذه العملية — أضفها من تبويب القوالب.";
-            return RedirectToPage();
-        }
-
         var start = startDate ?? DateOnly.FromDateTime(DateTime.Today);
-        var now = DateTime.UtcNow;
 
-        foreach (var template in templates)
+        var result = await EmployeeLifecycleApprovalStore.SubmitAsync(
+            _dbContext,
+            employee.Id,
+            process,
+            start,
+            CurrentUser);
+
+        Message = result.Message;
+
+        return RedirectToPage(new
         {
-            _dbContext.EmployeeTasks.Add(new EmployeeTask
-            {
-                EmployeeId = employee.Id,
-                ProcessType = process,
-                Title = template.Title,
-                Description = template.Description,
-                AssigneeRole = template.AssigneeRole,
-                DueDate = start.AddDays(template.DueDays),
-                CreatedAt = now,
-                CreatedBy = CurrentUser
-            });
-        }
+            StatusFilter = "all",
+            ProcessFilter = processType,
+            Search
+        });
+    }
 
-        await _dbContext.SaveChangesAsync();
+    public async Task<IActionResult> OnPostResubmitLifecycleAsync(int requestId)
+    {
+        var result = await EmployeeLifecycleApprovalStore.ResubmitAsync(
+            _dbContext,
+            await _companyScope.GetAsync(HttpContext.RequestAborted),
+            requestId);
 
-        Message = $"تم إطلاق عملية {(process == HrProcessType.Onboarding ? "التعيين" : "الإنهاء")} للموظف {employee.FullName} ({templates.Count} مهمة).";
+        Message = result.Message;
         return RedirectToPage();
     }
 
@@ -257,7 +247,7 @@ public class IndexModel : PageModel
     // ---- Template management ----
     public async Task<IActionResult> OnPostAddTemplateAsync(int processType, string title, string? assigneeRole, int dueDays, int sortOrder)
     {
-        await EmployeeTasksSchema.EnsureAsync(_dbContext);
+        await EmployeeLifecycleApprovalStore.EnsureAsync(_dbContext);
 
         if (processType is not (1 or 2) || string.IsNullOrWhiteSpace(title))
         {

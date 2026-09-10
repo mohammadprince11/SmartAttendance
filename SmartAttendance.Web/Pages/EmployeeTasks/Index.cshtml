@@ -16,7 +16,12 @@
             <h1>مهام التعيين والإنهاء</h1>
             <p>قوائم مهام مؤتمتة لدورة حياة الموظف (Onboarding / Offboarding) بنمط كيان.</p>
         </div>
-        <button type="button" class="hrms-btn-primary" data-hrms-open="launch-form">+ بدء عملية</button>
+        <div class="hrms-inline-form">
+            <a class="hrms-btn-secondary"
+               asp-page="/HrSettings/ApprovalTemplates"
+               asp-route-Type="Onboarding">إعداد مسارات الموافقة</a>
+            <button type="button" class="hrms-btn-primary" data-hrms-open="launch-form">+ طلب بدء عملية</button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.Message))
@@ -30,14 +35,109 @@
             <div class="hrms-stat"><span>مهام إنهاء مفتوحة</span><strong>@Model.OpenOffboarding</strong></div>
             <div class="hrms-stat"><span>متأخرة</span><strong>@Model.OverdueCount</strong></div>
             <div class="hrms-stat"><span>أُنجزت هذا الشهر</span><strong>@Model.DoneThisMonth</strong></div>
+            <div class="hrms-stat"><span>بانتظار الموافقة</span><strong>@Model.PendingLifecycleApprovals</strong></div>
         </div>
     </div>
 
     <div class="hrms-tabs" role="tablist">
         <button type="button" class="hrms-tab active" data-hrms-tab="screening" data-hrms-tab-remember>متابعة المهام</button>
+        <button type="button" class="hrms-tab" data-hrms-tab="approval-cycle" data-hrms-tab-remember>دورة الموافقات</button>
         <button type="button" class="hrms-tab" data-hrms-tab="templates" data-hrms-tab-remember>قوالب المهام</button>
     </div>
 
+    @* ---------------- Approval Cycle ---------------- *@
+    <div class="hrms-tabpanel" data-hrms-tabpanel="approval-cycle">
+        <div class="hrms-table-card">
+            <div class="hrms-tile-head">
+                <div>
+                    <h3>دورة موافقات Onboarding / Offboarding</h3>
+                    <p class="hrms-muted">
+                        بدء العملية ينشئ طلب موافقة أولاً. بعد آخر موافقة فقط يتم توليد مهام الموظف
+                        من نسخة القالب التي جُمّدت وقت تقديم الطلب.
+                    </p>
+                </div>
+                <a class="hrms-btn-secondary" asp-page="/Approvals/Index" asp-route-Status="All">
+                    فتح مركز الموافقات
+                </a>
+            </div>
+
+            @if (!Model.LifecycleRequests.Any())
+            {
+                <div class="hrms-empty">لا توجد طلبات دورة حياة حتى الآن.</div>
+            }
+            else
+            {
+                <div class="hrms-table-wrap">
+                    <table class="hrms-table">
+                        <thead>
+                            <tr>
+                                <th>الطلب</th>
+                                <th class="text-start">الموظف</th>
+                                <th>العملية</th>
+                                <th>تاريخ البدء</th>
+                                <th>الموافقة</th>
+                                <th>المرحلة الحالية</th>
+                                <th>المهام</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var request in Model.LifecycleRequests)
+                            {
+                                var statusClass = request.Status == "Approved"
+                                    ? "approved"
+                                    : request.Status == "Rejected"
+                                        ? "rejected"
+                                        : "pending";
+
+                                <tr>
+                                    <td>#@request.RequestId</td>
+                                    <td class="text-start">
+                                        @request.EmployeeName
+                                        <span class="hrms-muted">@request.EmployeeNo</span>
+                                    </td>
+                                    <td>@request.ProcessLabel</td>
+                                    <td>@request.StartDate.ToString("yyyy-MM-dd")</td>
+                                    <td>
+                                        <span class="hrms-badge @statusClass">@request.Status</span>
+                                    </td>
+                                    <td>@(string.IsNullOrWhiteSpace(request.CurrentStep) ? "—" : request.CurrentStep)</td>
+                                    <td>
+                                        @if (request.TasksGenerated)
+                                        {
+                                            <span class="hrms-badge approved">تم توليد @request.SnapshotTaskCount</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="hrms-badge pending">مجمّدة: @request.SnapshotTaskCount</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="hrms-inline-form">
+                                            <a class="hrms-btn-secondary"
+                                               asp-page="/Approvals/Index"
+                                               asp-route-Status="All"
+                                               asp-route-RequestType="@request.RequestType">
+                                                الموافقات
+                                            </a>
+
+                                            @if (request.Status is "Returned" or "WaitingRevision")
+                                            {
+                                                <form method="post" asp-page-handler="ResubmitLifecycle">
+                                                    <input type="hidden" name="requestId" value="@request.RequestId" />
+                                                    <button type="submit" class="hrms-btn-primary">إعادة تقديم</button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
     @* ---------------- Tab 1: Screening ---------------- *@
     <div class="hrms-tabpanel active" data-hrms-tabpanel="screening">
         <div class="hrms-table-card">
@@ -222,7 +322,10 @@
                 <label>تاريخ البدء</label>
                 <input type="date" name="startDate" value="@today.ToString("yyyy-MM-dd")" />
             </div>
-            <p class="hrms-muted">سيتم توليد مهام العملية من القالب الفعّال مع مواعيد استحقاق محسوبة من تاريخ البدء.</p>
+            <p class="hrms-muted">
+                سيتم إرسال العملية أولاً إلى Approval Cycle حسب قالب الشركة.
+                تُجمّد مهام القالب لحظة الإرسال، ولا تُنشأ مهام الموظف إلا بعد الاعتماد النهائي.
+            </p>
             <button type="submit" class="hrms-btn-primary">بدء العملية</button>
         </form>
     </div>
