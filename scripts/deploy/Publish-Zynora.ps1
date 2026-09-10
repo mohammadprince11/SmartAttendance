@@ -399,7 +399,7 @@ $preserveDirs  = @(
     # excluding the exact destination path protects runtime branding files.
     (Join-Path $SitePath 'wwwroot\tenant-assets')
 )
-$preserveFiles = @('appsettings*.json', 'run-*.vbs', 'run-*.bat', '*.dev-backup', '*.pfx')
+$preserveFiles = @('appsettings*.json', 'run-*.vbs', 'run-*.bat', 'Start-Zynora.ps1', '*.dev-backup', '*.pfx')
 
 robocopy $PublishDir $SitePath /MIR /XD $preserveDirs /XF $preserveFiles /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "فشل النسخ (robocopy=$LASTEXITCODE). ارجع: robocopy `"$backupDir`" `"$SitePath`" /MIR" }
