@@ -111,6 +111,10 @@ public sealed class AccessProfile
             return "Attendance.Operations";
         }
 
+        if (key.Equals("Attendance.OnlinePunches", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Attendance.Records";
+        }
         return key;
     }
     private static bool IsWider(string candidate, string current)

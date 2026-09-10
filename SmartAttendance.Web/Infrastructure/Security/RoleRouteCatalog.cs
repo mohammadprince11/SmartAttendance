@@ -54,7 +54,6 @@ public static class RoleRouteCatalog
         "/periodrules",
         "/attendancerecommendations",
         "/missingpunchrequests",
-        "/employeeonlinepunches",
         "/biometrickeys",
         "/shiftassignments",
         // الشاشة التشغيلية الأم: المسارات البديلة (المعالجة/التصحيحات/الاستيراد)
@@ -92,7 +91,6 @@ public static class RoleRouteCatalog
         "/attendancerecords",
         "/attendanceoperations",
         "/missingpunchrequests",
-        "/employeeonlinepunches",
         "/biometrickeys",
         "/holidays",
         "/leaverequests",
@@ -125,6 +123,7 @@ public static class RoleRouteCatalog
             "/attendanceprocessing" => "/attendanceoperations",
             "/attendancecorrections" => "/attendanceoperations",
             "/attendanceimports" => "/attendanceoperations",
+            "/employeeonlinepunches" => "/attendancerecords",
             _ => normalized,
         };
     }

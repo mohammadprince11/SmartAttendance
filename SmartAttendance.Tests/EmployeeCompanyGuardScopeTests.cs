@@ -326,10 +326,10 @@ public class EmployeeCompanyGuardScopeTests
         Assert.Contains("selectedIds", view);                              // مربّعات التحديد
         Assert.Contains("DeleteSelected", view);                           // زرّ الحذف الجماعي
 
-        // المسار القديم redirect حيّ لا صفحة مستقلّة — الروابط المحفوظة لا تنكسر.
-        var stub = ReadPage("EmployeeOnlinePunches/Index.cshtml");
-        Assert.Contains("RedirectToPage(\"/AttendanceRecords/Index\"", stub);
-        Assert.Contains("Source = \"Mobile\"", stub);
+        // المسار القديم يبقى حيّاً كـ endpoint redirect في Program.cs، لا كصفحة Razor مستقلة.
+        var program = File.ReadAllText(Path.Combine(RepoRoot(), "SmartAttendance.Web", "Program.cs"));
+        Assert.Contains("app.MapGet(\"/EmployeeOnlinePunches\"", program);
+        Assert.Contains("AttendanceRecords?Source=Mobile", program);
     }
 
 }

@@ -62,7 +62,7 @@ public static class PageAccessRouteCatalog
         new("/shiftrules", "Attendance.ShiftRules"), new("/periodrules", "Attendance.PeriodRules"),
         new("/attendancerecommendations", "Attendance.Recommendations"),
         new("/missingpunchrequests", "Attendance.MissingPunch"),
-        new("/employeeonlinepunches", "Attendance.OnlinePunches"),
+        new("/employeeonlinepunches", "Attendance.Records"),
         new("/shiftassignments", "Attendance.Assignments"),
         new("/attendanceviewer", "Attendance.Viewer"),
         new("/monthattendance", "Attendance.MonthAttendance"),
