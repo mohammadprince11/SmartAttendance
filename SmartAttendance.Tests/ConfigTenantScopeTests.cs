@@ -104,7 +104,7 @@ public sealed class ConfigTenantScopeTests
     public void Polls_ScopeListingAndGuardTogglePlusDelete()
     {
         var polls = System.IO.File.ReadAllText(System.IO.Path.Combine(
-            RepoRoot(), "SmartAttendance.Web", "Pages", "Engagement", "Polls.cshtml.cs"));
+            RepoRoot(), "SmartAttendance.Web", "Pages", "Engagement", "Index.Handlers.cs"));
 
         // نشر/سحب وحذف استطلاع شركة أخرى كانا ممكنَين بمعرّف من المتصفّح.
         Assert.Contains("ConfigTenantScope.IsInScopeAsync", polls);

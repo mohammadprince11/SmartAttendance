@@ -109,7 +109,7 @@
                                     <small>@item.Category · @Model.TargetText(item)</small>
                                 </div>
                                 <div class="zyw-item-actions">
-                                    <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Toggle">
+                                    <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementToggle">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="publish" value="true" />
                                         <button type="submit" class="btn-primary">نشر</button>
@@ -137,7 +137,7 @@
                                     <small>@item.OptionsCount خيار · @Model.TargetText(item)</small>
                                 </div>
                                 <div class="zyw-item-actions">
-                                    <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Toggle">
+                                    <form method="post" asp-page="/Engagement/Index" asp-page-handler="PollToggle">
                                         <input type="hidden" name="id" value="@item.Id" />
                                         <input type="hidden" name="publish" value="true" />
                                         <button type="submit" class="btn-primary">نشر</button>
@@ -177,7 +177,7 @@
         <article class="zy-card">
             <div class="zyw-queue-head"><h2>إعلان جديد</h2></div>
 
-            <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Create" data-zyw-form="announcement">
+            <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementCreate" data-zyw-form="announcement">
                 <div class="zyw-form-grid">
                     <div class="zyw-field zyw-field--wide">
                         <label for="ann-title">العنوان</label>
@@ -309,12 +309,12 @@
                             </div>
                         </div>
                         <div class="zyw-item-actions">
-                            <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Toggle">
+                            <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementToggle">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <input type="hidden" name="publish" value="@((!item.IsPublished).ToString().ToLowerInvariant())" />
                                 <button type="submit" class="btn-secondary">@(item.IsPublished ? "إلغاء النشر" : "نشر")</button>
                             </form>
-                            <form method="post" asp-page="/Engagement/Announcements" asp-page-handler="Archive">
+                            <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementArchive">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <button type="submit" class="btn-secondary" data-zyconfirm="أرشفة الإعلان؟">أرشفة</button>
                             </form>
@@ -330,7 +330,7 @@
         <article class="zy-card">
             <div class="zyw-queue-head"><h2>استطلاع جديد</h2></div>
 
-            <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Create">
+            <form method="post" asp-page="/Engagement/Index" asp-page-handler="PollCreate">
                 <div class="zyw-form-grid">
                     <div class="zyw-field zyw-field--wide">
                         <label for="poll-title">العنوان</label>
@@ -431,12 +431,12 @@
                             </div>
                         </div>
                         <div class="zyw-item-actions">
-                            <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Toggle">
+                            <form method="post" asp-page="/Engagement/Index" asp-page-handler="PollToggle">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <input type="hidden" name="publish" value="@((!item.IsPublished).ToString().ToLowerInvariant())" />
                                 <button type="submit" class="btn-secondary">@(item.IsPublished ? "إلغاء النشر" : "نشر")</button>
                             </form>
-                            <form method="post" asp-page="/Engagement/Polls" asp-page-handler="Delete">
+                            <form method="post" asp-page="/Engagement/Index" asp-page-handler="PollDelete">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <button type="submit" class="btn-secondary" data-zyconfirm="حذف الاستطلاع وأصواته؟">حذف</button>
                             </form>
@@ -478,7 +478,7 @@
                             }
                             else
                             {
-                                <form method="post" asp-page="/Engagement/Feedback" asp-page-handler="Reply">
+                                <form method="post" asp-page="/Engagement/Index" asp-page-handler="FeedbackReply">
                                     <input type="hidden" name="FeedbackReply.Id" value="@item.Id" />
                                     <div class="zyw-form-grid">
                                         <div class="zyw-field zyw-field--wide">
@@ -502,7 +502,7 @@
                         </div>
 
                         <div class="zyw-item-actions">
-                            <form method="post" asp-page="/Engagement/Feedback" asp-page-handler="Close">
+                            <form method="post" asp-page="/Engagement/Index" asp-page-handler="FeedbackClose">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <button type="submit" class="btn-secondary" data-zyconfirm="إغلاق الحالة؟">إغلاق</button>
                             </form>

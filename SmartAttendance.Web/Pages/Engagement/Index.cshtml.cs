@@ -21,7 +21,7 @@ namespace SmartAttendance.Web.Pages.Engagement;
 /// النماذج بـ`asp-page`. إعادةُ كتابة منطقٍ ماليّ/تشغيليّ لأجل تغييرٍ بصريّ هي
 /// أسرع طريق لانحدارٍ صامت. تلك الصفحات صارت تُعيد التوجيه إلى هنا بعد التنفيذ.
 /// </summary>
-public class IndexModel : EngagementPageModel
+public partial class IndexModel : EngagementPageModel
 {
     public IndexModel(
         ApplicationDbContext dbContext,

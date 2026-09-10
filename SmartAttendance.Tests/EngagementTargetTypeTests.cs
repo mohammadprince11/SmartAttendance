@@ -63,7 +63,7 @@ public class EngagementTargetTypeTests
         var shared = File.ReadAllText(
             Path.Combine(WebRoot(), "Pages", "Engagement", "EngagementPageModel.cs"));
         var announcements = File.ReadAllText(
-            Path.Combine(WebRoot(), "Pages", "Engagement", "Announcements.cshtml.cs"));
+            Path.Combine(WebRoot(), "Pages", "Engagement", "Index.Handlers.cs"));
 
         Assert.Contains("\"Employee\"", shared);
         Assert.Contains("\"Employee\"", announcements);

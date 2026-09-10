@@ -8,9 +8,9 @@
     </div>
     <nav class="nx-approved-tabs" aria-label="أقسام عمليات الموارد البشرية">
         <a class="@(Model == "overview" ? "active" : "")" asp-page="/Engagement/Index">نظرة عامة</a>
-        <a class="@(Model == "announcements" ? "active" : "")" asp-page="/Engagement/Announcements">التواصل</a>
-        <a class="@(Model == "polls" ? "active" : "")" asp-page="/Engagement/Polls">صوت الموظف</a>
-        <a class="@(Model == "feedback" ? "active" : "")" asp-page="/Engagement/Feedback">الحالات</a>
+        <a class="@(Model == "announcements" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="announcements">التواصل</a>
+        <a class="@(Model == "polls" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="polls">صوت الموظف</a>
+        <a class="@(Model == "feedback" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="cases">الحالات</a>
         <a class="@(Model == "recognition" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="recognition">التقدير والحملات</a>
     </nav>
 </header>

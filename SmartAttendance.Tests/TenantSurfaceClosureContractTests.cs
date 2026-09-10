@@ -34,14 +34,13 @@ public sealed class TenantSurfaceClosureContractTests
     {
         var service = Read("SmartAttendance.Infrastructure", "Services", "AnnouncementService.cs");
         var shared = ReadWeb("Pages", "Engagement", "EngagementPageModel.cs");
-        var announcements = ReadWeb("Pages", "Engagement", "Announcements.cshtml.cs");
-        var feedback = ReadWeb("Pages", "Engagement", "Feedback.cshtml.cs");
+        var handlers = ReadWeb("Pages", "Engagement", "Index.Handlers.cs");
 
         Assert.Contains("AllowedCompanyIds", service);
         Assert.Contains("group.AudienceRules.Any", service);
         Assert.Contains("IsTargetWithinCompanyScopeAsync", shared);
-        Assert.Contains("CanManageAnnouncementAsync", announcements);
-        Assert.Contains("CanAccessOwnedRowAsync", feedback);
+        Assert.Contains("CanManageAnnouncementAsync", handlers);
+        Assert.Contains("CanAccessOwnedRowAsync", handlers);
     }
 
     [Theory]

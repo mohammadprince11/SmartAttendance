@@ -681,6 +681,13 @@ app.MapGet("/Engagement/Recognition", () =>
 app.MapGet("/Violations/Actions", () =>
     Results.Redirect("/Violations?tab=actions", permanent: false));
 
+app.MapGet("/Engagement/Announcements", () =>
+    Results.Redirect("/Engagement?tab=announcements", permanent: false));
+app.MapGet("/Engagement/Polls", () =>
+    Results.Redirect("/Engagement?tab=polls", permanent: false));
+app.MapGet("/Engagement/Feedback", () =>
+    Results.Redirect("/Engagement?tab=cases", permanent: false));
+
 app.MapRazorPages()
    .WithStaticAssets();
 
