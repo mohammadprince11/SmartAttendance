@@ -22,6 +22,8 @@ public static class ApprovalTemplateStore
         new("DocumentRequest","طلب وثيقة",               "الأشخاص"),
         new("Resignation",    "استقالة",                 "الأشخاص"),
         new("Transfer",       "نقل موظف",                "الأشخاص"),
+        new("Onboarding",     "تهيئة وتعيين الموظف",     "الأشخاص"),
+        new("Offboarding",    "إنهاء وخروج الموظف",      "الأشخاص"),
 
         new("LeaveRequest",   "طلب إجازة",               "الإجازات"),
         new("LeaveCancel",    "إلغاء إجازة",             "الإجازات"),
