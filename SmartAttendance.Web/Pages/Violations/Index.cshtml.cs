@@ -76,6 +76,23 @@ public class IndexModel : PageModel
 
     public int PendingReplyCount => Items.Count(i => i.EmployeeReplyStatus == "Pending");
 
+    /// <summary>
+    /// صفّ عرض الإجراء التأديبي. كان مملوكاً للصفحة القديمة
+    /// /Violations/Actions؛ بعد توحيد الشاشة صار ملكه الطبيعي IndexModel.
+    /// </summary>
+    public sealed record ActionRow(
+        int Id,
+        string ReferenceNo,
+        string EmployeeName,
+        string EmployeeNo,
+        string ViolationTitle,
+        string? FinalPenaltyAction,
+        string FinancialImpactType,
+        decimal DeductionAmount,
+        DateOnly EventDate,
+        DateOnly? NotifiedOn,
+        DateOnly? DecidedOn,
+        DateTime? LetterIssuedAt);
     // ---------------------------------------------------- الإجراءات التأديبية
     //
     // كانت شاشةً مستقلّة (`/Violations/Actions`) فيُخرجك فتحُها من المخالفات إلى
@@ -86,7 +103,7 @@ public class IndexModel : PageModel
     // تغيير مدّة الطعن أو الإسقاط بصفحة الإعدادات يعيد تصنيف كل صفٍّ فوراً بلا
     // تعديل بيانات. ولذلك تُصفّى بالذاكرة بعد القراءة لا بالاستعلام.
 
-    public List<ActionsModel.ActionRow> DisciplinaryActions { get; private set; } = new();
+    public List<ActionRow> DisciplinaryActions { get; private set; } = new();
 
     public int ObjectionDays { get; private set; }
 
@@ -106,7 +123,7 @@ public class IndexModel : PageModel
 
     public decimal ActionsDeductions => DisciplinaryActions.Sum(row => row.DeductionAmount);
 
-    public string ActionStatusOf(ActionsModel.ActionRow row) =>
+    public string ActionStatusOf(ActionRow row) =>
         ViolationConfigPolicy.StatusLabel(row.NotifiedOn, row.DecidedOn, ObjectionDays, DropMonths, Today);
 
     /// <summary>
@@ -149,7 +166,7 @@ WHERE ISNULL(c.IsDeleted, 0) = 0
 ORDER BY c.EventDate DESC, c.Id DESC;
 """,
             _ => { },
-            reader => new ActionsModel.ActionRow(
+            reader => new ActionRow(
                 HrmsDatabase.GetInt(reader, "Id"),
                 HrmsDatabase.GetString(reader, "ReferenceNo"),
                 HrmsDatabase.GetString(reader, "EmployeeName"),

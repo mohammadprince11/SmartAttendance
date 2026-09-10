@@ -676,6 +676,11 @@ app.MapGet("/AttendanceImports", () =>
 app.MapGet("/EmployeeOnlinePunches", () =>
     Results.Redirect("/AttendanceRecords?Source=Mobile", permanent: false));
 
+app.MapGet("/Engagement/Recognition", () =>
+    Results.Redirect("/Engagement?tab=recognition", permanent: false));
+app.MapGet("/Violations/Actions", () =>
+    Results.Redirect("/Violations?tab=actions", permanent: false));
+
 app.MapRazorPages()
    .WithStaticAssets();
 
