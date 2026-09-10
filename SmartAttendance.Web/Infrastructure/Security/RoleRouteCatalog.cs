@@ -70,9 +70,6 @@ public static class RoleRouteCatalog
         "/attendancereports",
         "/employeeshifts",
         "/attendancerecords",
-        "/attendanceprocessing",
-        "/attendancecorrections",
-        "/attendanceimports",
         "/holidays",
         "/leaverequests",
         "/selfservices",
@@ -94,9 +91,6 @@ public static class RoleRouteCatalog
         "/myprofile",
         "/attendancerecords",
         "/attendanceoperations",
-        "/attendanceprocessing",
-        "/attendancecorrections",
-        "/attendanceimports",
         "/missingpunchrequests",
         "/employeeonlinepunches",
         "/biometrickeys",
@@ -113,8 +107,6 @@ public static class RoleRouteCatalog
         "/myprofile",
         "/attendancerecords",
         "/attendanceoperations",
-        "/attendanceprocessing",
-        "/attendancecorrections",
         "/leaverequests",
         "/selfservices"
     };
@@ -124,6 +116,18 @@ public static class RoleRouteCatalog
         "/organization"
     };
 
+    private static string CanonicalizeLegacyAttendancePath(string path)
+    {
+        var normalized = path.ToLowerInvariant();
+
+        return normalized switch
+        {
+            "/attendanceprocessing" => "/attendanceoperations",
+            "/attendancecorrections" => "/attendanceoperations",
+            "/attendanceimports" => "/attendanceoperations",
+            _ => normalized,
+        };
+    }
     /// <summary>قائمة مسارات الدور، أو null إن لم يكن دوراً بقائمة ثابتة.</summary>
     public static string[]? RoutesFor(string? role)
     {
@@ -146,7 +150,9 @@ public static class RoleRouteCatalog
     /// <summary>هل يطابق المسار أحد البادئات المسموحة؟</summary>
     public static bool Matches(string path, params string[] allowedPrefixes)
     {
-        foreach (var allowed in allowedPrefixes)
+                path = CanonicalizeLegacyAttendancePath(path);
+
+foreach (var allowed in allowedPrefixes)
         {
             if (path == allowed || path.StartsWith(allowed + "/", StringComparison.Ordinal))
             {

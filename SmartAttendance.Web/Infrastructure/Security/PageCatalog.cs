@@ -100,9 +100,6 @@ public static class PageCatalog
         {
             new CatalogPage("Attendance.Operations", "مراقبة الحضور"),
             new CatalogPage("Attendance.Records", "سجلات الحضور"),
-            new CatalogPage("Attendance.Imports", "استيراد البصمات"),
-            new CatalogPage("Attendance.Processing", "معالجة الحضور"),
-            new CatalogPage("Attendance.Corrections", "تصحيحات الحضور"),
             new CatalogPage("Attendance.ShiftTypes", "أنواع المناوبات"),
             new CatalogPage("Attendance.Settings", "إعدادات الحضور"),
             new CatalogPage("Attendance.DayAttendance", "الحضور اليومي"),
@@ -138,7 +135,6 @@ public static class PageCatalog
             new CatalogPage("Payroll.SalaryItems", "عناصر الراتب"),
             new CatalogPage("Payroll.Settings", "تهيئة الضريبة والضمان"),
             new CatalogPage("Payroll.BankTemplates", "قوالب ملفات البنوك"),
-            new CatalogPage("Payroll.TaxSocial", "الضرائب والضمان"),
             new CatalogPage("Payroll.FinancialInfo", "تحديث المعلومات المالية"),
             new CatalogPage("Payroll.Payment", "معلومات الدفع"),
             new CatalogPage("Payroll.Reports", "تقارير الرواتب"),

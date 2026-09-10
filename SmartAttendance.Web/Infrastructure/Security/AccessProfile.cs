@@ -66,10 +66,12 @@ public sealed class AccessProfile
         var pages = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, actions) in pageGrants)
         {
-            if (!pages.TryGetValue(key, out var set))
+            var effectiveKey = CanonicalizePageGrantKey(key);
+
+            if (!pages.TryGetValue(effectiveKey, out var set))
             {
                 set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                pages[key] = set;
+                pages[effectiveKey] = set;
             }
 
             foreach (var action in actions)
@@ -100,6 +102,17 @@ public sealed class AccessProfile
         };
     }
 
+    private static string CanonicalizePageGrantKey(string key)
+    {
+        if (key.Equals("Attendance.Imports", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("Attendance.Processing", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("Attendance.Corrections", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Attendance.Operations";
+        }
+
+        return key;
+    }
     private static bool IsWider(string candidate, string current)
     {
         var candidateRank = ScopeOrder.ToList().IndexOf(candidate);

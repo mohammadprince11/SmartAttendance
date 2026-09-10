@@ -665,6 +665,15 @@ app.UseAuthorization();
 // وتردّ 401 على CSS وJS وعامل خدمة الـPWA — أي أن صفحة الدخول نفسها تفقد تنسيقها
 // وتطبيق الموظف ينكسر. إعفاؤها صريح: الحماية على البيانات لا على ملفات الواجهة.
 app.MapStaticAssets().AllowAnonymous();
+// Compatibility aliases after deleting the old hidden Razor redirect pages.
+// AttendanceOperations is the single physical destination.
+app.MapGet("/AttendanceProcessing", () =>
+    Results.Redirect("/AttendanceOperations?Tab=process", permanent: false));
+app.MapGet("/AttendanceCorrections", () =>
+    Results.Redirect("/AttendanceOperations?Tab=corrections", permanent: false));
+app.MapGet("/AttendanceImports", () =>
+    Results.Redirect("/AttendanceOperations?Tab=import", permanent: false));
+
 app.MapRazorPages()
    .WithStaticAssets();
 
