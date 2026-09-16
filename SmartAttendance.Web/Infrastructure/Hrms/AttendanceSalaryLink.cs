@@ -118,7 +118,9 @@ public static class AttendanceSalaryLink
         Policy policy, int workDays, int presentDays, int absentDays, decimal workedHours,
         // أيام تقويمية قبل تاريخ التعيين/إعادة التعيين ضمن الشهر — غير مدفوعة.
         // 0 ⟹ موظفٌ كامل الشهر (السلوك القديم). تُطبَّق مع المقام التقويمي فقط.
-        int preEmploymentUnpaidDays = 0)
+        int preEmploymentUnpaidDays = 0,
+        // Calendar days after service end inside the paid period.
+        int postEmploymentUnpaidDays = 0)
     {
         var p = policy.Normalized();
 
@@ -162,7 +164,7 @@ public static class AttendanceSalaryLink
         // preEmploymentUnpaidDays موجب ⟹ أيام قبل التعيين غير مدفوعة (المُعيَّن يوم 5 ⟹
         // 4 أيام ⟹ 26/30). سالب ⟹ **أثر رجعي**: أيام دورةٍ مُرحَّلة تُدفع الآن، فالمعامل
         // يتجاوز 1 (مثلاً 26/7 مُرحَّل ⟹ سبتمبر يدفع يوليو المتبقّي + أغسطس).
-        var factor = 1m - ((unpaidDays + extraPenaltyDays + preEmploymentUnpaidDays) / divisor);
+        var factor = 1m - ((unpaidDays + extraPenaltyDays + preEmploymentUnpaidDays + postEmploymentUnpaidDays) / divisor);
 
         if (preEmploymentUnpaidDays > 0)
             note = (note == null ? "" : note + " · ") +
@@ -170,6 +172,10 @@ public static class AttendanceSalaryLink
         else if (preEmploymentUnpaidDays < 0)
             note = (note == null ? "" : note + " · ") +
                    $"أثر رجعي (تعيين مُرحَّل): {-preEmploymentUnpaidDays} يوم إضافيّة";
+
+        if (postEmploymentUnpaidDays > 0)
+            note = (note == null ? "" : note + " · ") +
+                   $"تنسيب نهاية خدمة: {postEmploymentUnpaidDays} يوم بعد نهاية الخدمة غير مدفوع";
 
         if (extraPenaltyDays > 0m)
             note = (note == null ? "" : note + " · ") +

@@ -52,6 +52,8 @@ public class SettingsModel : PageModel
     /// <summary>سياسة ربط الراتب بالحضور المفعَّلة حالياً.</summary>
     public AttendanceSalaryLink.Policy LinkPolicy { get; set; } = AttendanceSalaryLink.Policy.Default;
 
+    public decimal MissingPunchPenaltyPercent { get; set; }
+
     public string AttendanceLinkMode => LinkPolicy.Mode;
 
     // ── سياسات الأوعية والمقام (كلّها بيانات يحرّرها المستخدم) ──
@@ -82,6 +84,7 @@ public class SettingsModel : PageModel
         BaseMembers = await SalaryBaseStore.AllAsync(_db);
         CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_db);
         LinkPolicy = await AttendanceSalaryLinkSettings.LoadAsync(_db, CompanyId);
+        MissingPunchPenaltyPercent = await MissingPunchPayrollPolicy.LoadPercentAsync(_db, CompanyId);
 
         OvertimeBaseMode = PayrollEarningBase.NormalizeMode(
             await GetSettingAsync("Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic));
@@ -284,18 +287,21 @@ public class SettingsModel : PageModel
     /// بدل أن تكتفي بـ«حُفظ».
     /// </summary>
     public async Task<IActionResult> OnPostSaveAttendanceLinkAsync(
-        string mode, decimal absenceDays, bool allowNegative)
+        string mode, decimal absenceDays, bool allowNegative, decimal missingPunchPenaltyPercent)
     {
         // المقام لم يعد يُحفظ هنا — يأتي من سياسة الغلق «أيام العمل» بالمسير.
         var policy = new AttendanceSalaryLink.Policy(mode, absenceDays, allowNegative).Normalized();
         if (!await CanWriteCompanyAsync()) return Forbid();
         await AttendanceSalaryLinkSettings.SaveAsync(_db, CompanyId!.Value, policy);
+        await MissingPunchPayrollPolicy.SavePercentAsync(_db, CompanyId.Value, missingPunchPenaltyPercent);
 
         var notes = new List<string> { AttendanceSalaryLink.ModeLabel(policy.Mode) };
         if (policy.Mode != AttendanceSalaryLink.Lenient)
             notes.Add("⚠️ من لا بيانات حضور له لن يُحتسب بالمسير القادم");
         if (policy.AbsenceDeductionDays != 1m)
             notes.Add($"خصم يوم الغياب = {policy.AbsenceDeductionDays:0.##} يوم");
+        if (MissingPunchPayrollPolicy.NormalizePercent(missingPunchPenaltyPercent) > 0m)
+            notes.Add($"خصم البصمة الناقصة = {MissingPunchPayrollPolicy.NormalizePercent(missingPunchPenaltyPercent):0.##}% من الأجر اليومي لكل يوم");
         if (policy.AllowNegative)
             notes.Add("⚠️ الصافي مسموح أن يكون سالباً");
 

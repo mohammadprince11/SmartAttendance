@@ -198,7 +198,7 @@ body {
     align-items: center;
     padding: 12px 16px;
     border-bottom: 1px solid var(--zhr-border-color);
-    background: rgba(217, 225, 232, 0.02);
+    background: transparent;
 }
 
 .zhr-toolbar-info {
@@ -345,7 +345,7 @@ html[data-theme="light"] .zhr-btn-secondary { color: #0b2239; }
 
 html[data-theme="light"] .zhr-btn-secondary { background-color: rgba(15, 60, 100, .08); }
 html[data-theme="light"] .zhr-select option { background-color: #ffffff; color: #0b2239; }
-html[data-theme="light"] .zhr-toolbar { background: rgba(15, 60, 100, .03); }
+html[data-theme="light"] .zhr-toolbar { background: transparent; }
 
 html[data-theme="light"] .zhr-page-link {
     background: #ffffff;

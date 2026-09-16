@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Notifications;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Payroll;
@@ -17,11 +18,13 @@ public class RunsModel : PageModel
 {
     private readonly ApplicationDbContext _db;
     private readonly ICompanyScopeProvider _companyScope;
+    private readonly IEmailSender _emailSender;
 
-    public RunsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope)
+    public RunsModel(ApplicationDbContext db, ICompanyScopeProvider companyScope, IEmailSender emailSender)
     {
         _db = db;
         _companyScope = companyScope;
+        _emailSender = emailSender;
     }
 
     public sealed class EmployeeOption
@@ -74,9 +77,6 @@ public class RunsModel : PageModel
             .OrderByDescending(run => run.Year).ThenByDescending(run => run.Month).ThenByDescending(run => run.Id)
             .ToList();
 
-        RequireCommitteeApproval = bool.TryParse(
-            await HrSettingsStore.GetAsync(_db, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var rca) && rca;
-
         var companyQuery = _db.Companies.AsNoTracking()
             .Where(company => company.IsActive && !company.IsDeleted);
         if (!scope.IsUnrestricted)
@@ -88,6 +88,13 @@ public class RunsModel : PageModel
             .OrderBy(company => company.Name)
             .Select(company => new CompanyOption { Id = company.Id, Name = company.Name })
             .ToListAsync(HttpContext.RequestAborted);
+        CommitteeRequiredCompanyIds.Clear();
+        foreach (var company in Companies)
+        {
+            if (bool.TryParse(await HrSettingsStore.GetCompanyAsync(
+                    _db, company.Id, PayrollRunStore.KeyRequireCommitteeApproval, "False"), out var required) && required)
+                CommitteeRequiredCompanyIds.Add(company.Id);
+        }
         if (CompanyId.HasValue && !Companies.Any(company => company.Id == CompanyId.Value))
             CompanyId = null;
         if (!CompanyId.HasValue && Companies.Count == 1)
@@ -288,7 +295,8 @@ public class RunsModel : PageModel
             var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
             run = await PayrollRunStore.GetRunAsync(_db, id);
             if (run is null) return (false, "الدفعة غير موجودة.");
-            drafts = await PayrollTransactionStore.PreflightDraftsAsync(_db, scope, run.Year, run.Month, id);
+            drafts = await PayrollTransactionStore.PreflightDraftsAsync(
+                _db, scope, run.Year, run.Month, id, run.CompanyId);
             return drafts.Count == 0
                 ? await PayrollRunStore.CalculateWithGuardAsync(_db, id, User?.Identity?.Name ?? "system")
                 : (true, string.Empty);
@@ -322,9 +330,13 @@ public class RunsModel : PageModel
         await ActAsync(id, () => PayrollRunStore.ApproveAsync(_db, id, User?.Identity?.Name ?? "system", note));
 
     /// <summary>هل تشترط التهيئة اعتماد لجنة قبل الإصدار؟ (لإظهار الزر والشارة).</summary>
-    public bool RequireCommitteeApproval { get; set; }
+    public HashSet<int> CommitteeRequiredCompanyIds { get; } = new();
+    public bool RequiresCommitteeApproval(PayrollRunStore.PayrollRun run) =>
+        run.CompanyId is > 0 && CommitteeRequiredCompanyIds.Contains(run.CompanyId.Value);
+
     public async Task<IActionResult> OnPostIssueAsync(int id) => await ActAsync(id, () => PayrollRunStore.IssueAsync(_db, id));
-    public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(id, () => PayrollRunStore.SendPayslipsAsync(_db, id));
+    public async Task<IActionResult> OnPostSendAsync(int id) => await ActAsync(id, () =>
+        PayrollPayslipDeliveryStore.SendRunAsync(_db, id, _emailSender, HttpContext.RequestAborted));
     public async Task<IActionResult> OnPostReopenAsync(int id) => await ActAsync(id, () => PayrollRunStore.ReopenAsync(_db, id));
     public async Task<IActionResult> OnPostUnlockAsync(int id) => await ActAsync(id, () => PayrollRunStore.UnlockAsync(_db, id));
     public async Task<IActionResult> OnPostDeleteAsync(int id) => await ActAsync(id, () => PayrollRunStore.DeleteRunAsync(_db, id));

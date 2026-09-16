@@ -110,16 +110,35 @@
 
             <form method="post" asp-page-handler="SaveReanalysisRule" class="ats-form zyu-0452d1ac5fb3">
                 <label class="zyu-95e15889185d">
-                    <input type="checkbox" name="AutoReanalyze" value="true" checked="@Model.AutoReanalyze" />
-                    إعادة تحليل الحضور تلقائياً بمجرد الموافقة على الإجازة أو المغادرة أو البصمة المفقودة
+                    <input type="checkbox" name="ApplyApprovedEffects" value="true" checked="@Model.ApplyApprovedEffects" />
+                    تطبيق أثر الطلب تلقائياً بعد الاعتماد النهائي
                 </label>
-                <span class="ats-hint">معطّل افتراضياً — عند تفعيله لا يحتاج المستخدم تشغيل «تحديث الحضور» يدوياً بعد كل موافقة لتظهر باليومية.</span>
+                <span class="ats-hint">ينشئ الأثر الحقيقي حسب النوع: إجازة، مغادرة، تغيير مناوبة أو حركة عمل إضافي. تعطيله يبقي الطلب معتمداً بلا تطبيق تشغيلي.</span>
+                <label class="zyu-95e15889185d">
+                    <input type="checkbox" name="AutoReanalyze" value="true" checked="@Model.AutoReanalyze" />
+                    إعادة تحليل الحضور تلقائياً بعد اعتماد طلب يؤثر على اليومية
+                </label>
+                <span class="ats-hint">مفعّل افتراضياً — يجعل أثر الإجازة والمغادرة والمناوبة يظهر مباشرة في اليومية والتقارير دون تشغيل «تحديث الحضور» يدوياً.</span>
                 <label class="zyu-35b96bc4c382">
                     <input type="checkbox" name="GuardExecutedActions" value="true" checked="@Model.GuardExecutedActions" />
                     امنع إعادة التحليل التلقائية إذا كانت هناك إجراءات منفَّذة على حضور ذلك اليوم
                 </label>
                 <span class="ats-hint">مفعّل افتراضياً. «إجراء منفَّذ» = اقتراح معتمَد أو تلقائي أنشأ قضية مخالفة أو حركة مالية — إعادة تحليله تدهس قراراً بشرياً أو أثراً مالياً سبق ترحيله. الاقتراح المعلّق أو المتجاهَل لا يمنع.</span>
-                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ قواعد إعادة التحليل</button>
+                <label class="zyu-95e15889185d">
+                    <input type="checkbox" name="AllowCrossMidnight" value="true" checked="@Model.AllowCrossMidnight" />
+                    السماح للطلبات الزمنية بالعبور إلى اليوم التالي
+                </label>
+                <span class="ats-hint">مثال: 23:30 إلى 02:00 = يبدأ بتاريخ الطلب وينتهي 02:00 من اليوم التالي (مدة ساعتان و30 دقيقة). عند التعطيل يُرفض هذا النطاق الزمني.</span>
+                <label>تدرج قائمة اختيار الوقت
+                    <select name="TimePickerStepMinutes" class="zyu-eb9e070a2eee">
+                        @foreach (var step in new[] { 1, 5, 10, 15, 30, 60 })
+                        {
+                            <option value="@step" selected="@(Model.TimePickerStepMinutes == step ? "selected" : null)">@step دقيقة</option>
+                        }
+                    </select>
+                    <span class="ats-hint">يحدد الفاصل بين الأوقات الظاهرة في قائمة الاختيار. القيمة الافتراضية 30 دقيقة. الوقت الفعلي القديم يبقى محفوظاً حتى لو لم يطابق التدرج.</span>
+                </label>
+                <button type="submit" class="ats-btn zyu-0fd943ffe4c5">حفظ سياسات الطلبات والحضور</button>
             </form>
 
             <form method="post" asp-page-handler="SaveBiometricRule" class="ats-form zyu-0452d1ac5fb3">

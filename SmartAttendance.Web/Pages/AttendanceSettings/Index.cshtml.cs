@@ -42,6 +42,10 @@ public class IndexModel : PageModel
     /// <summary>حارس: امنع إعادة التحليل إذا كانت هناك إجراءات منفَّذة على اليوم.</summary>
     public bool GuardExecutedActions { get; set; }
 
+    public bool ApplyApprovedEffects { get; set; }
+    public bool AllowCrossMidnight { get; set; }
+    public int TimePickerStepMinutes { get; set; }
+
     /// <summary>استثناءا النطاق الجغرافي بحسب اتجاه البصمة (الافتراضي: لا استثناء).</summary>
     public bool AllowOutsideCheckIn { get; set; }
     public bool AllowOutsideCheckOut { get; set; }
@@ -74,6 +78,9 @@ public class IndexModel : PageModel
         LeaveLogoutSeconds = await Web.Infrastructure.Security.PortalSessionPolicy.GetLeaveSecondsAsync(_dbContext);
         AutoReanalyze = await AttendanceReanalysisPolicy.GetAutoReanalyzeAsync(_dbContext);
         GuardExecutedActions = await AttendanceReanalysisPolicy.GetGuardExecutedAsync(_dbContext);
+        ApplyApprovedEffects = await AttendanceRequestPolicy.GetApplyEffectsAsync(_dbContext);
+        AllowCrossMidnight = await AttendanceRequestPolicy.GetCrossMidnightAsync(_dbContext);
+        TimePickerStepMinutes = await AttendanceRequestPolicy.GetTimePickerStepMinutesAsync(_dbContext);
         AllowOutsideCheckIn = await OnlinePunchStore.GetAllowOutsideAsync(_dbContext, "In");
         AllowOutsideCheckOut = await OnlinePunchStore.GetAllowOutsideAsync(_dbContext, "Out");
         MissingPunchMonthlyLimit = await MissingPunchPolicy.GetMonthlyLimitAsync(_dbContext);
@@ -112,7 +119,13 @@ public class IndexModel : PageModel
             _dbContext, Request.Form["AutoReanalyze"] == "true");
         await AttendanceReanalysisPolicy.SetGuardExecutedAsync(
             _dbContext, Request.Form["GuardExecutedActions"] == "true");
-        TempData["SuccessMessage"] = "حُفظت قواعد إعادة التحليل.";
+        await AttendanceRequestPolicy.SetApplyEffectsAsync(
+            _dbContext, Request.Form["ApplyApprovedEffects"] == "true");
+        await AttendanceRequestPolicy.SetCrossMidnightAsync(
+            _dbContext, Request.Form["AllowCrossMidnight"] == "true");
+        await AttendanceRequestPolicy.SetTimePickerStepMinutesAsync(
+            _dbContext, int.TryParse(Request.Form["TimePickerStepMinutes"], out var step) ? step : 30);
+        TempData["SuccessMessage"] = "حُفظت سياسات أثر الطلبات وإعادة التحليل واختيار الوقت.";
         return RedirectToPage();
     }
 

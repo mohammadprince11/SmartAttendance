@@ -1,8 +1,8 @@
-@page "/Employees/PeopleDashboard"
+﻿@page "/Employees/PeopleDashboard"
 @model SmartAttendance.Web.Pages.Employees.PeopleDashboardModel
 
 @{
-    ViewData["Title"] = T["داشبورد الأشخاص"].Value;
+    ViewData["Title"] = "لوحة معلومات الموارد البشرية";
 
     static int Pct(int part, int total) => total <= 0
         ? 0
@@ -11,181 +11,179 @@
     var genderTotal = Model.MaleCount + Model.FemaleCount;
     var malePct = Pct(Model.MaleCount, genderTotal);
     var femalePct = Pct(Model.FemaleCount, genderTotal);
-    var activePct = Pct(Model.ActiveEmployees, Model.TotalEmployees);
     var totalExits = Model.VoluntaryExits + Model.InvoluntaryExits;
     var voluntaryShare = Pct(Model.VoluntaryExits, totalExits);
     var turnoverGauge = Math.Clamp(Model.TurnoverRate, 0, 100);
-    var ageMax = Math.Max(1, Model.AgeBuckets.Count == 0 ? 1 : Model.AgeBuckets.Max(bucket => bucket.Count));
-    var tenureMax = Math.Max(1, Model.TenureBuckets.Count == 0 ? 1 : Model.TenureBuckets.Max(bucket => bucket.Count));
+    var ageMax = Math.Max(1, Model.AgeBuckets.Count == 0 ? 1 : Model.AgeBuckets.Max(x => x.Count));
+    var tenureMax = Math.Max(1, Model.TenureBuckets.Count == 0 ? 1 : Model.TenureBuckets.Max(x => x.Count));
     var pageDirection = System.Globalization.CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
 }
 
-    <link rel="stylesheet" href="~/css/zynora-people-dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-people-dashboard-v16.css" asp-append-version="true" />
 
 <section class="ppd-page" dir="@pageDirection">
     <header class="ppd-hero">
-        <div class="ppd-hero-copy">
-            <span class="ppd-eyebrow">@T["نظرة شاملة على القوى العاملة"]</span>
-            <h1>@T["داشبورد الأشخاص"]</h1>
-            <p>@T["مؤشرات الموظفين، الحركة الوظيفية وتوزيع القوى العاملة في شاشة واحدة."]</p>
-            <div class="ppd-hero-meta" aria-label="@T["ملخص القوى العاملة"]">
-                <span><i class="ppd-status-dot"></i> @Model.ActiveEmployees @T["موظف فعال"]</span>
-                <span>@T["نسبة النشاط"] @activePct%</span>
-                <span>@T["فترة القياس"] 12 @T["شهراً"]</span>
+        <div class="ppd-hero-content">
+            <div class="ppd-title-block">
+                <span class="ppd-welcome">مرحباً بك في زينورا</span>
+                <h1>لوحة معلومات الموارد البشرية</h1>
+                <p>نظرة شاملة على موظفيك، الحركة الوظيفية، ومؤشرات القوى العاملة في مكان واحد.</p>
+            </div>
+
+            <div class="ppd-v8-date-wrap">
+                <div class="ppd-v8-period" id="ppdPeriodPickerV8">
+                    <button type="button" class="ppd-v8-trigger" aria-expanded="false">
+                        <span class="ppd-v8-chevron" aria-hidden="true">
+                            <svg viewBox="0 0 20 20"><path d="M5.5 7.5 10 12l4.5-4.5"/></svg>
+                        </span>
+                        <strong class="ppd-v8-label">آخر 12 شهر</strong>
+                        <span class="ppd-v8-calendar" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="5" width="18" height="16" rx="2"/>
+                                <path d="M16 3v4M8 3v4M3 10h18"/>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <div class="ppd-v8-menu" hidden>
+                        <button type="button" data-period-label="آخر شهر">آخر شهر</button>
+                        <button type="button" data-period-label="آخر 3 أشهر">آخر 3 أشهر</button>
+                        <button type="button" data-period-label="آخر 6 أشهر">آخر 6 أشهر</button>
+                        <button type="button" class="is-active" data-period-label="آخر 12 شهر">آخر 12 شهر</button>
+                    </div>
+                </div>
             </div>
         </div>
-        <a class="ppd-primary-action" href="/Employees">
-            <span>@T["قائمة الموظفين"]</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
-        </a>
     </header>
 
-    <section class="ppd-kpi-grid" aria-label="@T["مؤشرات الموظفين الرئيسية"]">
-        <a class="ppd-kpi ppd-kpi-primary" href="/Employees">
-            <span class="ppd-kpi-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-            </span>
-            <span class="ppd-kpi-copy"><small>@T["إجمالي الموظفين"]</small><b>@Model.TotalEmployees.ToString("N0")</b><em>@Model.ActiveEmployees @T["فعال حالياً"]</em></span>
-            <span class="ppd-kpi-arrow">‹</span>
+    <section class="ppd-kpi-grid" aria-label="مؤشرات الموظفين">
+        <a class="ppd-kpi ppd-kpi-people" href="/Employees">
+            <span class="ppd-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span class="ppd-kpi-copy"><small>إجمالي الموظفين</small><b>@Model.TotalEmployees.ToString("N0")</b><em>مقارنة بالشهر السابق</em></span>
+            <span class="ppd-trend is-up">↑ 0%</span>
         </a>
 
-        <a class="ppd-kpi ppd-kpi-success" href="/Employees">
-            <span class="ppd-kpi-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M16 11h6" /></svg>
-            </span>
-            <span class="ppd-kpi-copy"><small>@T["جديد هذا الشهر"]</small><b>@Model.NewThisMonth.ToString("N0")</b><em>@T["انضمام جديد"]</em></span>
-            <span class="ppd-kpi-arrow">‹</span>
+        <a class="ppd-kpi ppd-kpi-new" href="/Employees">
+            <span class="ppd-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M16 11h6"/></svg></span>
+            <span class="ppd-kpi-copy"><small>جدد هذا الشهر</small><b>@Model.NewThisMonth.ToString("N0")</b><em>لا تغيير</em></span>
+            <span class="ppd-trend">—</span>
         </a>
 
-        <a class="ppd-kpi ppd-kpi-warning" href="/HrSettings/ProbationPeriod">
-            <span class="ppd-kpi-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2M9 2h6" /></svg>
-            </span>
-            <span class="ppd-kpi-copy"><small>@T["في فترة التجربة"]</small><b>@Model.InProbation.ToString("N0")</b><em>@Model.ProbationDays @T["يوماً من المباشرة"]</em></span>
-            <span class="ppd-kpi-arrow">‹</span>
+        <a class="ppd-kpi ppd-kpi-ended" href="/Employees/EndServiceList">
+            <span class="ppd-kpi-icon"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg></span>
+            <span class="ppd-kpi-copy"><small>أُنهي هذا الشهر</small><b>@Model.EndedThisMonth.ToString("N0")</b><em>لا تغيير</em></span>
+            <span class="ppd-trend">—</span>
         </a>
 
-        <a class="ppd-kpi ppd-kpi-danger" href="/Employees?Status=inactive">
-            <span class="ppd-kpi-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 9v6M15 9v6" /></svg>
-            </span>
-            <span class="ppd-kpi-copy"><small>@T["موقوف عن العمل"]</small><b>@Model.Suspended.ToString("N0")</b><em>@T["حالة غير نشطة"]</em></span>
-            <span class="ppd-kpi-arrow">‹</span>
+        <a class="ppd-kpi ppd-kpi-suspended" href="/Employees?Status=inactive">
+            <span class="ppd-kpi-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9v6M15 9v6"/></svg></span>
+            <span class="ppd-kpi-copy"><small>موقوفون عن العمل</small><b>@Model.Suspended.ToString("N0")</b><em>لا تغيير</em></span>
+            <span class="ppd-trend">—</span>
         </a>
 
-        <a class="ppd-kpi ppd-kpi-danger" href="/Employees/EndServiceList">
-            <span class="ppd-kpi-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" /></svg>
-            </span>
-            <span class="ppd-kpi-copy"><small>@T["أُنهي هذا الشهر"]</small><b>@Model.EndedThisMonth.ToString("N0")</b><em>@T["إنهاء خدمة"]</em></span>
-            <span class="ppd-kpi-arrow">‹</span>
+        <a class="ppd-kpi ppd-kpi-probation" href="/HrSettings/ProbationPeriod">
+            <span class="ppd-kpi-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M9 2h6"/></svg></span>
+            <span class="ppd-kpi-copy"><small>في فترة التجربة</small><b>@Model.InProbation.ToString("N0")</b><em>لا تغيير</em></span>
+            <span class="ppd-trend">—</span>
         </a>
     </section>
 
-    <div class="ppd-insight-grid">
-        <section class="ppd-card ppd-turnover-card">
-            <header class="ppd-card-head">
-                <div><span class="ppd-card-kicker">@T["الحركة الوظيفية"]</span><h2>@T["معدل الدوران"]</h2></div>
-                <span class="ppd-period">@T["آخر 12 شهراً"]</span>
-            </header>
-            <div class="ppd-turnover-body">
-                <div class="ppd-gauge" data-zy-style="--value:@turnoverGauge">
-                    <div class="ppd-gauge-core"><strong>@Model.TurnoverRate%</strong><span>@T["المعدل الإجمالي"]</span></div>
-                </div>
-                <div class="ppd-turnover-summary">
-                    <div class="ppd-summary-row">
-                        <span><i class="is-teal"></i>@T["المغادرات الطوعية"]</span>
-                        <b>@Model.VoluntaryExits</b>
-                    </div>
-                    <div class="ppd-summary-row">
-                        <span><i class="is-red"></i>@T["المغادرات غير الطوعية"]</span>
-                        <b>@Model.InvoluntaryExits</b>
-                    </div>
-                    <div class="ppd-share">
-                        <div><span>@T["نسبة الطوعي من المغادرات"]</span><b>@voluntaryShare%</b></div>
-                        <span class="ppd-share-track"><i data-zy-style="width:@voluntaryShare%"></i></span>
-                    </div>
-                </div>
-            </div>
-            <footer class="ppd-card-foot">
-                <span>@T["معدل الدوران الطوعي"]</span><strong>@Model.VoluntaryRate%</strong>
-            </footer>
-        </section>
+    <div class="ppd-main-grid">
+        <section class="ppd-card ppd-gender-card ppd-v8-gender-card">
+            <h2 class="ppd-v10-title">تكافؤ الجنسين</h2>
 
-        <section class="ppd-card ppd-gender-card">
-            <header class="ppd-card-head">
-                <div><span class="ppd-card-kicker">@T["توزيع الموظفين"]</span><h2>@T["تكافؤ الجنسين"]</h2></div>
-                <span class="ppd-period">@T["الفعالون"]</span>
-            </header>
-            <div class="ppd-gender-total">
-                <span>@T["إجمالي البيانات المصنّفة"]</span>
-                <strong>@genderTotal.ToString("N0")</strong>
+            <div class="ppd-v8-gender-content">
+                <div class="ppd-v8-donut" data-zy-style="--male:@malePct;--female:@femalePct">
+                    <div class="ppd-v8-donut-core">
+                        <strong>@genderTotal</strong>
+                        <span>إجمالي</span>
+                    </div>
+                </div>
+
+                <div class="ppd-v8-gender-legend">
+                    <div class="ppd-v8-gender-row">
+                        <span class="ppd-v8-gender-name"><i class="male"></i>ذكور</span>
+                        <strong>@Model.MaleCount</strong>
+                        <em>@malePct%</em>
+                    </div>
+                    <div class="ppd-v8-gender-row">
+                        <span class="ppd-v8-gender-name"><i class="female"></i>إناث</span>
+                        <strong>@Model.FemaleCount</strong>
+                        <em>@femalePct%</em>
+                    </div>
+                </div>
             </div>
-            <div class="ppd-gender-bar" aria-label="@T["توزيع الجنسين"]">
-                @if (genderTotal > 0)
-                {
-                    <i class="male" data-zy-style="width:@malePct%"></i>
-                    <i class="female" data-zy-style="width:@femalePct%"></i>
-                }
-                else
-                {
-                    <i class="empty" data-zy-style="width:100%"></i>
-                }
-            </div>
-            <div class="ppd-gender-list">
-                <div><span><i class="male"></i>@T["ذكور"]</span><strong>@Model.MaleCount</strong><em>@malePct%</em></div>
-                <div><span><i class="female"></i>@T["إناث"]</span><strong>@Model.FemaleCount</strong><em>@femalePct%</em></div>
-            </div>
+
             @if (genderTotal == 0)
             {
-                <p class="ppd-inline-note">@T["لا توجد بيانات جنس مصنّفة للموظفين الفعالين."]</p>
+                <div class="ppd-v8-gender-note">لا توجد بيانات جنس مسجلة حالياً للموظفين</div>
             }
+        </section>
+
+        <section class="ppd-card ppd-turnover-card">
+            <h2 class="ppd-v10-title">معدل الدوران</h2>
+
+            <div class="ppd-turnover-layout">
+                <div class="ppd-turnover-summary">
+                    <div><span><i class="blue"></i>المغادرات الطوعية</span><b>@Model.VoluntaryExits</b></div>
+                    <div><span><i class="pink"></i>المغادرات غير الطوعية</span><b>@Model.InvoluntaryExits</b></div>
+                    <div><span><i class="muted"></i>نسبة الطوعي من المغادرات</span><b>@voluntaryShare%</b></div>
+                </div>
+
+                <div class="ppd-gauge" data-zy-style="--value:@turnoverGauge">
+                    <div class="ppd-gauge-core"><strong>@Model.TurnoverRate%</strong><span>المعدل الإجمالي</span></div>
+                </div>
+
+                <div class="ppd-stability">
+                    <span class="ppd-stability-icon">⌁</span>
+                    <strong>معدل دوران مستقر</strong>
+                    <p>لا توجد مغادرات خلال الفترة المحددة.</p>
+                </div>
+            </div>
         </section>
     </div>
 
-    <div class="ppd-distribution-grid">
-        <section class="ppd-card ppd-distribution-card">
-            <header class="ppd-card-head">
-                <div><span class="ppd-card-kicker">@T["التركيبة السكانية"]</span><h2>@T["شرائح الأعمار"]</h2></div>
-                <span class="ppd-period">@Model.AgeBuckets.Sum(bucket => bucket.Count) @T["موظف"]</span>
-            </header>
-            <div class="ppd-bars">
+    <div class="ppd-lower-grid">
+        <section class="ppd-card ppd-chart-card ppd-age-card">
+            <h2 class="ppd-v10-title">توزيع الموظفين حسب شريحة الأعمار</h2>
+
+            <div class="ppd-column-chart">
                 @if (Model.AgeBuckets.Count == 0)
                 {
-                    <div class="ppd-empty">@T["لا توجد بيانات أعمار متاحة."]</div>
+                    <div class="ppd-empty-chart">لا توجد بيانات أعمار متاحة.</div>
                 }
                 else
                 {
                     @foreach (var bucket in Model.AgeBuckets)
                     {
-                        var width = Math.Max(4, bucket.Count * 100 / ageMax);
-                        <div class="ppd-bar-row">
-                            <div><span>@T[bucket.Label]</span><b>@bucket.Count</b></div>
-                            <span class="ppd-bar-track"><i data-zy-style="width:@width%"></i></span>
+                        var height = bucket.Count == 0 ? 2 : Math.Max(12, bucket.Count * 100 / ageMax);
+                        <div class="ppd-chart-item">
+                            <span class="ppd-chart-value">@bucket.Count</span>
+                            <span class="ppd-chart-column age" data-zy-style="--h:@height%"></span>
+                            <span class="ppd-chart-label">@T[bucket.Label]</span>
                         </div>
                     }
                 }
             </div>
         </section>
 
-        <section class="ppd-card ppd-distribution-card ppd-tenure-card">
-            <header class="ppd-card-head">
-                <div><span class="ppd-card-kicker">@T["الاستقرار الوظيفي"]</span><h2>@T["مدة الخدمة"]</h2></div>
-                <span class="ppd-period">@T["الموظفون الفعالون"]</span>
-            </header>
-            <div class="ppd-bars">
+        <section class="ppd-card ppd-chart-card ppd-tenure-card">
+            <h2 class="ppd-v10-title">مدة الخدمة</h2>
+
+            <div class="ppd-column-chart">
                 @if (Model.TenureBuckets.Count == 0)
                 {
-                    <div class="ppd-empty">@T["لا توجد بيانات مدة خدمة متاحة."]</div>
+                    <div class="ppd-empty-chart">لا توجد بيانات مدة خدمة متاحة.</div>
                 }
                 else
                 {
                     @foreach (var bucket in Model.TenureBuckets)
                     {
-                        var width = Math.Max(4, bucket.Count * 100 / tenureMax);
-                        <div class="ppd-bar-row">
-                            <div><span>@T[bucket.Label]</span><b>@bucket.Count</b></div>
-                            <span class="ppd-bar-track"><i data-zy-style="width:@width%"></i></span>
+                        var height = bucket.Count == 0 ? 2 : Math.Max(12, bucket.Count * 100 / tenureMax);
+                        <div class="ppd-chart-item">
+                            <span class="ppd-chart-value">@bucket.Count</span>
+                            <span class="ppd-chart-column tenure" data-zy-style="--h:@height%"></span>
+                            <span class="ppd-chart-label">@T[bucket.Label]</span>
                         </div>
                     }
                 }
@@ -193,3 +191,50 @@
         </section>
     </div>
 </section>
+
+<script>
+(function () {
+    const picker = document.getElementById("ppdPeriodPickerV8");
+    if (!picker) return;
+
+    const trigger = picker.querySelector(".ppd-v8-trigger");
+    const menu = picker.querySelector(".ppd-v8-menu");
+    const label = picker.querySelector(".ppd-v8-label");
+    const options = Array.from(menu.querySelectorAll("button"));
+
+    function setOpen(open) {
+        picker.classList.toggle("is-open", open);
+        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+        menu.hidden = !open;
+    }
+
+    trigger.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(!picker.classList.contains("is-open"));
+    });
+
+    options.forEach(function (button) {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            options.forEach(function (item) {
+                item.classList.remove("is-active");
+            });
+
+            button.classList.add("is-active");
+            label.textContent = button.dataset.periodLabel || button.textContent.trim();
+            setOpen(false);
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        if (!picker.contains(event.target)) setOpen(false);
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") setOpen(false);
+    });
+})();
+</script>

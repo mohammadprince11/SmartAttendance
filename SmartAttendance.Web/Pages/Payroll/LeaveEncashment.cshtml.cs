@@ -97,7 +97,13 @@ public class LeaveEncashmentModel : PageModel
         if (employeeId <= 0) return new JsonResult(new { ok = false });
         if (year < 2000 || year > 2100) year = Year;
 
+        var scope = await ScopeAsync();
+        var allowed = await HrmsDatabase.ScalarAsync<int>(_db,
+            $"SELECT COUNT(*) FROM Employees e WHERE e.Id=@Emp AND ISNULL(e.IsDeleted,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
+            command => HrmsDatabase.AddParameter(command, "@Emp", employeeId));
+        if (allowed != 1) return new JsonResult(new { ok = false });
         var balances = await LeaveBalanceCalculator.ForEmployeeAsync(_db, employeeId, year);
+        var annualAvailable = await LeaveEncashmentPolicy.AvailableAnnualDaysAsync(_db, scope, employeeId, year);
         return new JsonResult(new
         {
             ok = true,
@@ -106,7 +112,7 @@ public class LeaveEncashmentModel : PageModel
             {
                 type = b.Type.ToString(),
                 label = LeaveTypeText(b.Type),
-                remaining = b.Remaining,
+                remaining = b.Type == LeaveType.Annual ? annualAvailable : b.Remaining,
                 entitled = b.Entitled + b.CarriedOver,
                 used = b.Used
             })
@@ -148,6 +154,16 @@ public class LeaveEncashmentModel : PageModel
             TempData["PayrollMessage"] = "الحركة مقفلة (دخلت مسيراً مقفلاً) — لا يمكن تعديلها.";
             TempData["PayrollOk"] = false;
             return RedirectToPage(new { Year = tx.Year, Month = tx.Month, Lock = "Locked" });
+        }
+
+        var encashmentScope = await ScopeAsync();
+        var balanceCheck = await LeaveEncashmentPolicy.ValidateAsync(
+            _db, encashmentScope, tx.EmployeeId, tx.Year, days, tx.Id);
+        if (!balanceCheck.Ok)
+        {
+            TempData["PayrollMessage"] = balanceCheck.Error;
+            TempData["PayrollOk"] = false;
+            return RedirectToPage(back);
         }
 
         await PayrollTransactionStore.SaveAsync(_db, await ScopeAsync(), tx, User?.Identity?.Name ?? "system");
@@ -213,10 +229,25 @@ public class LeaveEncashmentModel : PageModel
             Source = "إدخال جماعي"
         };
 
-        var count = await PayrollTransactionStore.SaveManyAsync(_db, await ScopeAsync(), empIds, template, User?.Identity?.Name ?? "system");
+        var massScope = await ScopeAsync();
+        var eligibleIds = new List<int>();
+        var balanceSkipped = 0;
+        foreach (var employeeId in empIds)
+        {
+            var check = await LeaveEncashmentPolicy.ValidateAsync(_db, massScope, employeeId, y, days);
+            if (check.Ok) eligibleIds.Add(employeeId); else balanceSkipped++;
+        }
+        if (eligibleIds.Count == 0)
+        {
+            TempData["PayrollMessage"] = "لم يُضف أي بدل إجازة: الرصيد السنوي المتاح غير كافٍ للموظفين المحددين.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage(back);
+        }
+        var count = await PayrollTransactionStore.SaveManyAsync(_db, massScope, eligibleIds, template, User?.Identity?.Name ?? "system");
         TempData["PayrollMessage"] = $"تمت إضافة {count} بدل إجازة (النطاق: {scopeLabel})"
-            + (skipped > 0 ? $"، وتُخطّي {skipped} كوداً غير مطابق." : ".");
-        TempData["PayrollOk"] = true;
+            + (skipped > 0 ? $"، وتُخطّي {skipped} كوداً غير مطابق" : "")
+            + (balanceSkipped > 0 ? $"، وتُخطّي {balanceSkipped} موظفاً لعدم كفاية الرصيد" : "") + ".";
+        TempData["PayrollOk"] = count > 0;
         return RedirectToPage(back);
     }
 
@@ -253,8 +284,11 @@ public class LeaveEncashmentModel : PageModel
             if (!decimal.TryParse(row[1], out var days) || days <= 0) { skipped++; continue; }
 
             var itemName = row.Length > 2 && !string.IsNullOrWhiteSpace(row[2]) ? row[2].Trim() : "بدل إجازة";
+            var importScope = await ScopeAsync();
+            var balanceCheck = await LeaveEncashmentPolicy.ValidateAsync(_db, importScope, empId, y, Math.Abs(days));
+            if (!balanceCheck.Ok) { skipped++; continue; }
 
-            await PayrollTransactionStore.SaveAsync(_db, await ScopeAsync(), new PayrollTransactionStore.Transaction
+            await PayrollTransactionStore.SaveAsync(_db, importScope, new PayrollTransactionStore.Transaction
             {
                 EmployeeId = empId, Year = y, Month = m, TxType = PayrollTransactionStore.LeaveEncashment,
                 ItemName = itemName, Days = Math.Abs(days), Amount = 0, Taxable = true,

@@ -23,7 +23,7 @@ public static class AttendanceReanalysisPolicy
     public const string GuardExecutedKey = "Attendance.Reanalysis.GuardExecutedActions";
 
     public static async Task<bool> GetAutoReanalyzeAsync(ApplicationDbContext db) =>
-        await HrSettingsStore.GetAsync(db, AutoReanalyzeKey, "0") == "1";
+        await HrSettingsStore.GetAsync(db, AutoReanalyzeKey, "1") == "1";
 
     public static Task SetAutoReanalyzeAsync(ApplicationDbContext db, bool enabled) =>
         HrSettingsStore.SetAsync(db, AutoReanalyzeKey, enabled ? "1" : "0");
@@ -72,25 +72,52 @@ WHERE EmployeeId = @Employee AND WorkDate = @Date
     /// يوميات الشهر الذي يقع فيه <paramref name="date"/> — والعملية idempotent فتكرارها
     /// غير ضارّ.
     /// </summary>
-    public static async Task<Outcome> AfterApprovalAsync(
-        ApplicationDbContext db, int employeeId, DateOnly date)
+    public static Task<Outcome> AfterApprovalAsync(
+        ApplicationDbContext db, int employeeId, DateOnly date) =>
+        AfterApprovalRangeAsync(db, employeeId, date, date);
+
+    public static async Task<Outcome> AfterApprovalRangeAsync(
+        ApplicationDbContext db, int employeeId, DateOnly from, DateOnly to)
     {
         if (!await GetAutoReanalyzeAsync(db)) return Outcome.Disabled;
+        if (to < from) (from, to) = (to, from);
 
-        if (await GetGuardExecutedAsync(db) && await HasExecutedActionsAsync(db, employeeId, date))
+        if (await GetGuardExecutedAsync(db) &&
+            await HasExecutedActionsInRangeAsync(db, employeeId, from, to))
             return Outcome.Blocked;
 
         var shiftTypeId = await ResolveShiftTypeAsync(db, employeeId);
         if (shiftTypeId == 0)
             return new Outcome(false, "لم يُعَد التحليل: لا مناوبة مسنَدة ولا مناوبة افتراضية.");
 
-        // النطاق هنا **شركة الموظف نفسه** لا نطاق المستخدم: هذا مسار خلفيّ يُطلق من
-        // اعتماد طلبٍ يخصّ موظفاً بعينه، فإعادة التحليل يجب أن تقف عند حدود شركته.
-        // بلا هذا كانت موافقةٌ على إجازة موظفٍ واحد تعيد بناء يوميات كل الشركات.
         var scope = await CompanyScopeForEmployeeAsync(db, employeeId);
-
-        var count = await DayAttendanceStore.AnalyzeMonthAsync(db, scope, date.Year, date.Month, shiftTypeId);
+        var cursor = new DateOnly(from.Year, from.Month, 1);
+        var last = new DateOnly(to.Year, to.Month, 1);
+        var count = 0;
+        while (cursor <= last)
+        {
+            count += await DayAttendanceStore.AnalyzeMonthAsync(
+                db, scope, cursor.Year, cursor.Month, shiftTypeId);
+            cursor = cursor.AddMonths(1);
+        }
         return new Outcome(true, $"وأُعيد تحليل الحضور تلقائياً ({count} يومية).");
+    }
+
+    private static async Task<bool> HasExecutedActionsInRangeAsync(
+        ApplicationDbContext db, int employeeId, DateOnly from, DateOnly to)
+    {
+        await RecommendationStore.EnsureAsync(db);
+        return await HrmsDatabase.ScalarAsync<int>(db, """
+SELECT COUNT(1) FROM AttendanceRecommendations
+WHERE EmployeeId=@Employee AND WorkDate BETWEEN @From AND @To
+  AND Status IN (N'Approved',N'Auto')
+  AND (ViolationCaseId IS NOT NULL OR TransactionId IS NOT NULL);
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command, "@Employee", employeeId);
+            HrmsDatabase.AddParameter(command, "@From", from);
+            HrmsDatabase.AddParameter(command, "@To", to);
+        }) > 0;
     }
 
     /// <summary>

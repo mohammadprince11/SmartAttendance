@@ -28,10 +28,9 @@
 <section class="zxd-page" dir="rtl">
 
     @* ---------- الهيدر ---------- *@
-    <header class="zxd-head">
+    <header class="zxd-head" aria-label="أدوات لوحة التحكم">
         <div>
-            <h1>لوحة التحكم</h1>
-            <div class="zxd-date">@today.ToString("dddd, dd MMMM yyyy", System.Globalization.CultureInfo.CurrentUICulture) · @Model.SelectedCompanyName</div>
+            <div class="zxd-date">@today.ToString("dddd, dd MMMM yyyy", System.Globalization.CultureInfo.CurrentUICulture)</div>
         </div>
         <div class="zyu-7598b6eb4fe5">
             <form method="get" class="zxd-company">
@@ -42,7 +41,7 @@
                     }
                 </select>
             </form>
-            <button type="button" class="zxd-more zyu-95c01bc47f93" onclick="zxdOpenBuilder()">تخصيص اللوحة</button>
+            <button type="button" class="zxd-more" onclick="zxdOpenBuilder()">تخصيص اللوحة</button>
         </div>
     </header>
 
@@ -192,7 +191,7 @@
 
             <div class="zxd-card">
                 <h2><a href="@(definition.DrillPath + (definition.DrillPath.Contains('?') ? "&" : "?") + "CompanyId=" + Model.CompanyId)" title="المصدر: @definition.Source">@widget.DisplayTitle</a> <span class="zxd-badge">@total.ToString("N0")</span></h2>
-                <div class="zxd-card-body">
+                <div class="zxd-widget-body">
                 @if (rows.Count == 0 || rows.All(r => r.Total == 0))
                 {
                     <div class="zxd-empty">لا يوجد بيانات</div>
@@ -203,7 +202,7 @@
                         @foreach (var (row, index) in rows.Take(30).Select((r, i) => (r, i)))
                         {
                             <div class="zxd-dist-row" hidden="@(index >= 5)" data-more="@(index >= 5 ? "1" : null)">
-                                <span class="n" title="@row.Name">@row.Name</span>
+                                <span class="n" dir="auto" title="@row.Name">@row.Name</span>
                                 <span class="bar"><i data-zy-style="width:@(Math.Max(3, row.Total * 100 / max))%"></i></span>
                                 <span class="v">@row.Total (@(row.Total * 100 / total)%)</span>
                             </div>
@@ -238,7 +237,7 @@
                     {
                         var start = acc;
                         acc += slices[i].Total * 360.0 / total;
-                        stops.Add($"{paletteColors[i % paletteColors.Length]} {start:0.#}deg {acc:0.#}deg");
+                        stops.Add(FormattableString.Invariant($"{paletteColors[i % paletteColors.Length]} {start:0.#}deg {acc:0.#}deg"));
                     }
                     <div class="zxd-donut-wrap">
                         <div class="zxd-donut" data-zy-style="background:conic-gradient(@string.Join(", ", stops))"><i></i></div>
