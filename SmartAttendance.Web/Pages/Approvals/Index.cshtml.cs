@@ -148,12 +148,13 @@ public class IndexModel : PageModel
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
         await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, scope, id, ActorName(), ip);
-        await ShiftRequestStore.ApplyIfShiftRequestAsync(_dbContext, id);
         await EmployeeLifecycleApprovalStore.ApplyIfLifecycleAsync(
             _dbContext, scope, id, ActorName(), ip);
 
-        // الإجازة/المغادرة المعتمَدة تغيّر اليومية — أعد تحليلها إن كان المفتاح مفعّلاً.
-        await AttendanceReanalysisPolicy.ApplyIfAttendanceAffectingAsync(_dbContext, id);
+        // مسار موحّد: يطبّق الأثر الحقيقي للإجازة/المغادرة/المناوبة/الأوفرتايم،
+        // ثم يعيد تحليل اليومية تلقائياً حسب سياسة إعدادات الحضور.
+        await ApprovedAttendanceRequestEffectStore.ApplyAsync(
+            _dbContext, scope, id, ActorName());
     }
 
     private string ActorName() => User?.Identity?.Name ?? "HR";

@@ -172,7 +172,7 @@
                                     }
                                     @if (run.Status == "Locked")
                                     {
-                                        @if (Model.RequireCommitteeApproval && !run.IsApproved)
+                                        @if (Model.RequiresCommitteeApproval(run) && !run.IsApproved)
                                         {
                                             <form method="post" asp-page-handler="Approve" class="zyu-ff78d7a09cfd">
                                                 <input type="hidden" name="id" value="@run.Id" />
@@ -184,7 +184,7 @@
                                         {
                                             <span class="pr-yn yes" title="@run.ApprovalNote">✓ لجنة: @run.ApprovedBy</span>
                                         }
-                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="اعتماد للصرف؟" title="@(Model.RequireCommitteeApproval && !run.IsApproved ? "يتطلب اعتماد اللجنة أولاً" : "")">إصدار</button></form>
+                                        <form method="post" asp-page-handler="Issue"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="اعتماد للصرف؟" title="@(Model.RequiresCommitteeApproval(run) && !run.IsApproved ? "يتطلب اعتماد اللجنة أولاً" : "")">إصدار</button></form>
                                         <form method="post" asp-page-handler="Unlock"><input type="hidden" name="id" value="@run.Id" /><button class="pr-mi" type="submit" data-zyconfirm="إلغاء قفل الدفعة؟ ستعود قابلة للتعديل والاحتساب.">إلغاء القفل</button></form>
                                     }
                                     @if (run.Status == "Issued")

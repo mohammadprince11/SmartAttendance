@@ -1049,6 +1049,25 @@ BEGIN
 END;
 """),
 
+        // Repair for databases where the guarded 20260807-02 migration was recorded
+        // before ShiftTypes existed. The startup pipeline now ensures ShiftTypes first,
+        // and this new migration repairs already-affected databases exactly once.
+        new(
+            "20260916-01-shift-overtime-rate-context-repair",
+            """
+IF OBJECT_ID('ShiftTypes', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateWeekend') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateWeekend decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateRest') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateRest decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateHoliday') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateHoliday decimal(6,3) NULL;
+    IF COL_LENGTH('ShiftTypes', 'OvertimeRateLeave') IS NULL
+        ALTER TABLE ShiftTypes ADD OvertimeRateLeave decimal(6,3) NULL;
+END;
+"""),
+
         // الدلالة ككيان زمنيّ لا وسمٍ مسطّح (الفجوة #7 بدراسة كيان).
         //
         // اليوم `PunchSemantic` = اسم · اسم إنجليزي · نظامية · نشطة · ترتيب. **لا شيء

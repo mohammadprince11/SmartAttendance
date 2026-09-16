@@ -26,26 +26,48 @@ public static class AttendancePeriodPolicy
     /// <returns>الفترة، واسم السياسة (فارغ إن لم توجد سياسة نشطة).</returns>
     public static async Task<(Period Period, string? PolicyName)> ResolveFromPolicyAsync(
         ApplicationDbContext dbContext, int labelYear, int labelMonth,
-        // نوع السياسة: Attendance (الافتراض · 21→20) · WorkingDays (1→30) · Hiring …
-        // فكل نوعٍ فترته الخاصة — «ماكو شي ثابت، كلها سياسة».
         SmartAttendance.Domain.Enums.PayrollCutoffType policyType =
-            SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance)
+            SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance,
+        int? companyId = null)
     {
+        var labelStart = new DateOnly(labelYear, labelMonth, 1);
+        var labelEnd = labelStart.AddMonths(1).AddDays(-1);
+
         var policy = await (
             from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
             join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
                 on p.Id equals t.PayrollCutoffPolicyId
             where p.IsActive && !p.IsDeleted && !t.IsDeleted
                   && t.PolicyType == policyType
-            orderby p.Id
+                  && (!companyId.HasValue || p.CompanyId == companyId.Value)
+                  && p.EffectiveFrom <= labelEnd
+                  && (p.EffectiveTo == null || p.EffectiveTo >= labelStart)
+            orderby p.Priority descending, p.Id
             select new { p.Name, p.FromDay, p.ToDay }).FirstOrDefaultAsync();
 
         if (policy is null)
-        {
             return (Resolve(labelYear, labelMonth, 1, DateTime.DaysInMonth(labelYear, labelMonth)), null);
-        }
 
         return (Resolve(labelYear, labelMonth, policy.FromDay, policy.ToDay), policy.Name);
+    }
+
+    public static async Task<int?> ResolveDayOfMonthAsync(
+        ApplicationDbContext dbContext, int labelYear, int labelMonth,
+        SmartAttendance.Domain.Enums.PayrollCutoffType policyType, int companyId)
+    {
+        var labelStart = new DateOnly(labelYear, labelMonth, 1);
+        var labelEnd = labelStart.AddMonths(1).AddDays(-1);
+
+        return await (
+            from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
+            join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
+                on p.Id equals t.PayrollCutoffPolicyId
+            where p.CompanyId == companyId && p.IsActive && !p.IsDeleted && !t.IsDeleted
+                  && t.PolicyType == policyType
+                  && p.EffectiveFrom <= labelEnd
+                  && (p.EffectiveTo == null || p.EffectiveTo >= labelStart)
+            orderby p.Priority descending, p.Id
+            select p.DayOfMonth ?? p.ToDay).FirstOrDefaultAsync();
     }
 
     /// <summary>فترة محسومة: مداها، والشهر الذي تُسمّى به.</summary>
