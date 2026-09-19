@@ -391,7 +391,11 @@ SELECT d.Id, d.SessionId, d.ProtectedFileAssetId,
        ISNULL(durationInfo.SuccessfulDurationSamples, 0) AS SuccessfulDurationSamples,
        durationInfo.AverageSuccessfulDurationMs
 FROM dbo.OnboardingDocuments d
-JOIN dbo.ProtectedFileAssets a ON a.Id = d.ProtectedFileAssetId
+JOIN dbo.EmployeeOnboardingSessions s
+  ON s.Id = d.SessionId
+JOIN dbo.ProtectedFileAssets a
+  ON a.Id = d.ProtectedFileAssetId
+ AND a.CompanyId = s.CompanyId
 OUTER APPLY
 (
     SELECT TOP (1)

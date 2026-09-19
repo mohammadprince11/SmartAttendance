@@ -228,6 +228,8 @@ public sealed class PeopleAiSurfaceTests
             root, "SmartAttendance.Web", "Infrastructure", "Hrms",
             "EmployeeOnboardingStore.cs"));
 
+        Assert.Contains("JOIN dbo.EmployeeOnboardingSessions s", store);
+        Assert.Contains("a.CompanyId = s.CompanyId", store);
         Assert.Contains("log.CompanyId = s.CompanyId", store);
         Assert.Contains("log.Provider = 'PaddleOCR'", store);
         Assert.Contains("log.Model = 'PP-OCRv5-Mobile'", store);
