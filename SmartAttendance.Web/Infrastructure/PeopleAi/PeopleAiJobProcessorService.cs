@@ -278,7 +278,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                     "XLSX-Cells-v1"),
                 _ => (
                     "PaddleOCR",
-                    "PP-OCRv5")
+                    "PP-OCRv5-Mobile")
             };
 
         try

@@ -119,9 +119,48 @@ def _normalize_language_profile(value):
     return languages or ["ar"]
 
 
+def _resolve_ocr_model_names(language):
+    detection_model = (
+        os.environ.get(
+            "PEOPLE_AI_OCR_TEXT_DETECTION_MODEL",
+            "PP-OCRv5_mobile_det",
+        ).strip()
+        or "PP-OCRv5_mobile_det"
+    )
+
+    recognition_env = {
+        "ar": "PEOPLE_AI_OCR_AR_RECOGNITION_MODEL",
+        "en": "PEOPLE_AI_OCR_EN_RECOGNITION_MODEL",
+    }.get(language)
+    recognition_default = {
+        "ar": "arabic_PP-OCRv5_mobile_rec",
+        "en": "en_PP-OCRv5_mobile_rec",
+    }.get(language)
+
+    recognition_model = (
+        os.environ.get(recognition_env, "").strip()
+        if recognition_env
+        else ""
+    ) or recognition_default
+
+    return detection_model, recognition_model
+
+
 def _build_ocr_engine(language, resolved_device):
+    detection_model, recognition_model = _resolve_ocr_model_names(language)
+
     with contextlib.redirect_stdout(sys.stderr):
         from paddleocr import PaddleOCR
+        if recognition_model:
+            return PaddleOCR(
+                device=resolved_device,
+                text_detection_model_name=detection_model,
+                text_recognition_model_name=recognition_model,
+                use_doc_orientation_classify=True,
+                use_doc_unwarping=False,
+                use_textline_orientation=True,
+            )
+
         return PaddleOCR(
             lang=language,
             device=resolved_device,
@@ -170,9 +209,15 @@ def build_ocr():
             "STARTUP_MODELINIT_PERMISSION_DENIED"
         ) from exc
 
+    detection_model, recognition_model = _resolve_ocr_model_names(
+        default_language
+    )
+
     diagnostics = {
         "provider": "PaddleOCR",
-        "model": "PP-OCRv5",
+        "model": "PP-OCRv5-Mobile",
+        "textDetectionModel": detection_model,
+        "textRecognitionModel": recognition_model,
         "language": default_language,
         "requestedDevice": requested_device,
         "device": resolved_device,
@@ -1528,7 +1573,7 @@ def process_file(ocr, path, language):
     return {
         "success": True,
         "provider": "PaddleOCR",
-        "model": "PP-OCRv5",
+        "model": "PP-OCRv5-Mobile",
         "language": language,
         "pages": pages,
         "fullText": "\n".join(all_lines),

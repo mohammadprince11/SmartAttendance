@@ -16,6 +16,12 @@ public sealed class PeopleAiWorkerOptions
     public int StartupTimeoutSeconds { get; set; } = 180;
     public int JobTimeoutSeconds { get; set; } = 180;
     public int MaxImageSide { get; set; } = 1600;
+    public string TextDetectionModel { get; set; } =
+        "PP-OCRv5_mobile_det";
+    public string ArabicRecognitionModel { get; set; } =
+        "arabic_PP-OCRv5_mobile_rec";
+    public string EnglishRecognitionModel { get; set; } =
+        "en_PP-OCRv5_mobile_rec";
     public int PdfMaxPages { get; set; } = 20;
     public int PdfRenderDpi { get; set; } = 180;
     public int DocxMaxEntries { get; set; } = 2000;
@@ -297,6 +303,18 @@ public sealed class LocalOcrProcessClient :
         startInfo.Environment["PEOPLE_AI_OCR_MAX_IMAGE_SIDE"] =
             Math.Clamp(_options.MaxImageSide, 1200, 4096).ToString(
                 System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_OCR_TEXT_DETECTION_MODEL"] =
+            string.IsNullOrWhiteSpace(_options.TextDetectionModel)
+                ? "PP-OCRv5_mobile_det"
+                : _options.TextDetectionModel.Trim();
+        startInfo.Environment["PEOPLE_AI_OCR_AR_RECOGNITION_MODEL"] =
+            string.IsNullOrWhiteSpace(_options.ArabicRecognitionModel)
+                ? "arabic_PP-OCRv5_mobile_rec"
+                : _options.ArabicRecognitionModel.Trim();
+        startInfo.Environment["PEOPLE_AI_OCR_EN_RECOGNITION_MODEL"] =
+            string.IsNullOrWhiteSpace(_options.EnglishRecognitionModel)
+                ? "en_PP-OCRv5_mobile_rec"
+                : _options.EnglishRecognitionModel.Trim();
         startInfo.Environment["PEOPLE_AI_PDF_MAX_PAGES"] =
             Math.Clamp(_options.PdfMaxPages, 1, 100).ToString(
                 System.Globalization.CultureInfo.InvariantCulture);

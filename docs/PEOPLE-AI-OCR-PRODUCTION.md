@@ -49,8 +49,11 @@ the official PaddlePaddle runtime requirements.
 The installer creates an isolated venv, installs PaddlePaddle 3.2.0 and
 the packages from `requirements-ocr.txt`, including PaddleOCR 3.5.0, Pillow,
 pypdfium2 and olefile. LibreOffice Writer/Calc provide isolated legacy DOC/XLS conversion. PaddleOCR is intentionally held at 3.5.0 while ZYNORA's OCR
-contract remains PP-OCRv5; upgrading the OCR model/runtime is a separate
-regression-tested change. PDFium is used for direct PDF text extraction and
+contract remains PP-OCRv5. CPU production uses the PP-OCRv5 mobile text
+detector with Arabic/English mobile recognition models; this keeps the same
+OCR family while avoiding the much heavier server detector on ordinary HR
+documents. Switching back to server models is configuration-driven and should
+be regression-tested. PDFium is used for direct PDF text extraction and
 per-page rendering before OCR fallback.
 
 Then it executes:
@@ -90,6 +93,10 @@ PeopleAIWorker__Device=auto
 PeopleAIWorker__Language=ar
 PeopleAIWorker__TempDirectory=/var/lib/zynora/people-ai/tmp
 PADDLE_PDX_CACHE_HOME=/var/lib/zynora/people-ai/paddlex-cache
+PeopleAIWorker__MaxImageSide=1600
+PeopleAIWorker__TextDetectionModel=PP-OCRv5_mobile_det
+PeopleAIWorker__ArabicRecognitionModel=arabic_PP-OCRv5_mobile_rec
+PeopleAIWorker__EnglishRecognitionModel=en_PP-OCRv5_mobile_rec
 PeopleAIWorker__PdfMaxPages=20
 PeopleAIWorker__PdfRenderDpi=180
 PeopleAIWorker__DocxMaxEntries=2000

@@ -72,7 +72,7 @@ Company `EnabledLanguages` is wired into document processing.
 - Passport always uses English OCR because TD3 MRZ is ICAO Latin text.
 - Other/bilingual image documents and scanned PDF pages use the company `EnabledLanguages`; `ar,en` runs both OCR models and merges de-duplicated lines. Text-layer PDF pages are read directly and do not require OCR.
 - DOC/DOCX and XLS/XLSX are language-agnostic Office extraction paths and are processed once per document, even when the company enables multiple OCR languages.
-- The Python worker caches PaddleOCR engines by language for the life of the worker process and merges de-duplicated OCR lines for bilingual OCR requests.
+- The Python worker caches PaddleOCR engines by language for the life of the worker process and merges de-duplicated OCR lines for bilingual OCR requests. CPU production defaults to `PP-OCRv5_mobile_det` with language-specific mobile recognition models to reduce per-document latency while preserving the PP-OCRv5 extraction contract.
 
 `PeopleAIWorker__Language` remains the fallback only when the company setting has no supported language.
 

@@ -213,6 +213,9 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("process_legacy_office_document", worker);
         Assert.Contains("LEGACY_OFFICE_MACRO_CONTENT_UNSUPPORTED", worker);
         Assert.Contains("LibreOffice+OpenXML", worker);
+        Assert.Contains("PP-OCRv5_mobile_det", worker);
+        Assert.Contains("arabic_PP-OCRv5_mobile_rec", worker);
+        Assert.Contains("en_PP-OCRv5_mobile_rec", worker);
         Assert.Contains("pypdfium2", requirements);
         Assert.Contains("olefile", requirements);
     }
