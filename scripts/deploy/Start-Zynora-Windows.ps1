@@ -22,6 +22,41 @@ function Write-ZLog {
         -Encoding UTF8
 }
 
+function Stop-OrphanPeopleAiWorkers {
+    param([Parameter(Mandatory)][string] $SitePath)
+
+    $workerScript = Join-Path $SitePath 'PeopleAI\local_ocr_worker.py'
+    $workers = @(
+        Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.CommandLine -and
+                $_.CommandLine.IndexOf(
+                    $workerScript,
+                    [StringComparison]::OrdinalIgnoreCase) -ge 0 -and
+                $_.CommandLine.IndexOf(
+                    '--serve',
+                    [StringComparison]::OrdinalIgnoreCase) -ge 0
+            }
+    )
+
+    if ($workers.Count -eq 0) {
+        return
+    }
+
+    $workerIds = @($workers | ForEach-Object { [int] $_.ProcessId })
+    $roots = @(
+        $workers |
+            Where-Object {
+                $workerIds -notcontains [int] $_.ParentProcessId
+            }
+    )
+
+    foreach ($worker in $roots) {
+        Write-ZLog "Stopping orphan People AI worker tree. PID=$($worker.ProcessId)"
+        & taskkill.exe /PID $worker.ProcessId /T /F 2>$null | Out-Null
+    }
+}
+
 Write-ZLog "============================================"
 Write-ZLog "ZYNORA watchdog started."
 Write-ZLog "Windows user: $env:USERNAME"
@@ -56,6 +91,11 @@ while ($true) {
             Start-Sleep -Seconds 10
             continue
         }
+
+        # If the web process exited forcibly, its Python OCR child can survive
+        # outside the site path. Clean only this site's worker tree immediately
+        # before starting a replacement web process.
+        Stop-OrphanPeopleAiWorkers -SitePath $root
 
 
         if (-not (Test-Path $exe)) {

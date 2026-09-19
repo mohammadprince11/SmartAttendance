@@ -90,6 +90,36 @@ function Stop-SiteProcesses {
     Get-CimInstance Win32_Process -Filter "Name='cmd.exe' OR Name='wscript.exe' OR Name='timeout.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($SitePath, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
         ForEach-Object { Write-Host "  قتل حلقة PID $($_.ProcessId) ($($_.Name))"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+    # The People AI OCR Python runtime lives outside the site directory, so
+    # stopping SmartAttendance.Web.exe does not always terminate it. Select
+    # only workers whose command line points at this site's exact worker script.
+    $workerScript = Join-Path $SitePath 'PeopleAI\local_ocr_worker.py'
+    $workers = @(
+        Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.CommandLine -and
+                $_.CommandLine.IndexOf(
+                    $workerScript,
+                    [StringComparison]::OrdinalIgnoreCase) -ge 0 -and
+                $_.CommandLine.IndexOf(
+                    '--serve',
+                    [StringComparison]::OrdinalIgnoreCase) -ge 0
+            }
+    )
+
+    $workerIds = @($workers | ForEach-Object { [int] $_.ProcessId })
+    $workerRoots = @(
+        $workers |
+            Where-Object {
+                $workerIds -notcontains [int] $_.ParentProcessId
+            }
+    )
+
+    foreach ($worker in $workerRoots) {
+        Write-Host "  قتل People AI worker tree PID $($worker.ProcessId)"
+        & taskkill.exe /PID $worker.ProcessId /T /F 2>$null | Out-Null
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
