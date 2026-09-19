@@ -50,6 +50,17 @@ def _read_runtime_config():
     return requested_device, language, temp_directory
 
 
+def _verify_document_dependencies():
+    try:
+        from PIL import Image  # noqa: F401
+        import pypdfium2  # noqa: F401
+    except ImportError as exc:
+        raise RuntimeError(
+            "People AI document dependencies are incomplete. "
+            "Install requirements-ocr.txt."
+        ) from exc
+
+
 def _resolve_device(requested_device):
     import paddle
 
@@ -101,6 +112,7 @@ def _build_ocr_engine(language, resolved_device):
 
 def build_ocr():
     requested_device, language, temp_directory = _read_runtime_config()
+    _verify_document_dependencies()
     resolved_device = _resolve_device(requested_device)
     default_languages = _normalize_language_profile(language)
     default_language = default_languages[0]
@@ -117,6 +129,12 @@ def build_ocr():
         "tempWritable": True,
     }
     return ocr, diagnostics
+
+class DocumentExtractionError(RuntimeError):
+    def __init__(self, error_code, message):
+        super().__init__(message)
+        self.error_code = error_code
+
 
 def to_plain(value):
     if value is None:
@@ -324,9 +342,191 @@ def _recover_family_number_line(ocr, prepared_path, results):
         )[0]
 
 
+def _pdf_text_is_useful(text):
+    normalized = re.sub(r"\s+", " ", (text or "").replace("\x00", " ")).strip()
+    if len(normalized) < 40:
+        return False
+    return sum(ch.isalnum() for ch in normalized) >= 20
+
+
+def _pdf_text_lines(text):
+    lines = []
+    for raw in (text or "").replace("\x00", " ").splitlines():
+        value = re.sub(r"\s+", " ", raw).strip()
+        if value:
+            lines.append(value)
+    if not lines:
+        value = re.sub(r"\s+", " ", (text or "").replace("\x00", " ")).strip()
+        if value:
+            lines.append(value)
+    return [
+        {
+            "index": index,
+            "text": value,
+            "score": 1.0,
+            "box": None,
+        }
+        for index, value in enumerate(lines)
+    ]
+
+
+def _safe_close(resource):
+    if resource is None:
+        return
+    try:
+        close = getattr(resource, "close", None)
+        if close:
+            close()
+    except Exception:
+        pass
+
+
+def _render_pdf_page_to_temp_image(page, dpi):
+    bitmap = None
+    temp_path = None
+    try:
+        bitmap = page.render(scale=dpi / 72.0)
+        image = bitmap.to_pil().convert("RGB")
+        handle, temp_path = tempfile.mkstemp(
+            prefix="zynora-pdf-page-",
+            suffix=".jpg",
+        )
+        os.close(handle)
+        image.save(temp_path, "JPEG", quality=95, subsampling=0)
+        return temp_path
+    finally:
+        _safe_close(bitmap)
+
+
+def process_pdf_document(ocr, path, language):
+    try:
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(path)
+    except Exception as exc:
+        message = str(exc)
+        if "password" in message.casefold():
+            raise DocumentExtractionError(
+                "PDF_PASSWORD_PROTECTED",
+                "Password-protected PDF requires manual review.",
+            ) from exc
+        raise DocumentExtractionError(
+            "PDF_OPEN_FAILED",
+            "PDF could not be opened safely.",
+        ) from exc
+
+    max_pages = int(os.environ.get("PEOPLE_AI_PDF_MAX_PAGES", "20"))
+    max_pages = max(1, min(max_pages, 100))
+    render_dpi = int(os.environ.get("PEOPLE_AI_PDF_RENDER_DPI", "180"))
+    render_dpi = max(120, min(render_dpi, 300))
+
+    page_count = len(pdf)
+    if page_count <= 0:
+        _safe_close(pdf)
+        raise DocumentExtractionError(
+            "PDF_EMPTY",
+            "PDF does not contain any pages.",
+        )
+    if page_count > max_pages:
+        _safe_close(pdf)
+        raise DocumentExtractionError(
+            "PDF_PAGE_LIMIT_EXCEEDED",
+            f"PDF exceeds the configured {max_pages}-page processing limit.",
+        )
+
+    pages = []
+    all_lines = []
+    text_pages = 0
+    ocr_pages = 0
+
+    try:
+        for page_index in range(page_count):
+            page = None
+            text_page = None
+            temp_image = None
+            try:
+                page = pdf[page_index]
+                text_page = page.get_textpage()
+                direct_text = text_page.get_text_range() or ""
+
+                if _pdf_text_is_useful(direct_text):
+                    lines = _pdf_text_lines(direct_text)
+                    text_pages += 1
+                else:
+                    temp_image = _render_pdf_page_to_temp_image(
+                        page,
+                        render_dpi,
+                    )
+                    image_result = process_file(
+                        ocr,
+                        temp_image,
+                        language,
+                    )
+                    source_pages = image_result.get("pages", []) or []
+                    lines = (
+                        source_pages[0].get("lines", [])
+                        if source_pages
+                        else []
+                    )
+                    lines = [
+                        {
+                            "index": index,
+                            "text": str(line.get("text", "")),
+                            "score": line.get("score"),
+                            "box": line.get("box"),
+                        }
+                        for index, line in enumerate(lines)
+                        if str(line.get("text", "")).strip()
+                    ]
+                    ocr_pages += 1
+
+                pages.append({
+                    "pageIndex": page_index,
+                    "lines": lines,
+                })
+                all_lines.extend(
+                    str(line.get("text", ""))
+                    for line in lines
+                    if str(line.get("text", "")).strip()
+                )
+            finally:
+                if temp_image:
+                    try:
+                        os.remove(temp_image)
+                    except OSError:
+                        pass
+                _safe_close(text_page)
+                _safe_close(page)
+    finally:
+        _safe_close(pdf)
+
+    if text_pages == page_count:
+        provider = "PDFium"
+        model = "PDF-TextLayer-v1"
+    elif ocr_pages == page_count:
+        provider = "PaddleOCR"
+        model = "PP-OCRv5-PDF"
+    else:
+        provider = "ZYNORA-PDF-Hybrid"
+        model = "PDFium+PP-OCRv5"
+
+    return {
+        "success": True,
+        "provider": provider,
+        "model": model,
+        "language": language,
+        "pages": pages,
+        "fullText": "\n".join(all_lines),
+        "lineCount": len(all_lines),
+    }
+
+
 def process_file(ocr, path, language):
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
+
+    extension = os.path.splitext(path)[1].lower()
+    if extension == ".pdf":
+        return process_pdf_document(ocr, path, language)
 
     family_number_recovery = None
     with prepared_ocr_input(path) as prepared_path:
@@ -503,7 +703,11 @@ def serve():
             print(json.dumps({
                 "success": False,
                 "requestId": request.get("requestId") if "request" in locals() else None,
-                "errorType": type(exc).__name__,
+                "errorType": getattr(
+                    exc,
+                    "error_code",
+                    type(exc).__name__,
+                ),
                 "error": str(exc),
             }, ensure_ascii=True), flush=True)
             traceback.print_exc(file=sys.stderr)

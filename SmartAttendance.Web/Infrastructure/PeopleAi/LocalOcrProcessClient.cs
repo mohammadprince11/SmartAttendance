@@ -16,6 +16,8 @@ public sealed class PeopleAiWorkerOptions
     public int StartupTimeoutSeconds { get; set; } = 180;
     public int JobTimeoutSeconds { get; set; } = 180;
     public int MaxImageSide { get; set; } = 1600;
+    public int PdfMaxPages { get; set; } = 20;
+    public int PdfRenderDpi { get; set; } = 180;
     public string Device { get; set; } = "auto";
     public string Language { get; set; } = "ar";
     public string TempDirectory { get; set; } = string.Empty;
@@ -283,6 +285,12 @@ public sealed class LocalOcrProcessClient :
         startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
         startInfo.Environment["PEOPLE_AI_OCR_MAX_IMAGE_SIDE"] =
             Math.Clamp(_options.MaxImageSide, 1200, 4096).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_PDF_MAX_PAGES"] =
+            Math.Clamp(_options.PdfMaxPages, 1, 100).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_PDF_RENDER_DPI"] =
+            Math.Clamp(_options.PdfRenderDpi, 120, 300).ToString(
                 System.Globalization.CultureInfo.InvariantCulture);
         startInfo.Environment["PEOPLE_AI_OCR_DEVICE"] =
             string.IsNullOrWhiteSpace(_options.Device)

@@ -3,3 +3,4 @@
 # Keep 3.5.0 while the extraction contract is PP-OCRv5; upgrade separately with OCR regression tests.
 paddleocr==3.5.0
 Pillow>=10,<13
+pypdfium2>=4.30,<6

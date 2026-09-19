@@ -19,16 +19,16 @@ The runtime source of truth is `DocumentProcessingContract`.
 | PNG | Yes | Yes | **No** | Yes | Depends on document type |
 | JPG/JPEG | Yes | Yes | **No** | Yes | Depends on document type |
 | WEBP | Yes | Yes | **No** | Yes | Depends on document type |
-| PDF | Yes | Yes | **No** | **No** | No |
+| PDF | Yes | Yes | **No** | **Yes** | Depends on document type |
 | DOC/DOCX | Yes | Yes | No | **No** | No |
 | XLS/XLSX | Yes | Yes | No | **No** | No |
 Onboarding preview is currently `CanPreview=false` for every format because no pre-promotion protected preview route exists. Preview capability is deliberately not inferred from browser MIME support.
 
-PDF is intentionally storage/review-only in this production closure. The current local worker has no PDF renderer, text-PDF parser, scanned-PDF page renderer, page-limit enforcement or per-page OCR pipeline. Therefore ZYNORA does not advertise PDF as automatically extractable.
+PDF uses a hybrid automatic extraction pipeline. Pages with a usable PDF text layer are read directly through PDFium without OCR. Pages without a usable text layer are rendered to temporary images and passed through the existing PaddleOCR pipeline. Results are normalized into the same page/line contract consumed by the deterministic structured extractors.
 
-Office documents are also storage/review-only. There is no DOC/DOCX/XLS/XLSX parser or conversion pipeline in the existing architecture.
+Office documents remain storage/review-only. There is no DOC/DOCX/XLS/XLSX parser or conversion pipeline in the current phase.
 
-Storage-only files receive `ProcessingStatus=Stored` and are never queued for OCR. A completed `ManualReview/StorageOnly` extraction run is created from the existing company field policies so reviewers can enter fields manually; required fields remain subject to the existing Ready gate. Known structured document types also create an explicit unsupported-extraction review issue. Legacy queued unsupported files are converted to `Stored` by the worker without retrying fake extraction.
+Storage-only Office files receive `ProcessingStatus=Stored` and are never queued for automatic extraction. A completed `ManualReview/StorageOnly` extraction run is created from the existing company field policies so reviewers can enter fields manually; required fields remain subject to the existing Ready gate. Legacy queued unsupported Office files are converted to `Stored` without retrying fake extraction.
 
 ## Document type capability
 
@@ -66,13 +66,13 @@ Company `EnabledLanguages` is wired into document processing.
 
 - National ID always uses Arabic OCR because its deterministic parser depends on Arabic field labels.
 - Passport always uses English OCR because TD3 MRZ is ICAO Latin text.
-- Other/bilingual image documents use the company `EnabledLanguages`; `ar,en` runs both models and merges de-duplicated OCR lines.
+- Other/bilingual image documents and scanned PDF pages use the company `EnabledLanguages`; `ar,en` runs both OCR models and merges de-duplicated lines. Text-layer PDF pages are read directly and do not require OCR.
 - The Python worker caches PaddleOCR engines by language for the life of the worker process and merges de-duplicated OCR lines for bilingual requests.
 
 `PeopleAIWorker__Language` remains the fallback only when the company setting has no supported language.
 
 ## Limits and failure behavior
 
-The existing protected-upload contract remains authoritative for extension, binary signature, malware scanning, SHA-256 and maximum upload size. Unsupported extraction is not treated as OCR failure: the file remains safely stored for human review instead of entering retry loops.
+The existing protected-upload contract remains authoritative for extension, binary signature, malware scanning, SHA-256 and maximum upload size. Unsupported Office extraction is not treated as OCR failure: the file remains safely stored for human review instead of entering retry loops.
 
-PDF automatic extraction can be introduced later only when a real contract exists for text PDFs, scanned PDFs, multi-page rendering, page limits, per-page OCR, corrupted PDF behavior and timeout accounting.
+PDF processing is bounded by `PeopleAIWorker__PdfMaxPages` (default 20, hard-clamped to 1–100) and `PeopleAIWorker__PdfRenderDpi` (default 180, hard-clamped to 120–300). Text-layer pages bypass OCR. Scanned pages are rendered one at a time to temporary JPEG files and deleted immediately after OCR. Password-protected, empty, unreadable and over-limit PDFs return stable error codes and are treated as permanent document failures rather than entering retry loops.

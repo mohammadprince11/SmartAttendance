@@ -189,6 +189,23 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void PdfWorker_IsPackagedWithHybridExtractionGuards()
+    {
+        var root = FindRoot();
+        var worker = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "PeopleAI",
+            "local_ocr_worker.py"));
+        var requirements = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "PeopleAI",
+            "requirements-ocr.txt"));
+
+        Assert.Contains("process_pdf_document", worker);
+        Assert.Contains("PDF_PAGE_LIMIT_EXCEEDED", worker);
+        Assert.Contains("PDF_PASSWORD_PROTECTED", worker);
+        Assert.Contains("pypdfium2", requirements);
+    }
+
+    [Fact]
     public void PeopleAiCss_UsesDesignTokensOnly()
     {
         var root = FindRoot();

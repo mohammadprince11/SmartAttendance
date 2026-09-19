@@ -27,7 +27,7 @@ public static class DocumentProcessingContract
             [".jpg"] = new(".jpg", true, true, false, true),
             [".jpeg"] = new(".jpeg", true, true, false, true),
             [".webp"] = new(".webp", true, true, false, true),
-            [".pdf"] = new(".pdf", true, true, false, false),
+            [".pdf"] = new(".pdf", true, true, false, true),
             [".doc"] = new(".doc", true, true, false, false),
             [".docx"] = new(".docx", true, true, false, false),
             [".xls"] = new(".xls", true, true, false, false),
@@ -84,9 +84,9 @@ public static class DocumentProcessingContract
             "StorageOnly" =>
                 "سيُحفظ الملف بأمان للمراجعة فقط. الاستخراج التلقائي غير مدعوم لهذا التنسيق حالياً.",
             "AutomaticStructuredExtraction" =>
-                "هذا التنسيق والنوع يدعمان OCR واستخراج الحقول تلقائياً مع مراجعة بشرية.",
+                "هذا التنسيق والنوع يدعمان استخراج النص تلقائياً (OCR عند الحاجة) واستخراج الحقول مع مراجعة بشرية.",
             _ =>
-                "يدعم هذا التنسيق OCR النصي، لكن لا يوجد extractor منظم لهذا النوع؛ ستبقى المراجعة البشرية هي المرجع."
+                "يدعم هذا التنسيق استخراج النص تلقائياً (OCR عند الحاجة)، لكن لا يوجد extractor منظم لهذا النوع؛ ستبقى المراجعة البشرية هي المرجع."
         };
 
         return new DocumentProcessingDecision(

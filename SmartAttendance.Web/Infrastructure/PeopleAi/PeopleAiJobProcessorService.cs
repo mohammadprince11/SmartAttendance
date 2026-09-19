@@ -9,7 +9,7 @@ namespace SmartAttendance.Web.Infrastructure.PeopleAi;
 
 public sealed class PeopleAiJobProcessorService : BackgroundService
 {
-    private const string ExtractorVersion = "local-ocr-worker-v1";
+    private const string ExtractorVersion = "local-document-worker-v2";
     private const string SchemaVersion = "people-ai-extraction-v1";
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -249,14 +249,23 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
 
         long? runId = null;
         var stopwatch = Stopwatch.StartNew();
+        var isPdf = contract.Format.Extension.Equals(
+            ".pdf",
+            StringComparison.OrdinalIgnoreCase);
+        var extractionProvider = isPdf
+            ? "ZYNORA-PDF-Hybrid"
+            : "PaddleOCR";
+        var extractionModel = isPdf
+            ? "PDFium+PP-OCRv5"
+            : "PP-OCRv5";
 
         try
         {
             runId = await PeopleAiExtractionStore.StartRunAsync(
                 db,
                 input,
-                "PaddleOCR",
-                "PP-OCRv5",
+                extractionProvider,
+                extractionModel,
                 ExtractorVersion,
                 SchemaVersion);
 
@@ -317,13 +326,17 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             stopwatch.Stop();
 
             var errorCode = MapErrorCode(exception);
-            var willRetry = job.AttemptCount < job.MaxAttempts;
+            var willRetry =
+                !IsPermanentDocumentFailure(errorCode) &&
+                job.AttemptCount < job.MaxAttempts;
 
             await EmployeeOnboardingStore.FailJobAsync(
                 db,
                 job.Id,
                 errorCode,
-                RetryDelay(job.AttemptCount));
+                willRetry
+                    ? RetryDelay(job.AttemptCount)
+                    : TimeSpan.Zero);
 
             await PeopleAiExtractionStore.FailAsync(
                 db,
@@ -336,8 +349,8 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 db,
                 input,
                 "DocumentProcessed",
-                "PaddleOCR",
-                "PP-OCRv5",
+                extractionProvider,
+                extractionModel,
                 success: false,
                 (int)Math.Min(int.MaxValue, stopwatch.ElapsedMilliseconds),
                 errorCode);
@@ -375,6 +388,14 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             LocalOcrException local => NormalizeErrorCode(local.Code),
             _ => "LOCAL_OCR_PROCESSING_ERROR"
         };
+
+    private static bool IsPermanentDocumentFailure(
+        string errorCode) =>
+        errorCode is
+            "PDF_PASSWORD_PROTECTED" or
+            "PDF_PAGE_LIMIT_EXCEEDED" or
+            "PDF_EMPTY" or
+            "PDF_OPEN_FAILED";
 
     private static string NormalizeErrorCode(string value)
     {
