@@ -444,6 +444,9 @@ OUTER APPLY
           AND log.Operation = 'DocumentProcessed'
           AND log.Success = 1
           AND log.DurationMs IS NOT NULL
+          AND log.CompanyId = s.CompanyId
+          AND log.Provider = 'PaddleOCR'
+          AND log.Model = 'PP-OCRv5-Mobile'
         ORDER BY log.Id DESC
     ) sample
 ) durationInfo

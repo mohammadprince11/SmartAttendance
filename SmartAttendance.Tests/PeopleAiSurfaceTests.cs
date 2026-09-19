@@ -221,6 +221,19 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void QueueTelemetry_UsesCurrentMobileOcrModelPerCompany()
+    {
+        var root = FindRoot();
+        var store = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms",
+            "EmployeeOnboardingStore.cs"));
+
+        Assert.Contains("log.CompanyId = s.CompanyId", store);
+        Assert.Contains("log.Provider = 'PaddleOCR'", store);
+        Assert.Contains("log.Model = 'PP-OCRv5-Mobile'", store);
+    }
+
+    [Fact]
     public void PeopleAiCss_UsesDesignTokensOnly()
     {
         var root = FindRoot();
