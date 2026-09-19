@@ -1,8 +1,9 @@
 # ZYNORA People AI OCR — Production Packaging
 
-Target: Ubuntu 24.04 LTS. The OCR process remains a child of the existing
-ASP.NET Core People AI hosted service. Do not create a second queue worker or
-a second OCR service.
+Primary server target: Ubuntu 24.04 LTS. Windows production is also
+supported by the versioned watchdog launcher. The OCR process remains a child
+of the existing ASP.NET Core People AI hosted service. Do not create a second
+queue worker or a second OCR service.
 
 ## Runtime package
 
@@ -12,6 +13,20 @@ Published `SmartAttendance.Web` output must contain:
 - `PeopleAI/requirements-ocr.txt`
 
 The web service starts the Python worker through `PeopleAIWorker` configuration.
+
+## Windows production
+
+The canonical Windows watchdog is:
+
+`scripts/deploy/Start-Zynora-Windows.ps1`
+
+It keeps the ASP.NET Core process supervised, captures web stdout/stderr, and
+sets `PADDLE_PDX_CACHE_HOME=C:\ZynoraRuntime\PeopleAI\paddlex-cache`.
+Keep the isolated Python environment under
+`C:\ZynoraRuntime\PeopleAI\.venv` and the OCR temp directory under
+`C:\ZynoraRuntime\PeopleAI\tmp`. The PaddleX cache must not depend on the
+interactive user's `~\.paddlex` directory because scheduled-task tokens can
+have different effective access during model initialization.
 
 ## Install on Ubuntu
 
@@ -25,7 +40,7 @@ sudo apt-get install -y python3 python3-venv
 CPU is the default production profile:
 
 ```bash
-sudo mkdir -p /opt/zynora/people-ai /var/lib/zynora/people-ai/tmp
+sudo mkdir -p /opt/zynora/people-ai /var/lib/zynora/people-ai/tmp /var/lib/zynora/people-ai/paddlex-cache
 sudo bash scripts/deploy/install-people-ai-ocr-ubuntu.sh cpu
 ```
 
@@ -62,6 +77,7 @@ and read/write access to:
 
 ```text
 /var/lib/zynora/people-ai/tmp
+/var/lib/zynora/people-ai/paddlex-cache
 <AppContentRoot>/App_Data/ProtectedPeopleAssets
 ```
 Recommended runtime configuration:
@@ -73,6 +89,7 @@ PeopleAIWorker__ScriptPath=PeopleAI/local_ocr_worker.py
 PeopleAIWorker__Device=auto
 PeopleAIWorker__Language=ar
 PeopleAIWorker__TempDirectory=/var/lib/zynora/people-ai/tmp
+PADDLE_PDX_CACHE_HOME=/var/lib/zynora/people-ai/paddlex-cache
 PeopleAIWorker__PdfMaxPages=20
 PeopleAIWorker__PdfRenderDpi=180
 ```
@@ -89,10 +106,11 @@ Before queue processing starts, ZYNORA now verifies:
 2. Python can be started;
 3. the worker script exists;
 4. the configured temp directory is writable;
-5. Pillow and pypdfium2 import successfully;
-6. PaddleOCR imports successfully;
-7. CPU/GPU device selection is valid;
-8. OCR models initialize successfully.
+5. the PaddleX cache directory is writable when `PADDLE_PDX_CACHE_HOME` is configured;
+6. Pillow and pypdfium2 import successfully;
+7. PaddleOCR imports successfully;
+8. CPU/GPU device selection is valid;
+9. OCR models initialize successfully.
 
 A failure stops only People AI queue processing and writes a Critical startup
 diagnostic. It does not start consuming jobs in a partially initialized state.

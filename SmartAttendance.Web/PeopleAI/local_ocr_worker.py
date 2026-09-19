@@ -54,6 +54,19 @@ def _read_runtime_config():
     os.remove(probe_path)
     tempfile.tempdir = temp_directory
 
+    configured_cache = os.environ.get(
+        "PADDLE_PDX_CACHE_HOME", ""
+    ).strip()
+    if configured_cache:
+        cache_directory = os.path.abspath(configured_cache)
+        os.makedirs(cache_directory, exist_ok=True)
+        handle, cache_probe = tempfile.mkstemp(
+            prefix="zynora-paddlex-cache-probe-",
+            dir=cache_directory,
+        )
+        os.close(handle)
+        os.remove(cache_probe)
+
     return requested_device, language, temp_directory
 
 

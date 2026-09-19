@@ -48,8 +48,9 @@ esac
 export PEOPLE_AI_OCR_DEVICE="${PEOPLE_AI_OCR_DEVICE:-auto}"
 export PEOPLE_AI_OCR_LANGUAGE="${PEOPLE_AI_OCR_LANGUAGE:-ar}"
 export PEOPLE_AI_OCR_TEMP_DIRECTORY="${PEOPLE_AI_OCR_TEMP_DIRECTORY:-/var/lib/zynora/people-ai/tmp}"
+export PADDLE_PDX_CACHE_HOME="${PADDLE_PDX_CACHE_HOME:-/var/lib/zynora/people-ai/paddlex-cache}"
 
-mkdir -p "$PEOPLE_AI_OCR_TEMP_DIRECTORY"
+mkdir -p "$PEOPLE_AI_OCR_TEMP_DIRECTORY" "$PADDLE_PDX_CACHE_HOME"
 
 echo "Running People AI OCR preflight..."
 "$PYTHON" "$WORKER" --preflight
@@ -61,4 +62,5 @@ WorkerPath=$WORKER
 Device=$PEOPLE_AI_OCR_DEVICE
 Language=$PEOPLE_AI_OCR_LANGUAGE
 TempDirectory=$PEOPLE_AI_OCR_TEMP_DIRECTORY
+PaddleCache=$PADDLE_PDX_CACHE_HOME
 EOF
