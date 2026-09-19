@@ -27,6 +27,8 @@ public sealed class PeopleAiWorkerOptions
     public int XlsxMaxSheets { get; set; } = 50;
     public int XlsxMaxRowsPerSheet { get; set; } = 5000;
     public int XlsxMaxCellsPerSheet { get; set; } = 50000;
+    public string LibreOfficeExecutable { get; set; } = string.Empty;
+    public int OfficeConversionTimeoutSeconds { get; set; } = 90;
     public string Device { get; set; } = "auto";
     public string Language { get; set; } = "ar";
     public string TempDirectory { get; set; } = string.Empty;
@@ -334,6 +336,17 @@ public sealed class LocalOcrProcessClient :
         startInfo.Environment["PEOPLE_AI_XLSX_MAX_CELLS_PER_SHEET"] =
             Math.Clamp(_options.XlsxMaxCellsPerSheet, 1000, 500000).ToString(
                 System.Globalization.CultureInfo.InvariantCulture);
+        if (!string.IsNullOrWhiteSpace(_options.LibreOfficeExecutable))
+        {
+            startInfo.Environment["PEOPLE_AI_LIBREOFFICE_EXECUTABLE"] =
+                _options.LibreOfficeExecutable.Trim();
+        }
+        startInfo.Environment["PEOPLE_AI_OFFICE_CONVERSION_TIMEOUT_SECONDS"] =
+            Math.Clamp(
+                _options.OfficeConversionTimeoutSeconds,
+                15,
+                300).ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
         startInfo.Environment["PEOPLE_AI_OCR_DEVICE"] =
             string.IsNullOrWhiteSpace(_options.Device)
                 ? "auto"

@@ -154,15 +154,16 @@
                                data-upload-file
                                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" />
                         <strong>اختر مستنداً أو اسحبه هنا</strong>
-                        <span>الصور: OCR تلقائي · PDF: نص أو OCR · DOCX: نص وجداول · XLSX: Sheets/Cells تلقائياً · DOC/XLS: تخزين ومراجعة · الحد الأقصى 10MB</span>
+                        <span>الصور: OCR تلقائي · PDF: نص أو OCR · DOC/DOCX: نص وجداول · XLS/XLSX: Sheets/Cells تلقائياً · الحد الأقصى 10MB</span>
                     </label>
 
                     <div class="so-alert so-alert--info">
                         <strong>عقد المعالجة:</strong>
                         PNG/JPG/JPEG/WEBP تدعم OCR. PDF يدعم استخراج النص أو OCR تلقائياً.
-                        DOCX يُقرأ مباشرة من Open XML. XLSX يستخرج أسماء الأوراق والخلايا والقيم
-                        بدون تشغيل أي Formula أو Macro. DOC/XLS تُحفظ بأمان للمراجعة حالياً.
-                        نوع مستند مخصص يمكن تخزينه ومراجعته حتى بدون Structured Extractor.
+                        DOCX/XLSX تُقرأ مباشرة من Open XML. DOC/XLS القديمة تتحول محلياً
+                        عبر LibreOffice داخل بيئة مؤقتة معزولة ثم تُستخرج، مع رفض ملفات VBA/Macro.
+                        لا يتم تشغيل أي Formula أو Macro. نوع مستند مخصص يمكن تخزينه ومراجعته
+                        حتى بدون Structured Extractor.
                     </div>
 
                     <button type="submit"

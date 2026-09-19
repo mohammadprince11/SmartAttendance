@@ -74,6 +74,7 @@ def _verify_document_dependencies():
     try:
         from PIL import Image  # noqa: F401
         import pypdfium2  # noqa: F401
+        import olefile  # noqa: F401
     except ImportError as exc:
         raise RuntimeError(
             "People AI document dependencies are incomplete. "
@@ -152,6 +153,13 @@ def build_ocr():
             "STARTUP_DEVICE_PERMISSION_DENIED"
         ) from exc
 
+    try:
+        _resolve_libreoffice_executable()
+    except DocumentExtractionError as exc:
+        raise StartupStageError(
+            exc.error_code
+        ) from exc
+
     default_languages = _normalize_language_profile(language)
     default_language = default_languages[0]
 
@@ -171,6 +179,7 @@ def build_ocr():
         "pythonVersion": platform.python_version(),
         "platform": platform.system().lower(),
         "tempWritable": True,
+        "legacyOfficeConverterReady": True,
     }
     return ocr, diagnostics
 
@@ -1248,6 +1257,202 @@ def process_xlsx_document(path, language):
     }
 
 
+def _resolve_libreoffice_executable():
+    import shutil
+
+    configured = os.environ.get(
+        "PEOPLE_AI_LIBREOFFICE_EXECUTABLE",
+        "",
+    ).strip()
+
+    candidates = [
+        configured,
+        shutil.which("soffice"),
+        shutil.which("libreoffice"),
+    ]
+
+    if os.name == "nt":
+        candidates.extend([
+            os.path.join(
+                os.environ.get("ProgramFiles", r"C:\Program Files"),
+                "LibreOffice",
+                "program",
+                "soffice.exe",
+            ),
+            os.path.join(
+                os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+                "LibreOffice",
+                "program",
+                "soffice.exe",
+            ),
+        ])
+
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+
+    raise DocumentExtractionError(
+        "LEGACY_OFFICE_CONVERTER_UNAVAILABLE",
+        "LibreOffice converter is not available for legacy Office extraction.",
+    )
+
+
+def _reject_legacy_office_macros(path):
+    import olefile
+
+    try:
+        if not olefile.isOleFile(path):
+            raise DocumentExtractionError(
+                "LEGACY_OFFICE_INVALID_PACKAGE",
+                "Legacy Office file is not a valid OLE compound document.",
+            )
+
+        with olefile.OleFileIO(path) as ole:
+            entries = ole.listdir(streams=True, storages=True)
+    except DocumentExtractionError:
+        raise
+    except Exception as exc:
+        raise DocumentExtractionError(
+            "LEGACY_OFFICE_INVALID_PACKAGE",
+            "Legacy Office file could not be inspected safely.",
+        ) from exc
+
+    for entry in entries:
+        names = [str(part).casefold() for part in entry]
+        joined = "/".join(names)
+        if (
+            "vba" in names
+            or "macros" in names
+            or "_vba_project" in joined
+            or "projectwm" in joined
+            or "vba_project" in joined
+        ):
+            raise DocumentExtractionError(
+                "LEGACY_OFFICE_MACRO_CONTENT_UNSUPPORTED",
+                "Legacy Office files containing macros require manual review.",
+            )
+
+
+def process_legacy_office_document(path, language):
+    import pathlib
+    import shutil
+    import subprocess
+
+    extension = os.path.splitext(path)[1].lower()
+    if extension not in {".doc", ".xls"}:
+        raise DocumentExtractionError(
+            "LEGACY_OFFICE_FORMAT_UNSUPPORTED",
+            "Legacy Office conversion only supports DOC and XLS.",
+        )
+
+    _reject_legacy_office_macros(path)
+    executable = _resolve_libreoffice_executable()
+
+    timeout_seconds = int(os.environ.get(
+        "PEOPLE_AI_OFFICE_CONVERSION_TIMEOUT_SECONDS",
+        "90",
+    ))
+    timeout_seconds = max(15, min(timeout_seconds, 300))
+
+    target_extension = ".docx" if extension == ".doc" else ".xlsx"
+    convert_format = "docx" if extension == ".doc" else "xlsx"
+
+    with tempfile.TemporaryDirectory(
+        prefix="zynora-legacy-office-",
+        dir=tempfile.gettempdir(),
+    ) as work_dir:
+        source_path = os.path.join(work_dir, "source" + extension)
+        output_dir = os.path.join(work_dir, "out")
+        profile_dir = os.path.join(work_dir, "lo-profile")
+        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(profile_dir, exist_ok=True)
+        shutil.copyfile(path, source_path)
+
+        profile_uri = pathlib.Path(profile_dir).resolve().as_uri()
+        command = [
+            executable,
+            "--headless",
+            "--nologo",
+            "--nodefault",
+            "--nofirststartwizard",
+            "--norestore",
+            "--nolockcheck",
+            f"-env:UserInstallation={profile_uri}",
+            "--convert-to",
+            convert_format,
+            "--outdir",
+            output_dir,
+            source_path,
+        ]
+
+        environment = os.environ.copy()
+        environment["SAL_USE_VCLPLUGIN"] = "svp"
+
+        creation_flags = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            if os.name == "nt"
+            else 0
+        )
+
+        try:
+            completed = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout_seconds,
+                check=False,
+                env=environment,
+                creationflags=creation_flags,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise DocumentExtractionError(
+                "LEGACY_OFFICE_CONVERSION_TIMEOUT",
+                "Legacy Office conversion exceeded the configured timeout.",
+            ) from exc
+        except OSError as exc:
+            raise DocumentExtractionError(
+                "LEGACY_OFFICE_CONVERTER_UNAVAILABLE",
+                "LibreOffice converter could not be started.",
+            ) from exc
+
+        if completed.returncode != 0:
+            raise DocumentExtractionError(
+                "LEGACY_OFFICE_CONVERSION_FAILED",
+                "Legacy Office conversion failed.",
+            )
+
+        converted_path = os.path.join(
+            output_dir,
+            "source" + target_extension,
+        )
+        if not os.path.isfile(converted_path):
+            matches = [
+                item
+                for item in os.listdir(output_dir)
+                if item.casefold().endswith(target_extension)
+            ]
+            if len(matches) == 1:
+                converted_path = os.path.join(output_dir, matches[0])
+
+        if not os.path.isfile(converted_path):
+            raise DocumentExtractionError(
+                "LEGACY_OFFICE_OUTPUT_MISSING",
+                "Legacy Office conversion did not produce the expected output.",
+            )
+
+        if extension == ".doc":
+            result = process_docx_document(converted_path, language)
+            result["provider"] = "LibreOffice+OpenXML"
+            result["model"] = "DOC-via-DOCX-v1"
+        else:
+            result = process_xlsx_document(converted_path, language)
+            result["provider"] = "LibreOffice+OpenXML"
+            result["model"] = "XLS-via-XLSX-v1"
+
+        return result
+
+
 def process_file(ocr, path, language):
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
@@ -1255,8 +1460,12 @@ def process_file(ocr, path, language):
     extension = os.path.splitext(path)[1].lower()
     if extension == ".pdf":
         return process_pdf_document(ocr, path, language)
+    if extension == ".doc":
+        return process_legacy_office_document(path, language)
     if extension == ".docx":
         return process_docx_document(path, language)
+    if extension == ".xls":
+        return process_legacy_office_document(path, language)
     if extension == ".xlsx":
         return process_xlsx_document(path, language)
 
@@ -1438,7 +1647,9 @@ def serve():
             profile = ",".join(languages)
             extension = os.path.splitext(path or "")[1].lower()
 
-            if extension == ".docx":
+            if extension in {".doc", ".xls"}:
+                result = process_legacy_office_document(path, profile)
+            elif extension == ".docx":
                 result = process_docx_document(path, profile)
             elif extension == ".xlsx":
                 result = process_xlsx_document(path, profile)
@@ -1486,16 +1697,20 @@ def main():
 
     if args.input:
         extension = os.path.splitext(args.input)[1].lower()
-        if extension in {".docx", ".xlsx"}:
+        if extension in {".doc", ".docx", ".xls", ".xlsx"}:
             language = (
                 os.environ.get("PEOPLE_AI_OCR_LANGUAGE", "ar").strip()
                 or "ar"
             )
-            result = (
-                process_docx_document(args.input, language)
-                if extension == ".docx"
-                else process_xlsx_document(args.input, language)
-            )
+            if extension in {".doc", ".xls"}:
+                result = process_legacy_office_document(
+                    args.input,
+                    language,
+                )
+            elif extension == ".docx":
+                result = process_docx_document(args.input, language)
+            else:
+                result = process_xlsx_document(args.input, language)
             print(json.dumps(result, ensure_ascii=True))
             return
 

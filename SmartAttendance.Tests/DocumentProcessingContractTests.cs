@@ -47,7 +47,8 @@ public sealed class DocumentProcessingContractTests
     [Theory]
     [InlineData(".doc")]
     [InlineData(".xls")]
-    public void LegacyOfficeFormats_RemainStorageOnly(string extension)
+    public void LegacyOfficeFormats_AreQueuedForAutomaticStructuredExtraction(
+        string extension)
     {
         var decision = DocumentProcessingContract.Resolve(
             extension,
@@ -55,9 +56,12 @@ public sealed class DocumentProcessingContractTests
 
         Assert.True(decision.Format.CanUpload);
         Assert.True(decision.Format.CanStore);
-        Assert.False(decision.Format.CanExtractText);
-        Assert.False(decision.ShouldQueueAutomaticExtraction);
-        Assert.Equal("StorageOnly", decision.ProcessingMode);
+        Assert.True(decision.Format.CanExtractText);
+        Assert.True(decision.ShouldQueueAutomaticExtraction);
+        Assert.True(decision.HasStructuredExtractor);
+        Assert.Equal(
+            "AutomaticStructuredExtraction",
+            decision.ProcessingMode);
     }
 
     [Fact]

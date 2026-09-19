@@ -264,9 +264,15 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 ".pdf" => (
                     "ZYNORA-PDF-Hybrid",
                     "PDFium+PP-OCRv5"),
+                ".doc" => (
+                    "LibreOffice+OpenXML",
+                    "DOC-via-DOCX-v1"),
                 ".docx" => (
                     "OpenXML",
                     "DOCX-Text-v1"),
+                ".xls" => (
+                    "LibreOffice+OpenXML",
+                    "XLS-via-XLSX-v1"),
                 ".xlsx" => (
                     "OpenXML",
                     "XLSX-Cells-v1"),
@@ -468,6 +474,12 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             "PDF_PAGE_LIMIT_EXCEEDED" or
             "PDF_EMPTY" or
             "PDF_OPEN_FAILED" or
+            "LEGACY_OFFICE_INVALID_PACKAGE" or
+            "LEGACY_OFFICE_MACRO_CONTENT_UNSUPPORTED" or
+            "LEGACY_OFFICE_CONVERTER_UNAVAILABLE" or
+            "LEGACY_OFFICE_CONVERSION_FAILED" or
+            "LEGACY_OFFICE_OUTPUT_MISSING" or
+            "LEGACY_OFFICE_FORMAT_UNSUPPORTED" or
             "DOCX_INVALID_PACKAGE" or
             "DOCX_ENTRY_LIMIT_EXCEEDED" or
             "DOCX_UNCOMPRESSED_LIMIT_EXCEEDED" or

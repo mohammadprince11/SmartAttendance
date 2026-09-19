@@ -210,7 +210,11 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("XLSX_CELL_LIMIT_EXCEEDED", worker);
         Assert.Contains("XLSX_MACRO_CONTENT_UNSUPPORTED", worker);
         Assert.Contains("XLSX_EMBEDDED_OBJECT_UNSUPPORTED", worker);
+        Assert.Contains("process_legacy_office_document", worker);
+        Assert.Contains("LEGACY_OFFICE_MACRO_CONTENT_UNSUPPORTED", worker);
+        Assert.Contains("LibreOffice+OpenXML", worker);
         Assert.Contains("pypdfium2", requirements);
+        Assert.Contains("olefile", requirements);
     }
 
     [Fact]

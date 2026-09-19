@@ -34,7 +34,7 @@ Install the Ubuntu prerequisites first:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y python3 python3-venv
+sudo apt-get install -y python3 python3-venv libreoffice-writer libreoffice-calc
 ```
 
 CPU is the default production profile:
@@ -47,8 +47,8 @@ sudo bash scripts/deploy/install-people-ai-ocr-ubuntu.sh cpu
 For NVIDIA hosts use `cu118` or `cu126` only when the installed driver matches
 the official PaddlePaddle runtime requirements.
 The installer creates an isolated venv, installs PaddlePaddle 3.2.0 and
-the packages from `requirements-ocr.txt`, including PaddleOCR 3.5.0, Pillow
-and pypdfium2. PaddleOCR is intentionally held at 3.5.0 while ZYNORA's OCR
+the packages from `requirements-ocr.txt`, including PaddleOCR 3.5.0, Pillow,
+pypdfium2 and olefile. LibreOffice Writer/Calc provide isolated legacy DOC/XLS conversion. PaddleOCR is intentionally held at 3.5.0 while ZYNORA's OCR
 contract remains PP-OCRv5; upgrading the OCR model/runtime is a separate
 regression-tested change. PDFium is used for direct PDF text extraction and
 per-page rendering before OCR fallback.
@@ -101,6 +101,8 @@ PeopleAIWorker__XlsxMaxCompressionRatio=200
 PeopleAIWorker__XlsxMaxSheets=50
 PeopleAIWorker__XlsxMaxRowsPerSheet=5000
 PeopleAIWorker__XlsxMaxCellsPerSheet=50000
+PeopleAIWorker__LibreOfficeExecutable=/usr/bin/libreoffice
+PeopleAIWorker__OfficeConversionTimeoutSeconds=90
 ```
 
 `Device=auto` uses GPU only when the installed PaddlePaddle wheel exposes an
@@ -116,10 +118,11 @@ Before queue processing starts, ZYNORA now verifies:
 3. the worker script exists;
 4. the configured temp directory is writable;
 5. the PaddleX cache directory is writable when `PADDLE_PDX_CACHE_HOME` is configured;
-6. Pillow and pypdfium2 import successfully;
-7. PaddleOCR imports successfully;
-8. CPU/GPU device selection is valid;
-9. OCR models initialize successfully.
+6. Pillow, pypdfium2 and olefile import successfully;
+7. LibreOffice converter is resolvable;
+8. PaddleOCR imports successfully;
+9. CPU/GPU device selection is valid;
+10. OCR models initialize successfully.
 
 A failure stops only People AI queue processing and writes a Critical startup
 diagnostic. It does not start consuming jobs in a partially initialized state.

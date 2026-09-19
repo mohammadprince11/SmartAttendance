@@ -15,6 +15,15 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+if command -v libreoffice >/dev/null 2>&1; then
+  LIBREOFFICE_EXECUTABLE="$(command -v libreoffice)"
+elif command -v soffice >/dev/null 2>&1; then
+  LIBREOFFICE_EXECUTABLE="$(command -v soffice)"
+else
+  echo "LibreOffice Writer/Calc is required for DOC/XLS extraction." >&2
+  exit 1
+fi
+
 if [[ ! -f "$WORKER" || ! -f "$REQUIREMENTS" ]]; then
   echo "People AI worker package files are missing." >&2
   exit 1
@@ -49,6 +58,8 @@ export PEOPLE_AI_OCR_DEVICE="${PEOPLE_AI_OCR_DEVICE:-auto}"
 export PEOPLE_AI_OCR_LANGUAGE="${PEOPLE_AI_OCR_LANGUAGE:-ar}"
 export PEOPLE_AI_OCR_TEMP_DIRECTORY="${PEOPLE_AI_OCR_TEMP_DIRECTORY:-/var/lib/zynora/people-ai/tmp}"
 export PADDLE_PDX_CACHE_HOME="${PADDLE_PDX_CACHE_HOME:-/var/lib/zynora/people-ai/paddlex-cache}"
+export PEOPLE_AI_LIBREOFFICE_EXECUTABLE="${PEOPLE_AI_LIBREOFFICE_EXECUTABLE:-$LIBREOFFICE_EXECUTABLE}"
+export PEOPLE_AI_OFFICE_CONVERSION_TIMEOUT_SECONDS="${PEOPLE_AI_OFFICE_CONVERSION_TIMEOUT_SECONDS:-90}"
 
 mkdir -p "$PEOPLE_AI_OCR_TEMP_DIRECTORY" "$PADDLE_PDX_CACHE_HOME"
 
@@ -63,4 +74,6 @@ Device=$PEOPLE_AI_OCR_DEVICE
 Language=$PEOPLE_AI_OCR_LANGUAGE
 TempDirectory=$PEOPLE_AI_OCR_TEMP_DIRECTORY
 PaddleCache=$PADDLE_PDX_CACHE_HOME
+LibreOffice=$PEOPLE_AI_LIBREOFFICE_EXECUTABLE
+OfficeConversionTimeoutSeconds=$PEOPLE_AI_OFFICE_CONVERSION_TIMEOUT_SECONDS
 EOF

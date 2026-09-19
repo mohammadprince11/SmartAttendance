@@ -28,9 +28,9 @@ public static class DocumentProcessingContract
             [".jpeg"] = new(".jpeg", true, true, false, true),
             [".webp"] = new(".webp", true, true, false, true),
             [".pdf"] = new(".pdf", true, true, false, true),
-            [".doc"] = new(".doc", true, true, false, false),
+            [".doc"] = new(".doc", true, true, false, true),
             [".docx"] = new(".docx", true, true, false, true),
-            [".xls"] = new(".xls", true, true, false, false),
+            [".xls"] = new(".xls", true, true, false, true),
             [".xlsx"] = new(".xlsx", true, true, false, true)
         };
     private static readonly HashSet<string> StructuredDocumentTypes =

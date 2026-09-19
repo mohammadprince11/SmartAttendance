@@ -20,9 +20,9 @@ The runtime source of truth is `DocumentProcessingContract`.
 | JPG/JPEG | Yes | Yes | **No** | Yes | Depends on document type |
 | WEBP | Yes | Yes | **No** | Yes | Depends on document type |
 | PDF | Yes | Yes | **No** | **Yes** | Depends on document type |
-| DOC | Yes | Yes | No | **No** | No |
+| DOC | Yes | Yes | No | **Yes** | Depends on document type |
 | DOCX | Yes | Yes | No | **Yes** | Depends on document type |
-| XLS | Yes | Yes | No | **No** | No |
+| XLS | Yes | Yes | No | **Yes** | Depends on document type |
 | XLSX | Yes | Yes | No | **Yes** | Depends on document type |
 Onboarding preview is currently `CanPreview=false` for every format because no pre-promotion protected preview route exists. Preview capability is deliberately not inferred from browser MIME support.
 
@@ -32,7 +32,7 @@ DOCX uses direct Open XML extraction without OCR. The worker reads paragraphs an
 
 XLSX uses direct SpreadsheetML extraction without Excel automation or OCR. Every worksheet is represented as a separate extraction page. Sheet names, cell coordinates and cell values are preserved as text lines. Shared strings, inline strings, booleans, ISO dates and date-formatted numeric cells are normalized. Formula expressions are never executed; only an existing cached cell value is used.
 
-Legacy binary DOC/XLS formats remain storage/review-only. They receive `ProcessingStatus=Stored` and are never queued for automatic extraction. A completed `ManualReview/StorageOnly` extraction run is created from the existing company field policies so reviewers can enter fields manually; required fields remain subject to the existing Ready gate.
+Legacy binary DOC/XLS formats use a local LibreOffice conversion pipeline. The protected source is copied into an isolated temporary workspace, inspected as an OLE compound document, rejected when VBA/macro streams are present, converted to DOCX/XLSX with a dedicated temporary LibreOffice profile, and then passed through the existing Open XML extractors. Temporary converted files are deleted with the workspace after extraction.
 
 ## Document type capability
 
@@ -71,14 +71,14 @@ Company `EnabledLanguages` is wired into document processing.
 - National ID always uses Arabic OCR because its deterministic parser depends on Arabic field labels.
 - Passport always uses English OCR because TD3 MRZ is ICAO Latin text.
 - Other/bilingual image documents and scanned PDF pages use the company `EnabledLanguages`; `ar,en` runs both OCR models and merges de-duplicated lines. Text-layer PDF pages are read directly and do not require OCR.
-- DOCX and XLSX are language-agnostic Open XML extraction paths and are processed once per document, even when the company enables multiple OCR languages.
+- DOC/DOCX and XLS/XLSX are language-agnostic Office extraction paths and are processed once per document, even when the company enables multiple OCR languages.
 - The Python worker caches PaddleOCR engines by language for the life of the worker process and merges de-duplicated OCR lines for bilingual OCR requests.
 
 `PeopleAIWorker__Language` remains the fallback only when the company setting has no supported language.
 
 ## Limits and failure behavior
 
-The existing protected-upload contract remains authoritative for extension, binary signature, malware scanning, SHA-256 and maximum upload size. Unsupported legacy Office extraction is not treated as OCR failure: the file remains safely stored for human review instead of entering retry loops.
+The existing protected-upload contract remains authoritative for extension, binary signature, malware scanning, SHA-256 and maximum upload size. Legacy DOC/XLS files must pass the OLE signature gate and macro inspection before local conversion. Unsafe or non-convertible legacy files return stable review errors instead of entering repeated extraction loops.
 
 PDF processing is bounded by `PeopleAIWorker__PdfMaxPages` (default 20, hard-clamped to 1–100) and `PeopleAIWorker__PdfRenderDpi` (default 180, hard-clamped to 120–300). Text-layer pages bypass OCR. Scanned pages are rendered one at a time to temporary JPEG files and deleted immediately after OCR. Password-protected, empty, unreadable and over-limit PDFs return stable error codes and are treated as permanent document failures rather than entering retry loops.
 
