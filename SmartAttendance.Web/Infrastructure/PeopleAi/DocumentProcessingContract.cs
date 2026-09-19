@@ -31,7 +31,7 @@ public static class DocumentProcessingContract
             [".doc"] = new(".doc", true, true, false, false),
             [".docx"] = new(".docx", true, true, false, true),
             [".xls"] = new(".xls", true, true, false, false),
-            [".xlsx"] = new(".xlsx", true, true, false, false)
+            [".xlsx"] = new(".xlsx", true, true, false, true)
         };
     private static readonly HashSet<string> StructuredDocumentTypes =
         new(StringComparer.OrdinalIgnoreCase)

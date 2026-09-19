@@ -95,6 +95,12 @@ PeopleAIWorker__PdfRenderDpi=180
 PeopleAIWorker__DocxMaxEntries=2000
 PeopleAIWorker__DocxMaxUncompressedMegabytes=64
 PeopleAIWorker__DocxMaxCompressionRatio=200
+PeopleAIWorker__XlsxMaxEntries=5000
+PeopleAIWorker__XlsxMaxUncompressedMegabytes=64
+PeopleAIWorker__XlsxMaxCompressionRatio=200
+PeopleAIWorker__XlsxMaxSheets=50
+PeopleAIWorker__XlsxMaxRowsPerSheet=5000
+PeopleAIWorker__XlsxMaxCellsPerSheet=50000
 ```
 
 `Device=auto` uses GPU only when the installed PaddlePaddle wheel exposes an

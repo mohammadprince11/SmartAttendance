@@ -267,6 +267,9 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 ".docx" => (
                     "OpenXML",
                     "DOCX-Text-v1"),
+                ".xlsx" => (
+                    "OpenXML",
+                    "XLSX-Cells-v1"),
                 _ => (
                     "PaddleOCR",
                     "PP-OCRv5")
@@ -475,7 +478,22 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             "DOCX_EMBEDDED_OBJECT_UNSUPPORTED" or
             "DOCX_MAIN_DOCUMENT_MISSING" or
             "DOCX_XML_INVALID" or
-            "DOCX_PART_READ_FAILED";
+            "DOCX_PART_READ_FAILED" or
+            "XLSX_INVALID_PACKAGE" or
+            "XLSX_ENTRY_LIMIT_EXCEEDED" or
+            "XLSX_UNCOMPRESSED_LIMIT_EXCEEDED" or
+            "XLSX_COMPRESSION_RATIO_EXCEEDED" or
+            "XLSX_ENCRYPTED" or
+            "XLSX_UNSAFE_PATH" or
+            "XLSX_MACRO_CONTENT_UNSUPPORTED" or
+            "XLSX_EMBEDDED_OBJECT_UNSUPPORTED" or
+            "XLSX_XML_INVALID" or
+            "XLSX_SHEET_LIMIT_EXCEEDED" or
+            "XLSX_ROW_LIMIT_EXCEEDED" or
+            "XLSX_CELL_LIMIT_EXCEEDED" or
+            "XLSX_SHEET_RELATIONSHIP_MISSING" or
+            "XLSX_SHEET_PART_MISSING" or
+            "XLSX_PART_READ_FAILED";
 
     private static string NormalizeErrorCode(string value)
     {

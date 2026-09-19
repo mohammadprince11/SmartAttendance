@@ -22,14 +22,17 @@ The runtime source of truth is `DocumentProcessingContract`.
 | PDF | Yes | Yes | **No** | **Yes** | Depends on document type |
 | DOC | Yes | Yes | No | **No** | No |
 | DOCX | Yes | Yes | No | **Yes** | Depends on document type |
-| XLS/XLSX | Yes | Yes | No | **No** | No |
+| XLS | Yes | Yes | No | **No** | No |
+| XLSX | Yes | Yes | No | **Yes** | Depends on document type |
 Onboarding preview is currently `CanPreview=false` for every format because no pre-promotion protected preview route exists. Preview capability is deliberately not inferred from browser MIME support.
 
 PDF uses a hybrid automatic extraction pipeline. Pages with a usable PDF text layer are read directly through PDFium without OCR. Pages without a usable text layer are rendered to temporary images and passed through the existing PaddleOCR pipeline. Results are normalized into the same page/line contract consumed by the deterministic structured extractors.
 
-DOCX uses direct Open XML extraction without OCR. The worker reads paragraphs and table-cell text from `word/document.xml` (plus headers/footers when present) and normalizes the result into the same page/line contract consumed by deterministic structured extractors. Legacy binary DOC and Excel formats remain storage/review-only in this phase.
+DOCX uses direct Open XML extraction without OCR. The worker reads paragraphs and table-cell text from `word/document.xml` (plus headers/footers when present) and normalizes the result into the same page/line contract consumed by deterministic structured extractors.
 
-Storage-only DOC/XLS/XLSX files receive `ProcessingStatus=Stored` and are never queued for automatic extraction. A completed `ManualReview/StorageOnly` extraction run is created from the existing company field policies so reviewers can enter fields manually; required fields remain subject to the existing Ready gate. Legacy queued unsupported files are converted to `Stored` without retrying fake extraction.
+XLSX uses direct SpreadsheetML extraction without Excel automation or OCR. Every worksheet is represented as a separate extraction page. Sheet names, cell coordinates and cell values are preserved as text lines. Shared strings, inline strings, booleans, ISO dates and date-formatted numeric cells are normalized. Formula expressions are never executed; only an existing cached cell value is used.
+
+Legacy binary DOC/XLS formats remain storage/review-only. They receive `ProcessingStatus=Stored` and are never queued for automatic extraction. A completed `ManualReview/StorageOnly` extraction run is created from the existing company field policies so reviewers can enter fields manually; required fields remain subject to the existing Ready gate.
 
 ## Document type capability
 
@@ -68,7 +71,8 @@ Company `EnabledLanguages` is wired into document processing.
 - National ID always uses Arabic OCR because its deterministic parser depends on Arabic field labels.
 - Passport always uses English OCR because TD3 MRZ is ICAO Latin text.
 - Other/bilingual image documents and scanned PDF pages use the company `EnabledLanguages`; `ar,en` runs both OCR models and merges de-duplicated lines. Text-layer PDF pages are read directly and do not require OCR.
-- The Python worker caches PaddleOCR engines by language for the life of the worker process and merges de-duplicated OCR lines for bilingual requests.
+- DOCX and XLSX are language-agnostic Open XML extraction paths and are processed once per document, even when the company enables multiple OCR languages.
+- The Python worker caches PaddleOCR engines by language for the life of the worker process and merges de-duplicated OCR lines for bilingual OCR requests.
 
 `PeopleAIWorker__Language` remains the fallback only when the company setting has no supported language.
 
@@ -79,3 +83,5 @@ The existing protected-upload contract remains authoritative for extension, bina
 PDF processing is bounded by `PeopleAIWorker__PdfMaxPages` (default 20, hard-clamped to 1–100) and `PeopleAIWorker__PdfRenderDpi` (default 180, hard-clamped to 120–300). Text-layer pages bypass OCR. Scanned pages are rendered one at a time to temporary JPEG files and deleted immediately after OCR. Password-protected, empty, unreadable and over-limit PDFs return stable error codes and are treated as permanent document failures rather than entering retry loops.
 
 DOCX extraction is bounded by archive-entry count, total uncompressed bytes and compression ratio. Unsafe archive paths, encrypted packages, macro payloads and embedded objects are rejected before XML parsing. The defaults are 2,000 entries, 64 MB total uncompressed content and a 200:1 compression-ratio ceiling for large entries.
+
+XLSX applies the same Open XML archive protections and adds worksheet workload limits. The defaults are 5,000 archive entries, 64 MB total uncompressed content, a 200:1 compression-ratio ceiling, up to 50 worksheets, 5,000 processed rows per worksheet and 50,000 processed cells per worksheet. Formula expressions and macros are never executed.

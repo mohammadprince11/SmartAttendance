@@ -206,6 +206,10 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("DOCX_UNCOMPRESSED_LIMIT_EXCEEDED", worker);
         Assert.Contains("DOCX_MACRO_CONTENT_UNSUPPORTED", worker);
         Assert.Contains("DOCX_EMBEDDED_OBJECT_UNSUPPORTED", worker);
+        Assert.Contains("process_xlsx_document", worker);
+        Assert.Contains("XLSX_CELL_LIMIT_EXCEEDED", worker);
+        Assert.Contains("XLSX_MACRO_CONTENT_UNSUPPORTED", worker);
+        Assert.Contains("XLSX_EMBEDDED_OBJECT_UNSUPPORTED", worker);
         Assert.Contains("pypdfium2", requirements);
     }
 

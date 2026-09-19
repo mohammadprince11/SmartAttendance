@@ -745,6 +745,509 @@ def process_docx_document(path, language):
     }
 
 
+def _xlsx_limits():
+    max_entries = int(os.environ.get("PEOPLE_AI_XLSX_MAX_ENTRIES", "5000"))
+    max_entries = max(100, min(max_entries, 20000))
+
+    max_uncompressed_mb = int(
+        os.environ.get("PEOPLE_AI_XLSX_MAX_UNCOMPRESSED_MB", "64")
+    )
+    max_uncompressed_mb = max(8, min(max_uncompressed_mb, 512))
+
+    max_ratio = int(
+        os.environ.get("PEOPLE_AI_XLSX_MAX_COMPRESSION_RATIO", "200")
+    )
+    max_ratio = max(10, min(max_ratio, 1000))
+
+    max_sheets = int(os.environ.get("PEOPLE_AI_XLSX_MAX_SHEETS", "50"))
+    max_sheets = max(1, min(max_sheets, 200))
+
+    max_rows = int(
+        os.environ.get("PEOPLE_AI_XLSX_MAX_ROWS_PER_SHEET", "5000")
+    )
+    max_rows = max(100, min(max_rows, 100000))
+
+    max_cells = int(
+        os.environ.get("PEOPLE_AI_XLSX_MAX_CELLS_PER_SHEET", "50000")
+    )
+    max_cells = max(1000, min(max_cells, 500000))
+
+    return (
+        max_entries,
+        max_uncompressed_mb * 1024 * 1024,
+        max_ratio,
+        max_sheets,
+        max_rows,
+        max_cells,
+    )
+
+
+def _xlsx_parse_xml(payload):
+    import xml.etree.ElementTree as ET
+
+    try:
+        return ET.fromstring(payload)
+    except ET.ParseError as exc:
+        raise DocumentExtractionError(
+            "XLSX_XML_INVALID",
+            "XLSX contains invalid Open XML content.",
+        ) from exc
+
+
+def _xlsx_read_part(archive, name):
+    try:
+        return archive.read(name)
+    except (KeyError, RuntimeError, OSError) as exc:
+        raise DocumentExtractionError(
+            "XLSX_PART_READ_FAILED",
+            "XLSX content part could not be read safely.",
+        ) from exc
+
+
+def _xlsx_resolve_target(base_part, target):
+    import posixpath
+
+    value = (target or "").replace("\\", "/").strip()
+    if not value:
+        raise DocumentExtractionError(
+            "XLSX_SHEET_RELATIONSHIP_MISSING",
+            "XLSX sheet relationship target is missing.",
+        )
+
+    if value.startswith("/"):
+        resolved = posixpath.normpath(value.lstrip("/"))
+    else:
+        resolved = posixpath.normpath(
+            posixpath.join(posixpath.dirname(base_part), value)
+        )
+
+    if (
+        resolved.startswith("../")
+        or resolved.startswith("/")
+        or not resolved.casefold().startswith("xl/")
+    ):
+        raise DocumentExtractionError(
+            "XLSX_UNSAFE_PATH",
+            "XLSX contains an unsafe relationship target.",
+        )
+
+    return resolved
+
+
+def _xlsx_shared_strings(archive, name_map):
+    part = name_map.get("xl/sharedstrings.xml")
+    if not part:
+        return []
+
+    root = _xlsx_parse_xml(_xlsx_read_part(archive, part))
+    values = []
+
+    for item in root.iter():
+        if _openxml_local_name(item.tag) != "si":
+            continue
+        pieces = [
+            node.text or ""
+            for node in item.iter()
+            if _openxml_local_name(node.tag) == "t"
+        ]
+        values.append("".join(pieces))
+
+    return values
+
+
+def _xlsx_date_style_indexes(archive, name_map):
+    part = name_map.get("xl/styles.xml")
+    if not part:
+        return set()
+
+    root = _xlsx_parse_xml(_xlsx_read_part(archive, part))
+    custom_formats = {}
+    cell_xfs = None
+
+    for node in root.iter():
+        name = _openxml_local_name(node.tag)
+        if name == "numFmt":
+            try:
+                num_fmt_id = int(node.attrib.get("numFmtId", "-1"))
+            except ValueError:
+                continue
+            custom_formats[num_fmt_id] = node.attrib.get("formatCode", "")
+        elif name == "cellXfs":
+            cell_xfs = node
+
+    built_in_dates = {
+        14, 15, 16, 17, 18, 19, 20, 21, 22,
+        27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+        45, 46, 47, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+    }
+
+    def is_date_format(num_fmt_id):
+        if num_fmt_id in built_in_dates:
+            return True
+
+        code = custom_formats.get(num_fmt_id, "")
+        if not code:
+            return False
+
+        cleaned = re.sub(r'"[^"]*"', "", code.casefold())
+        cleaned = re.sub(r"\[[^\]]*\]", "", cleaned)
+        cleaned = cleaned.replace("\\", "")
+        return (
+            "yy" in cleaned
+            or "dd" in cleaned
+            or ("h" in cleaned and "m" in cleaned)
+            or ("h" in cleaned and "s" in cleaned)
+        )
+
+    date_indexes = set()
+    if cell_xfs is not None:
+        for index, xf in enumerate(list(cell_xfs)):
+            if _openxml_local_name(xf.tag) != "xf":
+                continue
+            try:
+                num_fmt_id = int(xf.attrib.get("numFmtId", "0"))
+            except ValueError:
+                num_fmt_id = 0
+            if is_date_format(num_fmt_id):
+                date_indexes.add(index)
+
+    return date_indexes
+
+
+def _xlsx_excel_serial(value, date1904):
+    from datetime import datetime, timedelta
+
+    try:
+        serial = float(value)
+    except (TypeError, ValueError):
+        return value
+
+    base = datetime(1904, 1, 1) if date1904 else datetime(1899, 12, 30)
+    result = base + timedelta(days=serial)
+
+    if result.time().hour or result.time().minute or result.time().second:
+        return result.isoformat(timespec="seconds")
+    return result.date().isoformat()
+
+
+def _xlsx_cell_value(cell, shared_strings, date_styles, date1904):
+    cell_type = (cell.attrib.get("t") or "").strip()
+    style_index = -1
+
+    try:
+        style_index = int(cell.attrib.get("s", "-1"))
+    except ValueError:
+        pass
+
+    value_node = None
+    inline_node = None
+    has_formula = False
+
+    for child in list(cell):
+        name = _openxml_local_name(child.tag)
+        if name == "v":
+            value_node = child
+        elif name == "is":
+            inline_node = child
+        elif name == "f":
+            has_formula = True
+
+    raw = value_node.text if value_node is not None else None
+
+    if cell_type == "inlineStr" and inline_node is not None:
+        raw = "".join(
+            node.text or ""
+            for node in inline_node.iter()
+            if _openxml_local_name(node.tag) == "t"
+        )
+    elif cell_type == "s":
+        try:
+            index = int(raw or "-1")
+        except ValueError:
+            index = -1
+        raw = (
+            shared_strings[index]
+            if 0 <= index < len(shared_strings)
+            else ""
+        )
+    elif cell_type == "b":
+        raw = "TRUE" if raw == "1" else "FALSE"
+    elif cell_type == "d":
+        raw = raw or ""
+    elif has_formula and raw is None:
+        # Never execute formulas. A formula without a cached value contributes
+        # no extracted value and remains available in the protected source file.
+        return ""
+
+    if raw is None:
+        return ""
+
+    value = str(raw).replace("\x00", " ").strip()
+    if style_index in date_styles and cell_type not in {"s", "inlineStr", "str"}:
+        value = _xlsx_excel_serial(value, date1904)
+
+    value = re.sub(r"\s+", " ", value).strip()
+    return value[:4096]
+
+
+def process_xlsx_document(path, language):
+    import zipfile
+
+    (
+        max_entries,
+        max_uncompressed,
+        max_ratio,
+        max_sheets,
+        max_rows,
+        max_cells,
+    ) = _xlsx_limits()
+
+    try:
+        archive = zipfile.ZipFile(path, "r")
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise DocumentExtractionError(
+            "XLSX_INVALID_PACKAGE",
+            "XLSX package could not be opened safely.",
+        ) from exc
+
+    try:
+        infos = archive.infolist()
+        if len(infos) > max_entries:
+            raise DocumentExtractionError(
+                "XLSX_ENTRY_LIMIT_EXCEEDED",
+                "XLSX contains too many archive entries.",
+            )
+
+        total_uncompressed = 0
+        name_map = {}
+
+        for info in infos:
+            name = (info.filename or "").replace("\\", "/")
+            lower_name = name.casefold()
+            name_map[lower_name] = name
+
+            parts = [part for part in name.split("/") if part]
+            if name.startswith("/") or ".." in parts:
+                raise DocumentExtractionError(
+                    "XLSX_UNSAFE_PATH",
+                    "XLSX contains an unsafe archive path.",
+                )
+
+            if info.flag_bits & 0x1:
+                raise DocumentExtractionError(
+                    "XLSX_ENCRYPTED",
+                    "Encrypted XLSX requires manual review.",
+                )
+
+            total_uncompressed += max(0, info.file_size)
+            if total_uncompressed > max_uncompressed:
+                raise DocumentExtractionError(
+                    "XLSX_UNCOMPRESSED_LIMIT_EXCEEDED",
+                    "XLSX exceeds the configured uncompressed-size limit.",
+                )
+
+            if info.file_size >= 1024 * 1024:
+                ratio = info.file_size / max(1, info.compress_size)
+                if ratio > max_ratio:
+                    raise DocumentExtractionError(
+                        "XLSX_COMPRESSION_RATIO_EXCEEDED",
+                        "XLSX compression ratio exceeds the safety limit.",
+                    )
+
+            if lower_name.endswith("vbaproject.bin"):
+                raise DocumentExtractionError(
+                    "XLSX_MACRO_CONTENT_UNSUPPORTED",
+                    "Macro-enabled content is not accepted in XLSX extraction.",
+                )
+
+            if lower_name.startswith("xl/embeddings/") and not name.endswith("/"):
+                raise DocumentExtractionError(
+                    "XLSX_EMBEDDED_OBJECT_UNSUPPORTED",
+                    "Embedded spreadsheet objects require manual review.",
+                )
+
+        required = (
+            "[content_types].xml",
+            "xl/workbook.xml",
+            "xl/_rels/workbook.xml.rels",
+        )
+        for required_name in required:
+            if required_name not in name_map:
+                raise DocumentExtractionError(
+                    "XLSX_INVALID_PACKAGE",
+                    "XLSX required Open XML parts are missing.",
+                )
+
+        workbook_root = _xlsx_parse_xml(
+            _xlsx_read_part(archive, name_map["xl/workbook.xml"])
+        )
+        rels_root = _xlsx_parse_xml(
+            _xlsx_read_part(
+                archive,
+                name_map["xl/_rels/workbook.xml.rels"],
+            )
+        )
+
+        date1904 = False
+        sheets = []
+        for node in workbook_root.iter():
+            local_name = _openxml_local_name(node.tag)
+            if local_name == "workbookPr":
+                date1904 = (
+                    str(node.attrib.get("date1904", "")).casefold()
+                    in {"1", "true"}
+                )
+            elif local_name == "sheet":
+                rel_id = next(
+                    (
+                        value
+                        for key, value in node.attrib.items()
+                        if _openxml_local_name(key) == "id"
+                    ),
+                    None,
+                )
+                sheets.append((
+                    re.sub(
+                        r"\s+",
+                        " ",
+                        node.attrib.get("name", "Sheet"),
+                    ).strip()[:256],
+                    rel_id,
+                ))
+
+        if len(sheets) > max_sheets:
+            raise DocumentExtractionError(
+                "XLSX_SHEET_LIMIT_EXCEEDED",
+                "XLSX contains too many worksheets.",
+            )
+
+        relationships = {}
+        for node in rels_root.iter():
+            if _openxml_local_name(node.tag) != "Relationship":
+                continue
+            rel_id = node.attrib.get("Id")
+            target = node.attrib.get("Target")
+            target_mode = (node.attrib.get("TargetMode") or "").casefold()
+            rel_type = node.attrib.get("Type") or ""
+            if (
+                rel_id
+                and target
+                and target_mode != "external"
+                and rel_type.casefold().endswith("/worksheet")
+            ):
+                relationships[rel_id] = _xlsx_resolve_target(
+                    "xl/workbook.xml",
+                    target,
+                )
+
+        shared_strings = _xlsx_shared_strings(archive, name_map)
+        date_styles = _xlsx_date_style_indexes(archive, name_map)
+
+        pages = []
+        full_text_lines = []
+
+        for page_index, (sheet_name, rel_id) in enumerate(sheets):
+            if not rel_id or rel_id not in relationships:
+                continue
+
+            part_name = relationships[rel_id]
+            actual_name = name_map.get(part_name.casefold())
+            if not actual_name:
+                raise DocumentExtractionError(
+                    "XLSX_SHEET_PART_MISSING",
+                    "XLSX worksheet part is missing.",
+                )
+
+            sheet_root = _xlsx_parse_xml(
+                _xlsx_read_part(archive, actual_name)
+            )
+
+            lines = [{
+                "index": 0,
+                "text": f"Sheet: {sheet_name or 'Sheet'}",
+                "score": 1.0,
+                "box": None,
+            }]
+            row_count = 0
+            cell_count = 0
+
+            for row in sheet_root.iter():
+                if _openxml_local_name(row.tag) != "row":
+                    continue
+
+                row_count += 1
+                if row_count > max_rows:
+                    raise DocumentExtractionError(
+                        "XLSX_ROW_LIMIT_EXCEEDED",
+                        "XLSX worksheet exceeds the row-processing limit.",
+                    )
+
+                pieces = []
+                for cell in list(row):
+                    if _openxml_local_name(cell.tag) != "c":
+                        continue
+
+                    cell_count += 1
+                    if cell_count > max_cells:
+                        raise DocumentExtractionError(
+                            "XLSX_CELL_LIMIT_EXCEEDED",
+                            "XLSX worksheet exceeds the cell-processing limit.",
+                        )
+
+                    value = _xlsx_cell_value(
+                        cell,
+                        shared_strings,
+                        date_styles,
+                        date1904,
+                    )
+                    if not value:
+                        continue
+
+                    reference = (cell.attrib.get("r") or "").upper()
+                    if not re.fullmatch(r"[A-Z]{1,4}[0-9]{1,7}", reference):
+                        reference = f"CELL{cell_count}"
+
+                    pieces.append(f"{reference}={value}")
+
+                if not pieces:
+                    continue
+
+                row_number = row.attrib.get("r") or str(row_count)
+                for offset in range(0, len(pieces), 20):
+                    chunk = pieces[offset:offset + 20]
+                    line_text = (
+                        f"Row {row_number}: " + " | ".join(chunk)
+                    )[:16000]
+                    lines.append({
+                        "index": len(lines),
+                        "text": line_text,
+                        "score": 1.0,
+                        "box": None,
+                    })
+
+            pages.append({
+                "pageIndex": page_index,
+                "lines": lines,
+            })
+            full_text_lines.extend(
+                line["text"]
+                for line in lines
+                if line["text"]
+            )
+    finally:
+        archive.close()
+
+    return {
+        "success": True,
+        "provider": "OpenXML",
+        "model": "XLSX-Cells-v1",
+        "language": language,
+        "pages": pages,
+        "fullText": "\n".join(full_text_lines),
+        "lineCount": len(full_text_lines),
+    }
+
+
 def process_file(ocr, path, language):
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
@@ -754,6 +1257,8 @@ def process_file(ocr, path, language):
         return process_pdf_document(ocr, path, language)
     if extension == ".docx":
         return process_docx_document(path, language)
+    if extension == ".xlsx":
+        return process_xlsx_document(path, language)
 
     family_number_recovery = None
     with prepared_ocr_input(path) as prepared_path:
@@ -935,6 +1440,8 @@ def serve():
 
             if extension == ".docx":
                 result = process_docx_document(path, profile)
+            elif extension == ".xlsx":
+                result = process_xlsx_document(path, profile)
             else:
                 outputs = []
                 for language in languages:
@@ -977,14 +1484,20 @@ def main():
         serve()
         return
 
-    if args.input and os.path.splitext(args.input)[1].lower() == ".docx":
-        language = (
-            os.environ.get("PEOPLE_AI_OCR_LANGUAGE", "ar").strip()
-            or "ar"
-        )
-        result = process_docx_document(args.input, language)
-        print(json.dumps(result, ensure_ascii=True))
-        return
+    if args.input:
+        extension = os.path.splitext(args.input)[1].lower()
+        if extension in {".docx", ".xlsx"}:
+            language = (
+                os.environ.get("PEOPLE_AI_OCR_LANGUAGE", "ar").strip()
+                or "ar"
+            )
+            result = (
+                process_docx_document(args.input, language)
+                if extension == ".docx"
+                else process_xlsx_document(args.input, language)
+            )
+            print(json.dumps(result, ensure_ascii=True))
+            return
 
     ocr, diagnostics = build_ocr()
 

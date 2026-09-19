@@ -21,6 +21,12 @@ public sealed class PeopleAiWorkerOptions
     public int DocxMaxEntries { get; set; } = 2000;
     public int DocxMaxUncompressedMegabytes { get; set; } = 64;
     public int DocxMaxCompressionRatio { get; set; } = 200;
+    public int XlsxMaxEntries { get; set; } = 5000;
+    public int XlsxMaxUncompressedMegabytes { get; set; } = 64;
+    public int XlsxMaxCompressionRatio { get; set; } = 200;
+    public int XlsxMaxSheets { get; set; } = 50;
+    public int XlsxMaxRowsPerSheet { get; set; } = 5000;
+    public int XlsxMaxCellsPerSheet { get; set; } = 50000;
     public string Device { get; set; } = "auto";
     public string Language { get; set; } = "ar";
     public string TempDirectory { get; set; } = string.Empty;
@@ -306,6 +312,27 @@ public sealed class LocalOcrProcessClient :
                     System.Globalization.CultureInfo.InvariantCulture);
         startInfo.Environment["PEOPLE_AI_DOCX_MAX_COMPRESSION_RATIO"] =
             Math.Clamp(_options.DocxMaxCompressionRatio, 10, 1000).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_XLSX_MAX_ENTRIES"] =
+            Math.Clamp(_options.XlsxMaxEntries, 100, 20000).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_XLSX_MAX_UNCOMPRESSED_MB"] =
+            Math.Clamp(
+                _options.XlsxMaxUncompressedMegabytes,
+                8,
+                512).ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_XLSX_MAX_COMPRESSION_RATIO"] =
+            Math.Clamp(_options.XlsxMaxCompressionRatio, 10, 1000).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_XLSX_MAX_SHEETS"] =
+            Math.Clamp(_options.XlsxMaxSheets, 1, 200).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_XLSX_MAX_ROWS_PER_SHEET"] =
+            Math.Clamp(_options.XlsxMaxRowsPerSheet, 100, 100000).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_XLSX_MAX_CELLS_PER_SHEET"] =
+            Math.Clamp(_options.XlsxMaxCellsPerSheet, 1000, 500000).ToString(
                 System.Globalization.CultureInfo.InvariantCulture);
         startInfo.Environment["PEOPLE_AI_OCR_DEVICE"] =
             string.IsNullOrWhiteSpace(_options.Device)
