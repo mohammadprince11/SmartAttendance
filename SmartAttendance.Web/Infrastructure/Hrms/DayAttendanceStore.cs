@@ -816,24 +816,32 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
     {
         static double Minutes(TimeOnly value) =>
             value.Hour * 60d + value.Minute + value.Second / 60d;
-        static double OnAxis(TimeOnly value, double anchor)
+
+        // Put a time-of-day on the occurrence nearest to the shift start.
+        // This preserves a genuine early arrival (07:55 for an 08:00 shift)
+        // while still mapping after-midnight punches of an overnight shift
+        // (00:30 for a 22:00 shift) onto the following day.
+        static double OnNearestAxis(TimeOnly value, double anchor)
         {
             var minutes = Minutes(value);
-            return minutes < anchor ? minutes + 1440d : minutes;
+            var nextDay = minutes + 1440d;
+            return Math.Abs(minutes - anchor) <= Math.Abs(nextDay - anchor)
+                ? minutes
+                : nextDay;
         }
 
         var shiftStartMinutes = Minutes(shiftStart);
-        var checkInMinutes = OnAxis(checkIn, shiftStartMinutes);
+        var checkInMinutes = OnNearestAxis(checkIn, shiftStartMinutes);
         if (checkInMinutes <= shiftStartMinutes) return TimeSpan.Zero;
 
-        var shiftEndMinutes = OnAxis(shiftEnd, shiftStartMinutes);
+        var shiftEndMinutes = OnNearestAxis(shiftEnd, shiftStartMinutes);
         if (shiftEndMinutes <= shiftStartMinutes) shiftEndMinutes += 1440d;
         var creditMinutes = 0d;
 
         foreach (var (permStart, permEnd) in permissions)
         {
-            var start = OnAxis(permStart, shiftStartMinutes);
-            var end = OnAxis(permEnd, shiftStartMinutes);
+            var start = OnNearestAxis(permStart, shiftStartMinutes);
+            var end = OnNearestAxis(permEnd, shiftStartMinutes);
             if (end <= start) end += 1440d;
 
             if (!considerOutsideShift)

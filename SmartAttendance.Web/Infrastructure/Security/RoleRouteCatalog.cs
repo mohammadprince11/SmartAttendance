@@ -73,8 +73,7 @@ public static class RoleRouteCatalog
         "/leaverequests",
         "/selfservices",
         "/approvals",
-        "/systemmaintenance",
-        "/employeepermissions"
+        "/systemmaintenance"
     };
 
     public static readonly string[] HrOfficerRoutes =

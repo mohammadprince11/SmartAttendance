@@ -1267,7 +1267,8 @@ WHERE Action=N'Unlock'
             db, runId, "payroll-operator-a");
 
         Assert.False(calculated);
-        Assert.Contains("اعتماد حضور شهري", message);
+        Assert.Contains("حضوراً شهرياً مقفلاً", message);
+        Assert.Contains("إقفال الشهر", message);
         Assert.Equal(0, await RawIntAsync(
             db, $"SELECT COUNT(*) FROM PayrollRunLines WHERE RunId={runId};"));
         Assert.Equal("Draft", await ScalarStringAsync(
@@ -1376,6 +1377,12 @@ ELSE
  INSERT INTO EmployeeMonthAttendance(EmployeeId,[Year],[Month],WorkDays,PresentDays,AbsentDays,Status,ApprovedAt)
  VALUES({_employeeA},2099,2,28,28,0,N'Approved',SYSUTCDATETIME());
 """);
+        var monthAttendanceId = await RawIntAsync(
+            db,
+            $"SELECT TOP(1) Id FROM EmployeeMonthAttendance WHERE EmployeeId={_employeeA} AND [Year]=2099 AND [Month]=2;");
+        Assert.Equal(1, await MonthAttendanceStore.LockAsync(
+            db, scopeA, new[] { monthAttendanceId }));
+
         var calculated = await PayrollRunStore.CalculateAsync(db, runId, "fx-payroll-test");
         Assert.True(calculated.Ok, calculated.Message);
         Assert.Equal(1_300_000m, Convert.ToDecimal(await ScalarObjectAsync(db,

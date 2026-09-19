@@ -48,8 +48,7 @@ public static class PageCatalog
         new("Identity", "إدارة المستخدمين", new[]
         {
             new CatalogPage("Identity.Users", "المستخدمون"),
-            new CatalogPage("Identity.Permissions", "الصلاحيات"),
-            new CatalogPage("Identity.AccessRoles", "أدوار الوصول"),
+            new CatalogPage("Identity.AccessControl", "مركز التحكم بالصلاحيات"),
         }),
         new("People", "أشخاص", new[]
         {
@@ -74,27 +73,18 @@ public static class PageCatalog
             new CatalogPage("People.Contracts", "العقود وحركاتها"),
             new CatalogPage("People.Forms", "النماذج والردود"),
             new CatalogPage("People.Acknowledgments", "الإقرارات وتتبعها"),
-            new CatalogPage("People.Evaluations", "تقييمات الموظفين"),
-            new CatalogPage("People.TemporaryHeads", "الرؤساء المؤقتون"),
             new CatalogPage("People.CompanyDocuments", "وثائق الشركة"),
         }),
         new("HrSettings", "إعدادات الموارد البشرية", new[]
         {
             new CatalogPage("HrSettings.Disciplinary", "إعدادات المخالفات"),
-            new CatalogPage("HrSettings.ProfileFields", "حقول ملف الموظف"),
             new CatalogPage("HrSettings.ApprovalTemplates", "قوالب الموافقات"),
-            new CatalogPage("HrSettings.EntityFields", "حقول الكيانات"),
-            new CatalogPage("HrSettings.EmployeeGroups", "مجموعات الموظفين"),
             new CatalogPage("HrSettings.Lookups", "القوائم المرجعية"),
-            new CatalogPage("HrSettings.ViolationConfiguration", "تهيئة المخالفات"),
-            new CatalogPage("HrSettings.Formulas", "المعادلات"),
-            new CatalogPage("HrSettings.ProbationPeriod", "فترة التجربة"),
             new CatalogPage("HrSettings.NoticePeriod", "فترة الإشعار"),
             new CatalogPage("HrSettings.SelfService", "الخدمة الذاتية"),
             new CatalogPage("HrSettings.TerminationReasons", "أسباب إنهاء الخدمة"),
             new CatalogPage("HrSettings.Notifications", "مركز الإشعارات"),
             new CatalogPage("HrSettings.EmployeeCodeSchema", "ترميز الموظفين"),
-            new CatalogPage("HrSettings.FieldControl", "الحقول الإلزامية"),
         }),
         new("Attendance", "الحضور والانصراف", new[]
         {
@@ -145,7 +135,6 @@ public static class PageCatalog
             new CatalogPage("Payroll.FinancialRequests", "الطلبات المالية"),
             new CatalogPage("Payroll.Loans", "القروض والسلف"),
             new CatalogPage("Payroll.SalaryScale", "سلم الرواتب"),
-            new CatalogPage("Payroll.TerminationSettlement", "تسوية نهاية الخدمة"),
         }),
     };
 

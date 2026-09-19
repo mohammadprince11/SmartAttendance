@@ -46,7 +46,9 @@ public sealed class ApprovalAdministrationSurfaceTests
         Assert.Contains("[Authorize(Roles = \"Admin\")]", model, StringComparison.Ordinal);
         Assert.Contains("[Authorize(Roles = \"Admin\")]", auditModel, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Setup/Index\"", page, StringComparison.Ordinal);
-        Assert.Contains("asp-page=\"/AccessRoles/Index\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"/AccessControl/Index\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("/AccessRoles", page, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/EmployeePermissions", page, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("asp-page=\"/AuditLogs/Index\"", page, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/HrSettings/ApprovalTemplates\"", page, StringComparison.Ordinal);
     }

@@ -36,7 +36,7 @@ public static class EmployeeOperationalHistoryGuard
         // المستندات
         "EmployeeDocuments", "GeneratedDocuments", "DocumentRequests",
         // المخالفات وإنهاء الخدمة
-        "EmployeeViolationCases", "EmployeeEndOfService",
+        "EmployeeViolationCases", "EmployeeEndServices",
     };
 
     /// <summary>اسم أوّل جدولٍ تشغيليٍّ فيه صفٌّ لهذا الموظف، أو <c>null</c> إن كان السجلّ نظيفاً.</summary>
@@ -44,13 +44,24 @@ public static class EmployeeOperationalHistoryGuard
     {
         if (employeeId <= 0) return null;
 
-        var sql = new StringBuilder("DECLARE @hit nvarchar(128) = NULL;\n");
+        // مهم: لا يجوز كتابة SELECT ثابت من جدول قد يفتقد EmployeeId داخل IF فقط.
+        // SQL Server يحل أسماء الأعمدة عند compilation قبل تقييم COL_LENGTH، فيرمي
+        // "Invalid column name 'EmployeeId'" حتى لو الشرط False. لذلك لا نُدخل
+        // اسم الجدول/العمود في statement قابل للـcompile إلا داخل sp_executesql بعد
+        // التحقق من وجود الجدول والعمود.
+        var sql = new StringBuilder(
+            "DECLARE @hit nvarchar(128) = NULL, @found bit = 0;\n");
         foreach (var table in OperationalTables)
         {
             GuardIdentifier(table);
             sql.Append(
                 $"IF @hit IS NULL AND OBJECT_ID('{table}', 'U') IS NOT NULL AND COL_LENGTH('{table}', 'EmployeeId') IS NOT NULL\n" +
-                $"    IF EXISTS (SELECT 1 FROM {table} WHERE EmployeeId = @Id) SET @hit = N'{table}';\n");
+                "BEGIN\n" +
+                "    SET @found = 0;\n" +
+                $"    EXEC sys.sp_executesql N'SELECT @FoundOut = CASE WHEN EXISTS (SELECT 1 FROM [{table}] WHERE EmployeeId = @EmployeeId) THEN 1 ELSE 0 END;',\n" +
+                "        N'@EmployeeId int, @FoundOut bit OUTPUT', @EmployeeId = @Id, @FoundOut = @found OUTPUT;\n" +
+                $"    IF @found = 1 SET @hit = N'{table}';\n" +
+                "END;\n");
         }
         sql.Append("SELECT @hit;");
 

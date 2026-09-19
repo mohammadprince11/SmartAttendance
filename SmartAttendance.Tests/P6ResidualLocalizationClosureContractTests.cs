@@ -28,19 +28,18 @@ public sealed class P6ResidualLocalizationClosureContractTests
     }
 
     [Fact]
-    public void PeopleConfiguration_UsesLocalizedHint_AndInheritsDirection()
+    public void PeopleConfiguration_LegacyPage_RemainsDecommissioned()
     {
-        var source = ReadWeb("Pages", "HrSettings", "PeopleConfiguration.cshtml");
+        var path = Path.Combine(
+            FindRoot(),
+            "SmartAttendance.Web",
+            "Pages",
+            "HrSettings",
+            "PeopleConfiguration.cshtml");
 
-        Assert.Contains(
-            "T[\"— المطابقة تتسامح مع «ال» التعريف والمسافات الزائدة.\"]",
-            source,
-            StringComparison.Ordinal);
-
-        Assert.DoesNotContain(
-            "<section class=\"nxhs-page\" dir=\"rtl\">",
-            source,
-            StringComparison.Ordinal);
+        Assert.False(
+            File.Exists(path),
+            "PeopleConfiguration was intentionally consolidated; do not restore the legacy page.");
     }
 
     [Fact]

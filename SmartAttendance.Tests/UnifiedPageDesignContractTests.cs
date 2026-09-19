@@ -101,7 +101,7 @@ public sealed class UnifiedPageDesignContractTests
     }
 
     [Fact]
-    public void LightTheme_CoversDirectContractConsumersAndTheFullHeightModuleDrawer()
+    public void LightTheme_CoversDirectContractConsumersAndUnifiedSidebar()
     {
         var themeContract = ReadWeb("wwwroot", "css", "zynora-theme-contract.css");
         var navigation = ReadWeb("wwwroot", "css", "zynora-kayan-nav.css");
@@ -117,12 +117,14 @@ public sealed class UnifiedPageDesignContractTests
             Assert.Contains(token, themeContract, StringComparison.Ordinal);
         }
 
-        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group.ky-open > .zynora-nav-group-links",
+        Assert.Contains("Unified Single-Sidebar Navigation", navigation, StringComparison.Ordinal);
+        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group > summary.ky-current",
             navigation, StringComparison.Ordinal);
-        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group-links .ky-back",
+        Assert.Contains("html[data-theme=\"light\"] .ky-acc .ky-acc-body .zynora-nav-link",
             navigation, StringComparison.Ordinal);
-        Assert.Contains("html[data-theme=\"light\"] .zynora-nav-group-links .ky-drawer-title",
-            navigation, StringComparison.Ordinal);
+        Assert.Contains(".ky-back,", navigation, StringComparison.Ordinal);
+        Assert.Contains(".ky-drawer-title", navigation, StringComparison.Ordinal);
+        Assert.Contains("display: none !important", navigation, StringComparison.Ordinal);
     }
 
     [Fact]

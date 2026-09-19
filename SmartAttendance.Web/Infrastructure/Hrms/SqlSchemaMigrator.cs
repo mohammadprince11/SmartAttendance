@@ -2777,6 +2777,154 @@ BEGIN CATCH
 END CATCH;
 """),
 
+        // Company-scoped leave balance policy + durable catalog identity on requests.
+        new(
+            "20260917-02-company-leave-policies",
+            """
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestTypeId') IS NULL
+        ALTER TABLE SelfServiceRequests ADD RequestTypeId int NULL;
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SelfServiceRequests') AND name='IX_SelfServiceRequests_RequestTypeId')
+        CREATE INDEX IX_SelfServiceRequests_RequestTypeId ON SelfServiceRequests(RequestTypeId,EmployeeId,Status,FromDate);
+END;
+
+IF OBJECT_ID('CompanyLeavePolicies','U') IS NULL
+BEGIN
+    CREATE TABLE CompanyLeavePolicies
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyLeavePolicies PRIMARY KEY,
+        CompanyId int NOT NULL,
+        RequestTypeId int NOT NULL,
+        RequiresBalance bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_RequiresBalance DEFAULT(0),
+        EntitlementDays decimal(9,4) NULL,
+        AllowNegative bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_AllowNegative DEFAULT(0),
+        BalanceSourceRequestTypeId int NULL,
+        HoursPerDay decimal(5,2) NOT NULL CONSTRAINT DF_CompanyLeavePolicies_HoursPerDay DEFAULT(8),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_CompanyLeavePolicies_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        UpdatedBy nvarchar(150) NULL
+    );
+    CREATE UNIQUE INDEX UX_CompanyLeavePolicies_CompanyType
+        ON CompanyLeavePolicies(CompanyId,RequestTypeId);
+    CREATE INDEX IX_CompanyLeavePolicies_BalanceSource
+        ON CompanyLeavePolicies(CompanyId,BalanceSourceRequestTypeId);
+END;
+"""),
+
+        // Reconcile stale RequestSource constraints from older databases.
+        // Existing rows are normalized before the canonical constraint is recreated.
+        new(
+            "20260917-03-request-source-constraint-reconcile",
+            """
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NULL
+        ALTER TABLE SelfServiceRequests ADD RequestSource nvarchar(20) NOT NULL
+            CONSTRAINT DF_SelfServiceRequests_RequestSource_Reconcile3 DEFAULT(N'Legacy');
+
+    UPDATE SelfServiceRequests
+    SET RequestSource = N'Legacy'
+    WHERE RequestSource IS NULL
+       OR RequestSource NOT IN (N'SelfService', N'Admin', N'Legacy');
+
+    IF EXISTS (
+        SELECT 1 FROM sys.check_constraints
+        WHERE parent_object_id = OBJECT_ID('SelfServiceRequests')
+          AND name = 'CK_SelfServiceRequests_RequestSource')
+        ALTER TABLE SelfServiceRequests DROP CONSTRAINT CK_SelfServiceRequests_RequestSource;
+
+    ALTER TABLE SelfServiceRequests WITH CHECK ADD CONSTRAINT CK_SelfServiceRequests_RequestSource
+        CHECK (RequestSource IN (N'SelfService', N'Admin', N'Legacy'));
+    ALTER TABLE SelfServiceRequests CHECK CONSTRAINT CK_SelfServiceRequests_RequestSource;
+END;
+"""),
+
+        // Stable request effects + company-specific leave policy engine.
+        new(
+            "20260917-04-company-leave-policy-engine",
+            """
+IF OBJECT_ID('RequestTypes','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('RequestTypes','EffectCode') IS NULL
+        ALTER TABLE RequestTypes ADD EffectCode nvarchar(40) NULL;
+
+    -- SQL Server compiles the batch before the ALTER above executes; use dynamic SQL
+    -- for statements that reference the newly-added EffectCode column.
+    EXEC sp_executesql N'UPDATE RequestTypes SET EffectCode =
+        CASE
+            WHEN Name LIKE N''%سنوي%'' THEN N''LeaveAnnual''
+            WHEN Name LIKE N''%مرض%'' THEN N''LeaveSick''
+            WHEN (Name LIKE N''%إجازة%'' OR Name LIKE N''%اجازة%'') AND PaidMode=N''unpaid'' THEN N''LeaveUnpaid''
+            WHEN Name LIKE N''%إجازة%'' OR Name LIKE N''%اجازة%'' THEN N''LeaveOther''
+            WHEN Name LIKE N''%مغادرة%'' OR Name LIKE N''%خروج%'' THEN N''ExitPermission''
+            WHEN Name LIKE N''%مهمة عمل%'' OR Name LIKE N''%رحلة عمل%'' THEN N''BusinessTrip''
+            WHEN Name LIKE N''%المنزل%'' OR Name LIKE N''%عن بعد%'' OR Name LIKE N''%عن بُعد%'' THEN N''WorkFromHome''
+            WHEN Name LIKE N''%إضافي%'' OR NameEn LIKE N''%Overtime%'' THEN N''Overtime''
+            WHEN Name LIKE N''%مناوبة%'' OR NameEn LIKE N''%Shift%'' THEN N''ShiftChange''
+            ELSE EffectCode
+        END
+    WHERE EffectCode IS NULL OR LTRIM(RTRIM(EffectCode))=N'''';';
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('RequestTypes') AND name='CK_RequestTypes_EffectCode')
+        ALTER TABLE RequestTypes DROP CONSTRAINT CK_RequestTypes_EffectCode;
+    EXEC sp_executesql N'ALTER TABLE RequestTypes WITH CHECK ADD CONSTRAINT CK_RequestTypes_EffectCode CHECK
+    (EffectCode IS NULL OR EffectCode IN
+        (N''LeaveAnnual'',N''LeaveSick'',N''LeaveUnpaid'',N''LeaveOther'',N''ExitPermission'',N''BusinessTrip'',N''WorkFromHome'',N''Overtime'',N''ShiftChange''));';
+END;
+
+IF OBJECT_ID('CompanyLeavePolicies','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('CompanyLeavePolicies','EntitlementDays') IS NOT NULL
+       AND COL_LENGTH('CompanyLeavePolicies','EntitlementAmount') IS NULL
+        EXEC sys.sp_rename N'dbo.CompanyLeavePolicies.EntitlementDays', N'EntitlementAmount', N'COLUMN';
+
+    IF COL_LENGTH('CompanyLeavePolicies','HoursPerDay') IS NOT NULL
+       AND COL_LENGTH('CompanyLeavePolicies','HoursPerDayOverride') IS NULL
+        EXEC sys.sp_rename N'dbo.CompanyLeavePolicies.HoursPerDay', N'HoursPerDayOverride', N'COLUMN';
+
+    IF COL_LENGTH('CompanyLeavePolicies','BalanceUnit') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD BalanceUnit nvarchar(10) NOT NULL CONSTRAINT DF_CompanyLeavePolicies_BalanceUnit DEFAULT(N'Days');
+    IF COL_LENGTH('CompanyLeavePolicies','NegativeLimitAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD NegativeLimitAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','MaxPerRequestAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD MaxPerRequestAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','MaxPerYearAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD MaxPerYearAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','MinimumNoticeDays') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD MinimumNoticeDays int NOT NULL CONSTRAINT DF_CompanyLeavePolicies_MinNotice DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','EligibilityDays') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD EligibilityDays int NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Eligibility DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','CarryForwardEnabled') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD CarryForwardEnabled bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_CarryForward DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','CarryForwardMaxAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD CarryForwardMaxAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','CarryForwardExpiryMonths') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD CarryForwardExpiryMonths int NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','AccrualMethod') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD AccrualMethod nvarchar(20) NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Accrual DEFAULT(N'FullUpfront');
+    IF COL_LENGTH('CompanyLeavePolicies','ProrateOnHire') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD ProrateOnHire bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_ProrateHire DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','AllowRetroactive') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD AllowRetroactive bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Retro DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','ReasonRequired') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD ReasonRequired bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Reason DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','AttachmentRequiredOverride') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD AttachmentRequiredOverride bit NULL;
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('CompanyLeavePolicies') AND name='CK_CompanyLeavePolicies_BalanceUnit')
+        ALTER TABLE CompanyLeavePolicies DROP CONSTRAINT CK_CompanyLeavePolicies_BalanceUnit;
+    EXEC sp_executesql N'ALTER TABLE CompanyLeavePolicies WITH CHECK ADD CONSTRAINT CK_CompanyLeavePolicies_BalanceUnit
+        CHECK(BalanceUnit IN(N''Days'',N''Hours''));';
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('CompanyLeavePolicies') AND name='CK_CompanyLeavePolicies_AccrualMethod')
+        ALTER TABLE CompanyLeavePolicies DROP CONSTRAINT CK_CompanyLeavePolicies_AccrualMethod;
+    EXEC sp_executesql N'ALTER TABLE CompanyLeavePolicies WITH CHECK ADD CONSTRAINT CK_CompanyLeavePolicies_AccrualMethod
+        CHECK(AccrualMethod IN(N''FullUpfront'',N''Monthly'',N''Daily''));';
+END;
+"""),
+
         // People AI production closure: move the existing idempotent schema
         // bootstrap under the controlled migration ledger. The SQL remains
         // additive/upgrade-safe and is now auditable in __SchemaMigrations.

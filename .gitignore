@@ -118,3 +118,6 @@ VisibilityFix-*/
 .language-lab-run/
 _design-backups/
 
+
+# Local Serena workspace state
+.serena/

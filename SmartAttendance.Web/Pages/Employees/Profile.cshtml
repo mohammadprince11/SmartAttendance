@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
 @using SmartAttendance.Domain.Enums
 @using System.Globalization
@@ -156,54 +156,9 @@
         .Where(item => item.Key != "basic" && item.Key != "personal" && item.Key != "job" && item.Key != "financial")
         .ToList();
 
-    var documentHasId = Model.DocumentRows.Any(d =>
-        string.Equals(d.DocumentType, "ID", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("هوية", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("بطاقة", StringComparison.OrdinalIgnoreCase));
-
-    var documentHasContract = Model.DocumentRows.Any(d =>
-        string.Equals(d.DocumentType, "Contract", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("Contract", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("عقد", StringComparison.OrdinalIgnoreCase));
-
-    var documentHasPassport = Model.DocumentRows.Any(d =>
-        string.Equals(d.DocumentType, "Passport", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("Passport", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("جواز", StringComparison.OrdinalIgnoreCase));
-
-    var documentHasVisa = Model.DocumentRows.Any(d =>
-        string.Equals(d.DocumentType, "Visa", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("Visa", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("إقامة", StringComparison.OrdinalIgnoreCase) ||
-        (d.DocumentType ?? string.Empty).Contains("اقامة", StringComparison.OrdinalIgnoreCase));
-
-    var employeeGeo = employee == null
-        ? string.Empty
-        : $"{employee.Nationality} {employee.Country}".ToLowerInvariant();
-
-    var isExpat =
-        !string.IsNullOrWhiteSpace(employeeGeo) &&
-        !(employeeGeo.Contains("iraq") ||
-          employeeGeo.Contains("iraqi") ||
-          employeeGeo.Contains("العراق") ||
-          employeeGeo.Contains("عراقي") ||
-          employeeGeo.Contains("عراقية"));
-
-    var contractNeedsReview =
-        employee != null &&
-        employee.ContractEndDate.HasValue &&
-        employee.ContractEndDate.Value <= today.AddDays(30);
-
-    var hasRequirements =
-        Model.PayrollRiskItems > 0 ||
-        Model.AttendanceExceptionsCount > 0 ||
-        Model.PendingRequests > 0 ||
-        Model.ExpiredDocumentsCount > 0 ||
-        Model.ExpiringDocumentsCount > 0 ||
-        !documentHasId ||
-        !documentHasContract ||
-        (isExpat && (!documentHasPassport || !documentHasVisa)) ||
-        contractNeedsReview;
+    var contractForReview = Model.Contracts
+        .FirstOrDefault(contract => contract.IsCurrent)
+        ?? Model.Contracts.OrderByDescending(contract => contract.FromDate).FirstOrDefault();
 
     var profileFileCards = new[]
     {
@@ -342,14 +297,6 @@
                     @* حُذف زرّ «إضافة مستند» من هنا: مكرَّر بفرعيه معاً — فرعُ المركز
                        يذهب إلى وجهة زرّ «فتح المركز» نفسها بقسم «المستندات» أدناه،
                        وفرعُ المرساة `#profile-files` يكرّر تبويب «ملفات الموظف». *@
-
-                    <a asp-page="./EFilePrint"
-                       asp-route-id="@employee.Id"
-                       target="_blank"
-                       class="z360-action"
-                       title="إصدار الملف الإلكتروني كاملاً بصفحة طباعة واحدة (حفظ PDF)">
-                        إصدار الملف PDF
-                    </a>
 
                     @if (employee.IsActive && Model.CanEndService)
                     {
@@ -545,7 +492,7 @@
 
             <section class="z360-summary-grid" aria-label="ملخص بيانات الموظف">
                 <article class="z360-card">
-                    <div class="z360-card-head">
+                    <div class="z360-summary-title-row">
                         <h3>المعلومات الشخصية</h3>
                         @if (Model.CanEditEmployee)
                         {
@@ -600,7 +547,7 @@
                 </article>
 
                 <article class="z360-card">
-                    <div class="z360-card-head">
+                    <div class="z360-summary-title-row">
                         <h3>المعلومات الوظيفية</h3>
                         @if (Model.CanViewLifecycle)
                         {
@@ -645,50 +592,10 @@
                     </div>
                 </article>
 
-                <article class="z360-card">
-                    <div class="z360-card-head">
-                        <h3>تنبيهات ومخالفات</h3>
-                        <span class="z360-card-tool" aria-hidden="true">!</span>
-                    </div>
-                    <div class="z360-fields">
-                        <div class="z360-field">
-                            <span>الغيابات والتأخير</span>
-                            <strong class="@(Model.AttendanceExceptionsCount > 0 ? "z360-value-danger" : "")">
-                                @Model.AttendanceExceptionsCount
-                            </strong>
-                        </div>
-                        <div class="z360-field">
-                            <span>بصمات ناقصة</span>
-                            <strong class="@(Model.MissingCheckoutCount > 0 ? "z360-value-warning" : "")">
-                                @Model.MissingCheckoutCount
-                            </strong>
-                        </div>
-                        <div class="z360-field">
-                            <span>طلبات معلقة</span>
-                            <strong class="@(Model.PendingRequests > 0 ? "z360-value-warning" : "")">
-                                @Model.PendingRequests
-                            </strong>
-                        </div>
-                        <div class="z360-field">
-                            <span>مستندات منتهية</span>
-                            <strong class="@(Model.ExpiredDocumentsCount > 0 ? "z360-value-danger" : "")">
-                                @Model.ExpiredDocumentsCount
-                            </strong>
-                        </div>
-                        <div class="z360-field">
-                            <span>مستندات قرب الانتهاء</span>
-                            <strong class="@(Model.ExpiringDocumentsCount > 0 ? "z360-value-warning" : "")">
-                                @Model.ExpiringDocumentsCount
-                            </strong>
-                        </div>
-                        <div class="z360-field">
-                            <span>حالة الملف</span>
-                            <strong class="@(hasRequirements ? "z360-value-warning" : "z360-value-success")">
-                                @(hasRequirements ? "يحتاج متابعة" : "مكتمل حالياً")
-                            </strong>
-                        </div>
-                    </div>
-                </article>
+                @* Empty placeholder keeps the four-column summary grid balanced.
+                   Actionable employee requirements are rendered once in the dedicated
+                   "متطلبات الموظف" section below. *@
+                <article class="z360-card z360-summary-placeholder" aria-hidden="true"></article>
 
                 @{
                     var fin = Model.FinancialInfo;
@@ -706,7 +613,7 @@
                 @if (Model.CanViewSalary)
                 {
                 <article class="z360-card">
-                    <div class="z360-card-head">
+                    <div class="z360-summary-title-row">
                         <h3>المعلومات المالية</h3>
                         <a class="z360-card-tool" asp-page="./FinancialInfo" asp-route-id="@Model.Id" title="تعديل المعلومات المالية">✎</a>
                     </div>
@@ -757,87 +664,73 @@
                 </section>
             }
 
-            @if (hasRequirements)
+            @* متطلبات الموظف مخفية مؤقتاً بطلب المستخدم — أزل false && لإظهارها مجدداً. *@
+            @if (false && Model.EmployeeRequirements.Any())
             {
-                <section class="z360-requirements">
+                <section class="z360-requirements" aria-label="مركز إجراءات متطلبات الموظف">
                     <div class="z360-section-head">
                         <div>
                             <h3>متطلبات الموظف</h3>
-                            <p>الملاحظات التي تحتاج متابعة قبل اعتماد الملف أو إغلاق الراتب.</p>
+                            <p>كل متطلب مرتبط بإجراء مباشر ويختفي تلقائياً بعد معالجة السبب.</p>
                         </div>
-                        <span class="z360-status-pill">توجد متطلبات تحتاج متابعة</span>
+                        <span class="z360-status-pill">
+                            @Model.EmployeeRequirements.Count متطلبات · @Model.EmployeeRequirementAffectedItems حالة
+                        </span>
                     </div>
 
                     <div class="z360-requirement-grid">
-                        @if (!documentHasId)
+                        @foreach (var requirement in Model.EmployeeRequirements)
                         {
-                            <div class="z360-requirement z360-requirement-danger">
-                                <strong>هوية / بطاقة وطنية مفقودة</strong>
-                                <span>هذا المستند مطلوب لكل موظف.</span>
-                            </div>
-                        }
-                        @if (!documentHasContract)
-                        {
-                            <div class="z360-requirement z360-requirement-danger">
-                                <strong>عقد العمل مفقود</strong>
-                                <span>العقد مطلوب لاكتمال ملف الموظف.</span>
-                            </div>
-                        }
-                        @if (isExpat && !documentHasPassport)
-                        {
-                            <div class="z360-requirement z360-requirement-danger">
-                                <strong>جواز السفر مفقود</strong>
-                                <span>مطلوب للموظفين الوافدين.</span>
-                            </div>
-                        }
-                        @if (isExpat && !documentHasVisa)
-                        {
-                            <div class="z360-requirement z360-requirement-danger">
-                                <strong>الإقامة / الفيزا مفقودة</strong>
-                                <span>مطلوبة للموظفين الوافدين.</span>
-                            </div>
-                        }
-                        @if (Model.PayrollRiskItems > 0)
-                        {
-                            <div class="z360-requirement">
-                                <strong>جاهزية الراتب</strong>
-                                <span>يوجد @Model.PayrollRiskItems ملاحظة تحتاج مراجعة.</span>
-                            </div>
-                        }
-                        @if (Model.AttendanceExceptionsCount > 0)
-                        {
-                            <div class="z360-requirement">
-                                <strong>استثناءات الحضور</strong>
-                                <span>يوجد @Model.AttendanceExceptionsCount حالة تحتاج تدقيق.</span>
-                            </div>
-                        }
-                        @if (Model.PendingRequests > 0)
-                        {
-                            <div class="z360-requirement">
-                                <strong>طلبات معلقة</strong>
-                                <span>يوجد @Model.PendingRequests طلب بانتظار الإجراء.</span>
-                            </div>
-                        }
-                        @if (Model.ExpiredDocumentsCount > 0)
-                        {
-                            <div class="z360-requirement z360-requirement-danger">
-                                <strong>مستندات منتهية</strong>
-                                <span>يوجد @Model.ExpiredDocumentsCount مستند منتهي.</span>
-                            </div>
-                        }
-                        @if (Model.ExpiringDocumentsCount > 0)
-                        {
-                            <div class="z360-requirement">
-                                <strong>مستندات قرب الانتهاء</strong>
-                                <span>يوجد @Model.ExpiringDocumentsCount مستند يحتاج متابعة.</span>
-                            </div>
-                        }
-                        @if (contractNeedsReview)
-                        {
-                            <div class="z360-requirement">
-                                <strong>العقد يحتاج متابعة</strong>
-                                <span>نهاية العقد: @Model.DisplayDate(employee.ContractEndDate)</span>
-                            </div>
+                            var actionHref = $"#{requirement.Target}";
+                            string? actionOnClick = null;
+
+                            if (requirement.ActionKind == "document-upload")
+                            {
+                                actionHref = (Url.Page("/EmployeeDocuments/Index", new
+                                {
+                                    employeeId = employee.Id,
+                                    documentType = requirement.DocumentType
+                                }) ?? $"#{requirement.Target}") + "#upload";
+                            }
+                            else if (requirement.ActionKind == "documents-center")
+                            {
+                                actionHref = Url.Page("/EmployeeDocuments/Index", new { employeeId = employee.Id })
+                                    ?? $"#{requirement.Target}";
+                            }
+                            else if (requirement.ActionKind == "contract-add")
+                            {
+                                actionHref = "#profile-files";
+                                actionOnClick = "contractOpen(0); return false;";
+                            }
+                            else if (requirement.ActionKind == "contract-review" && contractForReview != null)
+                            {
+                                actionHref = "#profile-files";
+                                actionOnClick =
+                                    $"contractOpen({contractForReview.Id},'{ScriptSafe.Js(contractForReview.ContractNo)}','{ScriptSafe.Js(contractForReview.ContractType)}','{contractForReview.FromDate:yyyy-MM-dd}','{contractForReview.ToDate?.ToString("yyyy-MM-dd") ?? ""}',{(contractForReview.IsCurrent ? "true" : "false")},'{ScriptSafe.Js(contractForReview.Note)}'); return false;";
+                            }
+
+                            <a class="z360-requirement z360-requirement-@requirement.Severity z360-requirement-clickable"
+                               href="@actionHref"
+                               onclick="@actionOnClick"
+                               aria-label="@($"{requirement.Title} — {requirement.ActionLabel}")">
+                                <div class="z360-requirement-meta">
+                                    <span class="z360-requirement-severity">@requirement.SeverityLabel</span>
+                                    @if (requirement.Count > 1)
+                                    {
+                                        <span class="z360-requirement-count">@requirement.Count</span>
+                                    }
+                                </div>
+
+                                <div class="z360-requirement-copy">
+                                    <strong>@requirement.Title</strong>
+                                    <span>@requirement.Description</span>
+                                </div>
+
+                                <span class="z360-requirement-hint" aria-hidden="true">
+                                    @requirement.ActionLabel
+                                    <span>←</span>
+                                </span>
+                            </a>
                         }
                     </div>
                 </section>
@@ -875,7 +768,7 @@
                             </div>
                         </div>
 
-                        <form method="get" class="z360-filter">
+                        <form method="get" class="z360-filter z360-attendance-filter">
                             <input type="hidden" name="Id" value="@employee.Id" />
                             <label>
                                 <span>من تاريخ</span>
@@ -894,6 +787,18 @@
                                asp-route-id="@employee.Id"
                                class="z360-action">الفترة الحالية</a>
                         </form>
+
+                        <div class="z360-cutoff-note @(Model.HasAttendanceCutoffPolicy ? "is-policy" : "is-fallback")">
+                            @if (Model.HasAttendanceCutoffPolicy)
+                            {
+                                <span>سياسة إقفال الحضور: <strong>@Model.AttendanceCutoffPolicyName</strong></span>
+                                <span>@Model.AttendancePolicyFrom.ToString("yyyy-MM-dd") → @Model.AttendancePolicyTo.ToString("yyyy-MM-dd")</span>
+                            }
+                            else
+                            {
+                                <span>لا توجد سياسة إقفال حضور فعّالة لهذه الشركة — يُستخدم الشهر التقويمي.</span>
+                            }
+                        </div>
 
                         <div class="z360-mini-kpis">
                             <div class="z360-mini-kpi"><span>السجلات</span><strong>@Model.AttendanceCount</strong></div>
@@ -1587,6 +1492,30 @@
                                     </div>
                                 }
                             </div>
+                            @if (Model.TimelineTotalPages > 1)
+                            {
+                                var firstTimelinePage = Math.Max(1, Model.TimelinePage - 2);
+                                var lastTimelinePage = Math.Min(Model.TimelineTotalPages, Model.TimelinePage + 2);
+                                var timelineFrom = ((Model.TimelinePage - 1) * Model.ActivityPageSize) + 1;
+                                var timelineTo = Math.Min(Model.TimelinePage * Model.ActivityPageSize, Model.TimelineTotalCount);
+                                <div class="z360-pagination">
+                                    <span class="z360-pagination-info">@timelineFrom–@timelineTo من @Model.TimelineTotalCount</span>
+                                    <div class="z360-pagination-pages">
+                                        @if (Model.TimelinePage > 1)
+                                        {
+                                            <a class="z360-page-link" href="@(Url.Page("./Profile", new { id = employee.Id, TimelinePage = Model.TimelinePage - 1, AuditPage = Model.AuditPage, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd") }) + "#timeline")">السابق</a>
+                                        }
+                                        @for (var pageNumber = firstTimelinePage; pageNumber <= lastTimelinePage; pageNumber++)
+                                        {
+                                            <a class="z360-page-link @(pageNumber == Model.TimelinePage ? "is-active" : "")" href="@(Url.Page("./Profile", new { id = employee.Id, TimelinePage = pageNumber, AuditPage = Model.AuditPage, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd") }) + "#timeline")">@pageNumber</a>
+                                        }
+                                        @if (Model.TimelinePage < Model.TimelineTotalPages)
+                                        {
+                                            <a class="z360-page-link" href="@(Url.Page("./Profile", new { id = employee.Id, TimelinePage = Model.TimelinePage + 1, AuditPage = Model.AuditPage, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd") }) + "#timeline")">التالي</a>
+                                        }
+                                    </div>
+                                </div>
+                            }
                         }
                     </article>
 
@@ -1603,7 +1532,7 @@
                             @if (Model.AuditRows.Any())
                             {
                                 <div class="z360-list">
-                                    @foreach (var row in Model.AuditRows.Take(8))
+                                    @foreach (var row in Model.AuditRows)
                                     {
                                         <div class="z360-list-row">
                                             <div class="z360-list-main">
@@ -1614,6 +1543,30 @@
                                         </div>
                                     }
                                 </div>
+                                @if (Model.AuditTotalPages > 1)
+                                {
+                                    var firstAuditPage = Math.Max(1, Model.AuditPage - 2);
+                                    var lastAuditPage = Math.Min(Model.AuditTotalPages, Model.AuditPage + 2);
+                                    var auditFrom = ((Model.AuditPage - 1) * Model.ActivityPageSize) + 1;
+                                    var auditTo = Math.Min(Model.AuditPage * Model.ActivityPageSize, Model.AuditTotalCount);
+                                    <div class="z360-pagination">
+                                        <span class="z360-pagination-info">@auditFrom–@auditTo من @Model.AuditTotalCount</span>
+                                        <div class="z360-pagination-pages">
+                                            @if (Model.AuditPage > 1)
+                                            {
+                                                <a class="z360-page-link" href="@(Url.Page("./Profile", new { id = employee.Id, TimelinePage = Model.TimelinePage, AuditPage = Model.AuditPage - 1, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd") }) + "#audit")">السابق</a>
+                                            }
+                                            @for (var pageNumber = firstAuditPage; pageNumber <= lastAuditPage; pageNumber++)
+                                            {
+                                                <a class="z360-page-link @(pageNumber == Model.AuditPage ? "is-active" : "")" href="@(Url.Page("./Profile", new { id = employee.Id, TimelinePage = Model.TimelinePage, AuditPage = pageNumber, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd") }) + "#audit")">@pageNumber</a>
+                                            }
+                                            @if (Model.AuditPage < Model.AuditTotalPages)
+                                            {
+                                                <a class="z360-page-link" href="@(Url.Page("./Profile", new { id = employee.Id, TimelinePage = Model.TimelinePage, AuditPage = Model.AuditPage + 1, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd") }) + "#audit")">التالي</a>
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             }
                             else
                             {

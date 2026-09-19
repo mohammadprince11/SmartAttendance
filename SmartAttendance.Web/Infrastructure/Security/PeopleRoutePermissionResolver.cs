@@ -45,20 +45,6 @@ public static class PeopleRoutePermissionResolver
             return Employee(PeoplePermissionCodes.Edit);
         }
 
-        if (normalizedPath.StartsWith("/payroll/terminationsettlement", StringComparison.Ordinal))
-        {
-            // GET بلا موظف يفتح شاشة الاختيار فقط ولا يقرأ بيانات شخص. فرض نطاق
-            // Employee هنا يجعل المحلّل يفشل لعدم وجود هدف، فيُحجب حتى Admin.
-            // عند اختيار موظف أو الإرسال يبقى الحارس الصفّي إلزامياً.
-            if (HttpMethods.IsGet(context.Request.Method) &&
-                (!int.TryParse(context.Request.Query["EmployeeId"], out var targetEmployeeId) ||
-                 targetEmployeeId <= 0))
-            {
-                return null;
-            }
-
-            return Employee(PeoplePermissionCodes.EndService);
-        }
 
         if (normalizedPath.StartsWith("/employees" ) is false &&
             normalizedPath.StartsWith("/employeedocuments", StringComparison.Ordinal))
@@ -166,11 +152,6 @@ public static class PeopleRoutePermissionResolver
             }
 
             return Employee(PeoplePermissionCodes.ViewProfile);
-        }
-
-        if (normalizedPath.StartsWith("/employeepermissions", StringComparison.Ordinal))
-        {
-            return Global(PeoplePermissionCodes.ManagePermissions);
         }
 
 

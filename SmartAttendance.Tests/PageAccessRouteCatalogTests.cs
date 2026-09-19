@@ -23,6 +23,7 @@ public sealed class PageAccessRouteCatalogTests
     [InlineData("/Settings", "Setup.Overview")]
     [InlineData("/AuditLogs", "Setup.AuditLogs")]
     [InlineData("/Branding/Index", "Setup.Branding")]
+    [InlineData("/AccessControl", "Identity.AccessControl")]
     public void LiveRoutes_MapToStablePageCodes(string path, string expected) =>
         Assert.Equal(expected, PageAccessRouteCatalog.ResolvePageCode(path));
 
@@ -58,7 +59,7 @@ public sealed class PageAccessRouteCatalogTests
         var codes = new[]
         {
             "People.LeaveRequests", "People.Approvals", "Attendance.MissingPunch",
-            "Payroll.Transactions", "Payroll.Reports", "Identity.AccessRoles"
+            "Payroll.Transactions", "Payroll.Reports", "Identity.Users", "Identity.AccessControl"
         };
         Assert.All(codes, code => Assert.True(PageCatalog.IsValidPage(code), code));
     }

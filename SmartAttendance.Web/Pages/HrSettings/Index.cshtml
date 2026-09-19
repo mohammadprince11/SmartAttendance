@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.HrSettings.IndexModel
 
 @{
@@ -16,11 +16,6 @@
     </header>
 
     <section class="nxhs-cards">
-        <a asp-page="./ProbationPeriod" class="nxhs-card">
-            <strong>فترة التجربة</strong>
-            <small>إعداد مدة التجربة، بداية الاحتساب، والاستثناءات.</small>
-        </a>
-
         <a asp-page="./NoticePeriod" class="nxhs-card">
             <strong>فترة الإنذار</strong>
             <small>إعداد مدة الإنذار وإجراءات المغادرة قبل نهاية الإنذار.</small>
@@ -46,19 +41,9 @@
             <small>الديانات، أنواع الدوام، الدرجات، الكفلاء، وبقية التصنيفات.</small>
         </a>
 
-        <a asp-page="./PeopleConfiguration" class="nxhs-card">
-            <strong>تهيئة الأشخاص</strong>
-            <small>قواعد الاشتقاق التلقائي: وسم الموظف مواطناً حسب جنسيته.</small>
-        </a>
-
         <a href="/HrSettings/EmployeeCodeSchema" class="nxhs-card">
             <strong>مخطط رمز الموظف</strong>
             <small>التوليد التلقائي لرمز الموظف: البادئة وعدد الأرقام والتسلسل.</small>
-        </a>
-
-        <a href="/HrSettings/FieldControl" class="nxhs-card">
-            <strong>استوديو الحقول</strong>
-            <small>إظهار/إخفاء حقول شاشة الموظف، تسمياتها، ترتيبها، وإلزاميتها.</small>
         </a>
 
         <a href="/HrSettings/ApprovalTemplates" class="nxhs-card">
@@ -68,13 +53,19 @@
 
         <a href="/HrSettings/RequestTypes" class="nxhs-card">
             <strong>مركز أنواع الطلبات</strong>
-            <small>تبويبات وأنواع طلبات داينمك بضوابطها (أيام، مالي، رصيد، مرفق، وقت) — تظهر في تطبيق الموظف.</small>
+            <small>الكتالوج العام للطلبات وأثرها التنفيذي والأهلية والمرفقات.</small>
         </a>
 
-        <a href="/HrSettings/EntityFields" class="nxhs-card">
-            <strong>حقول الكيانات</strong>
-            <small>حقول مخصصة لكيانات ملف الموظف: العائلة، العقود، العهد، وبقية البطاقات.</small>
+        <a href="/HrSettings/LeavePolicies" class="nxhs-card">
+            <strong>سياسات الإجازات والأرصدة</strong>
+            <small>رصيد كل شركة، مصدر الخصم، الساعات، الاستحقاق، الترحيل، والتجاوز.</small>
         </a>
+
+        <a href="/HrSettings/PeopleAI" class="nxhs-card">
+            <strong>People AI</strong>
+            <small>إعدادات Smart Onboarding، كشف التكرار، المراجعة، وسياسات المستندات لكل شركة.</small>
+        </a>
+
     </section>
 </section>
 

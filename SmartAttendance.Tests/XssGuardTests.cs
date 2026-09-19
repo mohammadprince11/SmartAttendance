@@ -69,16 +69,6 @@ public sealed class XssGuardTests
     }
 
     [Fact]
-    public void AccessRoles_UsesScriptSafe_NotPartialQuoteEscape()
-    {
-        var page = Web("Pages", "AccessRoles", "Index.cshtml");
-        Assert.Contains("ScriptSafe.Js(role.NameAr)", page);
-        Assert.Contains("ScriptSafe.Js(role.Note)", page);
-        // النمط الهشّ القديم اختفى من مقبض التعديل.
-        Assert.DoesNotContain("role.NameAr.Replace(\"'\", \"\\\\'\")", page);
-    }
-
-    [Fact]
     public void EmployeeProfile_UsesScriptSafe_ForAllowanceAndContract()
     {
         var page = Web("Pages", "Employees", "Profile.cshtml");

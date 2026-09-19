@@ -570,7 +570,7 @@ SELECT SequenceNo FROM @allocated;
 
         // بوابة مصدر الحقيقة: لا أثر حضور في الراتب من شهر ما زال قيد المراجعة.
         // نبني الملخص أولاً (فقط صفوف UnderReview تتحدث)، ثم نتحقق من أن كل موظف
-        // داخل نطاق الدفعة له اعتماد شهري Approved/Locked. يجب أن يسبق هذا أي أثر
+        // داخل نطاق الدفعة له حضور شهري Locked نهائي للرواتب. يجب أن يسبق هذا أي أثر
         // مالي مثل ترحيل قسط قرض، كي يكون فشل البوابة بلا كتابة جزئية.
         await MonthAttendanceStore.BuildMonthAsync(
             dbContext, loanScope, run.Year, run.Month);

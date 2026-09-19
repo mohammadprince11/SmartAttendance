@@ -15,14 +15,17 @@ namespace SmartAttendance.Tests;
 /// </summary>
 public class ApiTokenHotPathTests
 {
-    private static string RepoFile(params string[] parts)
+    private static string RepoPath(params string[] parts)
     {
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
             dir = dir.Parent;
         Assert.NotNull(dir);
-        return File.ReadAllText(Path.Combine(dir!.FullName, Path.Combine(parts)));
+        return Path.Combine(dir!.FullName, Path.Combine(parts));
     }
+
+    private static string RepoFile(params string[] parts) =>
+        File.ReadAllText(RepoPath(parts));
 
     /// <summary>🔴 الانحدار: جسم ValidateAsync يجب ألّا يستدعي EnsureAsync (لا DDL بالمسار الساخن).</summary>
     [Fact]
@@ -158,13 +161,16 @@ public class ApiTokenHotPathTests
     }
 
     [Fact]
-    public void EmployeeGroups_GlobalTable_RequiresUnrestrictedCompanyScope()
+    public void EmployeeGroups_LegacyPage_RemainsDecommissioned()
     {
-        var page = RepoFile(
-            "SmartAttendance.Web", "Pages", "HrSettings", "EmployeeGroups.cshtml.cs");
+        var page = RepoPath(
+            "SmartAttendance.Web",
+            "Pages",
+            "HrSettings",
+            "EmployeeGroups.cshtml.cs");
 
-        Assert.Contains("ICompanyScopeProvider", page);
-        Assert.Contains(".IsUnrestricted", page);
-        Assert.Contains("if (!await IsGlobalAdministratorAsync()) return Forbid();", page);
+        Assert.False(
+            File.Exists(page),
+            "EmployeeGroups is retained as schema data only; the legacy settings page must stay removed.");
     }
 }

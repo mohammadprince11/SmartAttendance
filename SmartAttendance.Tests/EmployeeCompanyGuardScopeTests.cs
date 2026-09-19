@@ -46,7 +46,6 @@ public class EmployeeCompanyGuardScopeTests
     /// </summary>
     [Theory]
     [InlineData("LeaveBalances/Adjust.cshtml.cs")]
-    [InlineData("Payroll/TerminationSettlement.cshtml.cs")]
     [InlineData("Documents/View.cshtml.cs")]
     public void GuardedPages_CallTheOwnershipGuard(string page) =>
         Assert.Contains("EmployeeCompanyGuard.CanAccessEmployeeAsync", ReadPage(page));
@@ -124,7 +123,6 @@ public class EmployeeCompanyGuardScopeTests
     /// </summary>
     [Theory]
     [InlineData("/leavebalances/adjust")]
-    [InlineData("/payroll/terminationsettlement")]
     [InlineData("/employeedocuments")]
     public void EmployeeTargetingRoutes_AreRegisteredCentrally(string route) =>
         Assert.Contains(route, ReadSecurity("PeopleRoutePermissionResolver.cs"));

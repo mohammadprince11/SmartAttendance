@@ -215,8 +215,14 @@ public class PayrollCompanyIsolationTests
         var start = source.IndexOf("LockForRunAsync", StringComparison.Ordinal);
         Assert.True(start > 0, "LockForRunAsync غير موجود — حُذف أو أُعيدت تسميته.");
 
-        // جسم الدالة حتى القوس المغلق التالي تقريباً.
-        var body = source[start..Math.Min(source.Length, start + 1400)];
+        // افحص جسم الدالة كاملاً حتى بداية UnlockForRunAsync؛ نموّ تجهيز
+        // الفترات قبل SQL لا يجوز أن يجعل الحارس النصّي يفشل كذباً.
+        var end = source.IndexOf(
+            "public static async Task UnlockForRunAsync",
+            start,
+            StringComparison.Ordinal);
+        Assert.True(end > start, "تعذّر تحديد نهاية LockForRunAsync.");
+        var body = source[start..end];
 
         Assert.Contains("INNER JOIN Employees", body);
         Assert.Contains("PayrollRuns r", body);

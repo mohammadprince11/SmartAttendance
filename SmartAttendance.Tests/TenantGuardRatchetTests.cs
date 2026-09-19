@@ -46,7 +46,7 @@ public sealed class TenantGuardRatchetTests
     /// </summary>
     private static readonly string[] RouteGuardedPrefixes =
     {
-        "Employees/", "EmployeePermissions/", "EmployeePortal/", "MyProfile/"
+        "Employees/", "EmployeePortal/", "MyProfile/"
     };
 
     /// <summary>

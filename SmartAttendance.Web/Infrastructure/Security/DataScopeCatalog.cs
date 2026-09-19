@@ -13,10 +13,10 @@ public static class DataScopeCatalog
 
     public sealed record DataEntity(string Code, string Label);
 
-    /// <summary>Scope breadth, widest first. "None" means the role grants no access to that entity.</summary>
+    /// <summary>Scope breadth, widest first. "None" means this role imposes no row-level restriction for that entity.</summary>
     public static readonly IReadOnlyList<ScopeLevel> ScopeLevels = new List<ScopeLevel>
     {
-        new("None", "لا يشمل"),
+        new("None", "بدون قيد من هذا الدور"),
         new("All", "كل السجلات"),
         new("OwnCompany", "شركة المستخدم"),
         new("OwnBranch", "فرع المستخدم"),

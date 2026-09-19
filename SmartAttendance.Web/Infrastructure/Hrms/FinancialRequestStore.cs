@@ -143,7 +143,7 @@ ORDER BY e.FullName;
         detail.Kind = kind.Key;
         if (detail.InstallmentCount < 1) detail.InstallmentCount = 1;
 
-        requestSource = requestSource is "Admin" or "SelfService" ? requestSource : "Legacy";
+        requestSource = RequestSourceCatalog.Normalize(requestSource);
         var requestId = await HrmsDatabase.ScalarAsync<int>(db, """
 INSERT INTO SelfServiceRequests
 (EmployeeId, RequestType, RequestDate, Reason, Status, CurrentStep, CreatedBy, RequestSource)

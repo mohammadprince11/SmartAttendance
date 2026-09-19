@@ -79,13 +79,14 @@ public class BulkRequestTests
     }
 
     [Fact]
-    public void TypeWithoutConsumer_HasNoEffect_SoItIsRefusedNotWrittenDead()
+    public void Overtime_HasStableEffect_ButBulkSubmissionHandlesItSeparately()
     {
-        // الأوفرتايم يُشتقّ من البصمات؛ لا محرّك يقرأ طلباً بهذا النوع. كتابته هنا
-        // كانت ستُنتج صفّاً يظنّه المستخدم مطبَّقاً وهو بلا أثر.
-        Assert.Equal(
-            BulkRequestStore.EffectKind.None,
-            BulkRequestStore.ResolveEffect(Type("عمل إضافي")).Kind);
+        // الهوية التنفيذية صارت ثابتة بالكتالوج؛ مسار Bulk نفسه يرفض الأوفرتايم
+        // لاحقاً لأنه يحتاج وقت بداية/نهاية واعتماداً مالياً، لا لأنه «بلا أثر».
+        var effect = BulkRequestStore.ResolveEffect(Type("عمل إضافي"));
+
+        Assert.Equal(BulkRequestStore.EffectKind.Overtime, effect.Kind);
+        Assert.Equal("Overtime", effect.RequestTypeCode);
     }
 
     // ═══ دمج أيام التحديد ═══
@@ -135,16 +136,24 @@ public class BulkRequestTests
     }
 
     [Fact]
-    public void InsufficientBalance_IsRejected_NotSilentlyOverdrawn()
+    public void BalanceDecision_IsDelegatedToCompanyPolicyEngine()
     {
         var type = Type("إجازة سنوية");
         var runs = BulkRequestStore.MergeRuns(new[] { D(1), D(2), D(3) });
 
-        var reason = BulkRequestStore.RejectionReason(
-            type, BulkRequestStore.ResolveEffect(type), Candidate(runs, remaining: 2m));
+        // RejectionReason يحرس الشروط/التداخل/الحدود فقط. الرصيد صار شركة-محورياً
+        // ويُفحص مرة واحدة من CompanyLeavePolicyStore حتى لا يبقى محركان متباعدان.
+        Assert.Null(BulkRequestStore.RejectionReason(
+            type, BulkRequestStore.ResolveEffect(type), Candidate(runs, remaining: 2m)));
 
-        Assert.NotNull(reason);
-        Assert.Contains("الرصيد", reason);
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SmartAttendance.slnx")))
+            directory = directory.Parent;
+        Assert.NotNull(directory);
+        var source = File.ReadAllText(Path.Combine(directory!.FullName, "SmartAttendance.Web", "Infrastructure", "Hrms", "BulkRequestStore.cs"));
+        Assert.Contains("CompanyLeavePolicyStore.ValidateRequestSetAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IraqiLeavePolicy.TrackedTypes", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("LeaveBalanceCalculator.ForEmployeeAsync", source, StringComparison.Ordinal);
     }
 
     [Fact]

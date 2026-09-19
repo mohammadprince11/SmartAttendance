@@ -148,15 +148,6 @@
                     PeoplePermissionCodes.Import),
                 Context.RequestAborted);
 
-        var canManagePeoplePermissions = isLoggedIn &&
-            await PermissionAuthorizationService.HasGlobalPermissionAsync(
-                systemUserId,
-                PeoplePermissionCodes.ManagePermissions,
-                PeopleCompatibilityAccess.IsAllowed(
-                    loginRole,
-                    PeoplePermissionCodes.ManagePermissions),
-                Context.RequestAborted);
-
         var isAdminRole = loginRole.Equals(
             "Admin",
             StringComparison.OrdinalIgnoreCase);
@@ -194,7 +185,6 @@
         var hasVisiblePeopleNavigation =
             canViewPeopleDirectory ||
             canImportPeople ||
-            canManagePeoplePermissions ||
             canViewOrganization ||
             canUseLegacyPeopleAdministration;
 
@@ -249,7 +239,7 @@
 
         Func<string, string> ActiveClass = path => IsCurrent(path) ? "active zynora-active" : "";
 
-        var employeesOpen = IsUnder("/Employees") || IsUnder("/Contracts") || IsUnder("/Acknowledgments") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/EmployeeDocuments") || IsUnder("/EmployeePermissions") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
+        var employeesOpen = IsUnder("/Employees") || IsUnder("/Contracts") || IsUnder("/Acknowledgments") || IsUnder("/EmployeeUpdates") || IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeDocuments") || IsUnder("/Organization") || IsUnder("/OrgStructures") || IsUnder("/Alerts") || IsUnder("/LeaveBalances") || IsUnder("/PeopleReports") || IsUnder("/EmployeeTasks") || IsUnder("/Engagement");
         @* المجموعة تُفتح على أي شاشة حضور — لا على السبع الأُوَل وحدها. الشاشات
            المضافة بموجات الحضور (اليومي/الأسبوعي/الشهري/القواعد/العمل خارج المكتب)
            كانت خارج هذا الشرط فتُفتح صفحتُها والقائمةُ مطويّة. *@
@@ -261,7 +251,7 @@
             || IsUnder("/ShiftTypes") || IsUnder("/ShiftRules") || IsUnder("/PeriodRules") || IsUnder("/BiometricKeys")
             || IsUnder("/EmployeeGeoLocations") || IsUnder("/Holidays") || IsUnder("/Devices");
         var requestsOpen = IsUnder("/Approvals") || IsUnder("/HrSettings/ApprovalTemplates");
-        var settingsOpen = IsUnder("/Settings") || IsUnder("/Setup") || IsUnder("/UserAccess") || IsUnder("/AccessRoles") || IsUnder("/Branding") || IsUnder("/Integrations") || IsUnder("/AuditLogs");
+        var settingsOpen = IsUnder("/Settings") || IsUnder("/Setup") || IsUnder("/UserAccess") || IsUnder("/AccessControl") || IsUnder("/Branding") || IsUnder("/Integrations") || IsUnder("/AuditLogs");
         var payrollOpen = IsUnder("/Payroll");
     }
 
@@ -390,15 +380,6 @@
                                         <a asp-page="/AssetsManagement/Index" class="zynora-nav-link @(IsUnder("/AssetsManagement") ? "active zynora-active" : "")">
                                             <span>إدارة العهد</span>
                                         </a>
-                                        <a asp-page="/Employees/Evaluations" class="zynora-nav-link">
-                                            <span>متابعة تقييمات</span>
-                                        </a>
-                                        <a asp-page="/Payroll/TerminationSettlement" class="zynora-nav-link">
-                                            <span>إنهاء الموظف — تسوية الفروقات</span>
-                                        </a>
-                                        <a asp-page="/Employees/TemporaryHeads" class="zynora-nav-link">
-                                            <span>تخصيص رئيس الوحدة المؤقت</span>
-                                        </a>
 
                                         @* بلا نظير بقائمة كيان — أُبقيت آخر القسم لأنها تشغيلية عندنا *@
                                         <a asp-page="/LeaveBalances/Index" class="zynora-nav-link @(IsUnder("/LeaveBalances") ? "active zynora-active" : "")">
@@ -471,7 +452,7 @@
                                 </a>
 
                                 @* ⑧ إعدادات الموارد البشرية — استقبلت منشئ الوثائق ومختبر الصيغ وتهيئة المخالفات *@
-                                <details class="ky-acc" @(IsUnder("/DisciplinaryRules") || IsUnder("/EmployeeProfileSettings") || IsUnder("/HrSettings") || IsUnder("/Documents/Templates") ? "open" : "")>
+                                <details class="ky-acc" @(IsUnder("/DisciplinaryRules") || IsUnder("/HrSettings") || IsUnder("/Documents/Templates") ? "open" : "")>
                                     <summary><span>إعدادات الموارد البشرية</span><span class="ky-acc-chev"></span></summary>
                                     @*
                                         ترتيب كيان بإعداداته: طلبات مخصصة · إعدادات المخالفات ▾ ·
@@ -487,12 +468,9 @@
                                             <span>طلبات الموظفين المخصصة</span>
                                         </a>
 
-                                        <details class="ky-acc" @(IsUnder("/HrSettings/ViolationConfiguration") || IsUnder("/DisciplinaryRules") ? "open" : "")>
+                                        <details class="ky-acc" @(IsUnder("/DisciplinaryRules") ? "open" : "")>
                                             <summary><span>إعدادات المخالفات</span><span class="ky-acc-chev"></span></summary>
                                             <div class="ky-acc-body">
-                                                <a asp-page="/HrSettings/ViolationConfiguration" class="zynora-nav-link @(IsUnder("/HrSettings/ViolationConfiguration") ? "active zynora-active" : "")">
-                                                    <span>التهيئة</span>
-                                                </a>
                                                 <a asp-page="/DisciplinaryRules/Index" class="zynora-nav-link @(IsUnder("/DisciplinaryRules") ? "active zynora-active" : "")">
                                                     <span>قائمة المخالفات وقواعدها</span>
                                                 </a>
@@ -515,16 +493,6 @@
                                         <a asp-page="/Documents/Templates" class="zynora-nav-link @(IsUnder("/Documents/Templates") ? "active zynora-active" : "")">
                                             <span>منشئ الوثائق</span>
                                         </a>
-                                        <a asp-page="/HrSettings/Formulas" class="zynora-nav-link @(IsUnder("/HrSettings/Formulas") ? "active zynora-active" : "")">
-                                            <span>مختبر الصيغ</span>
-                                        </a>
-                                        @* ZYNORA_EMPLOYEE_PROFILE_SETTINGS_NAV_LINK *@
-                                        <a asp-page="/EmployeeProfileSettings/Index" class="zynora-nav-link @(IsUnder("/EmployeeProfileSettings") ? "active zynora-active" : "")">
-                                            <span>&#x0625;&#x0639;&#x062F;&#x0627;&#x062F;&#x0627;&#x062A; &#x062D;&#x0642;&#x0648;&#x0644; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/ProbationPeriod" class="zynora-nav-link @(IsUnder("/HrSettings/ProbationPeriod") ? "active zynora-active" : "")">
-                                            <span>فترة التجربة</span>
-                                        </a>
                                         <a asp-page="/HrSettings/NoticePeriod" class="zynora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active zynora-active" : "")">
                                             <span>فترة الإنذار</span>
                                         </a>
@@ -543,29 +511,13 @@
                                         <a href="/HrSettings/EmployeeCodeSchema" class="zynora-nav-link @(IsUnder("/HrSettings/EmployeeCodeSchema") ? "active zynora-active" : "")">
                                             <span>مخطط رمز الموظف</span>
                                         </a>
-                                        <a href="/HrSettings/FieldControl" class="zynora-nav-link @(IsUnder("/HrSettings/FieldControl") ? "active zynora-active" : "")">
-                                            <span>استوديو الحقول</span>
-                                        </a>
                                         <a href="/HrSettings/ApprovalTemplates" class="zynora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active zynora-active" : "")">
                                             <span>قوالب الموافقات</span>
-                                        </a>
-                                        <a href="/HrSettings/EntityFields" class="zynora-nav-link @(IsUnder("/HrSettings/EntityFields") ? "active zynora-active" : "")">
-                                            <span>حقول الكيانات</span>
-                                        </a>
-                                        <a href="/HrSettings/EmployeeGroups" class="zynora-nav-link @(IsUnder("/HrSettings/EmployeeGroups") ? "active zynora-active" : "")">
-                                            <span>مجموعات الموظفين</span>
                                         </a>
                                     </div>
                                 </details>
                             }
 
-                            @if (canManagePeoplePermissions)
-                            {
-                                @* كانت معنونة «بطاقات الموظفين» وهي عن الصلاحيات — تسمية مضلِّلة رُصدت بدراسة مركز البطاقات. *@
-                                <a asp-page="/EmployeePermissions/Index" class="zynora-nav-link @(IsUnder("/EmployeePermissions") ? "active zynora-active" : "")">
-                                    <span>صلاحيات الموظفين</span>
-                                </a>
-                            }
                         </div>
                     </details>
                 }
@@ -874,7 +826,7 @@
                             <a asp-page="/Settings/Index" class="zynora-nav-link ky-drawer-title @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active zynora-active" : "")"><span>مركز الإعدادات</span></a>
                             <a asp-page="/Setup/Index" class="zynora-nav-link @(IsUnder("/Setup") ? "active zynora-active" : "")"><span>تهيئة الشركة</span></a>
                             <a asp-page="/UserAccess/Index" class="zynora-nav-link @(IsUnder("/UserAccess") ? "active zynora-active" : "")"><span>إدارة المستخدمين</span></a>
-                            <a asp-page="/AccessRoles/Index" class="zynora-nav-link @(IsUnder("/AccessRoles") ? "active zynora-active" : "")"><span>أدوار الوصول</span></a>
+                            <a asp-page="/AccessControl/Index" class="zynora-nav-link @(IsUnder("/AccessControl") ? "active zynora-active" : "")"><span>مركز الصلاحيات</span></a>
                             <a asp-page="/AuditLogs/Index" class="zynora-nav-link @(IsUnder("/AuditLogs") ? "active zynora-active" : "")"><span>سجل التدقيق</span></a>
                             <a asp-page="/Settings/Dictionary" class="zynora-nav-link @(IsUnder("/Settings/Dictionary") ? "active zynora-active" : "")"><span>قاموس اللغات</span></a>
                             <a asp-page="/Settings/DataLanguages" class="zynora-nav-link @(IsUnder("/Settings/DataLanguages") ? "active zynora-active" : "")"><span>لغات بيانات الشركة</span></a>

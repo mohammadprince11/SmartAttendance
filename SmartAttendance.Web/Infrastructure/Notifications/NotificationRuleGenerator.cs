@@ -3,7 +3,6 @@ using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.HrSettings;
-using SmartAttendance.Web.Pages.HrSettings;
 
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
@@ -105,10 +104,10 @@ public static class NotificationRuleGenerator
 
         var parentProbation = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [ProbationPeriodModel.KeyDuration] = probValue.ToString(),
-            [ProbationPeriodModel.KeyUnit] = probUnit,
-            [ProbationPeriodModel.KeyBasis] = probBasis,
-            [ProbationPeriodModel.KeyExtensionDays] = probExtDays.ToString()
+            [HrPolicyOverrideStore.ProbationKeyDuration] = probValue.ToString(),
+            [HrPolicyOverrideStore.ProbationKeyUnit] = probUnit,
+            [HrPolicyOverrideStore.ProbationKeyBasis] = probBasis,
+            [HrPolicyOverrideStore.ProbationKeyExtensionDays] = probExtDays.ToString()
         };
 
         // نُسَخ السياسة المشروطة. **تُقرأ الحقائق مرّة واحدة لكل الموظفين ويُحسم
@@ -188,10 +187,10 @@ WHERE IsActive = 1 AND IsDeleted = 0;
                     .Resolve(parentProbation, probationOverrides, empFacts).Values;
             }
 
-            var empBasis = probation.GetValueOrDefault(ProbationPeriodModel.KeyBasis, probBasis);
-            var empUnit = probation.GetValueOrDefault(ProbationPeriodModel.KeyUnit, probUnit);
-            var empValue = int.TryParse(probation.GetValueOrDefault(ProbationPeriodModel.KeyDuration), out var rv) ? rv : probValue;
-            var empExtDays = int.TryParse(probation.GetValueOrDefault(ProbationPeriodModel.KeyExtensionDays), out var rd) ? rd : probExtDays;
+            var empBasis = probation.GetValueOrDefault(HrPolicyOverrideStore.ProbationKeyBasis, probBasis);
+            var empUnit = probation.GetValueOrDefault(HrPolicyOverrideStore.ProbationKeyUnit, probUnit);
+            var empValue = int.TryParse(probation.GetValueOrDefault(HrPolicyOverrideStore.ProbationKeyDuration), out var rv) ? rv : probValue;
+            var empExtDays = int.TryParse(probation.GetValueOrDefault(HrPolicyOverrideStore.ProbationKeyExtensionDays), out var rd) ? rd : probExtDays;
 
             foreach (var (kind, rule) in rules)
             {

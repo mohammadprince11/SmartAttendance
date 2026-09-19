@@ -73,6 +73,17 @@ public class EditModel : PageModel
     [BindProperty]
     public int? DirectManagerId { get; set; }
 
+    [BindProperty]
+    [System.ComponentModel.DataAnnotations.StringLength(150)]
+    public string? FamilyNumber { get; set; }
+
+    [BindProperty]
+    public long FamilyIdentityDocumentId { get; set; }
+
+    private sealed record FamilyIdentityValue(
+        long Id,
+        string FamilyNumber);
+
     public class ManagerOption { 
         public int Id { get; set; } 
         public string EmployeeNo { get; set; } = string.Empty; 
@@ -124,6 +135,122 @@ public class EditModel : PageModel
         SponsorOptions = await HrLookups.ValuesAsync(_dbContext, "sponsors");
     }
 
+    private async Task LoadFamilyNumberAsync(int employeeId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 1
+       Id,
+       FamilyNumber
+FROM dbo.EmployeeIdentityDocuments
+WHERE EmployeeId = @EmployeeId
+  AND DocumentType = N'NationalId'
+  AND IsCurrent = 1
+ORDER BY
+    CASE
+        WHEN NULLIF(LTRIM(RTRIM(FamilyNumber)), '') IS NOT NULL
+            THEN 0
+        ELSE 1
+    END,
+    CASE
+        WHEN SourceOnboardingDocumentId IS NOT NULL
+            THEN 0
+        ELSE 1
+    END,
+    Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId),
+            reader => new FamilyIdentityValue(
+                HrmsDatabase.GetLong(reader, "Id"),
+                HrmsDatabase.GetString(reader, "FamilyNumber")));
+
+        var identity = rows.FirstOrDefault();
+        FamilyIdentityDocumentId = identity?.Id ?? 0;
+        FamilyNumber = string.IsNullOrWhiteSpace(
+                identity?.FamilyNumber)
+            ? null
+            : identity.FamilyNumber.Trim();
+    }
+
+    private async Task<bool> SaveFamilyNumberAsync(int employeeId)
+    {
+        var identityId = await HrmsDatabase.ScalarAsync<long>(
+            _dbContext,
+            """
+SELECT TOP 1 Id
+FROM dbo.EmployeeIdentityDocuments
+WHERE EmployeeId = @EmployeeId
+  AND DocumentType = N'NationalId'
+  AND IsCurrent = 1
+ORDER BY
+    CASE WHEN Id = @PreferredId THEN 0 ELSE 1 END,
+    CASE
+        WHEN NULLIF(LTRIM(RTRIM(FamilyNumber)), '') IS NOT NULL
+            THEN 0
+        ELSE 1
+    END,
+    CASE
+        WHEN SourceOnboardingDocumentId IS NOT NULL
+            THEN 0
+        ELSE 1
+    END,
+    Id DESC;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@PreferredId",
+                    FamilyIdentityDocumentId);
+            });
+
+        if (identityId <= 0)
+        {
+            return string.IsNullOrWhiteSpace(FamilyNumber);
+        }
+
+        var normalized = string.IsNullOrWhiteSpace(FamilyNumber)
+            ? null
+            : FamilyNumber.Trim();
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+UPDATE dbo.EmployeeIdentityDocuments
+SET FamilyNumber = @FamilyNumber
+WHERE Id = @IdentityId
+  AND EmployeeId = @EmployeeId
+  AND DocumentType = N'NationalId';
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@FamilyNumber",
+                    (object?)normalized ?? DBNull.Value);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@IdentityId",
+                    identityId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+            });
+
+        FamilyIdentityDocumentId = identityId;
+        FamilyNumber = normalized;
+        return true;
+    }
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         // Defense-in-depth: نفس فحص صلاحية التعديل الموجود بصفحة Profile،
@@ -142,6 +269,7 @@ public class EditModel : PageModel
 
         Employee = employee;
         PrefillQuadNameFromFullName();
+        await LoadFamilyNumberAsync(Employee.Id);
         var companyId = await ResolveEmployeeCompanyIdAsync(Employee.BranchId);
         await LoadEmployeeNameTranslationsAsync(companyId, false);
 
@@ -275,6 +403,14 @@ public class EditModel : PageModel
             if (!updated)
             {
                 ErrorMessage = "تعذر حفظ التعديل. تأكد من كود الموظف وموقع العمل والقسم والمدير المباشر.";
+                return Page();
+            }
+
+            if (!await SaveFamilyNumberAsync(Employee.Id))
+            {
+                await transaction.RollbackAsync();
+                ErrorMessage =
+                    "تعذر حفظ الرقم العائلي لعدم وجود سجل بطاقة وطنية صالح لهذا الموظف.";
                 return Page();
             }
 

@@ -181,6 +181,61 @@ END;
         if (employeeInfo is null)
             return new ActionResult(false, "تعذّر بدء الموافقة لأن الموظف غير موجود.");
 
+        // اربط الطلب بهوية نوع الكتالوج ثم طبّق سياسة الرصيد المركزية قبل بدء الموافقات.
+        // بهذه النقطة تمر كل قنوات الخدمة الذاتية/ملف الموظف على نفس الحارس بدل تكرار
+        // منطق الرصيد في كل صفحة تقديم.
+        await RequestTypeStore.EnsureAsync(dbContext);
+        var catalogTypes = await RequestTypeStore.ListTypesAsync(dbContext, onlyActive: false);
+        var catalogType = catalogTypes.FirstOrDefault(t =>
+            string.Equals(t.Name, requestType, StringComparison.OrdinalIgnoreCase));
+        if (catalogType is not null)
+        {
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                "UPDATE SelfServiceRequests SET RequestTypeId=@TypeId WHERE Id=@Id AND RequestTypeId IS NULL;",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@TypeId", catalogType.Id);
+                    HrmsDatabase.AddParameter(command, "@Id", requestId);
+                });
+        }
+
+        var requestRows = await HrmsDatabase.QueryAsync(dbContext, """
+SELECT TOP 1 RequestTypeId, ISNULL(RequestType,N'') AS RequestType,
+       COALESCE(FromDate,RequestDate,CAST(CreatedAt AS date)) AS FromDate,
+       COALESCE(ToDate,FromDate,RequestDate,CAST(CreatedAt AS date)) AS ToDate,
+       StartTime, EndTime, ISNULL(Reason,N'') AS Reason,
+       CASE WHEN NULLIF(LTRIM(RTRIM(ISNULL(AttachmentPath,N''))),N'') IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS HasAttachment
+FROM SelfServiceRequests WHERE Id=@Id AND EmployeeId=@EmployeeId;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command, "@Id", requestId);
+            HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+        }, reader => new
+        {
+            RequestTypeId = HrmsDatabase.GetNullableInt(reader, "RequestTypeId"),
+            RequestType = HrmsDatabase.GetString(reader, "RequestType"),
+            FromDate = HrmsDatabase.GetDateOnly(reader, "FromDate") ?? DateOnly.FromDateTime(DateTime.Today),
+            ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate") ?? DateOnly.FromDateTime(DateTime.Today),
+            StartTime = HrmsDatabase.GetTimeSpan(reader, "StartTime"),
+            EndTime = HrmsDatabase.GetTimeSpan(reader, "EndTime"),
+            Reason = HrmsDatabase.GetString(reader, "Reason"),
+            HasAttachment = HrmsDatabase.GetBool(reader, "HasAttachment")
+        });
+        var requestInfo = requestRows.FirstOrDefault();
+        if (requestInfo is not null)
+        {
+            var balanceCheck = await CompanyLeavePolicyStore.ValidateRequestAsync(
+                dbContext, employeeId, requestId, requestInfo.RequestTypeId,
+                requestInfo.RequestType, requestInfo.FromDate, requestInfo.ToDate,
+                requestInfo.StartTime, requestInfo.EndTime, requestInfo.Reason, requestInfo.HasAttachment);
+            if (!balanceCheck.Ok)
+            {
+                await BlockSubmissionAsync(dbContext, requestId, "Draft", "يتطلب تعديل",
+                    "LeaveBalancePolicy", balanceCheck.Message);
+                return new ActionResult(false, balanceCheck.Message);
+            }
+        }
+
         var template = await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType,requestId);
 
         // بلا قالب: السلسلة الافتراضية القديمة نفسها.

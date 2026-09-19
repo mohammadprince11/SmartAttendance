@@ -22,17 +22,16 @@ public class CreateModel : PageModel
     private readonly IWebHostEnvironment _environment;
     private readonly ICompanyDataLocalizationService _dataLocalization;
     private readonly ILocalizationDictionaryService _dictionary;
+    private readonly IEffectiveScopeService _effectiveScopeService;
+    private readonly IProtectedFileService _protectedFiles;
+    private readonly IPermissionAuthorizationService _permissionAuthorization;
+
+    private PeopleDataScope _createScope = PeopleDataScope.Empty();
 
     private const string FirstNameLabelKey = "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644";
     private const string SecondNameLabelKey = "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062b\u0627\u0646\u064a";
     private const string ThirdNameLabelKey = "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062b\u0627\u0644\u062b";
     private const string LastNameLabelKey = "\u0627\u0644\u0644\u0642\u0628";
-
-    private static readonly HashSet<string> AllowedDocumentExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".xls", ".xlsx"
-    };
-
 
     private static readonly HashSet<string> AllowedEmployeePhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -44,13 +43,19 @@ public class CreateModel : PageModel
         ApplicationDbContext dbContext,
         IWebHostEnvironment environment,
         ICompanyDataLocalizationService dataLocalization,
-        ILocalizationDictionaryService dictionary)
+        ILocalizationDictionaryService dictionary,
+        IEffectiveScopeService effectiveScopeService,
+        IProtectedFileService protectedFiles,
+        IPermissionAuthorizationService permissionAuthorization)
     {
         _employeeService = employeeService;
         _dbContext = dbContext;
         _environment = environment;
         _dataLocalization = dataLocalization;
         _dictionary = dictionary;
+        _effectiveScopeService = effectiveScopeService;
+        _protectedFiles = protectedFiles;
+        _permissionAuthorization = permissionAuthorization;
     }
 
     [BindProperty]
@@ -61,6 +66,7 @@ public class CreateModel : PageModel
 
     public bool CanEditCompensation { get; set; }
 
+    public bool CanUseSmartOnboarding { get; set; }
 
     [BindProperty]
     public IFormFile? EmployeePhoto { get; set; }
@@ -164,10 +170,8 @@ public class CreateModel : PageModel
     public async Task OnGetAsync()
     {
         CanEditCompensation = await CanEditCompensationGloballyAsync();
-        Branches = await _employeeService.GetBranchesForDropdownAsync();
-        await ResolveSelectedCompanyAsync();
-        Departments = await _employeeService.GetDepartmentsForDropdownAsync();
-        PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
+        CanUseSmartOnboarding = await CanUseSmartOnboardingAsync();
+        await LoadScopedOrganizationAsync();
         await LocalizeBusinessLookupsAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
@@ -186,10 +190,8 @@ public class CreateModel : PageModel
     public async Task<IActionResult> OnPostAsync()
     {
         CanEditCompensation = await CanEditCompensationGloballyAsync();
-        Branches = await _employeeService.GetBranchesForDropdownAsync();
-        await ResolveSelectedCompanyAsync();
-        Departments = await _employeeService.GetDepartmentsForDropdownAsync();
-        PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
+        CanUseSmartOnboarding = await CanUseSmartOnboardingAsync();
+        await LoadScopedOrganizationAsync();
         await LocalizeBusinessLookupsAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
@@ -332,6 +334,27 @@ public class CreateModel : PageModel
             HttpContext.RequestAborted);
     }
 
+    private async Task<bool> CanUseSmartOnboardingAsync()
+    {
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        if (RoleRouteCatalog.IsAdmin(role))
+        {
+            return true;
+        }
+
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        if (systemUserId <= 0)
+        {
+            return false;
+        }
+
+        return await _permissionAuthorization.HasPermissionAsync(
+            systemUserId,
+            PeoplePermissionCodes.AiProcessDocuments,
+            compatibilityAllowed: false,
+            HttpContext.RequestAborted);
+    }
+
     private async Task SaveBasicSalaryAsync(int employeeId)
     {
         if (!BasicSalary.HasValue || !CanEditCompensation || employeeId <= 0)
@@ -435,11 +458,58 @@ public class CreateModel : PageModel
         EmployeeNameTranslations = result;
     }
 
-    private async Task ResolveSelectedCompanyAsync()
+    private async Task LoadScopedOrganizationAsync()
     {
-        CompanyOptions = await _dbContext.Companies
+        _createScope = await ResolveCreateScopeAsync();
+
+        var branches = (await _employeeService.GetBranchesForDropdownAsync()).ToList();
+        var departments = (await _employeeService.GetDepartmentsForDropdownAsync()).ToList();
+        var positions = (await _employeeService.GetPositionsForDropdownAsync()).ToList();
+
+        HashSet<int>? allowedCompanyIds = null;
+        if (!_createScope.IsUnrestricted || _createScope.HasAnyDenial)
+        {
+            departments = departments
+                .Where(item => _createScope.AllowsLocation(
+                    item.CompanyId, item.BranchId, item.Id))
+                .ToList();
+
+            var departmentBranchIds = departments
+                .Where(item => item.BranchId > 0)
+                .Select(item => item.BranchId)
+                .ToHashSet();
+
+            branches = branches
+                .Where(item =>
+                    _createScope.AllowsLocation(item.CompanyId, item.Id, 0) ||
+                    departmentBranchIds.Contains(item.Id))
+                .ToList();
+
+            allowedCompanyIds = _createScope.AllowedCompanyIds
+                .Concat(branches.Select(item => item.CompanyId))
+                .Concat(departments.Select(item => item.CompanyId))
+                .Where(id => id > 0)
+                .ToHashSet();
+
+            positions = positions
+                .Where(item => allowedCompanyIds.Contains(item.CompanyId))
+                .ToList();
+        }
+
+        Branches = branches;
+        Departments = departments;
+        PositionOptions = positions;
+
+        var companies = _dbContext.Companies
             .AsNoTracking()
-            .Where(item => item.IsActive && !item.IsDeleted)
+            .Where(item => item.IsActive && !item.IsDeleted);
+
+        if (allowedCompanyIds is not null)
+        {
+            companies = companies.Where(item => allowedCompanyIds.Contains(item.Id));
+        }
+
+        CompanyOptions = await companies
             .OrderBy(item => item.Name)
             .ThenBy(item => item.Code)
             .Select(item => new EmployeeCompanyChoice(item.Id, item.Name))
@@ -449,6 +519,26 @@ public class CreateModel : PageModel
             HttpContext,
             SelectedCompanyId,
             CompanyOptions.Select(item => item.Id).ToArray());
+    }
+
+    private async Task<PeopleDataScope> ResolveCreateScopeAsync()
+    {
+        var role = PeopleAccessContext.GetRole(HttpContext);
+        if (RoleRouteCatalog.IsAdmin(role))
+        {
+            return PeopleDataScope.Unrestricted();
+        }
+
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        if (systemUserId <= 0)
+        {
+            return PeopleDataScope.Empty();
+        }
+
+        return await _effectiveScopeService.GetEmployeesAccessScopeAsync(
+            systemUserId,
+            isAdmin: false,
+            HttpContext.RequestAborted);
     }
 
     private async Task ValidateAndMapEmployeeNamesAsync()
@@ -469,6 +559,17 @@ public class CreateModel : PageModel
             ModelState.AddModelError(
                 nameof(SelectedCompanyId),
                 "موقع العمل يجب أن يكون تابعاً للشركة المحددة في البيانات الأساسية.");
+            return;
+        }
+
+        if (!_createScope.AllowsLocation(
+                companyId.Value,
+                Employee.BranchId,
+                Employee.DepartmentId))
+        {
+            ModelState.AddModelError(
+                nameof(SelectedCompanyId),
+                "لا تملك صلاحية إنشاء موظف في الشركة أو الموقع أو القسم المحدد.");
             return;
         }
 
@@ -680,9 +781,6 @@ VALUES ('UnifiedIdentity', @EntityId, 'Create Employee Login On Employee Create'
         if (InitialDocumentFiles == null || InitialDocumentFiles.Count == 0)
             return string.Empty;
 
-        var uploadRoot = Path.Combine(_environment.WebRootPath, "uploads", "employee-documents");
-        Directory.CreateDirectory(uploadRoot);
-
         var savedCount = 0;
         var skippedCount = 0;
 
@@ -691,20 +789,6 @@ VALUES ('UnifiedIdentity', @EntityId, 'Create Employee Login On Employee Create'
             var file = InitialDocumentFiles[i];
 
             if (file == null || file.Length == 0)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            var extension = Path.GetExtension(file.FileName);
-
-            if (string.IsNullOrWhiteSpace(extension) || !AllowedDocumentExtensions.Contains(extension))
-            {
-                skippedCount++;
-                continue;
-            }
-
-            if (file.Length > 10 * 1024 * 1024)
             {
                 skippedCount++;
                 continue;
@@ -719,13 +803,16 @@ VALUES ('UnifiedIdentity', @EntityId, 'Create Employee Login On Employee Create'
                 : "Optional";
 
             var safeOriginalName = Path.GetFileName(file.FileName);
-            var storedName = $"{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
-            var physicalPath = Path.Combine(uploadRoot, storedName);
-            var relativePath = $"/uploads/employee-documents/{storedName}";
+            var relativePath = await _protectedFiles.SaveAsync(
+                file,
+                employeeId,
+                documentType,
+                HttpContext.RequestAborted);
 
-            await using (var stream = System.IO.File.Create(physicalPath))
+            if (string.IsNullOrWhiteSpace(relativePath))
             {
-                await file.CopyToAsync(stream);
+                skippedCount++;
+                continue;
             }
 
             await HrmsDatabase.ExecuteAsync(

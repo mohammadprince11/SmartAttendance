@@ -32,6 +32,10 @@
 
         <div class="nxr-actions">
             <a asp-page="./Index" class="nxr-btn">رجوع للقائمة</a>
+            @if (Model.CanUseSmartOnboarding)
+            {
+                <a asp-page="./SmartOnboarding" class="nxr-btn">Smart Onboarding</a>
+            }
             <button form="employee-create-form" type="submit" class="nxr-btn primary">إنشاء الموظف</button>
         </div>
     </section>
@@ -42,33 +46,6 @@
     }
 
     <form id="employee-create-form" method="post" enctype="multipart/form-data" class="nxr-form nxr-create-clean-form">
-
-        <section class="nxr-card nxr-form-section nxr-create-section nxr-photo-upload-card">
-            <div class="nxr-section-title">
-                <div>
-                    <h2>صورة الموظف</h2>
-                    <p>اضغط على مساحة الصورة نفسها أو اسحب الصورة فوقها. لا يوجد زر رفع منفصل.</p>
-                </div>
-                <span class="nxr-chip">اختياري</span>
-            </div>
-
-            <div class="nxr-photo-upload-wrap">
-                <label class="nxr-photo-drop has-image has-brand-placeholder" data-employee-photo-drop>
-                    <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
-                    <img class="nxr-photo-preview" src="@employeePhotoFallback" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" alt="Employee photo preview" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
-                    <span class="nxr-photo-placeholder">
-                        <strong>+</strong>
-                        <span>اضغط لإضافة صورة</span>
-                    </span>
-                </label>
-
-                <div class="nxr-photo-hint">
-                    <strong>مساحة الصورة هي زر الرفع</strong>
-                    <span>ارفع صورة واضحة للموظف بصيغة PNG أو JPG أو WEBP.</span>
-                    <small>الحد الأقصى 5MB. سيتم حفظ الصورة داخل ملف الموظف بعد الإنشاء.</small>
-                </div>
-            </div>
-        </section>
 
         <section class="nxr-card nxr-form-section nxr-create-section">
             <div class="nxr-section-title">
@@ -228,25 +205,10 @@
                     <label asp-for="Employee.Country">&#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</label>
                     <select asp-for="Employee.Country" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0628;&#x0644;&#x062F;</option>
-                        <option value="Iraq">&#x0627;&#x0644;&#x0639;&#x0631;&#x0627;&#x0642;</option>
-                        <option value="Syria">&#x0633;&#x0648;&#x0631;&#x064A;&#x0627;</option>
-                        <option value="Jordan">&#x0627;&#x0644;&#x0623;&#x0631;&#x062F;&#x0646;</option>
-                        <option value="Lebanon">&#x0644;&#x0628;&#x0646;&#x0627;&#x0646;</option>
-                        <option value="Saudi Arabia">&#x0627;&#x0644;&#x0633;&#x0639;&#x0648;&#x062F;&#x064A;&#x0629;</option>
-                        <option value="United Arab Emirates">&#x0627;&#x0644;&#x0625;&#x0645;&#x0627;&#x0631;&#x0627;&#x062A;</option>
-                        <option value="Qatar">&#x0642;&#x0637;&#x0631;</option>
-                        <option value="Kuwait">&#x0627;&#x0644;&#x0643;&#x0648;&#x064A;&#x062A;</option>
-                        <option value="Bahrain">&#x0627;&#x0644;&#x0628;&#x062D;&#x0631;&#x064A;&#x0646;</option>
-                        <option value="Oman">&#x0639;&#x0645;&#x0627;&#x0646;</option>
-                        <option value="Egypt">&#x0645;&#x0635;&#x0631;</option>
-                        <option value="Turkey">&#x062A;&#x0631;&#x0643;&#x064A;&#x0627;</option>
-                        <option value="Iran">&#x0625;&#x064A;&#x0631;&#x0627;&#x0646;</option>
-                        <option value="India">&#x0627;&#x0644;&#x0647;&#x0646;&#x062F;</option>
-                        <option value="Pakistan">&#x0628;&#x0627;&#x0643;&#x0633;&#x062A;&#x0627;&#x0646;</option>
-                        <option value="Bangladesh">&#x0628;&#x0646;&#x063A;&#x0644;&#x0627;&#x062F;&#x0634;</option>
-                        <option value="Philippines">&#x0627;&#x0644;&#x0641;&#x0644;&#x0628;&#x064A;&#x0646;</option>
-                        <option value="Nepal">&#x0646;&#x064A;&#x0628;&#x0627;&#x0644;</option>
-                        <option value="Other">&#x0623;&#x062E;&#x0631;&#x0649;</option>
+                        @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryCountries)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
                     </select>
                     <span asp-validation-for="Employee.Country" class="text-danger"></span>
                 </div>
@@ -255,25 +217,10 @@
                     <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
-                        <option value="Iraqi">&#x0639;&#x0631;&#x0627;&#x0642;&#x064A;</option>
-                        <option value="Syrian">&#x0633;&#x0648;&#x0631;&#x064A;</option>
-                        <option value="Jordanian">&#x0623;&#x0631;&#x062F;&#x0646;&#x064A;</option>
-                        <option value="Lebanese">&#x0644;&#x0628;&#x0646;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Saudi">&#x0633;&#x0639;&#x0648;&#x062F;&#x064A;</option>
-                        <option value="Emirati">&#x0625;&#x0645;&#x0627;&#x0631;&#x0627;&#x062A;&#x064A;</option>
-                        <option value="Qatari">&#x0642;&#x0637;&#x0631;&#x064A;</option>
-                        <option value="Kuwaiti">&#x0643;&#x0648;&#x064A;&#x062A;&#x064A;</option>
-                        <option value="Bahraini">&#x0628;&#x062D;&#x0631;&#x064A;&#x0646;&#x064A;</option>
-                        <option value="Omani">&#x0639;&#x0645;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Egyptian">&#x0645;&#x0635;&#x0631;&#x064A;</option>
-                        <option value="Turkish">&#x062A;&#x0631;&#x0643;&#x064A;</option>
-                        <option value="Iranian">&#x0625;&#x064A;&#x0631;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Indian">&#x0647;&#x0646;&#x062F;&#x064A;</option>
-                        <option value="Pakistani">&#x0628;&#x0627;&#x0643;&#x0633;&#x062A;&#x0627;&#x0646;&#x064A;</option>
-                        <option value="Bangladeshi">&#x0628;&#x0646;&#x063A;&#x0644;&#x0627;&#x062F;&#x0634;&#x064A;</option>
-                        <option value="Filipino">&#x0641;&#x0644;&#x0628;&#x064A;&#x0646;&#x064A;</option>
-                        <option value="Nepali">&#x0646;&#x064A;&#x0628;&#x0627;&#x0644;&#x064A;</option>
-                        <option value="Other">&#x0623;&#x062E;&#x0631;&#x0649;</option>
+                        @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryNationalities)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
                     </select>
                     <span asp-validation-for="Employee.Nationality" class="text-danger"></span>
                 </div>
@@ -368,6 +315,33 @@
 
                     <span asp-validation-for="Employee.MotherCity"
                           class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="nxr-card nxr-form-section nxr-create-section nxr-photo-upload-card">
+            <div class="nxr-section-title">
+                <div>
+                    <h2>صورة الموظف</h2>
+                    <p>اضغط على مساحة الصورة نفسها أو اسحب الصورة فوقها. لا يوجد زر رفع منفصل.</p>
+                </div>
+                <span class="nxr-chip">اختياري</span>
+            </div>
+
+            <div class="nxr-photo-upload-wrap">
+                <label class="nxr-photo-drop has-image has-brand-placeholder" data-employee-photo-drop>
+                    <input asp-for="EmployeePhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+                    <img class="nxr-photo-preview" src="@employeePhotoFallback" data-employee-photo-preview data-placeholder-src="@employeePhotoFallback" alt="Employee photo preview" onerror="this.onerror=null;this.src='@employeePhotoFallback';" />
+                    <span class="nxr-photo-placeholder">
+                        <strong>+</strong>
+                        <span>اضغط لإضافة صورة</span>
+                    </span>
+                </label>
+
+                <div class="nxr-photo-hint">
+                    <strong>مساحة الصورة هي زر الرفع</strong>
+                    <span>ارفع صورة واضحة للموظف بصيغة PNG أو JPG أو WEBP.</span>
+                    <small>الحد الأقصى 5MB. سيتم حفظ الصورة داخل ملف الموظف بعد الإنشاء.</small>
                 </div>
             </div>
         </section>

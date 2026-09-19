@@ -130,6 +130,12 @@
                     <span asp-validation-for="Employee.NationalId"></span>
                 </div>
                 <div class="nxr-edit-field">
+                    <label asp-for="FamilyNumber">الرقم العائلي</label>
+                    <input asp-for="FamilyNumber" autocomplete="off" />
+                    <input asp-for="FamilyIdentityDocumentId" type="hidden" />
+                    <span asp-validation-for="FamilyNumber"></span>
+                </div>
+                <div class="nxr-edit-field">
                     <label asp-for="Employee.Phone">الهاتف</label>
                     <input asp-for="Employee.Phone" />
                     <span asp-validation-for="Employee.Phone"></span>
@@ -214,16 +220,30 @@
                     <label asp-for="Employee.Country">البلد</label>
                     <select asp-for="Employee.Country" class="nxr-native-select">
                         <option value="">اختر البلد</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) && !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownCountry(Model.Employee.Country)) { <option value="@Model.Employee.Country">@Model.Employee.Country</option> }
-                        <option value="Iraq">العراق</option><option value="Syria">سوريا</option><option value="Jordan">الأردن</option><option value="Lebanon">لبنان</option><option value="Saudi Arabia">السعودية</option><option value="United Arab Emirates">الإمارات</option><option value="Qatar">قطر</option><option value="Kuwait">الكويت</option><option value="Bahrain">البحرين</option><option value="Oman">عمان</option><option value="Egypt">مصر</option><option value="Turkey">تركيا</option><option value="Iran">إيران</option><option value="India">الهند</option><option value="Pakistan">باكستان</option><option value="Bangladesh">بنغلادش</option><option value="Philippines">الفلبين</option><option value="Nepal">نيبال</option><option value="Other">أخرى</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Country) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownPrimaryCountry(Model.Employee.Country))
+                        {
+                            <option value="@Model.Employee.Country">@Model.Employee.Country</option>
+                        }
+                        @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryCountries)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
                     </select>
                 </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.Nationality">الجنسية</label>
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
                         <option value="">اختر الجنسية</option>
-                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) && !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownNationality(Model.Employee.Nationality)) { <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option> }
-                        <option value="Iraqi">عراقي</option><option value="Syrian">سوري</option><option value="Jordanian">أردني</option><option value="Lebanese">لبناني</option><option value="Saudi">سعودي</option><option value="Emirati">إماراتي</option><option value="Qatari">قطري</option><option value="Kuwaiti">كويتي</option><option value="Bahraini">بحريني</option><option value="Omani">عماني</option><option value="Egyptian">مصري</option><option value="Turkish">تركي</option><option value="Iranian">إيراني</option><option value="Indian">هندي</option><option value="Pakistani">باكستاني</option><option value="Bangladeshi">بنغلادشي</option><option value="Filipino">فلبيني</option><option value="Nepali">نيبالي</option><option value="Other">أخرى</option>
+                        @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
+                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownPrimaryNationality(Model.Employee.Nationality))
+                        {
+                            <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
+                        }
+                        @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryNationalities)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
                     </select>
                 </div>
 

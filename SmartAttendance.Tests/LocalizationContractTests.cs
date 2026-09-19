@@ -170,21 +170,23 @@ public sealed class LocalizationContractTests
     }
 
     [Fact]
-    public void EnglishNavigation_ReversesThePhysicalShellAndDrawerPlacement()
+    public void EnglishNavigation_ReversesThePhysicalShellForUnifiedSidebar()
     {
         var refresh = ReadWeb("wwwroot", "css", "zynora-refresh-2026.css");
-        var navigation = ReadWeb("wwwroot", "js", "zynora-kayan-nav.js");
+        var navigation = ReadWeb("wwwroot", "css", "zynora-kayan-nav.css");
 
         Assert.Contains("html[dir=\"ltr\"] .zynora-shell", refresh, StringComparison.Ordinal);
         Assert.Contains("html[dir=\"ltr\"] .zynora-sidebar", refresh, StringComparison.Ordinal);
         Assert.Contains("html[dir=\"ltr\"] .zynora-main", refresh, StringComparison.Ordinal);
-        Assert.Contains("--ky-left", refresh, StringComparison.Ordinal);
-        Assert.Contains("kySlideOverLtr", refresh, StringComparison.Ordinal);
+        Assert.Contains("grid-column: 1 !important", refresh, StringComparison.Ordinal);
+        Assert.Contains("grid-column: 2 !important", refresh, StringComparison.Ordinal);
+        Assert.Contains("border-inline-end: 1px solid var(--zy-border)", refresh, StringComparison.Ordinal);
 
-        Assert.Contains("links.style.setProperty(\"--ky-left\"", navigation, StringComparison.Ordinal);
-        Assert.Contains("return \"Back\"", navigation, StringComparison.Ordinal);
-        Assert.Contains("return \"گەڕانەوە\"", navigation, StringComparison.Ordinal);
-        Assert.DoesNotContain("back.innerHTML", navigation, StringComparison.Ordinal);
+        Assert.Contains("Unified Single-Sidebar Navigation", navigation, StringComparison.Ordinal);
+        Assert.Contains("html[dir=\"ltr\"] .ky-acc .ky-acc-body .zynora-nav-link",
+            navigation, StringComparison.Ordinal);
+        Assert.DoesNotContain("--ky-left", refresh, StringComparison.Ordinal);
+        Assert.DoesNotContain("kySlideOverLtr", refresh, StringComparison.Ordinal);
     }
 
     [Fact]

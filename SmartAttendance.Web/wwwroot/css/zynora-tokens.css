@@ -357,7 +357,6 @@
 
 /* المسافة بين البطاقات — كانت هي الأخرى توكناً بلا مستهلك */
 .zy-scope .nxupd-stage-blocks,
-.zy-scope .permissions-layout,
 .zy-scope .zdl-card-grid {
     gap: var(--zy-card-gap, 14px) !important;
 }

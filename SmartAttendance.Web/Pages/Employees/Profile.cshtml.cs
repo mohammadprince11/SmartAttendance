@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -66,6 +67,19 @@ public partial class ProfileModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DateOnly? ToDate { get; set; }
 
+    public int ActivityPageSize => 25;
+
+    [BindProperty(SupportsGet = true)]
+    public int TimelinePage { get; set; } = 1;
+
+    [BindProperty(SupportsGet = true)]
+    public int AuditPage { get; set; } = 1;
+
+    public int TimelineTotalCount { get; set; }
+    public int AuditTotalCount { get; set; }
+    public int TimelineTotalPages => Math.Max(1, (TimelineTotalCount + ActivityPageSize - 1) / ActivityPageSize);
+    public int AuditTotalPages => Math.Max(1, (AuditTotalCount + ActivityPageSize - 1) / ActivityPageSize);
+
     public EmployeeProfileCard? Employee { get; set; }
 
     public List<AttendanceRow> AttendanceRows { get; set; } = new();
@@ -105,6 +119,11 @@ public partial class ProfileModel : PageModel
 
     public int TimePickerStepMinutes { get; set; } = 30;
 
+    public string? AttendanceCutoffPolicyName { get; set; }
+    public DateOnly AttendancePolicyFrom { get; set; }
+    public DateOnly AttendancePolicyTo { get; set; }
+    public bool HasAttendanceCutoffPolicy => !string.IsNullOrWhiteSpace(AttendanceCutoffPolicyName);
+
     public int ApprovedRequests { get; set; }
 
     public int RejectedRequests { get; set; }
@@ -138,29 +157,33 @@ public partial class ProfileModel : PageModel
         await EnsureProfileFilesTableAsync();
         TimePickerStepMinutes = await AttendanceRequestPolicy.GetTimePickerStepMinutesAsync(_dbContext);
 
-        // نافذة الحضور الافتراضية تتبع **سياسة فترة الحضور** (نفس اعتماد الحضور
-        // واليوميات والمسير) بدل «آخر 30 يوماً» — فلا يعرض الملفّ غياباً من أيام
-        // تخصّ دورةً أخرى. التواريخ الصريحة بالرابط تُحترَم كما هي.
-        if (!FromDate.HasValue || !ToDate.HasValue)
-        {
-            var today = DateTime.Today;
-            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
-                _dbContext, today.Year, today.Month);
-            FromDate ??= period.From;
-            ToDate ??= period.To;
-        }
-
         Employee = await LoadEmployeeAsync();
-
-        if (Employee != null)
-        {
-            ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
-        }
 
         if (Employee == null)
         {
             ErrorMessage = "لم يتم العثور على الموظف المطلوب.";
             return Page();
+        }
+
+        ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, Employee.Id);
+
+        // الفترة الافتراضية مرتبطة بسياسة إقفال الحضور الخاصة بشركة الموظف.
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var (attendancePeriod, cutoffPolicyName) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+            _dbContext,
+            today.Year,
+            today.Month,
+            SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance,
+            Employee.CompanyId);
+
+        AttendanceCutoffPolicyName = cutoffPolicyName;
+        AttendancePolicyFrom = attendancePeriod.From;
+        AttendancePolicyTo = attendancePeriod.To;
+
+        if (!FromDate.HasValue || !ToDate.HasValue)
+        {
+            FromDate ??= attendancePeriod.From;
+            ToDate ??= attendancePeriod.To;
         }
 
         await LoadActionPermissionsAsync(Employee.Id);
@@ -185,6 +208,7 @@ public partial class ProfileModel : PageModel
         Id = Employee.Id;
         await LoadPanelsAsync();
         await LoadTimelineAsync();
+        BuildEmployeeRequirements();
 
         return Page();
     }
@@ -377,19 +401,23 @@ public partial class ProfileModel : PageModel
             ? $"{option.Label} ليوم {date:yyyy-MM-dd} من ملف الموظف"
             : requestReason.Trim();
 
-        var requestId = await HrmsDatabase.ScalarAsync<int>(
-            _dbContext,
+        int requestId;
+        try
+        {
+            requestId = await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason,
+(EmployeeId, RequestTypeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason,
  Status, CurrentStep, CreatedBy, RequestSource, DaysCount, AttachmentPath, ShiftTypeId)
 VALUES
-(@EmployeeId, @RequestType, @RequestDate, @FromDate, @ToDate, @StartTime, @EndTime, @Reason,
- 'Pending', 'Direct Manager', @CreatedBy, N'EmployeeProfile', 1, @AttachmentPath, @ShiftTypeId);SELECT CAST(SCOPE_IDENTITY() AS int);
+(@EmployeeId, @RequestTypeId, @RequestType, @RequestDate, @FromDate, @ToDate, @StartTime, @EndTime, @Reason,
+ 'Pending', 'Direct Manager', @CreatedBy, @RequestSource, 1, @AttachmentPath, @ShiftTypeId);SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", id);
+                HrmsDatabase.AddParameter(command, "@RequestTypeId", (object?)option.RequestTypeId ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@RequestType", option.RequestType);
                 HrmsDatabase.AddParameter(command, "@RequestDate", DateOnly.FromDateTime(DateTime.Today));
                 HrmsDatabase.AddParameter(command, "@FromDate", date);
@@ -398,9 +426,16 @@ VALUES
                 HrmsDatabase.AddParameter(command, "@EndTime", (object?)endTime ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Reason", reason);
                 HrmsDatabase.AddParameter(command, "@CreatedBy", actor);
+                HrmsDatabase.AddParameter(command, "@RequestSource", RequestSourceCatalog.Admin);
                 HrmsDatabase.AddParameter(command, "@AttachmentPath", (object?)attachmentPath ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@ShiftTypeId", (object?)shiftTypeId ?? DBNull.Value);
-            });
+                });
+        }
+        catch (SqlException ex) when (ex.Number is 547 or 515 or 2601 or 2627)
+        {
+            TempData["ErrorMessage"] = "تعذر إنشاء الطلب لأن البيانات لا تتوافق مع إعدادات النظام الحالية. راجع نوع الطلب وسياسة الشركة ثم أعد المحاولة.";
+            return RedirectToProfile(id, returnFromDate, returnToDate);
+        }
 
         if (requestId <= 0)
         {
@@ -1073,6 +1108,7 @@ ORDER BY da.WorkDate DESC;",
         DayRequestOptions = types.Select(type => new DayRequestOption
         {
             Value = $"type:{type.Id}",
+            RequestTypeId = type.Id,
             RequestType = type.Name,
             Label = type.Name,
             Group = type.CategoryName,
@@ -1235,23 +1271,34 @@ ORDER BY es.IsCurrent DESC, es.EffectiveFrom DESC;",
 
     private async Task LoadAuditAsync(int employeeId)
     {
+        AuditTotalCount = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            @"SELECT COUNT(*) FROM AuditLogs WHERE EntityName = 'Employee' AND EntityId = CAST(@EmployeeId AS nvarchar(80));",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
+
+        AuditPage = NormalizeActivityPage(AuditPage, AuditTotalCount);
+        var offset = (AuditPage - 1) * ActivityPageSize;
+
         AuditRows = await HrmsDatabase.QueryAsync(
             _dbContext,
             @"
-SELECT TOP 25
-    EntityName,
-    EntityId,
-    Action,
-    ISNULL(OldValues, '') AS OldValues,
-    ISNULL(NewValues, '') AS NewValues,
-    ISNULL(UserName, '') AS UserName,
-    ISNULL(IpAddress, '') AS IpAddress,
-    CreatedAt
+SELECT EntityName, EntityId, Action,
+       ISNULL(OldValues, '') AS OldValues,
+       ISNULL(NewValues, '') AS NewValues,
+       ISNULL(UserName, '') AS UserName,
+       ISNULL(IpAddress, '') AS IpAddress,
+       CreatedAt
 FROM AuditLogs
 WHERE EntityName = 'Employee'
   AND EntityId = CAST(@EmployeeId AS nvarchar(80))
-ORDER BY CreatedAt DESC;",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+ORDER BY CreatedAt DESC
+OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@Offset", offset);
+                HrmsDatabase.AddParameter(command, "@PageSize", ActivityPageSize);
+            },
             reader => new AuditRow
             {
                 EntityName = HrmsDatabase.GetString(reader, "EntityName"),
@@ -1263,6 +1310,12 @@ ORDER BY CreatedAt DESC;",
                 IpAddress = HrmsDatabase.GetString(reader, "IpAddress"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")
             });
+    }
+
+    private int NormalizeActivityPage(int page, int totalCount)
+    {
+        var totalPages = Math.Max(1, (totalCount + ActivityPageSize - 1) / ActivityPageSize);
+        return Math.Clamp(page, 1, totalPages);
     }
 
     private async Task<int> CountAsync(string sql, int employeeId)
@@ -1498,6 +1551,7 @@ public string EmployeeNo { get; set; } = string.Empty;
     public class DayRequestOption
     {
         public string Value { get; set; } = string.Empty;
+        public int? RequestTypeId { get; set; }
         public string RequestType { get; set; } = string.Empty;
         public string Label { get; set; } = string.Empty;
         public string Group { get; set; } = string.Empty;
