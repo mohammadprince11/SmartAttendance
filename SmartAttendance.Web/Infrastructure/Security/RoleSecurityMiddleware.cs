@@ -182,6 +182,14 @@ public class RoleSecurityMiddleware
             return compatibilityAllowed;
         }
 
+        // Admin bypass is explicit and intentional. AI routes may disable legacy
+        // compatibility fallback for ordinary roles, but that must not revoke
+        // the authenticated Admin role's unrestricted system access.
+        if (RoleRouteCatalog.IsAdmin(role))
+        {
+            return true;
+        }
+
         // Dynamic People permissions fail closed when the synchronized
         // system identity is unavailable. Compatibility access remains in
         // effect only for routes that do not declare a dynamic requirement.

@@ -299,6 +299,10 @@ public sealed class PeopleAiProcessingFailureIntegrationTests : IAsyncLifetime
     {
         public bool IsEnabled => true;
 
+        public Task EnsureReadyAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
         public Task<LocalOcrResponse> ExtractAsync(
             string physicalPath,
             CancellationToken cancellationToken = default)

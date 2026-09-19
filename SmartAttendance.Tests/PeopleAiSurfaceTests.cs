@@ -175,6 +175,20 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void SmartOnboarding_PreservesExplicitAdminBypass()
+    {
+        var root = FindRoot();
+        var middleware = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Security",
+            "RoleSecurityMiddleware.cs"));
+
+        Assert.Contains(
+            "the authenticated Admin role's unrestricted system access",
+            middleware);
+        Assert.Contains("if (RoleRouteCatalog.IsAdmin(role))", middleware);
+    }
+
+    [Fact]
     public void PeopleAiCss_UsesDesignTokensOnly()
     {
         var root = FindRoot();
