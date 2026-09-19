@@ -18,6 +18,13 @@ if hasattr(sys.stderr, "reconfigure"):
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 os.environ.setdefault("FLAGS_minloglevel", "2")
 
+
+class StartupStageError(RuntimeError):
+    def __init__(self, error_code):
+        super().__init__(error_code)
+        self.error_code = error_code
+
+
 def _read_runtime_config():
     requested_device = (
         os.environ.get("PEOPLE_AI_OCR_DEVICE", "auto").strip().lower()
@@ -111,12 +118,36 @@ def _build_ocr_engine(language, resolved_device):
 
 
 def build_ocr():
-    requested_device, language, temp_directory = _read_runtime_config()
-    _verify_document_dependencies()
-    resolved_device = _resolve_device(requested_device)
+    try:
+        requested_device, language, temp_directory = _read_runtime_config()
+    except PermissionError as exc:
+        raise StartupStageError(
+            "STARTUP_RUNTIMECONFIG_PERMISSION_DENIED"
+        ) from exc
+
+    try:
+        _verify_document_dependencies()
+    except PermissionError as exc:
+        raise StartupStageError(
+            "STARTUP_DEPENDENCIES_PERMISSION_DENIED"
+        ) from exc
+
+    try:
+        resolved_device = _resolve_device(requested_device)
+    except PermissionError as exc:
+        raise StartupStageError(
+            "STARTUP_DEVICE_PERMISSION_DENIED"
+        ) from exc
+
     default_languages = _normalize_language_profile(language)
     default_language = default_languages[0]
-    ocr = _build_ocr_engine(default_language, resolved_device)
+
+    try:
+        ocr = _build_ocr_engine(default_language, resolved_device)
+    except PermissionError as exc:
+        raise StartupStageError(
+            "STARTUP_MODELINIT_PERMISSION_DENIED"
+        ) from exc
 
     diagnostics = {
         "provider": "PaddleOCR",
@@ -648,7 +679,11 @@ def serve():
     except Exception as exc:
         print(json.dumps({
             "ready": False,
-            "errorType": type(exc).__name__,
+            "errorType": getattr(
+                exc,
+                "error_code",
+                type(exc).__name__,
+            ),
             "error": str(exc),
         }, ensure_ascii=True), flush=True)
         traceback.print_exc(file=sys.stderr)
