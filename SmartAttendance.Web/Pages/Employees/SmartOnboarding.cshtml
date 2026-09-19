@@ -1,0 +1,503 @@
+@page "/Employees/SmartOnboarding"
+@model SmartAttendance.Web.Pages.Employees.SmartOnboardingModel
+@{
+    ViewData["Title"] = "Smart Onboarding";
+    string StatusLabel(string value) => value switch
+    {
+        "Draft" => "مسودة",
+        "Queued" => "بانتظار المعالجة",
+        "Processing" => "قيد المعالجة",
+        "NeedsReview" => "تحتاج مراجعة",
+        "Stored" => "محفوظ للمراجعة",
+        "Ready" => "جاهزة",
+        "Completed" => "مكتملة",
+        "Cancelled" => "ملغاة",
+        "Failed" => "فشلت",
+        _ => value
+    };
+    string SizeLabel(long bytes) =>
+        bytes >= 1024 * 1024
+            ? $"{bytes / 1024d / 1024d:0.0} MB"
+            : $"{Math.Max(1, bytes / 1024d):0} KB";
+
+    string DurationLabel(long milliseconds)
+    {
+        var seconds = Math.Max(1, (int)Math.Round(milliseconds / 1000d));
+        if (seconds < 60)
+        {
+            return $"{seconds} ث";
+        }
+
+        var minutes = seconds / 60;
+        var remainingSeconds = seconds % 60;
+        return remainingSeconds == 0
+            ? $"{minutes} د"
+            : $"{minutes} د {remainingSeconds} ث";
+    }
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/smart-onboarding.css" asp-append-version="true" />
+}
+
+<div class="so-shell" dir="rtl">
+    <div class="zy-breadcrumb"><span>زينورا</span><span>/</span><span>الأشخاص</span><span>/</span><b>Smart Onboarding</b></div>
+
+    <header class="zy-page-header so-head">
+        <div>
+            <h1>Smart Onboarding</h1>
+            <div class="zy-desc">إدخال الموظف بمساعدة المستندات مع حماية الملفات، مراجعة بشرية، ومنع الكتابة المباشرة إلى سجل الموظف.</div>
+        </div>
+        <div class="zy-spacer"></div>
+        <span class="zy-badge zy-badge--info">Local Processing</span>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="so-alert so-alert--success">@Model.StatusMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="so-alert so-alert--danger">@Model.ErrorMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorPageMessage))
+    {
+        <div class="so-alert so-alert--danger">@Model.ErrorPageMessage</div>
+    }
+
+    <section class="so-steps" aria-label="مراحل Smart Onboarding">
+        <div class="is-done"><b>1</b><span>الشركة</span></div>
+        <div class="@(Model.Session is null ? null : "is-done")"><b>2</b><span>الجلسة</span></div>
+        <div class="@(Model.Documents.Count > 0 ? "is-active" : null)"><b>3</b><span>المستندات</span></div>
+        <div><b>4</b><span>الاستخراج والمراجعة</span></div>
+        <div><b>5</b><span>Preview & Create</span></div>
+    </section>
+
+    <section class="so-card so-company-card">
+        <div class="so-section-head">
+            <div>
+                <h2>1. الشركة</h2>
+                <p>الشركة تُثبت داخل جلسة الـOnboarding ولا يستطيع المستند أو محرك المعالجة تغييرها.</p>
+            </div>
+        </div>
+
+        <form method="get" class="so-company-select">
+            <select name="CompanyId" onchange="this.form.submit()" @(Model.Session is not null ? "disabled" : null)>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+            @if (Model.Session is null && Model.CompanyId is > 0)
+            {
+                <span>اختر الشركة ثم أنشئ جلسة جديدة.</span>
+            }
+            else if (Model.Session is not null)
+            {
+                <span>الشركة مثبتة لهذه الجلسة.</span>
+            }
+        </form>
+
+        @if (Model.Session is null && Model.CompanyId is > 0)
+        {
+            <form method="post" asp-page-handler="Start">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <button type="submit" class="zy-btn zy-btn--primary">بدء Smart Onboarding</button>
+            </form>
+        }
+    </section>
+
+    @if (Model.Session is not null)
+    {
+        <section class="so-session-strip" data-live-fragment="session">
+            <div><span>Session</span><strong>#@Model.Session.Id</strong></div>
+            <div><span>الحالة</span><strong>@StatusLabel(Model.Session.Status)</strong></div>
+            <div><span>المستندات</span><strong>@Model.Documents.Count</strong></div>
+            <div><span>المعالجة</span><strong>محلية فقط</strong></div>
+            <form method="post" asp-page-handler="Cancel">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <input type="hidden" name="sessionId" value="@Model.Session.Id" />
+                <button type="submit" class="zy-btn">إلغاء الجلسة</button>
+            </form>
+        </section>
+
+        <section class="so-grid">
+            <div class="so-card">
+                <div class="so-section-head">
+                    <div>
+                        <h2>2. رفع المستندات</h2>
+                        <p>الملف يمر بالتوقيع الثنائي وفحص الأمان وSHA-256 ثم يُحفظ خارج wwwroot.</p>
+                    </div>
+                </div>
+
+                <form method="post"
+                      asp-page-handler="Upload"
+                      enctype="multipart/form-data"
+                      class="so-upload"
+                      data-ajax-upload>
+                    <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                    <input type="hidden" name="sessionId" value="@Model.Session.Id" />
+
+                    <label>
+                        <span>نوع المستند</span>
+                        <select asp-for="DeclaredDocumentType"
+                                data-document-type>
+                            @foreach (var type in Model.AvailableDocumentTypes)
+                            {
+                                <option value="@type.DocumentType">@type.DisplayLabel</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="so-drop">
+                        <input asp-for="DocumentFile"
+                               type="file"
+                               data-upload-file
+                               accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" />
+                        <strong>اختر مستنداً أو اسحبه هنا</strong>
+                        <span>الصور: OCR تلقائي · PDF/Office: تخزين ومراجعة فقط · الحد الأقصى 10MB</span>
+                    </label>
+
+                    <div class="so-alert so-alert--info">
+                        <strong>عقد المعالجة:</strong>
+                        PNG/JPG/JPEG/WEBP تدعم OCR. PDF/DOC/DOCX/XLS/XLSX تُحفظ بأمان،
+                        لكن الاستخراج التلقائي غير مدعوم حالياً ولن تدخل طابور OCR.
+                        نوع مستند مخصص يمكن تخزينه ومراجعته حتى بدون Structured Extractor.
+                    </div>
+
+                    <button type="submit"
+                            class="zy-btn zy-btn--primary"
+                            data-upload-submit>
+                        رفع المستند
+                    </button>
+
+                    <div class="so-upload-feedback"
+                         data-upload-message
+                         hidden></div>
+                </form>
+
+                <div class="so-policy-summary">
+                    <h3>متطلبات هذه الشركة</h3>
+                    @foreach (var policy in Model.DocumentPolicies.Where(x => x.IsActive && x.Requirement == "Required"))
+                    {
+                        <span>
+                            <b>@policy.DocumentType</b>
+                            <small>@(policy.EmployeeCategory == "Citizen" ? "مواطن" : policy.EmployeeCategory == "Expat" ? "وافد" : "الجميع")</small>
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <div class="so-card so-queue-panel"
+                 data-live-queue
+                 data-refresh-seconds="@Model.QueueRefreshSeconds"
+                 aria-live="polite">
+                @{
+                    var activeQueueCount = Model.Documents
+                        .Select(x => x.ActiveQueueCount)
+                        .DefaultIfEmpty(0)
+                        .Max();
+                    var queueHead = Model.Documents
+                        .Where(x => x.JobStatus is "Queued" or "Retry" or "Processing")
+                        .OrderBy(x => x.JobStatus == "Processing" ? 0 : 1)
+                        .ThenBy(x => x.JobsAhead)
+                        .ThenBy(x => x.Id)
+                        .FirstOrDefault();
+                    var durationSource = Model.Documents.FirstOrDefault(
+                        x => x.AverageSuccessfulDurationMs is > 0);
+                }
+
+                <div class="so-section-head">
+                    <div>
+                        <h2>3. طابور المعالجة</h2>
+                        <p>حالة حية من الـQueue الفعلية. تتحدث تلقائياً بدون إعادة تحميل الصفحة.</p>
+                    </div>
+                    <span class="zy-badge zy-badge--info">@Model.Documents.Count ملف</span>
+                </div>
+
+                <div class="so-queue-overview">
+                    <div class="so-live-state">
+                        <span class="so-live-dot" aria-hidden="true"></span>
+                        <div>
+                            <strong>متابعة مباشرة</strong>
+                            <small data-live-message>تحديث كل @Model.QueueRefreshSeconds ثوانٍ</small>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span>الطابور العام</span>
+                        <strong>@activeQueueCount</strong>
+                        <small>ملف نشط/منتظر</small>
+                    </div>
+
+                    @if (queueHead is not null)
+                    {
+                        <div>
+                            <span>أول ملف من هذه الجلسة</span>
+                            @if (queueHead.JobStatus == "Processing")
+                            {
+                                <strong>يُعالج الآن</strong>
+                                <small>المحاولة @queueHead.JobAttemptCount من @queueHead.JobMaxAttempts</small>
+                            }
+                            else
+                            {
+                                <strong>الترتيب #@(queueHead.JobsAhead + 1)</strong>
+                                <small>@(queueHead.JobsAhead == 0 ? "الدور التالي" : $"{queueHead.JobsAhead} ملف أمامه")</small>
+                            }
+                        </div>
+                    }
+
+                    <div>
+                        <span>زمن OCR المرجعي</span>
+                        @if (durationSource?.AverageSuccessfulDurationMs is > 0)
+                        {
+                            <strong>~@DurationLabel(durationSource.AverageSuccessfulDurationMs.Value)</strong>
+                            <small>متوسط @durationSource.SuccessfulDurationSamples معالجة ناجحة</small>
+                        }
+                        else
+                        {
+                            <strong>غير متاح بعد</strong>
+                            <small>لا توجد عينات نجاح كافية</small>
+                        }
+                    </div>
+
+                    <div>
+                        <span>مهلة المحاولة</span>
+                        <strong>@DurationLabel(Model.JobTimeoutSeconds * 1000L)</strong>
+                        <small>قد تنتهي أسرع؛ يعاد التقييم عند المهلة</small>
+                    </div>
+                </div>
+
+                @if (Model.Documents.Count == 0)
+                {
+                    <div class="so-empty">لم يتم رفع أي مستند لهذه الجلسة بعد.</div>
+                }
+                else
+                {
+                    <div class="so-doc-list">
+                        @foreach (var document in Model.Documents)
+                        {
+                            var isCancelled = document.JobStatus == "Cancelled";
+                            var isProcessing =
+                                !isCancelled &&
+                                (document.JobStatus == "Processing" ||
+                                 document.ProcessingStatus == "Processing");
+                            var isRetry = document.JobStatus == "Retry";
+                            var isWaiting =
+                                document.JobStatus == "Queued" ||
+                                isRetry ||
+                                (document.JobStatus is null &&
+                                 document.ProcessingStatus == "Queued");
+                            var displayStatus = isCancelled
+                                ? "Cancelled"
+                                : document.ProcessingStatus;
+                            var lockedAtUtc = document.JobLockedAt.HasValue
+                                ? DateTime.SpecifyKind(document.JobLockedAt.Value, DateTimeKind.Utc)
+                                : (DateTime?)null;
+                            var attemptDeadlineUtc = lockedAtUtc?.AddSeconds(Model.JobTimeoutSeconds);
+                            var nextAttemptUtc = document.JobNextAttemptAt.HasValue
+                                ? DateTime.SpecifyKind(document.JobNextAttemptAt.Value, DateTimeKind.Utc)
+                                : (DateTime?)null;
+                            var averageSuccessfulSeconds =
+                                document.AverageSuccessfulDurationMs is > 0
+                                    ? Math.Max(
+                                        1,
+                                        (int)Math.Ceiling(
+                                            document.AverageSuccessfulDurationMs.Value / 1000d))
+                                    : (int?)null;
+                            var estimatedCompletionSeconds =
+                                averageSuccessfulSeconds.HasValue
+                                    ? averageSuccessfulSeconds.Value * (document.JobsAhead + 1)
+                                    : (int?)null;
+                            var conservativeFirstPassSeconds =
+                                Model.JobTimeoutSeconds * (document.JobsAhead + 1);
+
+                            <article class="so-doc" data-document-id="@document.Id">
+                                <div class="so-doc-top">
+                                    <div>
+                                        <strong>@document.OriginalFileName</strong>
+                                        <span>@(document.DeclaredDocumentType ?? "Unknown") · @SizeLabel(document.SizeBytes)</span>
+                                    </div>
+                                    <span class="so-status so-status--@displayStatus.ToLowerInvariant()">@StatusLabel(displayStatus)</span>
+                                </div>
+
+                                <div class="so-doc-meta">
+                                    <span>Document #@document.Id</span>
+                                    <span>المعلن: @(document.DeclaredDocumentType ?? "Unknown")</span>
+                                    @if (!string.IsNullOrWhiteSpace(document.DetectedDocumentType))
+                                    {
+                                        <span>
+                                            المكتشف: @document.DetectedDocumentType
+                                            @if (document.ClassificationConfidence.HasValue)
+                                            {
+                                                <text> · @($"{document.ClassificationConfidence.Value:P0}")</text>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(document.DetectionMethod))
+                                            {
+                                                <text> · @document.DetectionMethod</text>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>المكتشف: غير محدد — لا يتم افتراضه من اختيار المستخدم</span>
+                                    }
+                                    <span>SHA-256: @(document.Sha256.Length >= 12 ? document.Sha256[..12] + "…" : document.Sha256)</span>
+                                    <span>رُفع @document.UploadedAt.ToLocalTime().ToString("HH:mm:ss")</span>
+                                </div>
+
+                                @if (isProcessing && lockedAtUtc.HasValue)
+                                {
+                                    <div class="so-processing-state">
+                                        <div class="so-processing-head">
+                                            <div>
+                                                <strong>المعالجة تعمل الآن</strong>
+                                                <span>OCR محلي · المحاولة @document.JobAttemptCount من @document.JobMaxAttempts</span>
+                                            </div>
+                                            <span class="so-live-pill">LIVE</span>
+                                        </div>
+                                        <div class="so-indeterminate" aria-hidden="true"><i></i></div>
+                                        <div class="so-timing-grid">
+                                            <span>
+                                                بدأت منذ
+                                                <b data-elapsed-from="@lockedAtUtc.Value.ToString("O")">—</b>
+                                            </span>
+                                            <span>
+                                                تنتهي المحاولة أو يعاد تقييمها خلال
+                                                <b data-countdown-to="@attemptDeadlineUtc!.Value.ToString("O")">—</b>
+                                            </span>
+                                        </div>
+                                    </div>
+                                }
+                                else if (isRetry && nextAttemptUtc.HasValue &&
+                                         nextAttemptUtc.Value > DateTime.UtcNow)
+                                {
+                                    <div class="so-queue-state so-queue-state--retry">
+                                        <div>
+                                            <strong>بانتظار إعادة المحاولة</strong>
+                                            <span>المحاولة السابقة @document.JobAttemptCount من @document.JobMaxAttempts</span>
+                                        </div>
+                                        <div>
+                                            <span>المحاولة التالية خلال</span>
+                                            <b data-countdown-to="@nextAttemptUtc.Value.ToString("O")">—</b>
+                                        </div>
+                                    </div>
+                                }
+                                else if (isWaiting)
+                                {
+                                    <div class="so-queue-state">
+                                        <div>
+                                            <strong>
+                                                @(document.JobsAhead == 0
+                                                    ? "الدور التالي للمعالجة"
+                                                    : $"الترتيب #{document.JobsAhead + 1} في الطابور")
+                                            </strong>
+                                            <span>
+                                                @(document.JobsAhead == 0
+                                                    ? "سيبدأ تلقائياً عند توفر الـWorker."
+                                                    : $"{document.JobsAhead} ملف أمامه حالياً.")
+                                            </span>
+                                        </div>
+                                        <div class="so-queue-rank">
+                                            <b>#@(document.JobsAhead + 1)</b>
+                                            <span>من @Math.Max(1, document.ActiveQueueCount)</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="so-queue-eta">
+                                        @if (estimatedCompletionSeconds.HasValue)
+                                        {
+                                            <div>
+                                                <span>الانتهاء المتوقع</span>
+                                                <strong>~@DurationLabel(estimatedCompletionSeconds.Value * 1000L)</strong>
+                                                <small>
+                                                    تقدير حي حسب متوسط آخر
+                                                    @document.SuccessfulDurationSamples
+                                                    معالجة ناجحة.
+                                                </small>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div>
+                                                <span>الانتهاء المتوقع</span>
+                                                <strong>جارٍ بناء التقدير</strong>
+                                                <small>يظهر بعد توفر أول عينة معالجة ناجحة.</small>
+                                            </div>
+                                        }
+                                        <div>
+                                            <span>حد محافظ للمحاولة الأولى</span>
+                                            <strong>≤ @DurationLabel(conservativeFirstPassSeconds * 1000L)</strong>
+                                            <small>قد يزيد فقط إذا احتاج أحد الملفات إعادة محاولة.</small>
+                                        </div>
+                                    </div>
+                                }
+                                else if (isCancelled)
+                                {
+                                    <div class="so-cancelled-state">
+                                        <strong>مهمة المعالجة ملغاة</strong>
+                                        <span>هذا الملف لن يدخل الـOCR ما دامت المهمة ملغاة.</span>
+                                    </div>
+                                }
+                                else if (document.ProcessingStatus == "Stored")
+                                {
+                                    <div class="so-done-state">
+                                        <strong>محفوظ للمراجعة فقط</strong>
+                                        <span>هذا التنسيق لا يدعم الاستخراج التلقائي حالياً ولم تتم إضافته إلى طابور OCR.</span>
+                                    </div>
+                                }
+                                else if (document.ProcessedAt.HasValue)
+                                {
+                                    <div class="so-done-state">
+                                        <strong>انتهت المعالجة</strong>
+                                        <span>@document.ProcessedAt.Value.ToLocalTime().ToString("HH:mm:ss")</span>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(document.ProcessingErrorCode))
+                                {
+                                    <div class="so-doc-error">@document.ProcessingErrorCode</div>
+                                }
+
+                                @if (document.ProcessingStatus == "Failed")
+                                {
+                                    <form method="post" asp-page-handler="RetryDocument">
+                                        <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                                        <input type="hidden" name="sessionId" value="@Model.Session.Id" />
+                                        <input type="hidden" name="documentId" value="@document.Id" />
+                                        <button type="submit" class="zy-btn">إعادة المعالجة</button>
+                                    </form>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="so-card so-next" data-live-fragment="next">
+            <div>
+                <h2>المرحلة التالية</h2>
+                <p>Document Classification → Preprocessing → OCR/MRZ → Normalization → Validation → Duplicate Detection → Human Review.</p>
+            </div>
+            @if (Model.Session.Status is "NeedsReview" or "Ready" or "Completed" ||
+                 Model.Documents.Any(x =>
+                     x.ProcessingStatus is "NeedsReview" or "Stored"))
+            {
+                <a asp-page="./SmartOnboardingReview"
+                   asp-route-CompanyId="@Model.CompanyId"
+                   asp-route-SessionId="@Model.Session.Id"
+                   class="zy-btn zy-btn--primary">
+                    فتح المراجعة البشرية
+                </a>
+            }
+            else
+            {
+                <span class="zy-badge zy-badge--info">لا يوجد إنشاء موظف تلقائي</span>
+            }
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/smart-onboarding-live-queue.js" asp-append-version="true"></script>
+}

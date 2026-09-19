@@ -22,6 +22,11 @@
     <ProjectReference Include="..\SmartAttendance.Infrastructure\SmartAttendance.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="PeopleAI\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <Target Name="GenerateLocalizationSourceCatalog" AfterTargets="Publish">
     <PropertyGroup>

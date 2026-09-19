@@ -1,0 +1,447 @@
+@page "/HrSettings/PeopleAI"
+@model SmartAttendance.Web.Pages.HrSettings.PeopleAI.IndexModel
+@using SmartAttendance.Application.PeopleAi
+@{
+    ViewData["Title"] = "People AI";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/people-ai-settings.css" asp-append-version="true" />
+}
+
+<div class="pai-shell" dir="rtl">
+    <div class="zy-breadcrumb">
+        <span>زينورا</span><span>/</span><span>إعدادات الموارد البشرية</span><span>/</span><b>People AI</b>
+    </div>
+
+    <header class="zy-page-header pai-head">
+        <div>
+            <h1>People AI</h1>
+            <div class="zy-desc">إعدادات الذكاء المساعد للأشخاص، التكرار، المراجعة، والمستندات المطلوبة لكل شركة.</div>
+        </div>
+        <div class="zy-spacer"></div>
+        <span class="zy-badge zy-badge--info">Local Only</span>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="pai-alert pai-alert--success">@Model.StatusMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="pai-alert pai-alert--danger">@Model.ErrorMessage</div>
+    }
+
+    <form method="get" class="pai-company">
+        <label>
+            <span>الشركة</span>
+            <select name="CompanyId" onchange="this.form.submit()">
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+        </label>
+        <small>كل سياسة هنا مستقلة لكل شركة ولا تمنح صلاحيات بيانات إضافية للمستخدم.</small>
+    </form>
+
+    @if (Model.CompanyId is not > 0 || Model.Policy is null)
+    {
+        <div class="pai-empty">لا توجد شركة متاحة ضمن نطاق صلاحيتك.</div>
+    }
+    else
+    {
+        <section class="pai-grid">
+            <form method="post" asp-page-handler="SavePolicy" class="pai-card">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <div class="pai-card-head">
+                    <div>
+                        <h2>السياسة العامة</h2>
+                        <p>تتحكم بكيفية كشف التكرار ومن يراجع نتائج المعالجة.</p>
+                    </div>
+                    <label class="pai-toggle">
+                        <input type="checkbox" name="enabled" value="true" checked="@Model.Policy.IsEnabled" />
+                        <span>مفعّل</span>
+                    </label>
+                </div>
+
+                <div class="pai-fields">
+                    <label>
+                        <span>نطاق كشف التكرار</span>
+                        <select name="duplicateScope">
+                            <option value="CurrentCompany" selected="@(Model.Policy.DuplicateScope == PeopleAiDuplicateScope.CurrentCompany)">الشركة الحالية فقط</option>
+                            <option value="AuthorizedCompanies" selected="@(Model.Policy.DuplicateScope == PeopleAiDuplicateScope.AuthorizedCompanies)">الشركات المصرح للمستخدم بها</option>
+                            <option value="WholeTenant" selected="@(Model.Policy.DuplicateScope == PeopleAiDuplicateScope.WholeTenant)">كل شركات المجموعة بدون كشف التفاصيل غير المصرحة</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        <span>الإجراء عند وجود Duplicate</span>
+                        <select name="duplicateAction">
+                            <option value="WarnOnly" selected="@(Model.Policy.DuplicateAction == PeopleAiDuplicateAction.WarnOnly)">تحذير فقط</option>
+                            <option value="RequireReview" selected="@(Model.Policy.DuplicateAction == PeopleAiDuplicateAction.RequireReview)">يتطلب مراجعة</option>
+                            <option value="BlockCreation" selected="@(Model.Policy.DuplicateAction == PeopleAiDuplicateAction.BlockCreation)">منع الإنشاء</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>من يعتمد نتيجة المعالجة</span>
+                        <select name="reviewerMode">
+                            <option value="AdminOnly" selected="@(Model.Policy.ReviewerMode == PeopleAiReviewerMode.AdminOnly)">Admin فقط</option>
+                            <option value="AdminOrCreatorWithPermission" selected="@(Model.Policy.ReviewerMode == PeopleAiReviewerMode.AdminOrCreatorWithPermission)">Admin أو منشئ المعاملة مع صلاحية المراجعة</option>
+                        </select>
+                    </label>
+
+                    <div class="pai-language-field">
+                        <span>اللغات</span>
+                        <label><input type="checkbox" name="languages" value="ar" checked="@Model.Policy.EnabledLanguages.Contains("ar")" /> العربية</label>
+                        <label><input type="checkbox" name="languages" value="en" checked="@Model.Policy.EnabledLanguages.Contains("en")" /> English</label>
+                    </div>
+                </div>
+
+                <div class="pai-local">
+                    <strong>المعالجة المحلية فقط</strong>
+                    <span>Cloud AI/OCR معطّل على مستوى السياسة ولا يمكن تفعيله من هذه الصفحة.</span>
+                </div>
+
+                <div class="pai-actions">
+                    <button type="submit" class="zy-btn zy-btn--primary">حفظ السياسة</button>
+                </div>
+            </form>
+
+            <section class="pai-card pai-card--info">
+                <div class="pai-card-head">
+                    <div>
+                        <h2>حالة البنية</h2>
+                        <p>الطبقات التي أصبحت جاهزة قبل تشغيل OCR فعلي.</p>
+                    </div>
+                </div>
+                <div class="pai-readiness">
+                    <span><b>Protected Storage</b><small>خارج wwwroot</small></span>
+                    <span><b>Company Scope</b><small>يفرض على Create وOnboarding</small></span>
+                    <span><b>Duplicate Engine</b><small>حسب سياسة الشركة</small></span>
+                    <span><b>Durable Jobs</b><small>Idempotency + Retry</small></span>
+                    <span><b>Audit Foundation</b><small>بدون تخزين PII الخام</small></span>
+                    <span><b>Cloud Processing</b><small>معطّل</small></span>
+                </div>
+            </section>
+        </section>
+
+        <section class="pai-card pai-doc-types">
+            <div class="pai-card-head">
+                <div>
+                    <h2>أنواع المستندات</h2>
+                    <p>
+                        أضف أو عدّل أنواع المستندات التي تظهر في Smart Onboarding.
+                        مفتاح النوع يستخدم داخلياً، واسم العرض هو النص الذي يراه المستخدم.
+                    </p>
+                </div>
+                <span class="zy-badge zy-badge--info">@Model.DocumentTypes.Count نوع</span>
+            </div>
+
+            <div class="pai-doc-type-list">
+                @foreach (var type in Model.DocumentTypes)
+                {
+                    <form method="post"
+                          asp-page-handler="SaveDocumentType"
+                          class="pai-doc-type-row">
+                        <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="documentType" value="@type.DocumentType" />
+
+                        <div class="pai-field-identity">
+                            <strong>@type.DisplayLabel</strong>
+                            <code>@type.DocumentType</code>
+                        </div>
+
+                        <label>
+                            <span>اسم العرض</span>
+                            <input name="displayLabel"
+                                   value="@type.DisplayLabel"
+                                   maxlength="150"
+                                   required />
+                        </label>
+
+                        <label>
+                            <span>الترتيب</span>
+                            <input type="number"
+                                   name="sortOrder"
+                                   value="@type.SortOrder"
+                                   min="0"
+                                   max="9999" />
+                        </label>
+
+                        <label class="pai-check">
+                            <input type="checkbox"
+                                   name="active"
+                                   value="true"
+                                   checked="@type.IsActive" />
+                            <span>فعال في قائمة الرفع</span>
+                        </label>
+
+                        <div class="pai-field-actions">
+                            <button type="submit" class="zy-btn">حفظ</button>
+                            <button type="submit"
+                                    asp-page-handler="DeleteDocumentType"
+                                    class="zy-btn pai-danger">
+                                إخفاء
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+
+            <form method="post"
+                  asp-page-handler="SaveDocumentType"
+                  class="pai-doc-type-add">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <input type="hidden" name="active" value="true" />
+
+                <h3>إضافة نوع مستند جديد</h3>
+
+                <label>
+                    <span>مفتاح النوع</span>
+                    <input name="documentType"
+                           placeholder="مثال: WorkPermit"
+                           maxlength="50"
+                           required />
+                </label>
+
+                <label>
+                    <span>اسم العرض</span>
+                    <input name="displayLabel"
+                           placeholder="مثال: إجازة عمل"
+                           maxlength="150"
+                           required />
+                </label>
+
+                <label>
+                    <span>الترتيب</span>
+                    <input type="number"
+                           name="sortOrder"
+                           value="100"
+                           min="0"
+                           max="9999" />
+                </label>
+
+                <button type="submit" class="zy-btn zy-btn--primary">
+                    إضافة النوع
+                </button>
+            </form>
+        </section>
+
+        <section class="pai-card pai-docs">
+            <div class="pai-card-head">
+                <div>
+                    <h2>سياسات المستندات</h2>
+                    <p>حدد ما هو مطلوب لكل فئة موظف، وهل يحتاج تاريخ انتهاء أو تحقق من الأصل.</p>
+                </div>
+                <span class="zy-badge zy-badge--info">@Model.DocumentPolicies.Count سياسة</span>
+            </div>
+
+            <div class="pai-policy-list">
+                @foreach (var policy in Model.DocumentPolicies)
+                {
+                    <form method="post" asp-page-handler="SaveDocumentPolicy" class="pai-policy-row">
+                        <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="documentType" value="@policy.DocumentType" />
+                        <input type="hidden" name="employeeCategory" value="@policy.EmployeeCategory" />
+
+                        <div class="pai-policy-name">
+                            <strong>@policy.DocumentType</strong>
+                            <small>@(policy.EmployeeCategory == "Citizen" ? "مواطن" : policy.EmployeeCategory == "Expat" ? "وافد" : "الجميع")</small>
+                        </div>
+
+                        <label>
+                            <span>الحالة</span>
+                            <select name="requirement">
+                                <option value="Required" selected="@(policy.Requirement == "Required")">مطلوب</option>
+                                <option value="Optional" selected="@(policy.Requirement == "Optional")">اختياري</option>
+                                <option value="NotApplicable" selected="@(policy.Requirement == "NotApplicable")">غير مطبق</option>
+                            </select>
+                        </label>
+
+                        <label class="pai-check">
+                            <input type="checkbox" name="requireExpiryDate" value="true" checked="@policy.RequireExpiryDate" />
+                            <span>تاريخ انتهاء</span>
+                        </label>
+
+                        <label class="pai-check">
+                            <input type="checkbox" name="requireOriginalVerification" value="true" checked="@policy.RequireOriginalVerification" />
+                            <span>التحقق من الأصل</span>
+                        </label>
+                        <label class="pai-check">
+                            <input type="checkbox" name="active" value="true" checked="@policy.IsActive" />
+                            <span>فعال</span>
+                        </label>
+
+                        <button type="submit" class="zy-btn">حفظ</button>
+                    </form>
+                }
+            </div>
+
+            <form method="post" asp-page-handler="SaveDocumentPolicy" class="pai-policy-add">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <h3>إضافة / تحديث سياسة مستند</h3>
+                <input name="documentType"
+                       list="pai-document-types"
+                       placeholder="مثال: WorkPermit"
+                       required />
+                <select name="employeeCategory">
+                    <option value="All">الجميع</option>
+                    <option value="Citizen">مواطن</option>
+                    <option value="Expat">وافد</option>
+                </select>
+                <select name="requirement">
+                    <option value="Required">مطلوب</option>
+                    <option value="Optional">اختياري</option>
+                    <option value="NotApplicable">غير مطبق</option>
+                </select>
+                <label class="pai-check"><input type="checkbox" name="requireExpiryDate" value="true" /> تاريخ انتهاء</label>
+                <label class="pai-check"><input type="checkbox" name="requireOriginalVerification" value="true" /> تحقق من الأصل</label>
+                <label class="pai-check"><input type="checkbox" name="active" value="true" checked /> فعال</label>
+                <button type="submit" class="zy-btn zy-btn--primary">حفظ السياسة</button>
+            </form>
+        </section>
+
+        <section class="pai-card pai-field-config">
+            <div class="pai-card-head">
+                <div>
+                    <h2>حقول المراجعة</h2>
+                    <p>
+                        تحكم بالحقول الظاهرة لكل نوع مستند: الاسم المعروض، الإلزامية،
+                        الترتيب، وهل يدخل الحقل ضمن «اعتماد الكل». الحقل المضاف يدوياً
+                        يظهر حتى لو لم يستخرجه OCR ويمكن تعبئته أثناء المراجعة.
+                    </p>
+                </div>
+                <span class="zy-badge zy-badge--info">@Model.FieldPolicies.Count حقل</span>
+            </div>
+
+            <div class="pai-field-policy-list">
+                @foreach (var field in Model.FieldPolicies)
+                {
+                    <form method="post"
+                          asp-page-handler="SaveFieldPolicy"
+                          class="pai-field-policy-row">
+                        <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="documentType" value="@field.DocumentType" />
+                        <input type="hidden" name="fieldKey" value="@field.FieldKey" />
+                        <input type="hidden" name="active" value="true" />
+
+                        <div class="pai-field-identity">
+                            <strong>@field.DocumentType</strong>
+                            <code>@field.FieldKey</code>
+                        </div>
+
+                        <label>
+                            <span>اسم العرض</span>
+                            <input name="displayLabel"
+                                   value="@field.DisplayLabel"
+                                   maxlength="150"
+                                   required />
+                        </label>
+
+                        <label>
+                            <span>الحالة</span>
+                            <select name="requirement">
+                                <option value="Required" selected="@(field.Requirement == "Required")">مطلوب</option>
+                                <option value="Optional" selected="@(field.Requirement == "Optional")">اختياري</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            <span>الترتيب</span>
+                            <input type="number"
+                                   name="sortOrder"
+                                   value="@field.SortOrder"
+                                   min="0"
+                                   max="9999" />
+                        </label>
+
+                        <label class="pai-check">
+                            <input type="checkbox"
+                                   name="allowBulkApprove"
+                                   value="true"
+                                   checked="@field.AllowBulkApprove" />
+                            <span>اعتماد الكل</span>
+                        </label>
+
+                        <div class="pai-field-actions">
+                            <button type="submit" class="zy-btn">حفظ</button>
+                            <button type="submit"
+                                    asp-page-handler="DeleteFieldPolicy"
+                                    class="zy-btn pai-danger">
+                                حذف / إخفاء
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+
+            <form method="post"
+                  asp-page-handler="SaveFieldPolicy"
+                  class="pai-field-add">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <input type="hidden" name="active" value="true" />
+
+                <h3>إضافة حقل للمراجعة</h3>
+
+                <label>
+                    <span>نوع المستند</span>
+                    <input name="documentType"
+                           list="pai-document-types"
+                           placeholder="NationalId"
+                           required />
+                </label>
+                <datalist id="pai-document-types">
+                    @foreach (var type in Model.DocumentTypes.Where(x => x.IsActive))
+                    {
+                        <option value="@type.DocumentType">@type.DisplayLabel</option>
+                    }
+                </datalist>
+
+                <label>
+                    <span>مفتاح الحقل</span>
+                    <input name="fieldKey"
+                           placeholder="FamilyNumber"
+                           maxlength="100"
+                           required />
+                </label>
+
+                <label>
+                    <span>اسم العرض</span>
+                    <input name="displayLabel"
+                           placeholder="الرقم العائلي"
+                           maxlength="150"
+                           required />
+                </label>
+
+                <label>
+                    <span>الحالة</span>
+                    <select name="requirement">
+                        <option value="Optional">اختياري</option>
+                        <option value="Required">مطلوب</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>الترتيب</span>
+                    <input type="number"
+                           name="sortOrder"
+                           value="100"
+                           min="0"
+                           max="9999" />
+                </label>
+
+                <label class="pai-check">
+                    <input type="checkbox"
+                           name="allowBulkApprove"
+                           value="true"
+                           checked />
+                    <span>يدخل ضمن اعتماد الكل</span>
+                </label>
+
+                <button type="submit" class="zy-btn zy-btn--primary">
+                    إضافة الحقل
+                </button>
+            </form>
+        </section>
+    }
+</div>

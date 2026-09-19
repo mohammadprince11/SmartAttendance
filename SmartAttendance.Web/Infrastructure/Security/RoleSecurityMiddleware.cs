@@ -190,20 +190,23 @@ public class RoleSecurityMiddleware
             return false;
         }
 
+        var permissionCompatibilityAllowed =
+            requirement.AllowCompatibilityFallback && compatibilityAllowed;
+
         return requirement.ScopeMode switch
         {
             PeoplePermissionScopeMode.DataSet =>
                 await permissionAuthorizationService.HasPermissionAsync(
                     systemUserId.Value,
                     requirement.PermissionCode,
-                    compatibilityAllowed,
+                    permissionCompatibilityAllowed,
                     context.RequestAborted),
 
             PeoplePermissionScopeMode.Global =>
                 await permissionAuthorizationService.HasGlobalPermissionAsync(
                     systemUserId.Value,
                     requirement.PermissionCode,
-                    compatibilityAllowed,
+                    permissionCompatibilityAllowed,
                     context.RequestAborted),
 
             PeoplePermissionScopeMode.Employee =>
@@ -213,7 +216,7 @@ public class RoleSecurityMiddleware
                     permissionAuthorizationService,
                     systemUserId.Value,
                     requirement.PermissionCode,
-                    compatibilityAllowed),
+                    permissionCompatibilityAllowed),
 
             _ => false
         };

@@ -1,0 +1,544 @@
+import argparse
+import contextlib
+import json
+import os
+import platform
+import re
+import sys
+import tempfile
+import traceback
+
+# The worker protocol is JSON-over-stdio. Force UTF-8 on Windows pipes so
+# Arabic OCR text and diagnostics can never fail with UnicodeEncodeError.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+os.environ.setdefault("FLAGS_minloglevel", "2")
+
+def _read_runtime_config():
+    requested_device = (
+        os.environ.get("PEOPLE_AI_OCR_DEVICE", "auto").strip().lower()
+        or "auto"
+    )
+    if requested_device not in {"auto", "cpu", "gpu"}:
+        raise RuntimeError(
+            "PEOPLE_AI_OCR_DEVICE must be one of: auto, cpu, gpu."
+        )
+
+    language = (
+        os.environ.get("PEOPLE_AI_OCR_LANGUAGE", "ar").strip()
+        or "ar"
+    )
+
+    configured_temp = os.environ.get(
+        "PEOPLE_AI_OCR_TEMP_DIRECTORY", ""
+    ).strip()
+    temp_directory = configured_temp or tempfile.gettempdir()
+    os.makedirs(temp_directory, exist_ok=True)
+
+    handle, probe_path = tempfile.mkstemp(
+        prefix="zynora-ocr-preflight-",
+        dir=temp_directory,
+    )
+    os.close(handle)
+    os.remove(probe_path)
+    tempfile.tempdir = temp_directory
+
+    return requested_device, language, temp_directory
+
+
+def _resolve_device(requested_device):
+    import paddle
+
+    gpu_available = (
+        paddle.device.is_compiled_with_cuda()
+        and paddle.device.cuda.device_count() > 0
+    )
+
+    if requested_device == "gpu" and not gpu_available:
+        raise RuntimeError(
+            "GPU OCR was requested but the installed PaddlePaddle runtime "
+            "does not expose an available CUDA device."
+        )
+
+    if requested_device == "auto":
+        return "gpu" if gpu_available else "cpu"
+
+    return requested_device
+
+
+def _normalize_language_profile(value):
+    raw = (value or "").replace(";", ",")
+    languages = []
+    for item in raw.split(","):
+        code = item.strip().lower()
+        if not code:
+            continue
+        if not re.fullmatch(r"[a-z0-9_-]{2,12}", code):
+            raise RuntimeError(
+                "Invalid OCR language code in language profile."
+            )
+        if code not in languages:
+            languages.append(code)
+
+    return languages or ["ar"]
+
+
+def _build_ocr_engine(language, resolved_device):
+    with contextlib.redirect_stdout(sys.stderr):
+        from paddleocr import PaddleOCR
+        return PaddleOCR(
+            lang=language,
+            device=resolved_device,
+            use_doc_orientation_classify=True,
+            use_doc_unwarping=False,
+            use_textline_orientation=True,
+        )
+
+
+def build_ocr():
+    requested_device, language, temp_directory = _read_runtime_config()
+    resolved_device = _resolve_device(requested_device)
+    default_languages = _normalize_language_profile(language)
+    default_language = default_languages[0]
+    ocr = _build_ocr_engine(default_language, resolved_device)
+
+    diagnostics = {
+        "provider": "PaddleOCR",
+        "model": "PP-OCRv5",
+        "language": default_language,
+        "requestedDevice": requested_device,
+        "device": resolved_device,
+        "pythonVersion": platform.python_version(),
+        "platform": platform.system().lower(),
+        "tempWritable": True,
+    }
+    return ocr, diagnostics
+
+def to_plain(value):
+    if value is None:
+        return None
+    if hasattr(value, "tolist"):
+        return value.tolist()
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): to_plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [to_plain(v) for v in value]
+    return str(value)
+
+@contextlib.contextmanager
+def prepared_ocr_input(path):
+    extension = os.path.splitext(path)[1].lower()
+    if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
+        yield path
+        return
+
+    from PIL import Image, ImageOps
+
+    max_side = int(os.environ.get("PEOPLE_AI_OCR_MAX_IMAGE_SIDE", "1600"))
+    max_side = max(1200, min(max_side, 4096))
+    temp_path = None
+
+    try:
+        with Image.open(path) as source:
+            image = ImageOps.exif_transpose(source)
+            original_size = image.size
+
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+
+            longest = max(image.size)
+            if longest > max_side:
+                scale = max_side / float(longest)
+                target = (
+                    max(1, round(image.width * scale)),
+                    max(1, round(image.height * scale)),
+                )
+                image = image.resize(target, Image.Resampling.LANCZOS)
+
+            handle, temp_path = tempfile.mkstemp(
+                prefix="zynora-ocr-",
+                suffix=".jpg",
+            )
+            os.close(handle)
+            image.save(temp_path, "JPEG", quality=95, subsampling=0)
+
+        print(
+            f"OCR preprocessing dimensions: {original_size[0]}x{original_size[1]} "
+            f"-> {image.size[0]}x{image.size[1]}",
+            file=sys.stderr,
+            flush=True,
+        )
+        yield temp_path
+    finally:
+        if temp_path:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
+def _normalize_digits(value):
+    table = str.maketrans({
+        "٠":"0","١":"1","٢":"2","٣":"3","٤":"4",
+        "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
+        "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4",
+        "۵":"5","۶":"6","۷":"7","۸":"8","۹":"9",
+    })
+    return (value or "").translate(table)
+
+
+def _looks_like_family_label(value):
+    compact = re.sub(r"\s+", "", (value or ""))
+    return (
+        "الرقمالعائلي" in compact
+        or "الرقمالعانلي" in compact
+        or "خيزاني" in compact
+        or "خيزانى" in compact
+    )
+
+
+def _recover_family_number_line(ocr, prepared_path, results):
+    if not results:
+        return None
+
+    first = results[0]
+    texts = list(first.get("rec_texts", []) or [])
+    boxes = to_plain(first.get("rec_boxes")) or []
+
+    label_box = None
+    for i, text in enumerate(texts):
+        if _looks_like_family_label(str(text)):
+            label_box = boxes[i] if i < len(boxes) else None
+            break
+
+    if not label_box or len(label_box) < 4:
+        return None
+
+    from PIL import Image, ImageOps, ImageEnhance, ImageFilter
+
+    with Image.open(prepared_path) as source:
+        image = ImageOps.exif_transpose(source).convert("RGB")
+        width, height = image.size
+
+        y1 = max(0, int(label_box[1]) - 70)
+        y2 = min(height, int(label_box[3]) + 120)
+        crop = image.crop((0, y1, width, y2))
+
+        gray = ImageOps.grayscale(crop)
+        contrast = ImageEnhance.Contrast(gray).enhance(2.4)
+        sharp = contrast.filter(ImageFilter.SHARPEN)
+
+        variants = [
+            ("sharp", sharp.convert("RGB")),
+            ("bw145", contrast.point(lambda p: 255 if p > 145 else 0).convert("RGB")),
+            ("bw165", contrast.point(lambda p: 255 if p > 165 else 0).convert("RGB")),
+        ]
+
+        candidates = []
+
+        for variant_name, variant in variants:
+            scale = min(2.0, 4000.0 / max(variant.size))
+            if scale > 1.0:
+                variant = variant.resize(
+                    (
+                        max(1, round(variant.width * scale)),
+                        max(1, round(variant.height * scale)),
+                    ),
+                    Image.Resampling.LANCZOS,
+                )
+
+            handle, temp_variant = tempfile.mkstemp(
+                prefix=f"zynora-family-{variant_name}-",
+                suffix=".jpg",
+            )
+            os.close(handle)
+
+            try:
+                variant.save(temp_variant, "JPEG", quality=97, subsampling=0)
+                with contextlib.redirect_stdout(sys.stderr):
+                    variant_results = list(ocr.predict(temp_variant))
+
+                for item in variant_results:
+                    variant_texts = list(item.get("rec_texts", []) or [])
+                    variant_scores = list(item.get("rec_scores", []) or [])
+                    variant_boxes = to_plain(item.get("rec_boxes")) or []
+
+                    for i, raw_text in enumerate(variant_texts):
+                        text = _normalize_digits(str(raw_text)).upper()
+                        for match in re.finditer(
+                            r"(?<![A-Z0-9])([A-Z0-9]{13,24})(?![A-Z0-9])",
+                            text,
+                        ):
+                            candidate = match.group(1)
+                            if sum(ch.isdigit() for ch in candidate) < 10:
+                                continue
+                            score = (
+                                float(variant_scores[i])
+                                if i < len(variant_scores)
+                                else 0.0
+                            )
+                            box = (
+                                variant_boxes[i]
+                                if i < len(variant_boxes)
+                                else None
+                            )
+
+                            mapped_box = None
+                            if box and len(box) >= 4:
+                                inv = 1.0 / scale
+                                mapped_box = [
+                                    round(box[0] * inv),
+                                    round(box[1] * inv + y1),
+                                    round(box[2] * inv),
+                                    round(box[3] * inv + y1),
+                                ]
+
+                            candidates.append({
+                                "text": candidate,
+                                "score": score,
+                                "box": mapped_box,
+                                "variant": variant_name,
+                            })
+            finally:
+                try:
+                    os.remove(temp_variant)
+                except OSError:
+                    pass
+
+        if not candidates:
+            return None
+
+        # Family numbers may be alphanumeric (example: 1010E1876147874699).
+        # Preserve letters instead of stripping them as OCR noise.
+        # The value still enters review as Pending and is never auto-approved.
+        return sorted(
+            candidates,
+            key=lambda item: (len(item["text"]), item["score"]),
+            reverse=True,
+        )[0]
+
+
+def process_file(ocr, path, language):
+    if not os.path.isfile(path):
+        raise FileNotFoundError(path)
+
+    family_number_recovery = None
+    with prepared_ocr_input(path) as prepared_path:
+        with contextlib.redirect_stdout(sys.stderr):
+            results = list(ocr.predict(prepared_path))
+
+        if language == "ar":
+            family_number_recovery = _recover_family_number_line(
+                ocr,
+                prepared_path,
+                results,
+            )
+
+    pages = []
+    all_lines = []
+
+    for page_index, item in enumerate(results):
+        rec_texts = list(item.get("rec_texts", []) or [])
+        rec_scores = list(item.get("rec_scores", []) or [])
+        rec_boxes = item.get("rec_boxes")
+        boxes = to_plain(rec_boxes) or []
+
+        lines = []
+        for index, text in enumerate(rec_texts):
+            score = float(rec_scores[index]) if index < len(rec_scores) else None
+            box = boxes[index] if index < len(boxes) else None
+            line = {
+                "index": index,
+                "text": str(text),
+                "score": score,
+                "box": box,
+            }
+            lines.append(line)
+            all_lines.append(str(text))
+
+        if page_index == 0 and family_number_recovery:
+            recovered = {
+                "index": len(lines),
+                "text": family_number_recovery["text"],
+                "score": family_number_recovery["score"],
+                "box": family_number_recovery["box"],
+            }
+            lines.append(recovered)
+            all_lines.append(family_number_recovery["text"])
+            print(
+                "Recovered FamilyNumber candidate "
+                f"via {family_number_recovery['variant']} "
+                f"(score={family_number_recovery['score']:.4f})",
+                file=sys.stderr,
+                flush=True,
+            )
+
+        pages.append({
+            "pageIndex": page_index,
+            "lines": lines,
+        })
+
+    return {
+        "success": True,
+        "provider": "PaddleOCR",
+        "model": "PP-OCRv5",
+        "language": language,
+        "pages": pages,
+        "fullText": "\n".join(all_lines),
+        "lineCount": len(all_lines),
+    }
+
+
+def merge_ocr_results(results, language_profile):
+    if len(results) == 1:
+        single = results[0]
+        single["language"] = language_profile
+        return single
+
+    pages_by_index = {}
+    seen_text = set()
+
+    for result in results:
+        for page in result.get("pages", []) or []:
+            page_index = int(page.get("pageIndex", 0))
+            target = pages_by_index.setdefault(page_index, [])
+            for line in page.get("lines", []) or []:
+                text = str(line.get("text", "")).strip()
+                key = re.sub(r"\s+", " ", text).casefold()
+                if not key or key in seen_text:
+                    continue
+                seen_text.add(key)
+                target.append({
+                    "index": len(target),
+                    "text": text,
+                    "score": line.get("score"),
+                    "box": line.get("box"),
+                })
+
+    pages = [
+        {"pageIndex": index, "lines": pages_by_index[index]}
+        for index in sorted(pages_by_index)
+    ]
+    all_lines = [
+        line["text"]
+        for page in pages
+        for line in page["lines"]
+    ]
+
+    return {
+        "success": True,
+        "provider": "PaddleOCR",
+        "model": "PP-OCRv5",
+        "language": language_profile,
+        "pages": pages,
+        "fullText": "\n".join(all_lines),
+        "lineCount": len(all_lines),
+    }
+
+
+def serve():
+    try:
+        ocr, diagnostics = build_ocr()
+    except Exception as exc:
+        print(json.dumps({
+            "ready": False,
+            "errorType": type(exc).__name__,
+            "error": str(exc),
+        }, ensure_ascii=True), flush=True)
+        traceback.print_exc(file=sys.stderr)
+        raise
+
+    ocr_cache = {
+        diagnostics["language"]: ocr,
+    }
+
+    ready = {"ready": True, **diagnostics}
+    print(json.dumps(ready, ensure_ascii=True), flush=True)
+
+    for raw in sys.stdin:
+        # .NET/other callers may accidentally prefix the first stdin message
+        # with a UTF-8 BOM. Ignore it defensively; the canonical C# client also
+        # emits BOM-free UTF-8.
+        raw = raw.lstrip("\ufeff").strip()
+        if not raw:
+            continue
+
+        try:
+            request = json.loads(raw)
+            request_id = request.get("requestId")
+            path = request.get("path")
+            requested_profile = (
+                request.get("language")
+                or diagnostics["language"]
+            )
+            languages = _normalize_language_profile(
+                requested_profile
+            )
+
+            outputs = []
+            for language in languages:
+                engine = ocr_cache.get(language)
+                if engine is None:
+                    engine = _build_ocr_engine(
+                        language,
+                        diagnostics["device"],
+                    )
+                    ocr_cache[language] = engine
+
+                outputs.append(
+                    process_file(engine, path, language)
+                )
+
+            profile = ",".join(languages)
+            result = merge_ocr_results(outputs, profile)
+            result["requestId"] = request_id
+            print(json.dumps(result, ensure_ascii=True), flush=True)
+        except Exception as exc:
+            print(json.dumps({
+                "success": False,
+                "requestId": request.get("requestId") if "request" in locals() else None,
+                "errorType": type(exc).__name__,
+                "error": str(exc),
+            }, ensure_ascii=True), flush=True)
+            traceback.print_exc(file=sys.stderr)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--serve", action="store_true")
+    parser.add_argument("--preflight", action="store_true")
+    parser.add_argument("--input")
+    args = parser.parse_args()
+
+    if args.serve:
+        serve()
+        return
+
+    ocr, diagnostics = build_ocr()
+
+    if args.preflight:
+        print(json.dumps(
+            {"ready": True, **diagnostics},
+            ensure_ascii=True,
+        ))
+        return
+
+    if not args.input:
+        raise SystemExit(
+            "--input is required when --serve/--preflight is not used"
+        )
+
+    result = process_file(
+        ocr,
+        args.input,
+        diagnostics["language"],
+    )
+    print(json.dumps(result, ensure_ascii=True))
+
+if __name__ == "__main__":
+    main()

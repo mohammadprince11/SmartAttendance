@@ -104,6 +104,26 @@ else
     builder.Services.AddSingleton<IFileThreatScanner, DisabledFileThreatScanner>();
 
 builder.Services.AddSingleton<IProtectedFileService, ProtectedFileService>();
+builder.Services.AddScoped<IOnboardingProtectedAssetService, OnboardingProtectedAssetService>();
+
+builder.Services.Configure<SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions>(
+    builder.Configuration.GetSection(
+        SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions.SectionName));
+
+var peopleAiWorkerOptions = builder.Configuration
+    .GetSection(SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions.SectionName)
+    .Get<SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions>()
+    ?? new SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions();
+
+builder.Services.AddSingleton<
+    SmartAttendance.Web.Infrastructure.PeopleAi.ILocalOcrProcessClient,
+    SmartAttendance.Web.Infrastructure.PeopleAi.LocalOcrProcessClient>();
+
+if (peopleAiWorkerOptions.IsUsable)
+{
+    builder.Services.AddHostedService<
+        SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiJobProcessorService>();
+}
 
 // مقاييس الطلبات بالذاكرة (FIX-004 · OBS-006): خطُّ الأساس الذي كان مفقوداً —
 // زمن الطلب وP95 ومعدّل الأخطاء لكل مسار. Singleton لأن الحالة مشتركة عبر الطلبات.
@@ -442,6 +462,9 @@ builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IAccessRoleService, SmartAttendance.Web.Infrastructure.Security.AccessRoleService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService, SmartAttendance.Web.Infrastructure.Security.EffectiveScopeService>();
+builder.Services.AddScoped<
+    SmartAttendance.Web.Infrastructure.PeopleAi.IPeopleAiSessionAccessService,
+    SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiSessionAccessService>();
 // نطاق شركات الطلب — يُشتقّ من محرك الصلاحيات نفسه (IEffectiveScopeService) فلا
 // يتباعد عنه مصدرُ حقيقةٍ ثانٍ. Scoped لأن نتيجته تُكاش بعمر الطلب.
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider, SmartAttendance.Web.Infrastructure.Security.CompanyScopeProvider>();
@@ -566,31 +589,35 @@ if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
     throw new InvalidOperationException(environmentRefusal);
 }
 
-// هجرات المخطط المحكومة للجداول القديمة (SQL خام) تعمل صراحةً مرة واحدة عند
-// الإقلاع — لا بكل طلب — وأي فشل يظهر فوراً بدل عطل صامت لاحق.
+// Production schema changes are deployed explicitly before service restart.
+// Development/staging keep the historical startup behavior unless disabled.
+var applyDatabaseMigrationsOnStartup =
+    app.Configuration.GetValue<bool?>("DatabaseMigrations:ApplyOnStartup")
+    ?? !app.Environment.IsProduction();
+
+if (app.Environment.IsProduction() && applyDatabaseMigrationsOnStartup)
+{
+    throw new InvalidOperationException(
+        "DatabaseMigrations:ApplyOnStartup must be false in Production. " +
+        "Run the controlled database migrator before starting ZYNORA.");
+}
+
 using (var migrationScope = app.Services.CreateScope())
 {
-    var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // These legacy tables pre-date the controlled migrator. Ensure their base shape
-    // at startup so the SalaryItemId migration also covers a clean database.
-    await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeUpdateSchema.EnsureAsync(migrationDb);
-    // الجداول القديمة الأساسية يجب أن توجد قبل الهجرات التي تضيف لها علاقات
-    // (مثل ApprovalRequestWatchers -> SelfServiceRequests).
-    await SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.EnsureCreatedAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Security.LoginDatabase.EnsureCreatedAsync(migrationDb);
-    // ShiftTypes must exist before controlled migrations that extend it. Previously the
-    // migrator ran first, recorded guarded ALTER migrations as applied, then the shift
-    // table was created later without those columns.
-    await SmartAttendance.Web.Infrastructure.Hrms.ShiftTypeStore.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
+    var migrationDb = migrationScope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
 
-    // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.
-    // كان ValidateAsync يفحص/ينشئ الجدول (DDL) بكل طلب Bearer؛ نقلُه للإقلاع يجعل
-    // التحقّق بحثاً مفهرساً محدوداً (بذرة فريدة على TokenHash).
-    await SmartAttendance.Web.Infrastructure.Api.ApiTokenStore.EnsureAsync(migrationDb);
+    if (applyDatabaseMigrationsOnStartup)
+    {
+        await SmartAttendance.Web.Infrastructure.Hrms.DatabaseDeployment
+            .ApplyAsync(migrationDb);
+    }
+    else
+    {
+        // Verification only. No DDL is executed on production startup.
+        await SmartAttendance.Web.Infrastructure.Hrms.DatabaseDeployment
+            .VerifyProductionSchemaAsync(migrationDb);
+    }
 }
 
 await DefaultShiftSeeder.SeedAsync(app.Services);

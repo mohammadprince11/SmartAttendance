@@ -11,7 +11,8 @@ public enum PeoplePermissionScopeMode
 
 public sealed record PeopleRoutePermissionRequirement(
     string PermissionCode,
-    PeoplePermissionScopeMode ScopeMode);
+    PeoplePermissionScopeMode ScopeMode,
+    bool AllowCompatibilityFallback = true);
 
 public static class PeopleRoutePermissionResolver
 {
@@ -76,6 +77,16 @@ public static class PeopleRoutePermissionResolver
             normalizedPath == "/employees/index")
         {
             return DataSet(PeoplePermissionCodes.ViewDirectory);
+        }
+
+        if (normalizedPath.StartsWith("/employees/smartonboarding", StringComparison.Ordinal))
+        {
+            // People AI processing is an explicit grant. Legacy role compatibility
+            // must never implicitly enable document AI processing.
+            return new PeopleRoutePermissionRequirement(
+                PeoplePermissionCodes.AiProcessDocuments,
+                PeoplePermissionScopeMode.DataSet,
+                AllowCompatibilityFallback: false);
         }
 
         if (normalizedPath.StartsWith("/employees/create", StringComparison.Ordinal))

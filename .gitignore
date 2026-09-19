@@ -79,6 +79,13 @@ SmartAttendance.Web/App_Data/PositionImports/
 # ممنوع أي بيانات موظف حقيقية بالمستودع. كان ملفٌّ منها متتبَّعاً بالخطأ (FIX-014).
 SmartAttendance.Web/App_Data/AttendanceImports/
 
+# People AI protected runtime data and Python bytecode are workstation/runtime-only.
+# They may contain employee PII or reproducible interpreter artifacts and must never enter Git.
+SmartAttendance.Web/App_Data/ProtectedEmployeeFiles/
+SmartAttendance.Web/App_Data/ProtectedPeopleAssets/
+**/__pycache__/
+*.pyc
+
 # Claude Code: keep shared launch.json, ignore local session data
 .claude/*
 !.claude/launch.json

@@ -1,0 +1,964 @@
+@page "/Employees/SmartOnboardingReview"
+@model SmartAttendance.Web.Pages.Employees.SmartOnboardingReviewModel
+@using SmartAttendance.Application.PeopleAi
+@{
+    ViewData["Title"] = "مراجعة Smart Onboarding";
+
+    string StatusLabel(string value) => value switch
+    {
+        "Queued" => "بانتظار المعالجة",
+        "Processing" => "قيد المعالجة",
+        "NeedsReview" => "تحتاج مراجعة",
+        "Ready" => "جاهزة للإنشاء",
+        "Completed" => "مكتملة",
+        "Cancelled" => "ملغاة",
+        "Failed" => "فشلت",
+        _ => value
+    };
+
+    string DocumentTypeFor(
+        SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
+    {
+        var document = Model.Documents.FirstOrDefault(x => x.Id == field.DocumentId);
+        return document?.DetectedDocumentType
+            ?? document?.DeclaredDocumentType
+            ?? PeopleAiDocumentTypes.Unknown;
+    }
+
+    PeopleAiFieldPolicy? FieldPolicy(
+        SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
+    {
+        var type = DocumentTypeFor(field);
+
+        return Model.FieldPolicies.FirstOrDefault(x =>
+            x.IsActive &&
+            x.DocumentType.Equals(type, StringComparison.OrdinalIgnoreCase) &&
+            x.FieldKey.Equals(field.FieldKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    string DefaultFieldLabel(string key) => key switch
+    {
+        "DocumentNumber" => "رقم المستند",
+        "NationalNumber" => "الرقم الوطني",
+        "FamilyNumber" => "الرقم العائلي",
+        "FirstName" => "الاسم",
+        "SecondName" => "اسم الأب",
+        "ThirdName" => "اسم الجد",
+        "LastName" => "اللقب",
+        "MotherName" => "اسم الأم",
+        "Surname" => "اللقب / اسم العائلة (MRZ)",
+        "GivenNames" => "الأسماء اللاتينية (MRZ)",
+        "DateOfBirth" => "تاريخ الميلاد",
+        "ExpiryDate" => "تاريخ الانتهاء",
+        "IssueDate" => "تاريخ الإصدار",
+        "Nationality" => "الجنسية",
+        "IssuingCountry" => "بلد الإصدار",
+        "IssuingAuthority" => "جهة الإصدار",
+        "PlaceOfIssue" => "مكان الإصدار",
+        "Sex" => "الجنس",
+        "Phone" => "الهاتف",
+        "Email" => "البريد الإلكتروني للعمل",
+        "PersonalEmail" => "البريد الشخصي",
+        "MRZ.Format" => "صيغة MRZ",
+        _ => key
+    };
+
+    string FieldLabel(
+        SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field) =>
+        FieldPolicy(field)?.DisplayLabel ?? DefaultFieldLabel(field.FieldKey);
+
+    string EffectiveValue(SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
+    {
+        if (field.ReviewStatus == "Rejected")
+        {
+            return string.Empty;
+        }
+
+        return field.ReviewedValue
+            ?? field.NormalizedValue
+            ?? field.RawValue
+            ?? string.Empty;
+    }
+
+    var semanticFields = Model.Fields
+        .Where(x => !x.FieldKey.StartsWith("OCR.", StringComparison.OrdinalIgnoreCase)
+                 && !x.FieldKey.StartsWith("MRZ.Check.", StringComparison.OrdinalIgnoreCase))
+        .Where(x => FieldPolicy(x) is not null)
+        .GroupBy(
+            x => $"{DocumentTypeFor(x)}\u001f{x.FieldKey}",
+            StringComparer.OrdinalIgnoreCase)
+        .Select(group => group
+            .OrderByDescending(x => x.ReviewStatus is "Accepted" or "Modified")
+            .ThenByDescending(x => !string.IsNullOrWhiteSpace(EffectiveValue(x)))
+            .ThenByDescending(x => x.ValidationStatus == "Valid")
+            .ThenByDescending(x => x.Id)
+            .First())
+        .OrderBy(x => DocumentTypeFor(x))
+        .ThenBy(x => FieldPolicy(x)!.SortOrder)
+        .ThenBy(x => FieldLabel(x))
+        .ToList();
+
+    var reviewFields = semanticFields
+        .Where(x => x.ReviewStatus is not ("Accepted" or "Modified"))
+        .ToList();
+
+    var acceptedFields = semanticFields
+        .Where(x => x.ReviewStatus is "Accepted" or "Modified")
+        .ToList();
+
+    DateOnly? EffectiveDocumentExpiry(
+        SmartAttendance.Web.Infrastructure.Hrms.EmployeeOnboardingStore.DocumentRow document)
+    {
+        if (document.ReviewedExpiryDate.HasValue)
+        {
+            return document.ReviewedExpiryDate;
+        }
+
+        var expiryValue = acceptedFields
+            .Where(x =>
+                x.DocumentId == document.Id &&
+                x.FieldKey.Equals(
+                    "ExpiryDate",
+                    StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(x => x.Id)
+            .Select(EffectiveValue)
+            .FirstOrDefault();
+
+        return DateOnly.TryParse(
+            expiryValue,
+            out var parsed)
+            ? parsed
+            : null;
+    }
+
+    bool DocumentReviewComplete(
+        SmartAttendance.Web.Infrastructure.Hrms.EmployeeOnboardingStore.DocumentRow document)
+    {
+        var type = document.DetectedDocumentType
+            ?? document.DeclaredDocumentType
+            ?? PeopleAiDocumentTypes.Unknown;
+
+        var policies = Model.DocumentPolicies
+            .Where(x =>
+                x.IsActive &&
+                x.DocumentType.Equals(
+                    type,
+                    StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var requireExpiry =
+            policies.Any(x => x.RequireExpiryDate);
+        var requireOriginal =
+            policies.Any(x => x.RequireOriginalVerification);
+
+        var processingDone =
+            document.ProcessingStatus is not (
+                "Queued" or "Processing" or "Failed");
+
+        var expiryDone =
+            !requireExpiry ||
+            EffectiveDocumentExpiry(document).HasValue;
+
+        var originalDone =
+            !requireOriginal ||
+            document.OriginalVerificationStatus == "Verified";
+
+        return processingDone &&
+               expiryDone &&
+               originalDone &&
+               document.OriginalVerificationStatus != "Rejected";
+    }
+
+    var documentsToReview = Model.Documents
+        .Where(x => !DocumentReviewComplete(x))
+        .ToList();
+
+    var reviewedDocuments = Model.Documents
+        .Where(DocumentReviewComplete)
+        .ToList();
+
+    var evidenceFields = Model.Fields
+        .Where(x => x.FieldKey.StartsWith("OCR.", StringComparison.OrdinalIgnoreCase)
+                 || x.FieldKey.StartsWith("MRZ.Check.", StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    var openIssues = Model.Issues.Where(x => x.Status == "Open").ToList();
+
+    var isFinalStage =
+        Model.Session?.Status is "Ready" or "Completed";
+
+    var hasActiveReviewWork =
+        documentsToReview.Count > 0 ||
+        reviewFields.Count > 0 ||
+        openIssues.Count > 0 ||
+        Model.DuplicateMatches.Count > 0;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/smart-onboarding-review.css" asp-append-version="true" />
+}
+
+<div class="sor-shell" dir="rtl">
+    <div class="zy-breadcrumb">
+        <span>زينورا</span><span>/</span><span>الأشخاص</span><span>/</span>
+        <a asp-page="./SmartOnboarding"
+           asp-route-CompanyId="@Model.CompanyId"
+           asp-route-SessionId="@Model.SessionId">Smart Onboarding</a>
+        <span>/</span><b>المراجعة</b>
+    </div>
+
+    <header class="zy-page-header sor-head">
+        <div>
+            <h1>مراجعة Smart Onboarding</h1>
+            <div class="zy-desc">مراجعة بشرية إلزامية قبل تحويل البيانات المستخرجة إلى سجل موظف.</div>
+        </div>
+        <div class="zy-spacer"></div>
+        @if (Model.Session is not null)
+        {
+            <span class="zy-badge zy-badge--info">@StatusLabel(Model.Session.Status)</span>
+        }
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="sor-alert sor-alert--success">@Model.StatusMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="sor-alert sor-alert--danger">@Model.ErrorMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.PageError))
+    {
+        <div class="sor-alert sor-alert--danger">@Model.PageError</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.DocumentPolicyError))
+    {
+        <div class="sor-alert sor-alert--warning">
+            متطلب قبل الإنشاء: @Model.DocumentPolicyError
+        </div>
+    }
+    @if (Model.Session is not null)
+    {
+        <section class="sor-summary">
+            <div><span>Session</span><strong>#@Model.Session.Id</strong></div>
+            <div><span>الحالة</span><strong>@StatusLabel(Model.Session.Status)</strong></div>
+            <div><span>المستندات</span><strong>@Model.Documents.Count</strong></div>
+            <div><span>الحقول الدلالية</span><strong>@semanticFields.Count</strong></div>
+            <div><span>مشاكل مفتوحة</span><strong>@openIssues.Count</strong></div>
+            <div><span>المراجع</span><strong>@(Model.CanReview ? "مسموح" : "عرض فقط")</strong></div>
+        </section>
+
+        @if (documentsToReview.Count > 0)
+        {
+        <section class="sor-card">
+            <div class="sor-section-head">
+                <div>
+                    <h2>المستندات والتحقق من الأصل</h2>
+                    <p>الحالة هنا مستقلة عن نجاح OCR. وجود الملف، استخراج البيانات، ومطابقة الأصل ثلاث حالات منفصلة.</p>
+                </div>
+                <span class="zy-badge zy-badge--info">@documentsToReview.Count بحاجة مراجعة</span>
+            </div>
+
+            <div class="sor-doc-review-list">
+                @foreach (var document in documentsToReview)
+                {
+                    var type = document.DetectedDocumentType
+                        ?? document.DeclaredDocumentType
+                        ?? PeopleAiDocumentTypes.Unknown;
+                    var policies = Model.DocumentPolicies
+                        .Where(x => x.IsActive &&
+                                    x.DocumentType.Equals(type, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    var requireExpiry = policies.Any(x => x.RequireExpiryDate);
+                    var requireOriginal = policies.Any(x => x.RequireOriginalVerification);
+
+                    <article class="sor-doc-review">
+                        <div class="sor-doc-review-head">
+                            <div>
+                                <strong>@document.OriginalFileName</strong>
+                                <small>
+                                    المعلن: @(document.DeclaredDocumentType ?? "Unknown")
+                                    · المكتشف: @(document.DetectedDocumentType ?? "غير محدد")
+                                    @if (document.ClassificationConfidence.HasValue)
+                                    {
+                                        <text> · @($"{document.ClassificationConfidence.Value:P0}")</text>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(document.DetectionMethod))
+                                    {
+                                        <text> · @document.DetectionMethod</text>
+                                    }
+                                    · @document.ProcessingStatus
+                                </small>
+                            </div>
+                            <div class="sor-field-badges">
+                                @if (requireExpiry)
+                                {
+                                    <span>Expiry مطلوب</span>
+                                }
+                                @if (requireOriginal)
+                                {
+                                    <span>Original مطلوب</span>
+                                }
+                                <span>@document.OriginalVerificationStatus</span>
+                            </div>
+                        </div>
+
+                        <div class="sor-doc-review-actions">
+                            @if (Model.CanReview)
+                            {
+                                <form method="post" asp-page-handler="UpdateDocumentMeta" class="sor-doc-meta-form">
+                                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                                    <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                                    <input type="hidden" name="documentId" value="@document.Id" />
+                                    <label>
+                                        <span>تاريخ الانتهاء المُراجع</span>
+                                        <input type="date"
+                                               name="expiryDate"
+                                               value="@(document.ReviewedExpiryDate?.ToString("yyyy-MM-dd"))" />
+                                    </label>
+                                    <button type="submit" class="zy-btn">حفظ التاريخ</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <div class="sor-doc-readonly">
+                                    <span>تاريخ الانتهاء المُراجع</span>
+                                    <strong>@(document.ReviewedExpiryDate?.ToString("yyyy-MM-dd") ?? "—")</strong>
+                                </div>
+                            }
+
+                            @if (Model.CanVerifyOriginal)
+                            {
+                                <form method="post" asp-page-handler="VerifyOriginal" class="sor-original-actions">
+                                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                                    <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                                    <input type="hidden" name="documentId" value="@document.Id" />
+                                    <button type="submit" name="action" value="Seen" class="zy-btn">تم الاطلاع</button>
+                                    <button type="submit" name="action" value="Verified" class="zy-btn zy-btn--primary">تم التحقق من الأصل</button>
+                                    <button type="submit" name="action" value="Rejected" class="zy-btn">رفض الأصل</button>
+                                </form>
+                            }
+                        </div>
+
+                        @if (document.OriginalVerifiedAt.HasValue)
+                        {
+                            <small class="sor-doc-audit">
+                                آخر تحقق: @document.OriginalVerifiedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            </small>
+                        }
+                    </article>
+                }
+            </div>
+        </section>
+        }
+
+        @if (!isFinalStage && hasActiveReviewWork && reviewedDocuments.Count > 0)
+        {
+            <details class="sor-card sor-reviewed">
+                <summary>
+                    <span>المستندات المعتمدة</span>
+                    <small>@reviewedDocuments.Count مستند — مخفية من قائمة الإجراءات</small>
+                </summary>
+
+                <div class="sor-reviewed-list">
+                    @foreach (var document in reviewedDocuments)
+                    {
+                        <div>
+                            <strong>@document.OriginalFileName</strong>
+                            <span>
+                                المعلن: @(document.DeclaredDocumentType ?? "Unknown")
+                                · المكتشف: @(document.DetectedDocumentType ?? "غير محدد")
+                            </span>
+                            <small>
+                                @(document.OriginalVerificationStatus == "Verified"
+                                    ? "تم التحقق"
+                                    : "لا يتطلب تحققاً إضافياً")
+                            </small>
+                        </div>
+                    }
+                </div>
+            </details>
+        }
+
+        @if (openIssues.Count > 0)
+        {
+            <section class="sor-card">
+                <div class="sor-section-head">
+                    <div>
+                        <h2>المشاكل التي تحتاج قرار</h2>
+                        <p>المشاكل المانعة يجب حلها قبل تحويل الجلسة إلى Ready.</p>
+                    </div>
+                    <span class="zy-badge zy-badge--info">@openIssues.Count مفتوحة</span>
+                </div>
+
+                <div class="sor-issues">
+                    @foreach (var issue in openIssues)
+                    {
+                        var isBlock = issue.RuleCode.StartsWith("DUPLICATE_BLOCK_", StringComparison.Ordinal);
+                        <article class="sor-issue sor-issue--@issue.Severity.ToLowerInvariant()">
+                            <div class="sor-issue-main">
+                                <div class="sor-tags">
+                                    <span>@issue.Severity</span>
+                                    <span>@issue.Category</span>
+                                    <span>@issue.RuleCode</span>
+                                </div>
+                                <strong>@issue.Message</strong>
+                                @if (!string.IsNullOrWhiteSpace(issue.FieldKey))
+                                {
+                                    <small>الحقل: @DefaultFieldLabel(issue.FieldKey)</small>
+                                }
+                            </div>
+
+                            @if (Model.CanReview && !isBlock)
+                            {
+                                <form method="post" asp-page-handler="ResolveIssue" class="sor-resolution">
+                                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                                    <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                                    <input type="hidden" name="issueId" value="@issue.Id" />
+                                    <input name="resolution" placeholder="قرار المراجع / سبب قبول الحالة" required />
+                                    <button type="submit" class="zy-btn">توثيق وإغلاق</button>
+                                </form>
+                            }
+                            else if (isBlock)
+                            {
+                                <span class="sor-lock">مانع حسب سياسة الشركة</span>
+                            }
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (Model.DuplicateMatches.Count > 0)
+        {
+            <section class="sor-card">
+                <div class="sor-section-head">
+                    <div>
+                        <h2>مطابقات الهوية</h2>
+                        <p>النتيجة محكومة بنطاق المستخدم وسياسة الشركة، ولا تُكشف تفاصيل خارج الصلاحية.</p>
+                    </div>
+                </div>
+
+                <div class="sor-duplicates">
+                    @foreach (var match in Model.DuplicateMatches)
+                    {
+                        <article class="sor-duplicate">
+                            <div>
+                                <strong>@match.DocumentType</strong>
+                                <small>@match.Action · @match.Candidates.Count مطابقة</small>
+                            </div>
+                            <div class="sor-candidate-list">
+                                @foreach (var candidate in match.Candidates)
+                                {
+                                    <span>
+                                        @if (candidate.IsVisibleToRequester)
+                                        {
+                                            <b>@candidate.EmployeeNo</b>
+                                            <span>@candidate.DisplayName</span>
+                                            <small>@(candidate.IsActive ? "فعال" : "غير فعال — راجع إعادة التعيين")</small>
+                                        }
+                                        else
+                                        {
+                                            <b>مطابقة محمية</b>
+                                            <span>@candidate.DisplayName</span>
+                                        }
+                                    </span>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+        @if (reviewFields.Count > 0)
+        {
+        <section class="sor-card">
+            <div class="sor-section-head">
+                <div>
+                    <h2>الحقول المستخرجة</h2>
+                    <p>اعتمد القيمة، عدّلها ثم اعتمدها، أو ارفضها. الحقول الظاهرة وترتيبها تأتي من إعدادات People AI للشركة.</p>
+                </div>
+                <div class="sor-section-actions">
+                    <span class="zy-badge zy-badge--info">@reviewFields.Count بحاجة مراجعة</span>
+                    @if (Model.CanReview && reviewFields.Any(x =>
+                        x.ReviewStatus == "Pending" &&
+                        !string.IsNullOrWhiteSpace(EffectiveValue(x)) &&
+                        FieldPolicy(x)?.AllowBulkApprove == true))
+                    {
+                        <form method="post"
+                              asp-page-handler="AcceptAll"
+                              data-preserve-scroll>
+                            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                            <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                            <button type="submit" class="zy-btn zy-btn--primary">
+                                اعتماد الكل
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="sor-fields">
+                    @foreach (var field in reviewFields)
+                    {
+                        var document = Model.Documents.FirstOrDefault(x => x.Id == field.DocumentId);
+                        var policy = FieldPolicy(field)!;
+                        var effectiveValue = EffectiveValue(field);
+                        var confidence = field.ProviderConfidence.HasValue
+                            ? $"{field.ProviderConfidence.Value * 100m:0.0}%"
+                            : field.ExtractionMethod == "Manual" ? "Manual" : "Rule-based";
+
+                        <article id="field-@field.Id"
+                                 class="sor-field sor-field--@field.ReviewStatus.ToLowerInvariant()">
+                            <div class="sor-field-meta">
+                                <div>
+                                    <strong>@FieldLabel(field)</strong>
+                                    <small>
+                                        @(document?.DetectedDocumentType ?? document?.DeclaredDocumentType ?? "Unknown")
+                                        · @field.ExtractionMethod
+                                        · @(policy.Requirement == "Required" ? "مطلوب" : "اختياري")
+                                    </small>
+                                </div>
+                                <div class="sor-field-badges">
+                                    @if (policy.Requirement == "Required")
+                                    {
+                                        <span class="is-required">Required</span>
+                                    }
+                                    <span>@field.ValidationStatus</span>
+                                    <span>@confidence</span>
+                                    <span>@field.ReviewStatus</span>
+                                </div>
+                            </div>
+
+                            <form method="post"
+                                  asp-page-handler="ReviewField"
+                                  class="sor-field-form"
+                                  data-preserve-scroll
+                                  data-field-id="@field.Id">
+                                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                                <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                                <input type="hidden" name="fieldId" value="@field.Id" />
+                                <input name="reviewedValue"
+                                       value="@effectiveValue"
+                                       readonly="@(!Model.CanReview)"
+                                       aria-label="@FieldLabel(field)" />
+                                @if (Model.CanReview)
+                                {
+                                    <div class="sor-field-actions">
+                                        <button type="submit" name="action" value="Accept" class="zy-btn">اعتماد</button>
+                                        <button type="submit" name="action" value="Modify" class="zy-btn zy-btn--primary">تعديل واعتماد</button>
+                                        <button type="submit" name="action" value="Reject" class="zy-btn">رفض</button>
+                                    </div>
+                                }
+                            </form>
+                        </article>
+                    }
+                </div>
+        </section>
+        }
+
+        @if (!isFinalStage && hasActiveReviewWork && acceptedFields.Count > 0)
+        {
+            <details class="sor-card sor-reviewed">
+                <summary>
+                    <span>الحقول المعتمدة</span>
+                    <small>@acceptedFields.Count حقل — مخفية من قائمة المراجعة الرئيسية</small>
+                </summary>
+
+                <div class="sor-reviewed-list">
+                    @foreach (var field in acceptedFields)
+                    {
+                        <div>
+                            <strong>@FieldLabel(field)</strong>
+                            <span>@EffectiveValue(field)</span>
+                            <small>
+                                @DocumentTypeFor(field)
+                                · @(field.ReviewStatus == "Modified" ? "معدل ومعتمد" : "معتمد")
+                            </small>
+                        </div>
+                    }
+                </div>
+            </details>
+        }
+
+        @if (!isFinalStage && hasActiveReviewWork && evidenceFields.Count > 0)
+        {
+        <details class="sor-card sor-evidence">
+            <summary>
+                <span>OCR / MRZ Evidence</span>
+                <small>@evidenceFields.Count سجل — للمرجعية فقط ولا يُكتب مباشرة إلى الموظف</small>
+            </summary>
+
+            <div class="sor-evidence-list">
+                @foreach (var field in evidenceFields)
+                {
+                    <div>
+                        <strong>@field.FieldKey</strong>
+                        <span>@(field.NormalizedValue ?? field.RawValue)</span>
+                        <small>
+                            @field.ExtractionMethod
+                            @if (field.ProviderConfidence.HasValue)
+                            {
+                                <text> · @($"{field.ProviderConfidence.Value * 100m:0.0}%")</text>
+                            }
+                            · @field.ValidationStatus
+                        </small>
+                    </div>
+                }
+            </div>
+        </details>
+        }
+
+        @if (Model.Session.Status is "NeedsReview" or "Processing" or "Queued")
+        {
+            <section class="sor-ready">
+                <div>
+                    <strong>إنهاء المراجعة</strong>
+                    <span>لا تتحول الجلسة إلى Ready إذا بقي حقل مطلوب غير معتمد أو مشكلة Blocking مفتوحة. الحقول الاختيارية لا تمنع الإكمال.</span>
+                </div>
+                @if (Model.CanReview)
+                {
+                    <form method="post" asp-page-handler="MarkReady">
+                        <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                        <button type="submit"
+                                class="zy-btn zy-btn--primary"
+                                disabled="@(!Model.CanMarkReady)">
+                            اعتماد المراجعة
+                        </button>
+                    </form>
+                }
+            </section>
+        }
+        @if (Model.Session.Status == "Ready")
+        {
+            <section class="sor-card sor-final">
+                <div class="sor-section-head">
+                    <div>
+                        <h2>Final Preview — إنشاء الموظف</h2>
+                        <p>هذه آخر نقطة قبل الكتابة إلى Employees. الشركة ثابتة ويُعاد فحص النطاق والتكرار عند الضغط على إنشاء.</p>
+                    </div>
+                    <span class="zy-badge zy-badge--info">Human Confirmed</span>
+                </div>
+
+                @if (!Model.CanCreateEmployee)
+                {
+                    <div class="sor-alert sor-alert--danger">
+                        تملك صلاحية المراجعة، لكن لا تملك People.Create. يجب أن ينفذ الإنشاء مستخدم مخول.
+                    </div>
+                }
+
+                <form method="post" asp-page-handler="Finalize" class="sor-final-form">
+                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                    <input type="hidden" name="SessionId" value="@Model.SessionId" />
+
+                    <div class="sor-form-section">
+                        <h3>البيانات الأساسية</h3>
+                        <label>
+                            @if (Model.CodeSchemaActive)
+                            {
+                                <span>كود الموظف — تلقائي</span>
+                                <input value="@Model.CodeSchemaPreview" readonly dir="ltr" aria-label="معاينة كود الموظف التلقائي" />
+                                <input type="hidden" name="Finalize.EmployeeNo" value="" />
+                                <small>سيتم حجز الرقم فعلياً عند إنشاء الموظف.</small>
+                            }
+                            else
+                            {
+                                <span>كود الموظف *</span>
+                                <input asp-for="Finalize.EmployeeNo" />
+                                <span asp-validation-for="Finalize.EmployeeNo" class="sor-validation"></span>
+                            }
+                        </label>
+                        <label class="sor-span-2">
+                            <span>الاسم المعروض *</span>
+                            <input asp-for="Finalize.FullName" />
+                            <span asp-validation-for="Finalize.FullName" class="sor-validation"></span>
+                        </label>
+                        <label>
+                            <span>تاريخ الميلاد</span>
+                            <input asp-for="Finalize.BirthDate" type="date" />
+                        </label>
+                        <label>
+                            <span>البلد</span>
+                            <select asp-for="Finalize.Country">
+                                <option value="">—</option>
+                                @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryCountries)
+                                {
+                                    <option value="@option.Value">@option.Label</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>الجنسية</span>
+                            <select asp-for="Finalize.Nationality">
+                                <option value="">—</option>
+                                @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryNationalities)
+                                {
+                                    <option value="@option.Value">@option.Label</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>الجنس</span>
+                            <select asp-for="Finalize.Gender">
+                                <option value="">—</option>
+                                <option value="Male">ذكر</option>
+                                <option value="Female">أنثى</option>
+                                <option value="Unspecified">غير محدد</option>
+                            </select>
+                        </label>
+                        <label class="sor-check">
+                            <input asp-for="Finalize.IsCitizen" />
+                            <span>موظف مواطن</span>
+                        </label>
+                    </div>
+
+                    <div class="sor-form-section">
+                        <h3>الاسم العربي</h3>
+                        <label><span>الأول</span><input asp-for="Finalize.FirstName" /></label>
+                        <label><span>الثاني</span><input asp-for="Finalize.SecondName" /></label>
+                        <label><span>الثالث</span><input asp-for="Finalize.ThirdName" /></label>
+                        <label><span>اللقب</span><input asp-for="Finalize.LastName" /></label>
+                    </div>
+
+                    <div class="sor-form-section">
+                        <h3>English Name</h3>
+                        <label><span>First</span><input asp-for="Finalize.FirstNameEn" /></label>
+                        <label><span>Second</span><input asp-for="Finalize.SecondNameEn" /></label>
+                        <label><span>Third</span><input asp-for="Finalize.ThirdNameEn" /></label>
+                        <label><span>Last</span><input asp-for="Finalize.LastNameEn" /></label>
+                    </div>
+
+                    <div class="sor-form-section">
+                        <h3>الهوية</h3>
+                        <label>
+                            <span>الرقم الوطني</span>
+                            <input asp-for="Finalize.NationalId" autocomplete="off" />
+                            <span asp-validation-for="Finalize.NationalId" class="sor-validation"></span>
+                        </label>
+                        <label>
+                            <span>الرقم العائلي</span>
+                            <input asp-for="Finalize.FamilyNumber" autocomplete="off" />
+                            <span asp-validation-for="Finalize.FamilyNumber" class="sor-validation"></span>
+                        </label>
+                        <label>
+                            <span>رقم الجواز</span>
+                            <input asp-for="Finalize.PassportNo" autocomplete="off" />
+                            <span asp-validation-for="Finalize.PassportNo" class="sor-validation"></span>
+                        </label>
+                    </div>
+
+                    <div class="sor-form-section">
+                        <h3>المعلومات الشخصية والإقامة</h3>
+                        <label>
+                            <span>الحالة الاجتماعية</span>
+                            <select asp-for="Finalize.MaritalStatus">
+                                <option value="">—</option>
+                                <option value="Single">أعزب</option>
+                                <option value="Married">متزوج</option>
+                                <option value="Divorced">مطلق</option>
+                                <option value="Widowed">أرمل</option>
+                                <option value="Separated">منفصل</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>الديانة</span>
+                            <select asp-for="Finalize.Religion">
+                                <option value="">—</option>
+                                @if (!string.IsNullOrWhiteSpace(Model.Finalize.Religion) &&
+                                     !Model.ReligionOptions.Contains(Model.Finalize.Religion, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <option value="@Model.Finalize.Religion">@Model.Finalize.Religion</option>
+                                }
+                                @foreach (var religion in Model.ReligionOptions)
+                                {
+                                    <option value="@religion">@religion</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>البلد الأم</span>
+                            <select asp-for="Finalize.MotherCountry" id="sor-mother-country">
+                                <option value="">—</option>
+                                @foreach (var country in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.Countries)
+                                {
+                                    <option value="@country.Value">@country.Label</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>المدينة الأم</span>
+                            <select asp-for="Finalize.MotherCity" id="sor-mother-city">
+                                <option value="">—</option>
+                                @foreach (var city in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeGeoLookups.Cities)
+                                {
+                                    <option value="@city.Value" data-country="@city.CountryValue">@city.Label</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>الكفيل</span>
+                            <select asp-for="Finalize.SponsorName">
+                                <option value="">بدون كفيل</option>
+                                @if (!string.IsNullOrWhiteSpace(Model.Finalize.SponsorName) &&
+                                     !Model.SponsorOptions.Contains(Model.Finalize.SponsorName, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <option value="@Model.Finalize.SponsorName">@Model.Finalize.SponsorName</option>
+                                }
+                                @foreach (var sponsor in Model.SponsorOptions)
+                                {
+                                    <option value="@sponsor">@sponsor</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="sor-form-section">
+                        <h3>البيانات الوظيفية</h3>
+                        <label>
+                            <span>تاريخ التعيين *</span>
+                            <input asp-for="Finalize.HireDate" type="date" />
+                        </label>
+                        <label>
+                            <span>تاريخ المباشرة الفعلية</span>
+                            <input asp-for="Finalize.JoiningDate" type="date" />
+                        </label>
+                        <label>
+                            <span>موقع العمل *</span>
+                            <select asp-for="Finalize.BranchId" id="sor-branch">
+                                <option value="0">اختر موقع العمل</option>
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Id">@branch.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Finalize.BranchId" class="sor-validation"></span>
+                        </label>
+                        <label>
+                            <span>القسم *</span>
+                            <select asp-for="Finalize.DepartmentId" id="sor-department">
+                                <option value="0">اختر القسم</option>
+                                @foreach (var department in Model.Departments)
+                                {
+                                    <option value="@department.Id" data-branch="@department.BranchId">@department.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Finalize.DepartmentId" class="sor-validation"></span>
+                        </label>
+                        <label>
+                            <span>المسمى الوظيفي</span>
+                            <select asp-for="Finalize.PositionId">
+                                <option value="">—</option>
+                                @foreach (var position in Model.Positions)
+                                {
+                                    <option value="@position.Id">@position.Name</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>نوع الدوام</span>
+                            <select asp-for="Finalize.WorkType">
+                                <option value="">—</option>
+                                @if (!string.IsNullOrWhiteSpace(Model.Finalize.WorkType) &&
+                                     !Model.WorkTypeOptions.Contains(Model.Finalize.WorkType, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <option value="@Model.Finalize.WorkType">@Model.Finalize.WorkType</option>
+                                }
+                                @foreach (var workType in Model.WorkTypeOptions)
+                                {
+                                    <option value="@workType">@workType</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>الدرجة الوظيفية</span>
+                            <select asp-for="Finalize.JobGrade">
+                                <option value="">—</option>
+                                @if (!string.IsNullOrWhiteSpace(Model.Finalize.JobGrade) &&
+                                     !Model.GradeOptions.Contains(Model.Finalize.JobGrade, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    <option value="@Model.Finalize.JobGrade">@Model.Finalize.JobGrade</option>
+                                }
+                                @foreach (var grade in Model.GradeOptions)
+                                {
+                                    <option value="@grade">@grade</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>المدير المباشر</span>
+                            <select asp-for="Finalize.DirectManagerId">
+                                <option value="">— بدون مدير —</option>
+                                @foreach (var manager in Model.ManagerOptions)
+                                {
+                                    <option value="@manager.Id">@manager.FullName — @manager.EmployeeNo</option>
+                                }
+                            </select>
+                        </label>
+                        <label>
+                            <span>حالة الموظف</span>
+                            <select asp-for="Finalize.IsActive">
+                                <option value="true">نشط</option>
+                                <option value="false">غير نشط</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="sor-form-section">
+                        <h3>بيانات الاتصال</h3>
+                        <label>
+                            <span>الهاتف</span>
+                            <input asp-for="Finalize.Phone" autocomplete="tel" />
+                        </label>
+                        <label>
+                            <span>امتداد الهاتف</span>
+                            <input asp-for="Finalize.PhoneExtension" />
+                        </label>
+                        <label>
+                            <span>البريد الإلكتروني للعمل</span>
+                            <input asp-for="Finalize.Email" type="email" autocomplete="email" />
+                            <span asp-validation-for="Finalize.Email" class="sor-validation"></span>
+                        </label>
+                        <label>
+                            <span>البريد الشخصي</span>
+                            <input asp-for="Finalize.PersonalEmail" type="email" />
+                            <span asp-validation-for="Finalize.PersonalEmail" class="sor-validation"></span>
+                        </label>
+                    </div>
+
+                    <div class="sor-final-warning">
+                        <strong>لن ينشئ ZYNORA الموظف تلقائياً.</strong>
+                        <span>عند الضغط على إنشاء الموظف سيعاد فحص Data Scope وDuplicate Policy والمستندات المطلوبة، ثم تتم العملية داخل Transaction واحدة.</span>
+                    </div>
+
+                    <div class="sor-final-actions">
+                        <a asp-page="./SmartOnboarding"
+                           asp-route-CompanyId="@Model.CompanyId"
+                           asp-route-SessionId="@Model.SessionId"
+                           class="zy-btn">رجوع للمستندات</a>
+                        <button type="submit"
+                                class="zy-btn zy-btn--primary"
+                                disabled="@(!Model.CanCreateEmployee)">
+                            إنشاء الموظف وربط المستندات
+                        </button>
+                    </div>
+                </form>
+            </section>
+        }
+        else if (Model.Session.Status == "Completed" && Model.Session.CreatedEmployeeId is > 0)
+        {
+            <section class="sor-completed">
+                <div>
+                    <strong>Smart Onboarding مكتمل</strong>
+                    <span>تم إنشاء الموظف وربط المستندات بنجاح.</span>
+                </div>
+                <a asp-page="./Profile"
+                   asp-route-id="@Model.Session.CreatedEmployeeId"
+                   class="zy-btn zy-btn--primary">فتح ملف الموظف</a>
+            </section>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/smart-onboarding-review.js" asp-append-version="true"></script>
+}

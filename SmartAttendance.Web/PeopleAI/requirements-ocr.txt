@@ -1,0 +1,5 @@
+# Common ZYNORA People AI OCR dependencies.
+# PaddlePaddle CPU/GPU runtime is installed separately by the Ubuntu installer.
+# Keep 3.5.0 while the extraction contract is PP-OCRv5; upgrade separately with OCR regression tests.
+paddleocr==3.5.0
+Pillow>=10,<13

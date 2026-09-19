@@ -348,12 +348,15 @@ public class EmployeeService : IEmployeeService
         return model;
     }
 
-    public async Task<bool> CreateAsync(EmployeeCreateViewModel model)
+    public async Task<bool> CreateAsync(EmployeeCreateViewModel model) =>
+        await CreateAndGetIdAsync(model) is > 0;
+
+    public async Task<int?> CreateAndGetIdAsync(EmployeeCreateViewModel model)
     {
         if (string.IsNullOrWhiteSpace(model.EmployeeNo) ||
             await EmployeeNoExistsAsync(model.EmployeeNo))
         {
-            return false;
+            return null;
         }
 
         var department = await _unitOfWork.Departments.GetByIdAsync(
@@ -374,7 +377,7 @@ public class EmployeeService : IEmployeeService
               !position.IsActive ||
               position.CompanyId != branch.CompanyId)))
         {
-            return false;
+            return null;
         }
 
         // شركة الموظف تُشتقّ من فرعه ولا تُخمَّن: عدم الاتساق يُرفض قبله بالتحقق
@@ -385,7 +388,7 @@ public class EmployeeService : IEmployeeService
 
         if (companyId is null)
         {
-            return false;
+            return null;
         }
 
         var employee = _mapper.Map<Employee>(model);
@@ -417,7 +420,7 @@ public class EmployeeService : IEmployeeService
         await _unitOfWork.Employees.AddAsync(employee);
         await _unitOfWork.SaveChangesAsync();
 
-        return true;
+        return employee.Id;
     }
 
     public async Task<bool> UpdateAsync(EmployeeEditViewModel model)

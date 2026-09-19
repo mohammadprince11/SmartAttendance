@@ -2776,6 +2776,17 @@ BEGIN CATCH
     THROW;
 END CATCH;
 """),
+
+        // People AI production closure: move the existing idempotent schema
+        // bootstrap under the controlled migration ledger. The SQL remains
+        // additive/upgrade-safe and is now auditable in __SchemaMigrations.
+        new(
+            PeopleAiSchema.FoundationMigrationId,
+            PeopleAiSchema.FoundationMigrationSql),
+
+        new(
+            PeopleAiSchema.DocumentProcessingContractMigrationId,
+            PeopleAiSchema.DocumentProcessingContractMigrationSql),
     };
 
     /// <summary>

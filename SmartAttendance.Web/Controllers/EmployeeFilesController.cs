@@ -61,10 +61,18 @@ public sealed class EmployeeFilesController : ControllerBase
             return Forbid();
         }
 
+        // الرمز الموقّع يمنع العبث بالحمولة لكنه ليس تخويلاً بحد ذاته.
+        // اربط المفتاح بالموظف الموجود داخل الحمولة قبل قراءة أي ملف حتى لا يستطيع
+        // أي مسار داخلي خاطئ إنشاء token لموظف مع storage key يعود لموظف آخر.
+        if (!ProtectedFileStore.TryGetCategory(storageKey, employeeId, out var category))
+        {
+            await WriteAuditAsync("Employee File Scope Mismatch", employeeId, 0);
+            return NotFound();
+        }
+
         // صلاحية عرض ملف الموظف لا تكشف تلقائياً مرفقاته المالية. الرمز الموقّع
         // قد يُنسخ من جلسة مخوّلة، لذلك نفحص التصنيف عند كل تنزيل من الخادم.
-        if (ProtectedFileStore.TryGetCategory(storageKey, employeeId, out var category) &&
-            category.Equals("financial", StringComparison.OrdinalIgnoreCase) &&
+        if (category.Equals("financial", StringComparison.OrdinalIgnoreCase) &&
             !await CanViewCompensationAsync(employeeId))
         {
             await WriteAuditAsync("Employee Financial File Download Denied", employeeId, 0);
