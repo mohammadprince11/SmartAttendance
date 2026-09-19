@@ -258,15 +258,19 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
 
         long? runId = null;
         var stopwatch = Stopwatch.StartNew();
-        var isPdf = contract.Format.Extension.Equals(
-            ".pdf",
-            StringComparison.OrdinalIgnoreCase);
-        var extractionProvider = isPdf
-            ? "ZYNORA-PDF-Hybrid"
-            : "PaddleOCR";
-        var extractionModel = isPdf
-            ? "PDFium+PP-OCRv5"
-            : "PP-OCRv5";
+        var (extractionProvider, extractionModel) =
+            contract.Format.Extension.ToLowerInvariant() switch
+            {
+                ".pdf" => (
+                    "ZYNORA-PDF-Hybrid",
+                    "PDFium+PP-OCRv5"),
+                ".docx" => (
+                    "OpenXML",
+                    "DOCX-Text-v1"),
+                _ => (
+                    "PaddleOCR",
+                    "PP-OCRv5")
+            };
 
         try
         {
@@ -460,7 +464,18 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             "PDF_PASSWORD_PROTECTED" or
             "PDF_PAGE_LIMIT_EXCEEDED" or
             "PDF_EMPTY" or
-            "PDF_OPEN_FAILED";
+            "PDF_OPEN_FAILED" or
+            "DOCX_INVALID_PACKAGE" or
+            "DOCX_ENTRY_LIMIT_EXCEEDED" or
+            "DOCX_UNCOMPRESSED_LIMIT_EXCEEDED" or
+            "DOCX_COMPRESSION_RATIO_EXCEEDED" or
+            "DOCX_ENCRYPTED" or
+            "DOCX_UNSAFE_PATH" or
+            "DOCX_MACRO_CONTENT_UNSUPPORTED" or
+            "DOCX_EMBEDDED_OBJECT_UNSUPPORTED" or
+            "DOCX_MAIN_DOCUMENT_MISSING" or
+            "DOCX_XML_INVALID" or
+            "DOCX_PART_READ_FAILED";
 
     private static string NormalizeErrorCode(string value)
     {

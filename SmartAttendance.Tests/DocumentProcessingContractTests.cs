@@ -26,12 +26,26 @@ public sealed class DocumentProcessingContractTests
             decision.ProcessingMode);
     }
 
+    [Fact]
+    public void Docx_IsQueuedForAutomaticStructuredExtraction()
+    {
+        var decision = DocumentProcessingContract.Resolve(
+            ".docx",
+            PeopleAiDocumentTypes.Cv);
+
+        Assert.True(decision.Format.CanExtractText);
+        Assert.True(decision.ShouldQueueAutomaticExtraction);
+        Assert.True(decision.HasStructuredExtractor);
+        Assert.Equal(
+            "AutomaticStructuredExtraction",
+            decision.ProcessingMode);
+    }
+
     [Theory]
     [InlineData(".doc")]
-    [InlineData(".docx")]
     [InlineData(".xls")]
     [InlineData(".xlsx")]
-    public void OfficeFormats_RemainStorageOnly(string extension)
+    public void LegacyOfficeFormats_RemainStorageOnly(string extension)
     {
         var decision = DocumentProcessingContract.Resolve(
             extension,

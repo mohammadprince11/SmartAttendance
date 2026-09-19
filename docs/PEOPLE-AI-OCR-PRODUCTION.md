@@ -92,6 +92,9 @@ PeopleAIWorker__TempDirectory=/var/lib/zynora/people-ai/tmp
 PADDLE_PDX_CACHE_HOME=/var/lib/zynora/people-ai/paddlex-cache
 PeopleAIWorker__PdfMaxPages=20
 PeopleAIWorker__PdfRenderDpi=180
+PeopleAIWorker__DocxMaxEntries=2000
+PeopleAIWorker__DocxMaxUncompressedMegabytes=64
+PeopleAIWorker__DocxMaxCompressionRatio=200
 ```
 
 `Device=auto` uses GPU only when the installed PaddlePaddle wheel exposes an

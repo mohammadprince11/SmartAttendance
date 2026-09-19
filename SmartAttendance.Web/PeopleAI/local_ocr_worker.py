@@ -564,6 +564,187 @@ def process_pdf_document(ocr, path, language):
     }
 
 
+def _docx_limits():
+    max_entries = int(os.environ.get("PEOPLE_AI_DOCX_MAX_ENTRIES", "2000"))
+    max_entries = max(100, min(max_entries, 10000))
+
+    max_uncompressed_mb = int(
+        os.environ.get("PEOPLE_AI_DOCX_MAX_UNCOMPRESSED_MB", "64")
+    )
+    max_uncompressed_mb = max(8, min(max_uncompressed_mb, 512))
+
+    max_ratio = int(
+        os.environ.get("PEOPLE_AI_DOCX_MAX_COMPRESSION_RATIO", "200")
+    )
+    max_ratio = max(10, min(max_ratio, 1000))
+
+    return max_entries, max_uncompressed_mb * 1024 * 1024, max_ratio
+
+
+def _openxml_local_name(tag):
+    return tag.rsplit("}", 1)[-1] if "}" in tag else tag
+
+
+def _extract_openxml_lines(xml_bytes):
+    import xml.etree.ElementTree as ET
+
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError as exc:
+        raise DocumentExtractionError(
+            "DOCX_XML_INVALID",
+            "DOCX contains invalid Open XML content.",
+        ) from exc
+
+    lines = []
+    for paragraph in root.iter():
+        if _openxml_local_name(paragraph.tag) != "p":
+            continue
+
+        parts = []
+        for node in paragraph.iter():
+            name = _openxml_local_name(node.tag)
+            if name == "t" and node.text:
+                parts.append(node.text)
+            elif name == "tab":
+                parts.append(" ")
+            elif name in {"br", "cr"}:
+                parts.append(" ")
+
+        value = re.sub(r"\s+", " ", "".join(parts)).strip()
+        if value:
+            lines.append(value)
+
+    return lines
+
+
+def process_docx_document(path, language):
+    import zipfile
+
+    max_entries, max_uncompressed, max_ratio = _docx_limits()
+
+    try:
+        archive = zipfile.ZipFile(path, "r")
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise DocumentExtractionError(
+            "DOCX_INVALID_PACKAGE",
+            "DOCX package could not be opened safely.",
+        ) from exc
+
+    try:
+        infos = archive.infolist()
+        if len(infos) > max_entries:
+            raise DocumentExtractionError(
+                "DOCX_ENTRY_LIMIT_EXCEEDED",
+                "DOCX contains too many archive entries.",
+            )
+
+        total_uncompressed = 0
+        normalized_names = set()
+
+        for info in infos:
+            name = (info.filename or "").replace("\\", "/")
+            lower_name = name.casefold()
+            normalized_names.add(lower_name)
+
+            parts = [part for part in name.split("/") if part]
+            if name.startswith("/") or ".." in parts:
+                raise DocumentExtractionError(
+                    "DOCX_UNSAFE_PATH",
+                    "DOCX contains an unsafe archive path.",
+                )
+
+            if info.flag_bits & 0x1:
+                raise DocumentExtractionError(
+                    "DOCX_ENCRYPTED",
+                    "Encrypted DOCX requires manual review.",
+                )
+
+            total_uncompressed += max(0, info.file_size)
+            if total_uncompressed > max_uncompressed:
+                raise DocumentExtractionError(
+                    "DOCX_UNCOMPRESSED_LIMIT_EXCEEDED",
+                    "DOCX exceeds the configured uncompressed-size limit.",
+                )
+
+            if info.file_size >= 1024 * 1024:
+                ratio = info.file_size / max(1, info.compress_size)
+                if ratio > max_ratio:
+                    raise DocumentExtractionError(
+                        "DOCX_COMPRESSION_RATIO_EXCEEDED",
+                        "DOCX compression ratio exceeds the safety limit.",
+                    )
+
+            if lower_name.endswith("vbaproject.bin"):
+                raise DocumentExtractionError(
+                    "DOCX_MACRO_CONTENT_UNSUPPORTED",
+                    "Macro-enabled content is not accepted in DOCX extraction.",
+                )
+
+            if lower_name.startswith("word/embeddings/") and not name.endswith("/"):
+                raise DocumentExtractionError(
+                    "DOCX_EMBEDDED_OBJECT_UNSUPPORTED",
+                    "Embedded objects require manual review.",
+                )
+
+        if "[content_types].xml" not in normalized_names:
+            raise DocumentExtractionError(
+                "DOCX_INVALID_PACKAGE",
+                "DOCX content-types manifest is missing.",
+            )
+
+        if "word/document.xml" not in normalized_names:
+            raise DocumentExtractionError(
+                "DOCX_MAIN_DOCUMENT_MISSING",
+                "DOCX main document part is missing.",
+            )
+
+        part_names = ["word/document.xml"]
+        part_names.extend(sorted(
+            info.filename
+            for info in infos
+            if re.fullmatch(
+                r"word/(header|footer)\d+\.xml",
+                (info.filename or "").replace("\\", "/"),
+                flags=re.IGNORECASE,
+            )
+        ))
+
+        text_lines = []
+        for part_name in part_names:
+            try:
+                payload = archive.read(part_name)
+            except (KeyError, RuntimeError) as exc:
+                raise DocumentExtractionError(
+                    "DOCX_PART_READ_FAILED",
+                    "DOCX content part could not be read safely.",
+                ) from exc
+
+            text_lines.extend(_extract_openxml_lines(payload))
+    finally:
+        archive.close()
+
+    lines = [
+        {
+            "index": index,
+            "text": value,
+            "score": 1.0,
+            "box": None,
+        }
+        for index, value in enumerate(text_lines)
+    ]
+
+    return {
+        "success": True,
+        "provider": "OpenXML",
+        "model": "DOCX-Text-v1",
+        "language": language,
+        "pages": [{"pageIndex": 0, "lines": lines}],
+        "fullText": "\n".join(text_lines),
+        "lineCount": len(text_lines),
+    }
+
+
 def process_file(ocr, path, language):
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
@@ -571,6 +752,8 @@ def process_file(ocr, path, language):
     extension = os.path.splitext(path)[1].lower()
     if extension == ".pdf":
         return process_pdf_document(ocr, path, language)
+    if extension == ".docx":
+        return process_docx_document(path, language)
 
     family_number_recovery = None
     with prepared_ocr_input(path) as prepared_path:
@@ -675,10 +858,29 @@ def merge_ocr_results(results, language_profile):
         for line in page["lines"]
     ]
 
+    providers = {
+        str(result.get("provider", "")).strip()
+        for result in results
+        if str(result.get("provider", "")).strip()
+    }
+    models = {
+        str(result.get("model", "")).strip()
+        for result in results
+        if str(result.get("model", "")).strip()
+    }
+
     return {
         "success": True,
-        "provider": "PaddleOCR",
-        "model": "PP-OCRv5",
+        "provider": (
+            next(iter(providers))
+            if len(providers) == 1
+            else "ZYNORA-MultiLanguage"
+        ),
+        "model": (
+            next(iter(models))
+            if len(models) == 1
+            else "+".join(sorted(models))
+        ),
         "language": language_profile,
         "pages": pages,
         "fullText": "\n".join(all_lines),
@@ -728,23 +930,27 @@ def serve():
             languages = _normalize_language_profile(
                 requested_profile
             )
-
-            outputs = []
-            for language in languages:
-                engine = ocr_cache.get(language)
-                if engine is None:
-                    engine = _build_ocr_engine(
-                        language,
-                        diagnostics["device"],
-                    )
-                    ocr_cache[language] = engine
-
-                outputs.append(
-                    process_file(engine, path, language)
-                )
-
             profile = ",".join(languages)
-            result = merge_ocr_results(outputs, profile)
+            extension = os.path.splitext(path or "")[1].lower()
+
+            if extension == ".docx":
+                result = process_docx_document(path, profile)
+            else:
+                outputs = []
+                for language in languages:
+                    engine = ocr_cache.get(language)
+                    if engine is None:
+                        engine = _build_ocr_engine(
+                            language,
+                            diagnostics["device"],
+                        )
+                        ocr_cache[language] = engine
+
+                    outputs.append(
+                        process_file(engine, path, language)
+                    )
+
+                result = merge_ocr_results(outputs, profile)
             result["requestId"] = request_id
             print(json.dumps(result, ensure_ascii=True), flush=True)
         except Exception as exc:
@@ -769,6 +975,15 @@ def main():
 
     if args.serve:
         serve()
+        return
+
+    if args.input and os.path.splitext(args.input)[1].lower() == ".docx":
+        language = (
+            os.environ.get("PEOPLE_AI_OCR_LANGUAGE", "ar").strip()
+            or "ar"
+        )
+        result = process_docx_document(args.input, language)
+        print(json.dumps(result, ensure_ascii=True))
         return
 
     ocr, diagnostics = build_ocr()

@@ -18,6 +18,9 @@ public sealed class PeopleAiWorkerOptions
     public int MaxImageSide { get; set; } = 1600;
     public int PdfMaxPages { get; set; } = 20;
     public int PdfRenderDpi { get; set; } = 180;
+    public int DocxMaxEntries { get; set; } = 2000;
+    public int DocxMaxUncompressedMegabytes { get; set; } = 64;
+    public int DocxMaxCompressionRatio { get; set; } = 200;
     public string Device { get; set; } = "auto";
     public string Language { get; set; } = "ar";
     public string TempDirectory { get; set; } = string.Empty;
@@ -291,6 +294,18 @@ public sealed class LocalOcrProcessClient :
                 System.Globalization.CultureInfo.InvariantCulture);
         startInfo.Environment["PEOPLE_AI_PDF_RENDER_DPI"] =
             Math.Clamp(_options.PdfRenderDpi, 120, 300).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_DOCX_MAX_ENTRIES"] =
+            Math.Clamp(_options.DocxMaxEntries, 100, 10000).ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_DOCX_MAX_UNCOMPRESSED_MB"] =
+            Math.Clamp(
+                _options.DocxMaxUncompressedMegabytes,
+                8,
+                512).ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+        startInfo.Environment["PEOPLE_AI_DOCX_MAX_COMPRESSION_RATIO"] =
+            Math.Clamp(_options.DocxMaxCompressionRatio, 10, 1000).ToString(
                 System.Globalization.CultureInfo.InvariantCulture);
         startInfo.Environment["PEOPLE_AI_OCR_DEVICE"] =
             string.IsNullOrWhiteSpace(_options.Device)

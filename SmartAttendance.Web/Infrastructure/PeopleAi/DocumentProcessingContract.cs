@@ -29,7 +29,7 @@ public static class DocumentProcessingContract
             [".webp"] = new(".webp", true, true, false, true),
             [".pdf"] = new(".pdf", true, true, false, true),
             [".doc"] = new(".doc", true, true, false, false),
-            [".docx"] = new(".docx", true, true, false, false),
+            [".docx"] = new(".docx", true, true, false, true),
             [".xls"] = new(".xls", true, true, false, false),
             [".xlsx"] = new(".xlsx", true, true, false, false)
         };
