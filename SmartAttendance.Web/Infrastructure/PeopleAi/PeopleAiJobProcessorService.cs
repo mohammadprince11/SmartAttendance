@@ -44,6 +44,8 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             return;
         }
 
+        var preflightStage = "ProtectedStorage";
+
         try
         {
             var protectedRoot =
@@ -60,6 +62,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 stoppingToken);
             File.Delete(probePath);
 
+            preflightStage = "LocalOcrHandshake";
             await _ocr.EnsureReadyAsync(stoppingToken);
         }
         catch (OperationCanceledException)
@@ -69,16 +72,22 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
         }
         catch (Exception exception)
         {
+            var startupErrorCode = MapStartupErrorCode(exception);
+
             if (_environment.IsDevelopment())
             {
                 _logger.LogCritical(
                     exception,
-                    "People AI OCR startup preflight failed. Queue processing will not start.");
+                    "People AI OCR startup preflight failed. Stage={Stage} Error={ErrorCode}. Queue processing will not start.",
+                    preflightStage,
+                    startupErrorCode);
             }
             else
             {
                 _logger.LogCritical(
-                    "People AI OCR startup preflight failed. Queue processing will not start.");
+                    "People AI OCR startup preflight failed. Stage={Stage} Error={ErrorCode}. Queue processing will not start.",
+                    preflightStage,
+                    startupErrorCode);
             }
 
             return;
@@ -378,6 +387,62 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
     private static TimeSpan RetryDelay(int attemptCount) =>
         TimeSpan.FromSeconds(
             Math.Min(300, Math.Max(5, attemptCount * attemptCount * 5)));
+
+    private static string MapStartupErrorCode(Exception exception)
+    {
+        if (exception is TimeoutException)
+        {
+            return "OCR_STARTUP_TIMEOUT";
+        }
+
+        if (exception is FileNotFoundException)
+        {
+            return "STARTUP_FILE_NOT_FOUND";
+        }
+
+        if (exception is UnauthorizedAccessException)
+        {
+            return "STARTUP_ACCESS_DENIED";
+        }
+
+        if (exception is IOException)
+        {
+            return "STARTUP_IO_ERROR";
+        }
+
+        if (exception is InvalidOperationException invalid)
+        {
+            var runtimeMatch = Regex.Match(
+                invalid.Message,
+                @"startup failed \((?<type>[A-Za-z0-9_]{1,80})\):",
+                RegexOptions.CultureInvariant);
+
+            if (runtimeMatch.Success)
+            {
+                return "OCR_RUNTIME_" +
+                    NormalizeErrorCode(runtimeMatch.Groups["type"].Value);
+            }
+
+            if (invalid.Message.Contains(
+                    "exited during startup",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return "OCR_PROCESS_EXITED";
+            }
+
+            if (invalid.Message.Contains(
+                    "Failed to start local OCR process",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return "OCR_PROCESS_START_FAILED";
+            }
+
+            return "STARTUP_INVALID_OPERATION";
+        }
+
+        return "STARTUP_" +
+            NormalizeErrorCode(exception.GetType().Name);
+    }
 
     private static string MapErrorCode(Exception exception) =>
         exception switch
