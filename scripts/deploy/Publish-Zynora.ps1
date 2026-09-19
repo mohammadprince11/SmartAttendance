@@ -116,9 +116,21 @@ function Stop-SiteProcesses {
             }
     )
 
+    $taskkillPath = Join-Path $env:SystemRoot 'System32\taskkill.exe'
     foreach ($worker in $workerRoots) {
         Write-Host "  قتل People AI worker tree PID $($worker.ProcessId)"
-        & taskkill.exe /PID $worker.ProcessId /T /F 2>$null | Out-Null
+        try {
+            Start-Process `
+                -FilePath $taskkillPath `
+                -ArgumentList @('/PID', "$($worker.ProcessId)", '/T', '/F') `
+                -WindowStyle Hidden `
+                -Wait `
+                -ErrorAction SilentlyContinue | Out-Null
+        }
+        catch {
+            # Worker cleanup is best-effort. A child may exit between discovery
+            # and taskkill; that race must never abort the deployment.
+        }
     }
 }
 
@@ -385,8 +397,26 @@ if ($SkipDbBackup) {
 # ─────────────────────────────────────────────────────────────────────────────
 # ٣) إيقاف المهمة وقتل حلقة run-server
 # ─────────────────────────────────────────────────────────────────────────────
+$deploymentTaskDisabled = $false
+trap {
+    $capturedError = $_
+    if ($deploymentTaskDisabled) {
+        try {
+            Enable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
+            Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+            Write-Warn 'فشل النشر قبل إعادة التشغيل؛ أُعيد تفعيل وتشغيل المهمة تلقائياً.'
+        }
+        catch {
+            Write-Warn 'فشل أيضاً الاسترداد التلقائي للمهمة المجدولة؛ يلزم تشغيلها يدوياً.'
+        }
+    }
+    [Console]::Error.WriteLine($capturedError.ToString())
+    exit 1
+}
+
 Write-Step '٣) إيقاف الموقع'
 Disable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
+$deploymentTaskDisabled = $true
 Stop-ScheduledTask    -TaskName $TaskName -ErrorAction SilentlyContinue
 
 Stop-SiteProcesses -SitePath $SitePath
@@ -460,6 +490,7 @@ Write-Ok 'نُسخ والإعدادات وأصول الخادم سليمة'
 Write-Step '٦) تشغيل وقياس'
 Enable-ScheduledTask -TaskName $TaskName | Out-Null
 Start-ScheduledTask  -TaskName $TaskName
+$deploymentTaskDisabled = $false
 
 $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
 $ready    = $false

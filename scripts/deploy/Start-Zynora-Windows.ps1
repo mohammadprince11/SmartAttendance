@@ -51,9 +51,20 @@ function Stop-OrphanPeopleAiWorkers {
             }
     )
 
+    $taskkillPath = Join-Path $env:SystemRoot 'System32\taskkill.exe'
     foreach ($worker in $roots) {
         Write-ZLog "Stopping orphan People AI worker tree. PID=$($worker.ProcessId)"
-        & taskkill.exe /PID $worker.ProcessId /T /F 2>$null | Out-Null
+        try {
+            Start-Process `
+                -FilePath $taskkillPath `
+                -ArgumentList @('/PID', "$($worker.ProcessId)", '/T', '/F') `
+                -WindowStyle Hidden `
+                -Wait `
+                -ErrorAction SilentlyContinue | Out-Null
+        }
+        catch {
+            # Best-effort cleanup: workers may exit during process discovery.
+        }
     }
 }
 
