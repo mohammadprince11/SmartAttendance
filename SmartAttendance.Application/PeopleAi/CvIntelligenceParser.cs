@@ -368,7 +368,13 @@ public static class CvIntelligenceParser
     {
         var dateIndexes = lines
             .Select((line, index) => new { line, index })
-            .Where(x => ContainsDate(x.line.Text))
+            // Experience descriptions often use words such as "current"
+            // (for example, "reviewed current benefit programs"). Those
+            // words must not be treated as employment date boundaries.
+            // A real experience range is anchored by a calendar year.
+            .Where(x => Regex.IsMatch(
+                x.line.Text,
+                @"\b(?:19|20)\d{2}\b"))
             .Select(x => x.index)
             .ToList();
 

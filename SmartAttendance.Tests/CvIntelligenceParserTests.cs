@@ -129,6 +129,8 @@ public sealed class CvIntelligenceParserTests
             L("EXAMPLE GROUP — Baghdad"),
             L("Feb 2025 - Present"),
             L("Managed payroll and attendance operations."),
+            L("Reviewed current benefit programs for competitiveness."),
+            L("Ensured policies were current and compliant."),
             L("HR OFFICER"),
             L("SECOND COMPANY — Baghdad"),
             L("Apr 2022 - Feb 2024"),
