@@ -740,16 +740,44 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             }
 
             var needle = value.Trim();
+            var canonicalNeedle = new string(
+                needle
+                    .Where(char.IsLetterOrDigit)
+                    .Select(char.ToUpperInvariant)
+                    .ToArray());
+
             var scores = response.AllLines
                 .Where(line =>
-                    line.Score.HasValue &&
-                    !string.IsNullOrWhiteSpace(line.Text) &&
-                    (line.Text.Contains(
-                         needle,
-                         StringComparison.OrdinalIgnoreCase) ||
-                     needle.Contains(
-                         line.Text.Trim(),
-                         StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (!line.Score.HasValue ||
+                        string.IsNullOrWhiteSpace(line.Text))
+                    {
+                        return false;
+                    }
+
+                    var lineText = line.Text.Trim();
+                    if (lineText.Contains(
+                            needle,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    if (canonicalNeedle.Length < 4)
+                    {
+                        return false;
+                    }
+
+                    var canonicalLine = new string(
+                        lineText
+                            .Where(char.IsLetterOrDigit)
+                            .Select(char.ToUpperInvariant)
+                            .ToArray());
+
+                    return canonicalLine.Contains(
+                        canonicalNeedle,
+                        StringComparison.Ordinal);
+                })
                 .Select(line => line.Score!.Value)
                 .ToList();
 
