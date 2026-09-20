@@ -534,6 +534,21 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             ? PeopleAiDocumentTypes.Unknown
             : input.DeclaredDocumentType!;
 
+        var isDeclaredPassport = string.Equals(
+            declaredType,
+            PeopleAiDocumentTypes.Passport,
+            StringComparison.OrdinalIgnoreCase);
+        var passportVisual = isDeclaredPassport
+            ? PassportVisualParser.Parse(
+                response.AllLines.Select(line =>
+                    new PassportVisualOcrLine(
+                        line.Text,
+                        line.Score,
+                        line.Box)))
+            : null;
+        var hasStrongPassportVisualEvidence =
+            passportVisual?.HasStrongIdentityEvidence == true;
+
         if (string.Equals(
                 declaredType,
                 PeopleAiDocumentTypes.Cv,
@@ -636,12 +651,53 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             }
         }
 
+        if (isDeclaredPassport && passportVisual is not null)
+        {
+            if (mrz is null)
+            {
+                await SaveObservedField(
+                    "DocumentNumber",
+                    passportVisual.DocumentNumber);
+                await SaveObservedField(
+                    "GivenNames",
+                    passportVisual.GivenNames);
+                await SaveObservedField(
+                    "Surname",
+                    passportVisual.Surname);
+                await SaveObservedField(
+                    "DateOfBirth",
+                    passportVisual.DateOfBirth);
+                await SaveObservedField(
+                    "ExpiryDate",
+                    passportVisual.ExpiryDate);
+                await SaveObservedField(
+                    "Nationality",
+                    passportVisual.Nationality);
+                await SaveObservedField(
+                    "Sex",
+                    passportVisual.Sex);
+                await SaveObservedField(
+                    "IssuingCountry",
+                    passportVisual.IssuingCountry);
+            }
+
+            await SaveObservedField(
+                "IssueDate",
+                passportVisual.IssueDate);
+            await SaveObservedField(
+                "PlaceOfBirth",
+                passportVisual.PlaceOfBirth);
+            await SaveObservedField(
+                "MotherName",
+                passportVisual.MotherName);
+            await SaveObservedField(
+                "IssuingAuthority",
+                passportVisual.IssuingAuthority);
+        }
+
         if (mrz is null)
         {
-            if (string.Equals(
-                    declaredType,
-                    PeopleAiDocumentTypes.Passport,
-                    StringComparison.OrdinalIgnoreCase))
+            if (isDeclaredPassport)
             {
                 await PeopleAiExtractionStore.AddValidationIssueAsync(
                     db,
@@ -651,7 +707,17 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                     "MRZ",
                     "Warning",
                     "MRZ",
-                    "لم يتم العثور على MRZ صالح في الجواز. يجب مراجعة المستند يدوياً.");
+                    hasStrongPassportVisualEvidence
+                        ? "لم يتم العثور على MRZ صالح، لكن تم استخراج بيانات الجواز المرئية. يرجى التحقق منها أثناء المراجعة."
+                        : "لم يتم العثور على MRZ صالح في الجواز. يجب مراجعة المستند يدوياً.");
+            }
+
+            if (hasStrongPassportVisualEvidence)
+            {
+                return new PeopleAiExtractionStore.DocumentClassification(
+                    PeopleAiDocumentTypes.Passport,
+                    0.82m,
+                    "PASSPORT_VISUAL_LABELS");
             }
 
             return hasStrongNationalIdEvidence
