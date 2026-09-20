@@ -13,5 +13,6 @@ public enum EmployeeRecordType
     EmergencyContact = 8,
     Residency = 9,
     Skill = 10,
-    Language = 11
+    Language = 11,
+    ProfessionalSummary = 12
 }

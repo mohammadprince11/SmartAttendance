@@ -770,6 +770,70 @@ WHERE ac.AddressValue IS NOT NULL;
       ON d.Id = r.OnboardingDocumentId
     WHERE d.SessionId = @SessionId
 ),
+ProfessionalSummaryCandidate AS
+(
+    SELECT TOP (1)
+        COALESCE(
+            NULLIF(LTRIM(RTRIM(f.ReviewedValue)), N''),
+            NULLIF(LTRIM(RTRIM(f.NormalizedValue)), N''),
+            NULLIF(LTRIM(RTRIM(f.RawValue)), N'')
+        ) AS SummaryValue
+    FROM LatestRuns lr
+    JOIN dbo.DocumentExtractedFields f
+      ON f.ExtractionRunId = lr.Id
+    WHERE lr.rn = 1
+      AND f.FieldKey = N'ProfessionalSummary'
+      AND f.ReviewStatus IN (N'Accepted', N'Modified')
+    ORDER BY
+        CASE f.ReviewStatus
+            WHEN N'Modified' THEN 0
+            ELSE 1
+        END,
+        f.ProviderConfidence DESC,
+        f.Id DESC
+)
+INSERT INTO dbo.EmployeeFileRecords
+(
+    EmployeeId,
+    RecordType,
+    Title,
+    Note,
+    IsCurrent,
+    IsReturned,
+    EmployeeAcknowledged,
+    CreatedAt,
+    CreatedBy,
+    IsDeleted
+)
+SELECT
+    @EmployeeId,
+    12,
+    N'Professional Summary',
+    psc.SummaryValue,
+    1,
+    0,
+    0,
+    SYSUTCDATETIME(),
+    @CreatedBy,
+    0
+FROM ProfessionalSummaryCandidate psc
+WHERE psc.SummaryValue IS NOT NULL;
+
+;WITH LatestRuns AS
+(
+    SELECT
+        r.Id,
+        r.OnboardingDocumentId,
+        ROW_NUMBER() OVER
+        (
+            PARTITION BY r.OnboardingDocumentId
+            ORDER BY r.Id DESC
+        ) AS rn
+    FROM dbo.DocumentExtractionRuns r
+    JOIN dbo.OnboardingDocuments d
+      ON d.Id = r.OnboardingDocumentId
+    WHERE d.SessionId = @SessionId
+),
 AcceptedLists AS
 (
     SELECT

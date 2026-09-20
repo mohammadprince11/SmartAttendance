@@ -578,6 +578,9 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 "Nationality",
                 cv.Nationality);
             await SaveCvField(
+                "ProfessionalSummary",
+                cv.ProfessionalSummary);
+            await SaveCvField(
                 "Skills",
                 cv.Skills.Count == 0
                     ? null

@@ -108,6 +108,64 @@ public sealed class CvIntelligenceParserTests
         Assert.Equal("Synthetic Candidate", result.FullName);
     }
 
+    [Fact]
+    public void Parse_CommonResumeLayout_ExtractsReusableSections()
+    {
+        var result = CvIntelligenceParser.Parse(
+        [
+            L("SYNTHETIC CANDIDATE"),
+            L("C o n t a c t"),
+            L("+964 770 000 0000"),
+            L("candidate@example.com"),
+            L("Baghdad"),
+            L("1990-01-15"),
+            L("Iraq"),
+            L("P r o f e s s i o n a l S u m m a r y"),
+            L("HR operations professional with payroll and analytics experience."),
+            L("S k i l l s"),
+            L("Payroll • Attendance • Power BI"),
+            L("E x p e r i e n c e"),
+            L("HR OPERATIONS SUPERVISOR"),
+            L("EXAMPLE GROUP — Baghdad"),
+            L("Feb 2025 - Present"),
+            L("Managed payroll and attendance operations."),
+            L("HR OFFICER"),
+            L("SECOND COMPANY — Baghdad"),
+            L("Apr 2022 - Feb 2024"),
+            L("Processed employee records."),
+            L("E d u c a t i o n"),
+            L("BACHELOR'S"),
+            L("Sep 2018 | EXAMPLE UNIVERSITY COLLEGE"),
+            L("L a n g u a g e s"),
+            L("Arabic"),
+            L("Native"),
+            L("English"),
+            L("Intermediate")
+        ]);
+
+        Assert.Equal("Baghdad, Iraq", result.Address);
+        Assert.Contains("payroll and analytics", result.ProfessionalSummary);
+        Assert.Contains("Power BI", result.Skills);
+        Assert.Contains("Arabic (Native)", result.Languages);
+        Assert.Contains("English (Intermediate)", result.Languages);
+
+        var experience = result.Records
+            .Where(x => x.RecordType == "Experience")
+            .ToList();
+        Assert.Equal(2, experience.Count);
+        Assert.Equal("EXAMPLE GROUP", experience[0].Title);
+        Assert.Equal("HR OPERATIONS SUPERVISOR", experience[0].Subtitle);
+        Assert.Equal(new DateOnly(2025, 2, 1), experience[0].FromDate);
+        Assert.True(experience[0].IsCurrent);
+        Assert.Contains("Managed payroll", experience[0].Note);
+
+        var education = Assert.Single(
+            result.Records.Where(x => x.RecordType == "Education"));
+        Assert.Equal("EXAMPLE UNIVERSITY COLLEGE", education.Title);
+        Assert.Equal("BACHELOR'S", education.Subtitle);
+        Assert.Equal(new DateOnly(2018, 9, 1), education.FromDate);
+    }
+
     private static CvIntelligenceLine L(string text) =>
         new(text, 0.98);
 }
