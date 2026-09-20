@@ -467,6 +467,91 @@
                 var assetRecords = Model.RecordsOf(EmployeeRecordType.Asset).ToList();
                 var custodyHeld = assetRecords.Count(r => !r.IsReturned);
             }
+            @if (Model.ProfileIntelligence is { } profileAi)
+            {
+                <section class="z360-profile-intelligence"
+                         aria-label="ذكاء ملف الموظف">
+                    <article class="z360-profile-completeness">
+                        <div class="z360-profile-ai-head">
+                            <div>
+                                <span>Profile Completeness</span>
+                                <strong>اكتمال بيانات الملف</strong>
+                            </div>
+                            <strong class="z360-profile-score">@profileAi.CompletenessScore%</strong>
+                        </div>
+                        <div class="z360-profile-progress"
+                             role="progressbar"
+                             aria-valuemin="0"
+                             aria-valuemax="100"
+                             aria-valuenow="@profileAi.CompletenessScore">
+                            <span style="width:@profileAi.CompletenessScore%"></span>
+                        </div>
+                        <small>
+                            @profileAi.CompletedItems من @profileAi.TotalItems عنصر مكتمل
+                        </small>
+                        @if (profileAi.MissingItems.Count > 0)
+                        {
+                            <div class="z360-profile-missing">
+                                <span>بيانات ناقصة:</span>
+                                <div>
+                                    @foreach (var item in profileAi.MissingItems.Take(8))
+                                    {
+                                        <span>@item</span>
+                                    }
+                                    @if (profileAi.MissingItems.Count > 8)
+                                    {
+                                        <span>+@(profileAi.MissingItems.Count - 8)</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="z360-profile-complete">
+                                جميع عناصر الاكتمال الأساسية متوفرة.
+                            </div>
+                        }
+                    </article>
+
+                    <article class="z360-profile-summary">
+                        <div class="z360-profile-ai-head">
+                            <div>
+                                <span>Smart Employee Summary</span>
+                                <strong>ملخص الموظف الذكي</strong>
+                            </div>
+                            <small>مبني على البيانات المسجلة فقط</small>
+                        </div>
+                        <p>@profileAi.SmartSummary</p>
+
+                        @if (profileAi.Skills.Count > 0)
+                        {
+                            <div class="z360-profile-facts">
+                                <strong>المهارات</strong>
+                                <div>
+                                    @foreach (var skill in profileAi.Skills)
+                                    {
+                                        <span>@skill</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (profileAi.Languages.Count > 0)
+                        {
+                            <div class="z360-profile-facts">
+                                <strong>اللغات</strong>
+                                <div>
+                                    @foreach (var language in profileAi.Languages)
+                                    {
+                                        <span>@language</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </article>
+                </section>
+            }
+
             <section class="z360-kpis" aria-label="مؤشرات الموظف">
                 <div class="z360-kpi @healthClass">
                     <span class="z360-kpi-label">مؤشر الصحة الوظيفية</span>
@@ -1181,6 +1266,8 @@
                                     new { Type = EmployeeRecordType.Education, Title = "التعليم", TitleLabel = "الجامعة / المؤسسة", SubLabel = "الدرجة والتخصص", RefLabel = "رقم مرجعي", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
                                     new { Type = EmployeeRecordType.Asset, Title = "العهد", TitleLabel = "اسم العهدة", SubLabel = "النوع", RefLabel = "رقم مرجعي", ShowAmount = true, ShowCurrent = true, CurrentLabel = "بحوزة الموظف" },
                                     new { Type = EmployeeRecordType.Address, Title = "العنوان", TitleLabel = "العنوان", SubLabel = "المنطقة", RefLabel = "رقم مرجعي", ShowAmount = false, ShowCurrent = true, CurrentLabel = "العنوان الحالي" },
+                                    new { Type = EmployeeRecordType.Skill, Title = "المهارات", TitleLabel = "المهارة", SubLabel = "التفصيل / المستوى", RefLabel = "مرجع", ShowAmount = false, ShowCurrent = true, CurrentLabel = "مهارة حالية" },
+                                    new { Type = EmployeeRecordType.Language, Title = "اللغات", TitleLabel = "اللغة", SubLabel = "المستوى", RefLabel = "مرجع", ShowAmount = false, ShowCurrent = true, CurrentLabel = "لغة حالية" },
                                     new { Type = EmployeeRecordType.EmergencyContact, Title = "جهات الطوارئ", TitleLabel = "الاسم", SubLabel = "صلة القرابة", RefLabel = "رقم الهاتف", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" },
                                     new { Type = EmployeeRecordType.Residency, Title = "الإقامة", TitleLabel = "نوع الإقامة", SubLabel = "الحالة", RefLabel = "رقم الإقامة", ShowAmount = false, ShowCurrent = false, CurrentLabel = "" }
                                 };
@@ -1750,7 +1837,7 @@
             <div class="hrms-field"><label>ملاحظة</label><input name="RecordInput.Note" id="rec-Note" /></div>
             <div class="hrms-field"><label>ملف مرفق (اختياري)</label><input type="file" name="RecordAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" /></div>
             @* الحقول المخصصة لكل نوع سجل — السلايد مشترك فتظهر مجموعة النوع الفعال فقط (JS) *@
-            @foreach (var recordTypeKey in new[] { "Education", "Experience", "Certificate", "Training", "Medical", "Asset", "Address", "EmergencyContact", "Residency" })
+            @foreach (var recordTypeKey in new[] { "Education", "Experience", "Certificate", "Training", "Medical", "Asset", "Address", "Skill", "Language", "EmergencyContact", "Residency" })
             {
                 <partial name="_EntityCustomFields" model='new EntityCustomFieldsPartialModel { EntityKey = recordTypeKey, Fields = Model.CustomFieldsOf(recordTypeKey), ApplyRequired = false, StartHidden = true }' />
             }

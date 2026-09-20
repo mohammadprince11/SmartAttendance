@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using SmartAttendance.Application.Common.Security;
+using SmartAttendance.Application.PeopleAi;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -81,6 +82,8 @@ public partial class ProfileModel : PageModel
     public int AuditTotalPages => Math.Max(1, (AuditTotalCount + ActivityPageSize - 1) / ActivityPageSize);
 
     public EmployeeProfileCard? Employee { get; set; }
+
+    public EmployeeProfileIntelligenceResult? ProfileIntelligence { get; set; }
 
     public List<AttendanceRow> AttendanceRows { get; set; } = new();
 
@@ -207,6 +210,7 @@ public partial class ProfileModel : PageModel
 
         Id = Employee.Id;
         await LoadPanelsAsync();
+        BuildProfileIntelligence();
         await LoadTimelineAsync();
         BuildEmployeeRequirements();
 
@@ -1457,6 +1461,49 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;",
         : Employee360HealthScore >= 60
             ? "يحتاج متابعة"
             : "خطر تشغيلي";
+
+
+    private void BuildProfileIntelligence()
+    {
+        if (Employee is null)
+        {
+            ProfileIntelligence = null;
+            return;
+        }
+
+        var recordFacts = FileRecords
+            .Where(record => !record.IsDeleted)
+            .Select(record => new EmployeeProfileRecordFact(
+                record.RecordType,
+                record.Title,
+                record.Subtitle,
+                record.FromDate,
+                record.ToDate,
+                record.IsCurrent))
+            .ToList();
+
+        ProfileIntelligence = EmployeeProfileIntelligence.Evaluate(
+            new EmployeeProfileIntelligenceInput(
+                Employee.EmployeeNo,
+                Employee.FullName,
+                Employee.IsCitizen,
+                Employee.NationalId,
+                Employee.PassportNo,
+                Employee.BirthDate,
+                Employee.Nationality,
+                Employee.Gender,
+                Employee.CompanyName,
+                Employee.BranchName,
+                Employee.DepartmentName,
+                Employee.Position,
+                Employee.HireDate,
+                Employee.WorkType,
+                Employee.EmploymentStatus,
+                Employee.Phone,
+                Employee.Email,
+                Employee.PersonalEmail,
+                recordFacts));
+    }
 
     public class EmployeeProfileCard
     {

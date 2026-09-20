@@ -754,6 +754,73 @@ SELECT
     0
 FROM AddressCandidate ac
 WHERE ac.AddressValue IS NOT NULL;
+
+;WITH LatestRuns AS
+(
+    SELECT
+        r.Id,
+        r.OnboardingDocumentId,
+        ROW_NUMBER() OVER
+        (
+            PARTITION BY r.OnboardingDocumentId
+            ORDER BY r.Id DESC
+        ) AS rn
+    FROM dbo.DocumentExtractionRuns r
+    JOIN dbo.OnboardingDocuments d
+      ON d.Id = r.OnboardingDocumentId
+    WHERE d.SessionId = @SessionId
+),
+AcceptedLists AS
+(
+    SELECT
+        f.FieldKey,
+        COALESCE(
+            NULLIF(LTRIM(RTRIM(f.ReviewedValue)), N''),
+            NULLIF(LTRIM(RTRIM(f.NormalizedValue)), N''),
+            NULLIF(LTRIM(RTRIM(f.RawValue)), N'')
+        ) AS ListValue
+    FROM LatestRuns lr
+    JOIN dbo.DocumentExtractedFields f
+      ON f.ExtractionRunId = lr.Id
+    WHERE lr.rn = 1
+      AND f.FieldKey IN (N'Skills', N'Languages')
+      AND f.ReviewStatus IN (N'Accepted', N'Modified')
+),
+Tokens AS
+(
+    SELECT DISTINCT
+        al.FieldKey,
+        LTRIM(RTRIM(value)) AS Token
+    FROM AcceptedLists al
+    CROSS APPLY STRING_SPLIT(al.ListValue, N';')
+    WHERE NULLIF(LTRIM(RTRIM(value)), N'') IS NOT NULL
+)
+INSERT INTO dbo.EmployeeFileRecords
+(
+    EmployeeId,
+    RecordType,
+    Title,
+    IsCurrent,
+    IsReturned,
+    EmployeeAcknowledged,
+    CreatedAt,
+    CreatedBy,
+    IsDeleted
+)
+SELECT
+    @EmployeeId,
+    CASE t.FieldKey
+        WHEN N'Skills' THEN 10
+        WHEN N'Languages' THEN 11
+    END,
+    t.Token,
+    1,
+    0,
+    0,
+    SYSUTCDATETIME(),
+    @CreatedBy,
+    0
+FROM Tokens t;
 """,
             command =>
             {

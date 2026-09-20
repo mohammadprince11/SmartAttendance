@@ -302,6 +302,39 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void EmployeeProfile_IntelligenceAndCvCompetencies_AreWired()
+    {
+        var root = FindRoot();
+        var profile = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "Profile.cshtml"));
+        var profileModel = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "Profile.cshtml.cs"));
+        var recordType = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Domain", "Enums",
+            "EmployeeRecordType.cs"));
+        var promotion = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms",
+            "PeopleAiStructuredRecordStore.cs"));
+        var calculator = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Application", "PeopleAi",
+            "EmployeeProfileIntelligence.cs"));
+
+        Assert.Contains("Profile Completeness", profile);
+        Assert.Contains("Smart Employee Summary", profile);
+        Assert.Contains("EmployeeRecordType.Skill", profile);
+        Assert.Contains("EmployeeRecordType.Language", profile);
+        Assert.Contains("BuildProfileIntelligence", profileModel);
+        Assert.Contains("Skill = 10", recordType);
+        Assert.Contains("Language = 11", recordType);
+        Assert.Contains("WHEN N'Skills' THEN 10", promotion);
+        Assert.Contains("WHEN N'Languages' THEN 11", promotion);
+        Assert.Contains("EmployeeProfileIntelligenceResult", calculator);
+        Assert.Contains("MissingItems", calculator);
+    }
+
+    [Fact]
     public void PeopleAiCss_UsesDesignTokensOnly()
     {
         var root = FindRoot();

@@ -523,6 +523,39 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
             await ScalarIntAsync(
                 """
                 SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType = 10
+                  AND Title IN ('Payroll','Attendance','Power BI');
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(3));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType = 11
+                  AND Title IN ('Arabic','English');
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(2));
+
+        await Expect(
+                Page.GetByText("Profile Completeness"))
+            .ToBeVisibleAsync();
+        await Expect(
+                Page.GetByText("Smart Employee Summary"))
+            .ToBeVisibleAsync();
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
                 FROM dbo.Employees
                 WHERE Id = @EmployeeId
                   AND CompanyId = @CompanyId;

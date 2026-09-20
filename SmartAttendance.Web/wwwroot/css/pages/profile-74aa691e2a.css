@@ -31,3 +31,92 @@
 .zyu-f85c702c688c { margin-bottom:6px; }
 
 .zyu-662bbe2d5b0b { margin:6px 0 4px; }
+
+.z360-profile-intelligence{
+    display:grid;
+    grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);
+    gap:var(--sp-3);
+    margin-block:var(--sp-4)
+}
+.z360-profile-completeness,
+.z360-profile-summary{
+    display:grid;
+    align-content:start;
+    gap:var(--sp-3);
+    padding:var(--sp-4);
+    border:1px solid var(--color-border);
+    border-radius:var(--radius-lg);
+    background:var(--color-surface)
+}
+.z360-profile-ai-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:var(--sp-3)
+}
+.z360-profile-ai-head>div{
+    display:grid;
+    gap:2px
+}
+.z360-profile-ai-head span,
+.z360-profile-ai-head small,
+.z360-profile-completeness>small{
+    color:var(--color-text-secondary);
+    font-size:var(--fs-tiny)
+}
+.z360-profile-score{
+    font-size:clamp(1.8rem,4vw,2.6rem);
+    line-height:1
+}
+.z360-profile-progress{
+    block-size:10px;
+    overflow:hidden;
+    border-radius:999px;
+    background:var(--color-background)
+}
+.z360-profile-progress>span{
+    display:block;
+    block-size:100%;
+    border-radius:inherit;
+    background:var(--color-primary)
+}
+.z360-profile-missing,
+.z360-profile-facts{
+    display:grid;
+    gap:var(--sp-2)
+}
+.z360-profile-missing>span,
+.z360-profile-facts>strong{
+    font-size:var(--fs-small)
+}
+.z360-profile-missing>div,
+.z360-profile-facts>div{
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--sp-1)
+}
+.z360-profile-missing>div>span,
+.z360-profile-facts>div>span{
+    padding:4px 9px;
+    border:1px solid var(--color-border);
+    border-radius:999px;
+    background:var(--color-background);
+    font-size:var(--fs-tiny)
+}
+.z360-profile-complete{
+    padding:var(--sp-2) var(--sp-3);
+    border-radius:var(--radius);
+    background:var(--color-success-soft);
+    color:var(--color-success);
+    font-size:var(--fs-small)
+}
+.z360-profile-summary>p{
+    margin:0;
+    line-height:1.9;
+    color:var(--color-text-primary)
+}
+@media(max-width:900px){
+    .z360-profile-intelligence{
+        grid-template-columns:1fr
+    }
+}
