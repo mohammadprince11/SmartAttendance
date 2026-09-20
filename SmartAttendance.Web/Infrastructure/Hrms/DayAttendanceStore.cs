@@ -689,6 +689,31 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
         return Math.Round((decimal)effective.TotalHours, 2);
     }
 
+    public static TimeSpan ApplyLateCompensation(
+        TimeSpan lateSpan,
+        DateTime checkIn,
+        DateTime checkOut,
+        TimeSpan shiftEnd,
+        bool enabled,
+        string? eligibleUntil,
+        string? endLimit)
+    {
+        if (!enabled || lateSpan <= TimeSpan.Zero || checkOut.Date != checkIn.Date)
+            return lateSpan;
+
+        if (!TimeSpan.TryParse(eligibleUntil, out var eligible)
+            || !TimeSpan.TryParse(endLimit, out var limit)
+            || checkIn.TimeOfDay > eligible
+            || limit <= shiftEnd)
+            return lateSpan;
+
+        var compensatedUntil = checkOut.TimeOfDay < limit ? checkOut.TimeOfDay : limit;
+        var extra = compensatedUntil - shiftEnd;
+        if (extra <= TimeSpan.Zero) return lateSpan;
+
+        return lateSpan - (extra >= lateSpan ? lateSpan : extra);
+    }
+
     /// <summary>
     /// أيام العمل خارج المكتب المعتمدة، مفهرسة (موظف × يوم) ⟶ سياق اليوم.
     ///
@@ -1024,9 +1049,22 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         decimal late = 0, early = 0;
         if (TimeSpan.TryParse(day?.StartTime, out var shiftStart))
         {
-            // قسيمة المغادرة المعتمدة (إن وُجدت) تُطرح من مدة التأخير قبل السماحية
-            late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart - lateCredit,
-                shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
+            // قسيمة المغادرة المعتمدة (إن وُجدت) تُطرح من مدة التأخير قبل السماحية.
+            var rawLate = checkIn.Value.TimeOfDay - shiftStart - lateCredit;
+
+            if (TimeSpan.TryParse(day?.EndTime, out var compensationShiftEnd))
+            {
+                rawLate = ApplyLateCompensation(
+                    rawLate,
+                    checkIn.Value,
+                    checkOut.Value,
+                    compensationShiftEnd,
+                    shift.LateCompensationEnabled,
+                    shift.LateCompensationEligibleUntil,
+                    shift.LateCompensationEndLimit);
+            }
+
+            late = ApplyGrace(rawLate, shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
         }
         if (checkOut.Value.Date == checkIn.Value.Date
             && TimeSpan.TryParse(day?.StartTime, out var dayStart)

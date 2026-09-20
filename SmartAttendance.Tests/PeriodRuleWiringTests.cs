@@ -131,4 +131,26 @@ public class PeriodRuleWiringTests
 
         Assert.Contains("3 يوم", match.Summary);
     }
+
+    [Fact]
+    public void LateViolationDays_UsesConfiguredMinuteAllowance()
+    {
+        var days = new[]
+        {
+            new DayAttendanceStore.DayRow { WorkDate = new DateOnly(2026, 9, 1), LateHours = 0.50m },
+            new DayAttendanceStore.DayRow { WorkDate = new DateOnly(2026, 9, 2), LateHours = 0.67m },
+            new DayAttendanceStore.DayRow { WorkDate = new DateOnly(2026, 9, 3), LateHours = 0.83m },
+            new DayAttendanceStore.DayRow { WorkDate = new DateOnly(2026, 9, 4), LateHours = 0.17m }
+        };
+
+        Assert.Equal(1, PeriodRuleStore.CountLateViolationDays(days, 120));
+    }
+
+    [Fact]
+    public void PeriodRule_CompanyScope_AppliesSharedOrMatchingOnly()
+    {
+        Assert.True(PeriodRuleStore.AppliesToCompany(new PeriodRuleStore.PeriodRule(), 2));
+        Assert.True(PeriodRuleStore.AppliesToCompany(new PeriodRuleStore.PeriodRule { CompanyId = 2 }, 2));
+        Assert.False(PeriodRuleStore.AppliesToCompany(new PeriodRuleStore.PeriodRule { CompanyId = 1 }, 2));
+    }
 }

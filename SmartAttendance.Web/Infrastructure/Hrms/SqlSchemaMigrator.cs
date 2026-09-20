@@ -2939,6 +2939,29 @@ END;
         new(
             PeopleAiSchema.CvIntelligenceMigrationId,
             PeopleAiSchema.CvIntelligenceMigrationSql),
+
+        new(
+            "20260920-04-attendance-period-late-allowance",
+            """
+IF OBJECT_ID('PeriodRules', 'U') IS NOT NULL
+   AND COL_LENGTH('PeriodRules', 'AllowanceMinutes') IS NULL
+    ALTER TABLE PeriodRules ADD AllowanceMinutes int NOT NULL
+        CONSTRAINT DF_PeriodRules_AllowanceMinutes DEFAULT(0);
+"""),
+
+        new(
+            "20260920-05-attendance-late-compensation",
+            """
+IF OBJECT_ID('ShiftTypes', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ShiftTypes','LateCompensationEnabled') IS NULL
+        ALTER TABLE ShiftTypes ADD LateCompensationEnabled bit NOT NULL CONSTRAINT DF_ST_LCE DEFAULT(0);
+    IF COL_LENGTH('ShiftTypes','LateCompensationEligibleUntil') IS NULL
+        ALTER TABLE ShiftTypes ADD LateCompensationEligibleUntil nvarchar(5) NULL;
+    IF COL_LENGTH('ShiftTypes','LateCompensationEndLimit') IS NULL
+        ALTER TABLE ShiftTypes ADD LateCompensationEndLimit nvarchar(5) NULL;
+END;
+"""),
     };
 
     /// <summary>

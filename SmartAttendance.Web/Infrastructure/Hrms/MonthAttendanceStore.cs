@@ -16,6 +16,7 @@ public static class MonthAttendanceStore
     {
         public int Id { get; set; }
         public int EmployeeId { get; set; }
+        public int CompanyId { get; set; }
         public string EmployeeNo { get; set; } = string.Empty;
         public string EmployeeName { get; set; } = string.Empty;
         public int Year { get; set; }
@@ -188,7 +189,7 @@ WHERE m.[Year] = @Year AND m.[Month] = @Month
         return await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
-SELECT m.*, e.EmployeeNo, e.FullName
+SELECT m.*, e.CompanyId, e.EmployeeNo, e.FullName
 FROM EmployeeMonthAttendance m
 INNER JOIN Employees e ON e.Id = m.EmployeeId
 WHERE m.[Year] = @Year AND m.[Month] = @Month
@@ -204,6 +205,7 @@ ORDER BY e.EmployeeNo;
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 EmployeeId = HrmsDatabase.GetInt(reader, "EmployeeId"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 EmployeeName = HrmsDatabase.GetString(reader, "FullName"),
                 Year = HrmsDatabase.GetInt(reader, "Year"),

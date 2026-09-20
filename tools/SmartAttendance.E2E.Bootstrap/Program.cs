@@ -111,6 +111,7 @@ await EmployeeEngagementSchema.EnsureAsync(db);
 await PayrollTransactionStore.EnsureAsync(db);
 await PayrollRunStore.EnsureAsync(db);
 await HrmsDatabase.EnsureCreatedAsync(db);
+await ShiftTypeStore.EnsureAsync(db);
 await DayAttendanceStore.EnsureAsync(db);
 await EndOfServiceStore.EnsureAsync(db);
 await LoanStore.EnsureAsync(db);

@@ -87,6 +87,9 @@ public class IndexModel : PageModel
             Name = f["Name"].ToString().Trim(),
             PeriodType = f["PeriodType"].ToString() == "Week" ? "Week" : "Month",
             Metric = f["Metric"].ToString() is { Length: > 0 } m ? m : "LateHours",
+            AllowanceMinutes = int.TryParse(f["AllowanceMinutes"], out var allowanceMinutes)
+                ? Math.Max(0, allowanceMinutes)
+                : 0,
             IsActive = f["IsActive"] == "true" || f["IsActive"] == "on"
         };
 

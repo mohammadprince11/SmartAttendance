@@ -22,6 +22,7 @@ public static class PeriodRuleStore
     public static readonly (string Key, string Label, bool IsHours)[] Metrics =
     {
         ("LateHours", "إجمالي ساعات التأخير", true),
+        ("LateViolationDays", "أيام التأخير بعد استنفاد السماح", false),
         ("EarlyLeaveHours", "إجمالي ساعات الخروج المبكر", true),
         ("WorkedHours", "إجمالي ساعات العمل", true),
         ("AbsentDays", "أيام الغياب", false),
@@ -34,7 +35,11 @@ public static class PeriodRuleStore
     /// <summary>
     /// المقاييس المحسوبة من اليوميات لا من صفّ التجميع — تحتاج قراءة أيام الفترة.
     /// </summary>
-    public static bool IsDayDerivedMetric(string key) => key == "ConsecutiveAbsentDays";
+    public static bool IsDayDerivedMetric(string key) =>
+        key is "ConsecutiveAbsentDays" or "LateViolationDays";
+
+    public static bool AppliesToCompany(PeriodRule rule, int companyId) =>
+        rule.CompanyId is null || rule.CompanyId == companyId;
 
     /// <summary>
     /// **أطول سلسلة غياب متواصل** داخل الفترة. دالة نقية على أيام مرتّبة تصاعدياً:
@@ -107,9 +112,11 @@ public static class PeriodRuleStore
     public sealed class PeriodRule
     {
         public int Id { get; set; }
+        public int? CompanyId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string PeriodType { get; set; } = "Month";   // Month | Week
         public string Metric { get; set; } = "LateHours";
+        public int AllowanceMinutes { get; set; }
         public bool IsActive { get; set; } = true;
         public List<Slice> Slices { get; set; } = new();
 
@@ -130,12 +137,18 @@ BEGIN
         Name nvarchar(200) NOT NULL,
         PeriodType nvarchar(10) NOT NULL DEFAULT(N'Month'),
         Metric nvarchar(30) NOT NULL DEFAULT(N'LateHours'),
+        AllowanceMinutes int NOT NULL DEFAULT(0),
         IsActive bit NOT NULL DEFAULT(1),
         CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
-        -- مطابقة لهجرة 20260811-01 (تُضيف العمود للقائم فقط) — لا عمود جديد بالشفاء.
+        -- CompanyId يطابق عزل التهيئة؛ NULL يعني قاعدة مشتركة.
         CompanyId int NULL
     );
 END;
+
+IF OBJECT_ID('PeriodRules', 'U') IS NOT NULL
+   AND COL_LENGTH('PeriodRules', 'AllowanceMinutes') IS NULL
+    ALTER TABLE PeriodRules ADD AllowanceMinutes int NOT NULL
+        CONSTRAINT DF_PeriodRules_AllowanceMinutes DEFAULT(0);
 
 IF OBJECT_ID('PeriodRuleSlices', 'U') IS NULL
 BEGIN
@@ -165,9 +178,11 @@ END;
             reader => new PeriodRule
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetNullableInt(reader, "CompanyId"),
                 Name = HrmsDatabase.GetString(reader, "Name"),
                 PeriodType = HrmsDatabase.GetString(reader, "PeriodType") is { Length: > 0 } p ? p : "Month",
                 Metric = HrmsDatabase.GetString(reader, "Metric") is { Length: > 0 } m ? m : "LateHours",
+                AllowanceMinutes = Math.Max(0, HrmsDatabase.GetInt(reader, "AllowanceMinutes")),
                 IsActive = HrmsDatabase.GetBool(reader, "IsActive")
             });
 
@@ -211,13 +226,14 @@ END;
         {
             await HrmsDatabase.ExecuteAsync(
                 db,
-                "UPDATE PeriodRules SET Name=@Name, PeriodType=@Period, Metric=@Metric, IsActive=@Active WHERE Id=@Id;",
+                "UPDATE PeriodRules SET Name=@Name, PeriodType=@Period, Metric=@Metric, AllowanceMinutes=@Allowance, IsActive=@Active WHERE Id=@Id;",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Id", rule.Id);
                     HrmsDatabase.AddParameter(command, "@Name", rule.Name.Trim());
                     HrmsDatabase.AddParameter(command, "@Period", rule.PeriodType);
                     HrmsDatabase.AddParameter(command, "@Metric", rule.Metric);
+                    HrmsDatabase.AddParameter(command, "@Allowance", Math.Max(0, rule.AllowanceMinutes));
                     HrmsDatabase.AddParameter(command, "@Active", rule.IsActive ? 1 : 0);
                 });
             ruleId = rule.Id;
@@ -228,12 +244,13 @@ END;
         {
             ruleId = await HrmsDatabase.ScalarAsync<int>(
                 db,
-                "INSERT INTO PeriodRules (Name, PeriodType, Metric, IsActive) VALUES (@Name, @Period, @Metric, @Active); SELECT CAST(SCOPE_IDENTITY() AS int);",
+                "INSERT INTO PeriodRules (Name, PeriodType, Metric, AllowanceMinutes, IsActive) VALUES (@Name, @Period, @Metric, @Allowance, @Active); SELECT CAST(SCOPE_IDENTITY() AS int);",
                 command =>
                 {
                     HrmsDatabase.AddParameter(command, "@Name", rule.Name.Trim());
                     HrmsDatabase.AddParameter(command, "@Period", rule.PeriodType);
                     HrmsDatabase.AddParameter(command, "@Metric", rule.Metric);
+                    HrmsDatabase.AddParameter(command, "@Allowance", Math.Max(0, rule.AllowanceMinutes));
                     HrmsDatabase.AddParameter(command, "@Active", rule.IsActive ? 1 : 0);
                 });
         }
@@ -347,39 +364,94 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
     public static async Task<List<Match>> EvaluateAsync(
         ApplicationDbContext db, CompanyScope scope, string periodType, int year, int period)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new List<Match>();
+
+        var allowedRuleIds = scope.IsUnrestricted
+            ? null
+            : await ConfigTenantScope.AllowedIdsAsync(db, ConfigTenantScope.PeriodRules, scope);
+
         var rules = (await ListRulesAsync(db))
-            .Where(r => r.IsActive && r.PeriodType == periodType && r.Slices.Count > 0)
+            .Where(r => r.IsActive
+                        && r.PeriodType == periodType
+                        && r.Slices.Count > 0
+                        && (scope.IsUnrestricted || allowedRuleIds!.Contains(r.Id)))
             .ToList();
         var result = new List<Match>();
         if (rules.Count == 0) return result;
 
-        // (EmployeeId, EmployeeNo, Name, metricAccessor)
-        List<(int Id, string No, string Name, Func<string, decimal> Metric)> rows;
+        // (EmployeeId, CompanyId, EmployeeNo, Name, metricAccessor)
+        List<(int Id, int CompanyId, string No, string Name, Func<string, decimal> Metric)> rows;
         if (periodType == "Week")
         {
             var weekRows = await WeekAttendanceStore.ListAsync(db, scope, year, period);
-            rows = weekRows.Select(w => (w.EmployeeId, w.EmployeeNo, w.EmployeeName,
+            rows = weekRows.Select(w => (w.EmployeeId, w.CompanyId, w.EmployeeNo, w.EmployeeName,
                 (Func<string, decimal>)(key => WeekMetric(w, key)))).ToList();
         }
         else
         {
             var monthRows = await MonthAttendanceStore.ListAsync(db, scope, year, period);
-            rows = monthRows.Select(m => (m.EmployeeId, m.EmployeeNo, m.EmployeeName,
+            rows = monthRows.Select(m => (m.EmployeeId, m.CompanyId, m.EmployeeNo, m.EmployeeName,
                 (Func<string, decimal>)(key => MonthMetric(m, key)))).ToList();
         }
 
-        // المقاييس المشتقّة من اليوميات تُحسب مرّة واحدة، وفقط إن طلبتها قاعدة نشطة.
-        var streaks = rules.Any(r => IsDayDerivedMetric(r.Metric))
-            ? await AbsenceStreaksAsync(db, scope, periodType, year, period)
-            : new Dictionary<int, int>();
+        var needsDayMetrics = rules.Any(r => IsDayDerivedMetric(r.Metric));
+        var dayCache = new Dictionary<int, Dictionary<int, List<DayAttendanceStore.DayRow>>>();
+
+        async Task<IReadOnlyList<DayAttendanceStore.DayRow>> DaysForAsync(int companyId, int employeeId)
+        {
+            if (!needsDayMetrics) return Array.Empty<DayAttendanceStore.DayRow>();
+
+            if (!dayCache.TryGetValue(companyId, out var byEmployee))
+            {
+                DateOnly from;
+                DateOnly to;
+                if (periodType == "Week")
+                {
+                    (from, to) = WeekAttendanceStore.WeekRange(year, period);
+                }
+                else
+                {
+                    var (attendancePeriod, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                        db, year, period, SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance, companyId);
+                    from = attendancePeriod.From;
+                    to = attendancePeriod.To;
+                }
+
+                var companyDays = await DayAttendanceStore.ListRangeAsync(
+                    db, CompanyScope.ForCompanies(new[] { companyId }), from, to, null, computeStale: false);
+                byEmployee = companyDays.GroupBy(day => day.EmployeeId)
+                    .ToDictionary(group => group.Key, group => group.ToList());
+                dayCache[companyId] = byEmployee;
+            }
+
+            return byEmployee.TryGetValue(employeeId, out var employeeDays)
+                ? employeeDays
+                : Array.Empty<DayAttendanceStore.DayRow>();
+        }
 
         foreach (var rule in rules)
         {
             foreach (var row in rows)
             {
-                var value = IsDayDerivedMetric(rule.Metric)
-                    ? (streaks.TryGetValue(row.Id, out var streak) ? streak : 0)
-                    : row.Metric(rule.Metric);
+                if (!AppliesToCompany(rule, row.CompanyId))
+                    continue;
+
+                decimal value;
+                if (rule.Metric == "ConsecutiveAbsentDays")
+                {
+                    var days = await DaysForAsync(row.CompanyId, row.Id);
+                    value = LongestAbsenceStreak(days.Select(day => (day.WorkDate, day.Status == "Absent")));
+                }
+                else if (rule.Metric == "LateViolationDays")
+                {
+                    var days = await DaysForAsync(row.CompanyId, row.Id);
+                    value = CountLateViolationDays(days, rule.AllowanceMinutes);
+                }
+                else
+                {
+                    value = row.Metric(rule.Metric);
+                }
                 var slice = MatchSlice(rule.Slices, value);
                 if (slice == null) continue;
                 result.Add(new Match
@@ -403,33 +475,18 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
         return result.OrderBy(r => r.RuleName).ThenByDescending(r => r.Value).ToList();
     }
 
-    /// <summary>
-    /// أطول سلسلة غياب متواصل لكل موظف داخل الفترة — تُقرأ من اليوميات مباشرةً لأن
-    /// صفّ التجميع يحمل **عدد** أيام الغياب لا **ترتيبها**.
-    /// </summary>
-    private static async Task<Dictionary<int, int>> AbsenceStreaksAsync(
-        ApplicationDbContext db, CompanyScope scope, string periodType, int year, int period)
+    public static int CountLateViolationDays(
+        IEnumerable<DayAttendanceStore.DayRow> days,
+        int allowanceMinutes)
     {
-        DateOnly from, to;
-        if (periodType == "Week")
-        {
-            to = PeriodAnchorDate("Week", year, period);
-            from = to.AddDays(-6);
-        }
-        else
-        {
-            from = new DateOnly(year, Math.Clamp(period, 1, 12), 1);
-            to = PeriodAnchorDate("Month", year, period);
-        }
+        ArgumentNullException.ThrowIfNull(days);
 
-        // حساب أطول سلسلة غياب — لا يقرأ IsStale، فنتخطّى حسابها المترابط.
-        var days = await DayAttendanceStore.ListRangeAsync(db, scope, from, to, null, computeStale: false);
+        var lateDays = days.Select(day => new AttendanceLateAllowancePolicy.LateDay(
+            day.WorkDate,
+            Math.Max(0, (int)Math.Round(day.LateHours * 60m, MidpointRounding.AwayFromZero))));
 
-        return days
-            .GroupBy(d => d.EmployeeId)
-            .ToDictionary(
-                g => g.Key,
-                g => LongestAbsenceStreak(g.Select(d => (d.WorkDate, d.Status == "Absent"))));
+        return AttendanceLateAllowancePolicy.Evaluate(lateDays, allowanceMinutes)
+            .Count(result => result.IsViolationDay);
     }
 
     private static decimal MonthMetric(MonthAttendanceStore.MonthRow m, string key) => key switch
