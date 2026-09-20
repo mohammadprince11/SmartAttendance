@@ -34,6 +34,10 @@ public sealed class LoanStoreRegressionTests
             root, "SmartAttendance.Web", "Infrastructure", "Hrms", "LoanStore.cs"));
         var page = File.ReadAllText(Path.Combine(
             root, "SmartAttendance.Web", "Pages", "Payroll", "Loans.cshtml.cs"));
+        var view = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Payroll", "Loans.cshtml"));
+        var migration = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs"));
 
         Assert.Contains("loan.Status = Pending;", store, StringComparison.Ordinal);
         Assert.Contains("WHERE Id=@Id AND Status = N'Pending'", store, StringComparison.Ordinal);
@@ -42,7 +46,15 @@ public sealed class LoanStoreRegressionTests
         Assert.Contains("WITH (UPDLOCK, HOLDLOCK)", store, StringComparison.Ordinal);
         Assert.Contains("await RegenerateScheduleAsync(dbContext, loanId, loan);", store, StringComparison.Ordinal);
         Assert.Contains("COALESCE(@AttName, AttachmentName)", store, StringComparison.Ordinal);
+        Assert.Contains("WHERE l.RequestKey = @RequestKey", store, StringComparison.Ordinal);
+        Assert.DoesNotContain("ALTER TABLE EmployeeLoans ADD RequestKey", store, StringComparison.Ordinal);
+        Assert.DoesNotContain("UX_EmployeeLoans_RequestKey", store, StringComparison.Ordinal);
         Assert.DoesNotContain("Status = form[\"Status\"]", page, StringComparison.Ordinal);
+        Assert.Contains("RequestKey = NullIfEmpty(form[\"RequestKey\"])", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"f_RequestKey\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"f_Status\"", view, StringComparison.Ordinal);
+        Assert.Contains("20260920-09-payroll-loan-idempotency", migration, StringComparison.Ordinal);
+        Assert.Contains("UX_EmployeeLoans_RequestKey", migration, StringComparison.Ordinal);
     }
 
     private static string FindRoot()

@@ -66,6 +66,7 @@ public class LoansModel : PageModel
             StartMonth = int.TryParse(form["StartMonth"], out var sm) ? sm : DateTime.Today.Month,
             Reason = NullIfEmpty(form["Reason"]),
             Note = NullIfEmpty(form["Note"]),
+            RequestKey = NullIfEmpty(form["RequestKey"]),
             Status = LoanStore.Pending
         };
 

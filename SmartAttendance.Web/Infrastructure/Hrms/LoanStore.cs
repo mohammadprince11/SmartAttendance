@@ -47,6 +47,7 @@ public static class LoanStore
         public string Status { get; set; } = Pending;
         public string? AttachmentName { get; set; }
         public string? AttachmentPath { get; set; }
+        public string? RequestKey { get; set; }
         public DateTime CreatedAt { get; set; }
 
         // محسوبة من الأقساط
@@ -251,6 +252,8 @@ ORDER BY l.CreatedAt DESC;
 
         // الحفظ لا يعتمد الحالة القادمة من النموذج؛ الاعتماد/الرفض لهما مسار مستقل.
         loan.Status = Pending;
+        if (loan.Id <= 0)
+            loan.RequestKey = NormalizeRequestKey(loan.RequestKey);
 
         var ownTransaction = dbContext.Database.CurrentTransaction is null
             ? await dbContext.Database.BeginTransactionAsync()
@@ -283,6 +286,24 @@ WHERE l.Id = @Id
             }
             else
             {
+                var existingId = await HrmsDatabase.ScalarAsync<int>(
+                    dbContext,
+                    $"""
+SELECT TOP 1 l.Id
+FROM EmployeeLoans l WITH (UPDLOCK, HOLDLOCK)
+INNER JOIN Employees e ON e.Id = l.EmployeeId
+WHERE l.RequestKey = @RequestKey
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
+                    command => HrmsDatabase.AddParameter(command, "@RequestKey", loan.RequestKey));
+
+                if (existingId > 0)
+                {
+                    if (ownTransaction is not null)
+                        await ownTransaction.CommitAsync();
+                    return existingId;
+                }
+
                 if (string.IsNullOrWhiteSpace(loan.ReferenceNo))
                     loan.ReferenceNo = await GenerateReferenceNoAsync(dbContext);
                 loanId = await HrmsDatabase.ScalarAsync<int>(
@@ -552,6 +573,14 @@ ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
         return (zeroBased / 12, zeroBased % 12 + 1);
     }
 
+    private static string NormalizeRequestKey(string? requestKey)
+    {
+        var value = string.IsNullOrWhiteSpace(requestKey)
+            ? Guid.NewGuid().ToString("N")
+            : requestKey.Trim();
+        return value.Length <= 64 ? value : value[..64];
+    }
+
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext)
     {
         var prefix = $"LN{DateTime.Today:yy}-";
@@ -563,9 +592,9 @@ ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
 
     private const string InsertSql = """
 INSERT INTO EmployeeLoans
- (EmployeeId, LoanType, Amount, InstallmentCount, MonthlyAmount, StartYear, StartMonth, Reason, Note, Status, AttachmentName, AttachmentPath, ReferenceNo, CreatedBy)
+ (EmployeeId, LoanType, Amount, InstallmentCount, MonthlyAmount, StartYear, StartMonth, Reason, Note, Status, AttachmentName, AttachmentPath, RequestKey, ReferenceNo, CreatedBy)
 VALUES
- (@Emp, @Type, @Amount, @Count, @Monthly, @SYear, @SMonth, @Reason, @Note, @Status, @AttName, @AttPath, @Ref, @By);
+ (@Emp, @Type, @Amount, @Count, @Monthly, @SYear, @SMonth, @Reason, @Note, @Status, @AttName, @AttPath, @RequestKey, @Ref, @By);
 """;
 
     private const string UpdateSql = """
@@ -595,6 +624,7 @@ WHERE Id=@Id AND Status = N'Pending';
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : Pending,
         AttachmentName = HrmsDatabase.GetString(reader, "AttachmentName") is { Length: > 0 } an ? an : null,
         AttachmentPath = HrmsDatabase.GetString(reader, "AttachmentPath") is { Length: > 0 } ap ? ap : null,
+        RequestKey = HrmsDatabase.GetString(reader, "RequestKey") is { Length: > 0 } rk ? rk : null,
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
         PaidAmount = reader["PaidAmount"] is decimal pa ? pa : 0,
         PaidCount = HrmsDatabase.GetInt(reader, "PaidCount")
@@ -614,5 +644,6 @@ WHERE Id=@Id AND Status = N'Pending';
         HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(l.Status) ? Pending : l.Status);
         HrmsDatabase.AddParameter(command, "@AttName", (object?)l.AttachmentName ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@AttPath", (object?)l.AttachmentPath ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@RequestKey", (object?)l.RequestKey ?? DBNull.Value);
     }
 }

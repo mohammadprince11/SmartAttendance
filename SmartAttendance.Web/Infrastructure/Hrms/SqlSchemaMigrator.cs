@@ -3035,6 +3035,26 @@ BEGIN
             WHERE PayrollTransactionId IS NOT NULL;
 END;
 """),
+
+        new(
+            "20260920-09-payroll-loan-idempotency",
+            """
+IF OBJECT_ID('EmployeeLoans', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeLoans','RequestKey') IS NULL
+        ALTER TABLE EmployeeLoans ADD RequestKey nvarchar(64) NULL;
+
+    IF COL_LENGTH('EmployeeLoans','RequestKey') IS NOT NULL
+       AND NOT EXISTS (
+            SELECT 1 FROM sys.indexes
+            WHERE object_id=OBJECT_ID('EmployeeLoans')
+              AND name='UX_EmployeeLoans_RequestKey')
+        EXEC sp_executesql N'
+            CREATE UNIQUE INDEX UX_EmployeeLoans_RequestKey
+                ON EmployeeLoans(RequestKey)
+                WHERE RequestKey IS NOT NULL;';
+END;
+"""),
     };
 
     /// <summary>
