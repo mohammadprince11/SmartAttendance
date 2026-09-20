@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Playwright;
@@ -14,16 +16,50 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
         Require("ZYNORA_E2E_BASE_URL").TrimEnd('/');
 
     private static string Username =>
-        Require("ZYNORA_E2E_USERNAME");
+        Environment.GetEnvironmentVariable("ZYNORA_E2E_USERNAME")
+        ?? "admin";
 
     private static string Password =>
-        Require("ZYNORA_E2E_PASSWORD");
+        Environment.GetEnvironmentVariable("ZYNORA_E2E_PASSWORD")
+        ?? DisposableCredential(DisposableDatabaseName);
 
-    private static string ConnectionString =>
-        Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-        ?? Environment.GetEnvironmentVariable("SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION")
-        ?? throw new InvalidOperationException(
-            "Disposable E2E SQL connection is required.");
+    private static string DisposableDatabaseName =>
+        Require("ZYNORA_E2E_DATABASE_NAME");
+
+    private static string ConnectionString
+    {
+        get
+        {
+            var configured =
+                Environment.GetEnvironmentVariable(
+                    "ConnectionStrings__DefaultConnection")
+                ?? Environment.GetEnvironmentVariable(
+                    "SMARTATTENDANCE_INTEGRATION_TEST_CONNECTION");
+
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured;
+            }
+
+            if (!OperatingSystem.IsWindows() ||
+                !Regex.IsMatch(
+                    DisposableDatabaseName,
+                    "^SmartAttendance_E2E_[A-Za-z0-9_]+$"))
+            {
+                throw new InvalidOperationException(
+                    "Disposable E2E SQL connection is required.");
+            }
+
+            return new SqlConnectionStringBuilder
+            {
+                DataSource = @"(localdb)\MSSQLLocalDB",
+                InitialCatalog = DisposableDatabaseName,
+                IntegratedSecurity = true,
+                TrustServerCertificate = true,
+                MultipleActiveResultSets = true
+            }.ConnectionString;
+        }
+    }
 
     public override BrowserNewContextOptions ContextOptions() => new()
     {
@@ -274,6 +310,180 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
               AND f.ReviewStatus IN ('Accepted', 'Modified');
             """,
             ("@SessionId", sessionId)), Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task SmartReview_PreviewConfidenceAndCrossDocumentConflict_AreEnforced()
+    {
+        await LoginAsync();
+        var (sessionId, companyId) = await StartSessionAsync();
+
+        await UploadAsync(
+            "NationalId",
+            "e2e-review-national-id.png",
+            TinyPng);
+        await UploadAsync(
+            "Passport",
+            "e2e-review-passport.png",
+            TinyPng);
+        await WaitForOnboardingProcessingAsync(sessionId);
+
+        var previewButton = Page
+            .Locator("[data-preview-open]")
+            .First;
+        await Expect(previewButton).ToBeVisibleAsync();
+
+        var previewUrl =
+            await previewButton.GetAttributeAsync("data-preview-url");
+        Assert.That(previewUrl, Is.Not.Null.And.Not.Empty);
+
+        var previewStatus = await Page.EvaluateAsync<int>(
+            "async url => (await fetch(url,{credentials:'same-origin'})).status",
+            previewUrl!);
+        Assert.That(previewStatus, Is.EqualTo(200));
+
+        var cacheControl = await Page.EvaluateAsync<string>(
+            """
+            async url => {
+                const response = await fetch(
+                    url,
+                    {credentials:'same-origin'});
+                return response.headers.get('cache-control') || '';
+            }
+            """,
+            previewUrl!);
+        Assert.That(cacheControl, Does.Contain("no-store"));
+
+        var companyB = await ScalarIntAsync(
+            "SELECT Id FROM dbo.Companies WHERE Code = 'E2E-B';");
+        var wrongCompanyUrl = Regex.Replace(
+            previewUrl!,
+            @"(?i)companyId=\d+",
+            $"companyId={companyB}");
+        var wrongCompanyStatus = await Page.EvaluateAsync<int>(
+            """
+            async url => (
+                await fetch(
+                    url,
+                    {
+                        credentials:'same-origin',
+                        redirect:'manual'
+                    })
+            ).status
+            """,
+            wrongCompanyUrl);
+        Assert.That(
+            wrongCompanyStatus,
+            Is.AnyOf(0, 302, 403, 404));
+
+        await Page.GotoAsync(
+            $"{BaseUrl}/Employees/SmartOnboardingReview" +
+            $"?CompanyId={companyId}&SessionId={sessionId}");
+        await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+
+        await ExecuteAsync(
+            """
+            ;WITH CurrentRuns AS
+            (
+                SELECT d.DeclaredDocumentType,
+                       r.Id AS RunId,
+                       ROW_NUMBER() OVER
+                       (
+                           PARTITION BY d.Id
+                           ORDER BY r.Id DESC
+                       ) AS rn
+                FROM dbo.OnboardingDocuments d
+                JOIN dbo.DocumentExtractionRuns r
+                  ON r.OnboardingDocumentId = d.Id
+                WHERE d.SessionId = @SessionId
+                  AND d.DeclaredDocumentType
+                      IN ('NationalId', 'Passport')
+            )
+            UPDATE f
+            SET RawValue =
+                    CASE cr.DeclaredDocumentType
+                        WHEN 'NationalId' THEN '1990-01-02'
+                        ELSE '1991-03-04'
+                    END,
+                NormalizedValue =
+                    CASE cr.DeclaredDocumentType
+                        WHEN 'NationalId' THEN '1990-01-02'
+                        ELSE '1991-03-04'
+                    END,
+                ProviderConfidence = 0.95,
+                ValidationStatus = 'Valid',
+                ExtractionMethod = 'E2E',
+                ReviewStatus = 'Pending',
+                ReviewedValue = NULL,
+                ReviewedBySystemUserId = NULL,
+                ReviewedAt = NULL
+            FROM dbo.DocumentExtractedFields f
+            JOIN CurrentRuns cr
+              ON cr.RunId = f.ExtractionRunId
+             AND cr.rn = 1
+            WHERE f.FieldKey = 'DateOfBirth';
+            """,
+            ("@SessionId", sessionId));
+
+        await Page.ReloadAsync();
+        await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+
+        await Expect(Page.GetByText(
+                "مقارنة البيانات بين المستندات"))
+            .ToBeVisibleAsync();
+        await Expect(Page.GetByText(
+                "تعارض يحتاج قرار").First)
+            .ToBeVisibleAsync();
+
+        var highConfidence = Page.GetByRole(
+            AriaRole.Button,
+            new() { Name = "اعتماد عالي الثقة" });
+        await Expect(highConfidence).ToBeVisibleAsync();
+
+        var reviewPreview = Page
+            .Locator("[data-review-preview-open]")
+            .First;
+        await Expect(reviewPreview).ToBeVisibleAsync();
+        await reviewPreview.ClickAsync();
+        await Expect(Page.Locator(
+                "[data-review-preview-dialog]"))
+            .ToBeVisibleAsync();
+        await Page.Locator("[data-review-preview-close]")
+            .ClickAsync();
+
+        await highConfidence.ClickAsync();
+        await Page.WaitForLoadStateAsync(
+            LoadState.DOMContentLoaded);
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.OnboardingValidationIssues
+                WHERE SessionId = @SessionId
+                  AND Category = 'CrossDocument'
+                  AND Severity = 'Blocking'
+                  AND Status = 'Open';
+                """,
+                ("@SessionId", sessionId)),
+            Is.GreaterThanOrEqualTo(1));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.DocumentExtractedFields f
+                JOIN dbo.DocumentExtractionRuns r
+                  ON r.Id = f.ExtractionRunId
+                JOIN dbo.OnboardingDocuments d
+                  ON d.Id = r.OnboardingDocumentId
+                WHERE d.SessionId = @SessionId
+                  AND f.FieldKey = 'DateOfBirth'
+                  AND f.ProviderConfidence >= 0.90
+                  AND f.ReviewStatus = 'Accepted';
+                """,
+                ("@SessionId", sessionId)),
+            Is.GreaterThanOrEqualTo(2));
     }
 
     [Test]
@@ -550,7 +760,7 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
     {
         var acceptAll = Page.GetByRole(
             AriaRole.Button,
-            new() { Name = "اعتماد الكل" });
+            new() { Name = "اعتماد عالي الثقة" });
         if (await acceptAll.CountAsync() > 0 &&
             await acceptAll.IsVisibleAsync())
         {
@@ -615,6 +825,14 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
         }
 
         Assert.Fail("Open People AI review issues did not converge.");
+    }
+
+    private static string DisposableCredential(string value)
+    {
+        var bytes = SHA256.HashData(
+            Encoding.UTF8.GetBytes(
+                "ZYNORA-E2E-DISPOSABLE:" + value));
+        return "E2E-" + Convert.ToHexString(bytes)[..24] + "-Aa1!";
     }
 
     private static string Require(string name)

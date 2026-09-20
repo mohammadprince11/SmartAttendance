@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,28 @@ if (string.IsNullOrWhiteSpace(databaseName) ||
     !Regex.IsMatch(databaseName, "^SmartAttendance_E2E_[A-Za-z0-9_]+$"))
     throw new InvalidOperationException("ZYNORA_E2E_DATABASE_NAME must be a disposable SmartAttendance_E2E_* name.");
 
+if (string.IsNullOrWhiteSpace(
+        Environment.GetEnvironmentVariable(
+            "ZYNORA_BOOTSTRAP_ADMIN_PASSWORD")))
+{
+    Environment.SetEnvironmentVariable(
+        "ZYNORA_BOOTSTRAP_ADMIN_PASSWORD",
+        DisposableCredential(databaseName));
+}
+
 var masterConnection = Environment.GetEnvironmentVariable("SMARTATTENDANCE_SQL_TEST_MASTER");
 if (string.IsNullOrWhiteSpace(masterConnection) && OperatingSystem.IsWindows())
     masterConnection = @"Server=(localdb)\MSSQLLocalDB;Database=master;Integrated Security=true;TrustServerCertificate=true";
 if (string.IsNullOrWhiteSpace(masterConnection))
     throw new InvalidOperationException("SMARTATTENDANCE_SQL_TEST_MASTER is required on non-Windows hosts.");
+
+static string DisposableCredential(string value)
+{
+    var bytes = SHA256.HashData(
+        Encoding.UTF8.GetBytes(
+            "ZYNORA-E2E-DISPOSABLE:" + value));
+    return "E2E-" + Convert.ToHexString(bytes)[..24] + "-Aa1!";
+}
 
 static string Identifier(string value) => "[" + value.Replace("]", "]]" ) + "]";
 
