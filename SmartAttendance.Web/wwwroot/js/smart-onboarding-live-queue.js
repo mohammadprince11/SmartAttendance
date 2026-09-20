@@ -230,6 +230,41 @@
 
         if (!dialog || !frame) return;
 
+        const fitImageDocument = () => {
+            try {
+                const doc = frame.contentDocument;
+                const image = doc?.querySelector("img");
+                if (!doc || !image) return;
+
+                doc.documentElement.style.inlineSize = "100%";
+                doc.documentElement.style.blockSize = "100%";
+                doc.documentElement.style.margin = "0";
+                doc.documentElement.style.overflow = "hidden";
+
+                if (doc.body) {
+                    doc.body.style.inlineSize = "100%";
+                    doc.body.style.blockSize = "100%";
+                    doc.body.style.margin = "0";
+                    doc.body.style.display = "flex";
+                    doc.body.style.alignItems = "center";
+                    doc.body.style.justifyContent = "center";
+                    doc.body.style.overflow = "hidden";
+                }
+
+                image.style.display = "block";
+                image.style.inlineSize = "auto";
+                image.style.blockSize = "auto";
+                image.style.maxInlineSize = "100%";
+                image.style.maxBlockSize = "100%";
+                image.style.objectFit = "contain";
+                image.style.margin = "auto";
+            } catch {
+                // PDFs and browser-native viewers do not need image fitting.
+            }
+        };
+
+        frame.addEventListener("load", fitImageDocument);
+
         const closePreview = () => {
             frame.src = "about:blank";
             if (dialog.open) {

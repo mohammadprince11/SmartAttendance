@@ -299,9 +299,9 @@
 
 .sor-preview-button{min-height:32px;padding-inline:var(--sp-3)}
 .sor-preview-dialog{
-    inline-size:min(1100px,calc(100vw - var(--sp-6)));
+    inline-size:min(920px,calc(100vw - var(--sp-6)));
     max-inline-size:none;
-    block-size:min(820px,calc(100vh - var(--sp-6)));
+    block-size:min(700px,calc(100vh - var(--sp-6)));
     max-block-size:none;
     padding:0;
     border:1px solid var(--color-border-strong);

@@ -1716,6 +1716,19 @@ def serve():
                 result = merge_ocr_results(outputs, profile)
             result["requestId"] = request_id
             print(json.dumps(result, ensure_ascii=True), flush=True)
+        except PermissionError:
+            # A long-lived Paddle/Python worker can occasionally enter a bad
+            # filesystem/cache state on Windows. Return a stable, path-free
+            # diagnostic and exit the worker after flushing the response so
+            # the .NET client starts a fresh process on the next retry.
+            print(json.dumps({
+                "success": False,
+                "requestId": request.get("requestId") if "request" in locals() else None,
+                "errorType": "LOCAL_OCR_PERMISSION_DENIED",
+                "error": "OCR worker could not access a required file or runtime directory.",
+            }, ensure_ascii=True), flush=True)
+            traceback.print_exc(file=sys.stderr)
+            return
         except Exception as exc:
             print(json.dumps({
                 "success": False,
