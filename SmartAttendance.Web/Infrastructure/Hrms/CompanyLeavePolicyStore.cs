@@ -417,17 +417,182 @@ FROM SelfServiceRequests WHERE EmployeeId=@EmployeeId AND Id<>@CurrentRequestId 
         var carry=Math.Max(0m,priorEntitlement-priorUsed); if(sourcePolicy.CarryForwardMaxAmount is { } cap)carry=Math.Min(carry,cap); return carry;
     }
 
+    private sealed record ScheduledLeaveDay(bool IsWorking, decimal Hours);
+
+    public static bool IsChargeableLeaveDay(string? dayKind, bool isHoliday = false) =>
+        !isHoliday && !string.IsNullOrWhiteSpace(dayKind) && DayAttendanceStore.IsWorkingKind(dayKind);
+
     private static async Task<decimal> CalculateDebitAsync(ApplicationDbContext db,int employeeId,int companyId,DateOnly fromDate,DateOnly toDate,TimeSpan? startTime,TimeSpan? endTime,string unit,decimal hoursOverride)
     {
         unit=NormalizeUnit(unit);
         if(startTime.HasValue&&endTime.HasValue)
         {
             var duration=endTime.Value>startTime.Value?endTime.Value-startTime.Value:TimeSpan.FromDays(1)-startTime.Value+endTime.Value;
-            var hours=Math.Max(0m,(decimal)duration.TotalHours); if(unit=="Hours")return Math.Round(hours,4,MidpointRounding.AwayFromZero);
-            var daily=await ResolveDailyHoursAsync(db,employeeId,companyId,fromDate,hoursOverride); return daily>0?Math.Round(hours/daily,4,MidpointRounding.AwayFromZero):0m;
+            var hours=Math.Max(0m,(decimal)duration.TotalHours);
+            if(unit=="Hours")return Math.Round(hours,4,MidpointRounding.AwayFromZero);
+
+            var scheduled=await ResolveScheduledLeaveDayAsync(db,employeeId,companyId,fromDate,hoursOverride);
+            return scheduled.IsWorking&&scheduled.Hours>0
+                ? Math.Round(hours/scheduled.Hours,4,MidpointRounding.AwayFromZero)
+                : 0m;
         }
-        if(unit=="Days")return toDate.DayNumber-fromDate.DayNumber+1;
-        decimal total=0m; for(var date=fromDate;date<=toDate;date=date.AddDays(1))total+=await ResolveDailyHoursAsync(db,employeeId,companyId,date,hoursOverride); return Math.Round(total,4,MidpointRounding.AwayFromZero);
+
+        var schedule=await ResolveScheduledLeaveDaysAsync(
+            db,employeeId,companyId,fromDate,toDate,hoursOverride);
+        decimal total=0m;
+        for(var date=fromDate;date<=toDate;date=date.AddDays(1))
+        {
+            if(!schedule.TryGetValue(date,out var scheduled)||!scheduled.IsWorking)continue;
+            total+=unit=="Days"?1m:scheduled.Hours;
+        }
+        return Math.Round(total,4,MidpointRounding.AwayFromZero);
+    }
+
+    private static async Task<ScheduledLeaveDay> ResolveScheduledLeaveDayAsync(
+        ApplicationDbContext db,int employeeId,int companyId,DateOnly date,decimal hoursOverride)
+    {
+        var map=await ResolveScheduledLeaveDaysAsync(db,employeeId,companyId,date,date,hoursOverride);
+        return map.TryGetValue(date,out var day)?day:new ScheduledLeaveDay(true,
+            await ResolveDailyHoursAsync(db,employeeId,companyId,date,hoursOverride));
+    }
+
+    private static async Task<Dictionary<DateOnly,ScheduledLeaveDay>> ResolveScheduledLeaveDaysAsync(
+        ApplicationDbContext db,int employeeId,int companyId,DateOnly fromDate,DateOnly toDate,decimal hoursOverride)
+    {
+        var result=new Dictionary<DateOnly,ScheduledLeaveDay>();
+        if(toDate<fromDate)return result;
+
+        var scope=Security.CompanyScope.ForCompanies(new[]{companyId});
+        var shifts=(await ShiftTypeStore.ListInScopeAsync(db,scope)).ToDictionary(shift=>shift.Id);
+        var assignedShiftId=await HrmsDatabase.ScalarAsync<int?>(db,
+            "SELECT ShiftTypeId FROM EmployeeShiftTypes WHERE EmployeeId=@EmployeeId;",
+            command=>HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId));
+
+        var employeeAttrs=(await HrmsDatabase.QueryAsync(db,"""
+SELECT DepartmentId,BranchId,PositionId,ContractType,Nationality,MaritalStatus
+FROM Employees WHERE Id=@EmployeeId AND ISNULL(IsDeleted,0)=0;
+""",command=>HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId),reader=>
+            (IReadOnlyDictionary<string,string?>)new Dictionary<string,string?>
+            {
+                ["Department"]=HrmsDatabase.GetInt(reader,"DepartmentId").ToString(),
+                ["Branch"]=HrmsDatabase.GetInt(reader,"BranchId").ToString(),
+                ["Position"]=HrmsDatabase.GetNullableInt(reader,"PositionId")?.ToString(),
+                ["ContractType"]=HrmsDatabase.GetString(reader,"ContractType"),
+                ["Nationality"]=HrmsDatabase.GetString(reader,"Nationality"),
+                ["MaritalStatus"]=HrmsDatabase.GetString(reader,"MaritalStatus"),
+                ["Employee"]=employeeId.ToString()
+            })).FirstOrDefault()??new Dictionary<string,string?>();
+
+        var eligibilityShift=shifts.Values
+            .Where(shift=>shift.IsActive&&shift.Eligibility.Count>0)
+            .OrderBy(shift=>shift.Id)
+            .FirstOrDefault(shift=>ShiftTypeStore.EmployeeMatchesEligibility(shift,employeeAttrs));
+        var defaultShiftId=assignedShiftId is int assigned&&shifts.ContainsKey(assigned)
+            ? assigned
+            : eligibilityShift?.Id??shifts.Values.Where(shift=>shift.IsActive).OrderBy(shift=>shift.Id).Select(shift=>shift.Id).FirstOrDefault();
+
+        var existing=await HrmsDatabase.QueryAsync(db,"""
+SELECT WorkDate,ShiftTypeId,DayKind,Status
+FROM DayAttendances
+WHERE EmployeeId=@EmployeeId AND WorkDate>=@FromDate AND WorkDate<=@ToDate;
+""",command=>{
+            HrmsDatabase.AddParameter(command,"@EmployeeId",employeeId);
+            HrmsDatabase.AddParameter(command,"@FromDate",fromDate);
+            HrmsDatabase.AddParameter(command,"@ToDate",toDate);
+        },reader=>new{
+            Date=HrmsDatabase.GetDateOnly(reader,"WorkDate")??default,
+            ShiftId=HrmsDatabase.GetNullableInt(reader,"ShiftTypeId"),
+            DayKind=HrmsDatabase.GetString(reader,"DayKind"),
+            Status=HrmsDatabase.GetString(reader,"Status")
+        });
+        var existingByDate=existing.ToDictionary(row=>row.Date);
+
+        var holidayRows=await HrmsDatabase.QueryAsync(db,"""
+SELECT HolidayDate,IsRecurring
+FROM Holidays
+WHERE (IsRecurring=1)
+   OR (HolidayDate>=@FromDate AND HolidayDate<=@ToDate);
+""",command=>{
+            HrmsDatabase.AddParameter(command,"@FromDate",fromDate);
+            HrmsDatabase.AddParameter(command,"@ToDate",toDate);
+        },reader=>new{
+            Date=HrmsDatabase.GetDateOnly(reader,"HolidayDate")??default,
+            Recurring=HrmsDatabase.GetBool(reader,"IsRecurring")
+        });
+        var holidays=new HashSet<DateOnly>();
+        for(var date=fromDate;date<=toDate;date=date.AddDays(1))
+            if(holidayRows.Any(h=>h.Recurring
+                    ? h.Date.Month==date.Month&&h.Date.Day==date.Day
+                    : h.Date==date))
+                holidays.Add(date);
+
+        var overrideMap=await ShiftOverrideStore.MapAsync(db,fromDate,toDate);
+        var roster=new Dictionary<(int EmployeeId,DateOnly Date),(int? ShiftId,string? ForcedDayKind)>();
+        for(var month=new DateOnly(fromDate.Year,fromDate.Month,1);
+            month<=new DateOnly(toDate.Year,toDate.Month,1);
+            month=month.AddMonths(1))
+        {
+            var monthMap=await RosterStore.MapAsync(db,scope,month.Year,month.Month);
+            foreach(var pair in monthMap)
+                roster[pair.Key]=pair.Value;
+        }
+
+        for(var date=fromDate;date<=toDate;date=date.AddDays(1))
+        {
+            if(holidays.Contains(date))
+            {
+                result[date]=new ScheduledLeaveDay(false,0m);
+                continue;
+            }
+
+            if(existingByDate.TryGetValue(date,out var persisted))
+            {
+                var persistedWorking=IsChargeableLeaveDay(
+                    persisted.DayKind,
+                    persisted.Status=="Holiday");
+                var persistedHours=persistedWorking
+                    ? ResolveHoursFromShift(shifts,persisted.ShiftId,date,hoursOverride)
+                    : 0m;
+                if(persistedWorking&&persistedHours<=0m)
+                    persistedHours=await ResolveDailyHoursAsync(db,employeeId,companyId,date,hoursOverride);
+                result[date]=new ScheduledLeaveDay(persistedWorking,persistedHours);
+                continue;
+            }
+
+            var shiftId=defaultShiftId;
+            string? forcedDayKind=null;
+            if(overrideMap.TryGetValue((employeeId,date),out var overrideShift))
+                shiftId=overrideShift;
+            else if(roster.TryGetValue((employeeId,date),out var rosterCell))
+            {
+                if(rosterCell.ForcedDayKind is not null)forcedDayKind=rosterCell.ForcedDayKind;
+                else if(rosterCell.ShiftId is int rosterShift)shiftId=rosterShift;
+            }
+
+            shifts.TryGetValue(shiftId,out var shift);
+            var shiftDay=shift?.Days.FirstOrDefault(day=>day.DayIndex==DayAttendanceStore.ToDayIndex(date));
+            var dayKind=forcedDayKind??shiftDay?.DayKind??"Work";
+            var isWorking=IsChargeableLeaveDay(dayKind);
+            var hours=isWorking
+                ? (hoursOverride>0m?hoursOverride:
+                    shift?.IsFlexible==true&&shift.FlexDailyHours>0m?shift.FlexDailyHours:
+                    shiftDay?.WorkHours??0m)
+                : 0m;
+            if(isWorking&&hours<=0m)
+                hours=await ResolveDailyHoursAsync(db,employeeId,companyId,date,hoursOverride);
+            result[date]=new ScheduledLeaveDay(isWorking,hours);
+        }
+
+        return result;
+    }
+
+    private static decimal ResolveHoursFromShift(
+        IReadOnlyDictionary<int,ShiftTypeStore.ShiftType> shifts,int? shiftId,DateOnly date,decimal hoursOverride)
+    {
+        if(hoursOverride>0m)return hoursOverride;
+        if(shiftId is not int id||!shifts.TryGetValue(id,out var shift))return 0m;
+        if(shift.IsFlexible&&shift.FlexDailyHours>0m)return shift.FlexDailyHours;
+        return shift.Days.FirstOrDefault(day=>day.DayIndex==DayAttendanceStore.ToDayIndex(date))?.WorkHours??0m;
     }
 
     private static async Task<decimal> ResolveDailyHoursAsync(ApplicationDbContext db,int employeeId,int companyId,DateOnly date,decimal overrideHours)
