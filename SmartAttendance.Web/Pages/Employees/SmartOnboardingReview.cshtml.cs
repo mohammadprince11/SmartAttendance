@@ -487,27 +487,10 @@ public sealed class SmartOnboardingReviewModel : PageModel
             return Forbid();
         }
 
-        var markReadyDocuments =
-            await EmployeeOnboardingStore.ListDocumentsAsync(
-                _db,
-                SessionId);
-        var inferredCitizen = markReadyDocuments.Any(document =>
-            string.Equals(
-                document.DetectedDocumentType ??
-                document.DeclaredDocumentType,
-                PeopleAiDocumentTypes.NationalId,
-                StringComparison.OrdinalIgnoreCase));
-        var documentPolicyError =
-            await ValidateRequiredDocumentsAsync(
-                context.Value.Session,
-                inferredCitizen);
-
-        if (!string.IsNullOrWhiteSpace(documentPolicyError))
-        {
-            TempData["SmartOnboardingReviewError"] =
-                documentPolicyError;
-            return RedirectToSelf();
-        }
+        // Required onboarding documents belong to final employee creation,
+        // not to the human-review completion gate.
+        // Review may reach Ready while Contract is still pending.
+        // Finalize validates required documents again before employee creation.
 
         await RefreshCrossDocumentIssuesAsync(
             persistIssues: true);
@@ -908,17 +891,9 @@ WHERE Id = @EmployeeId
                 context.Value.Session,
                 inferredCitizen);
 
-        if (Session.Status == "Ready" &&
-            !string.IsNullOrWhiteSpace(DocumentPolicyError))
-        {
-            await PeopleAiReviewStore.ReopenForReviewAsync(
-                _db,
-                SessionId);
-
-            Session = await EmployeeOnboardingStore.GetSessionAsync(
-                _db,
-                SessionId);
-        }
+        // Ready represents completed human review.
+        // Missing required documents remain finalization prerequisites.
+        // Do not reopen completed review merely because Contract is missing.
 
         await RefreshCrossDocumentIssuesAsync(
             persistIssues: CanReview);
@@ -935,7 +910,6 @@ WHERE Id = @EmployeeId
 
         CanMarkReady =
             CanReview &&
-            string.IsNullOrWhiteSpace(DocumentPolicyError) &&
             !await PeopleAiStructuredRecordStore.HasPendingLatestAsync(
                 _db,
                 SessionId) &&
