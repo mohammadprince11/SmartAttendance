@@ -101,7 +101,10 @@
                                             s.Id, s.EmployeeId, ServiceStartDate=Dt(s.ServiceStartDate), LastWorkingDate=Dt(s.LastWorkingDate),
                                             s.LastBasic, s.Reason, s.GratuityAmount, s.GratuityCalculationMode, s.GratuityEligible,
                                             s.GratuityWeeksPerYear, s.GratuityMultiplier, s.GratuityBasisAmount,
-                                            s.LeaveBalanceDays, s.OtherDues, s.Deductions, s.Note })">تعديل</button>
+                                            s.LeaveBalanceDays, s.OtherDues, s.Deductions,
+                                            s.TaxWithheldSnapshot, s.TaxDueReviewed, s.TaxDifferenceIncluded,
+                                            s.GosiWithheldSnapshot, s.GosiDueReviewed, s.GosiDifferenceIncluded,
+                                            s.TerminationDifferenceNet, s.Note })">تعديل</button>
                                         <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف التسوية؟">
                                             <input type="hidden" name="id" value="@s.Id" />
                                             <button type="submit" class="es-btn danger sm">حذف</button>
@@ -183,6 +186,27 @@
                 </div>
                 <label>اقتطاعات (قروض/سلف/عهد)<input type="number" name="Deductions" id="es-Deductions" step="0.01" min="0" value="0" oninput="esCalc()" /></label>
 
+                <div class="es-warn">
+                    <b>مراجعة فروقات Tax / GOSI عند الإنهاء</b>
+                    <div class="es-grid2">
+                        <label>Tax Due المراجَع
+                            <input type="number" name="TaxDueReviewed" id="es-TaxDueReviewed" step="0.01" min="0" oninput="esCalc()" />
+                        </label>
+                        <label class="zyu-95e15889185d">
+                            <input type="checkbox" name="TaxDifferenceIncluded" value="true" id="es-TaxDifferenceIncluded" onchange="esCalc()" />
+                            تضمين فرق Tax في صافي التسوية
+                        </label>
+                        <label>GOSI Due المراجَع
+                            <input type="number" name="GosiDueReviewed" id="es-GosiDueReviewed" step="0.01" min="0" oninput="esCalc()" />
+                        </label>
+                        <label class="zyu-95e15889185d">
+                            <input type="checkbox" name="GosiDifferenceIncluded" value="true" id="es-GosiDifferenceIncluded" onchange="esCalc()" />
+                            تضمين فرق GOSI في صافي التسوية
+                        </label>
+                    </div>
+                    <small>Due يُدخل بعد مراجعة بشرية. النظام لا يستنتج الاستحقاق السنوي تلقائياً، ولا يدمج حقول PreviousTax* التاريخية في الفرق.</small>
+                </div>
+
                 @* ===== لوحة الحساب الحيّة ===== *@
                 <div class="es-calc" id="es-calc">
                     <div class="row"><span>سنوات الخدمة</span><b id="es-c-years">0</b></div>
@@ -191,13 +215,14 @@
                     <div class="row"><span>بدل رصيد الإجازات</span><b id="es-c-leave">0</b></div>
                     <div class="row"><span>مستحقات أخرى</span><b id="es-c-other">0</b></div>
                     <div class="row"><span>ناقص: اقتطاعات</span><b id="es-c-ded" class="zyu-94c76e9c8583">0</b></div>
+                    <div class="row"><span>فروقات Tax/GOSI المراجَعة</span><b id="es-c-term-diff">0</b></div>
                     <div class="row total"><span>صافي التسوية</span><b id="es-c-net">0</b></div>
                 </div>
                 <div class="es-warn" id="es-payroll-context">
                     <div id="es-rate-info">اختر الموظف وآخر يوم عمل لعرض أساس الأجر اليومي من Payroll.</div>
                     <div id="es-withholding-info"></div>
                     <div id="es-termination-payroll-warning"></div>
-                    <small>بيانات Tax/GOSI المعروضة للمراجعة فقط ولا تُضاف أو تُطرح من صافي التسوية تلقائياً.</small>
+                    <small>Withheld هنا من Regular Payroll النهائي في ZYNORA للسنة المختارة فقط. لا تُضاف أو تُطرح أي فروقات إلا بعد إدخال Due مراجَع واختيار التضمين صراحةً.</small>
                 </div>
                 <div class="es-warn">⚠️ أهلية مكافأة نهاية الخدمة والمضاعف يجب تأكيدهما لكل حالة. الحساب التلقائي لا يعمل إلا بعد تفعيل سياسة الشركة.</div>
 
@@ -354,6 +379,18 @@
             }, 180);
         }
 
+        function esReviewedDifference(ctx, dueId, includeId, withheldKey){
+            if (!document.getElementById(includeId).checked) return 0;
+            if (!ctx) return null;
+
+            var raw = document.getElementById(dueId).value;
+            if (raw === '') return null;
+
+            var due = Math.max(0, parseFloat(raw) || 0);
+            var withheld = parseFloat(ctx[withheldKey]) || 0;
+            return Math.round((withheld - due) * 100) / 100;
+        }
+
         function esCalc(skipContextRequest){
             var years = esYears(document.getElementById('es-ServiceStartDate').value, document.getElementById('es-LastWorkingDate').value);
             var basic = parseFloat(document.getElementById('es-LastBasic').value) || 0;
@@ -366,9 +403,16 @@
                 ? ES_SETTLEMENT_CONTEXT
                 : null;
             var leaveEnc = ctx ? (parseFloat(ctx.leaveEncashment) || 0) : null;
-            var net = leaveEnc === null
+            var taxDifference = esReviewedDifference(
+                ctx, 'es-TaxDueReviewed', 'es-TaxDifferenceIncluded', 'withheldTax');
+            var gosiDifference = esReviewedDifference(
+                ctx, 'es-GosiDueReviewed', 'es-GosiDifferenceIncluded', 'withheldGosi');
+            var terminationDifference = taxDifference === null || gosiDifference === null
                 ? null
-                : Math.round((g.total + leaveEnc + other - ded) * 100) / 100;
+                : Math.round((taxDifference + gosiDifference) * 100) / 100;
+            var net = leaveEnc === null || terminationDifference === null
+                ? null
+                : Math.round((g.total + leaveEnc + other - ded + terminationDifference) * 100) / 100;
 
             document.getElementById('es-c-years').textContent = fmt(years);
             document.getElementById('es-c-gratuity').textContent = fmt(g.total);
@@ -376,6 +420,8 @@
             document.getElementById('es-c-leave').textContent = leaveEnc === null ? '…' : fmt(leaveEnc);
             document.getElementById('es-c-other').textContent = fmt(other);
             document.getElementById('es-c-ded').textContent = '−' + fmt(ded);
+            document.getElementById('es-c-term-diff').textContent =
+                terminationDifference === null ? '…' : fmt(terminationDifference);
             document.getElementById('es-c-net').textContent = net === null ? '…' : fmt(net);
 
             if (!skipContextRequest) esScheduleContext();
@@ -398,7 +444,10 @@
             document.getElementById('es-title').textContent = id ? 'تعديل تسوية' : 'تسوية نهاية خدمة';
             esPicker.set(null);
             ['es-LeaveBalanceDays','es-OtherDues','es-Deductions','es-ManualGratuityAmount'].forEach(function(x){ document.getElementById(x).value = '0'; });
+            ['es-TaxDueReviewed','es-GosiDueReviewed'].forEach(function(x){ document.getElementById(x).value = ''; });
             document.getElementById('es-GratuityEligible').checked = false;
+            document.getElementById('es-TaxDifferenceIncluded').checked = false;
+            document.getElementById('es-GosiDifferenceIncluded').checked = false;
             document.getElementById('es-GratuityMultiplier').value = '1';
 
             if (id && d){
@@ -419,6 +468,10 @@
                 setVal('es-LeaveBalanceDays', d.LeaveBalanceDays);
                 setVal('es-OtherDues', d.OtherDues);
                 setVal('es-Deductions', d.Deductions);
+                setVal('es-TaxDueReviewed', d.TaxDueReviewed);
+                setVal('es-GosiDueReviewed', d.GosiDueReviewed);
+                document.getElementById('es-TaxDifferenceIncluded').checked = d.TaxDifferenceIncluded === true;
+                document.getElementById('es-GosiDifferenceIncluded').checked = d.GosiDifferenceIncluded === true;
                 setVal('es-Note', d.Note);
             }
             esCalc();

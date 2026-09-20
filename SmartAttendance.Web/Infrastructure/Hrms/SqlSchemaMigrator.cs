@@ -3055,6 +3055,33 @@ BEGIN
                 WHERE RequestKey IS NOT NULL;';
 END;
 """),
+
+        new(
+            "20260920-10-payroll-eos-termination-differences",
+            """
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','TaxWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TaxWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TaxDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','TaxDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_TaxDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GosiWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GosiDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_GosiDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TerminationDifferenceNet') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TerminationDifferenceNet decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TerminationDifferenceNet DEFAULT(0);
+END;
+"""),
     };
 
     /// <summary>

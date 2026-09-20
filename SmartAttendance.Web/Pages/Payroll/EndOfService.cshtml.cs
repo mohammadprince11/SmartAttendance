@@ -9,7 +9,9 @@ namespace SmartAttendance.Web.Pages.Payroll;
 /// <summary>
 /// نهاية الخدمة (/Payroll/EndOfService) — تسوية نهائية محكومة بسياسة الشركة.
 /// أهلية المكافأة صريحة لكل تسوية، وقيمتها إمّا Policy أو Manual، ثم يضاف بدل رصيد
-/// الإجازات والمستحقات الأخرى وتطرح الاقتطاعات. الاعتماد يرحّل الصافي إلى OffCycle Payroll.
+/// الإجازات والمستحقات الأخرى وتطرح الاقتطاعات. فروقات Tax/GOSI لا تُستنتج قانونياً:
+/// يُحفظ ما اقتُطع فعلياً من Regular Payroll، ويدخل الفرق فقط بعد إدخال Due مراجَع
+/// واختيار تضمينه صراحةً. الاعتماد يرحّل الصافي إلى OffCycle Payroll.
 /// كل الأرقام تُحتسب بالسيرفر (لا من العميل).
 /// </summary>
 public class EndOfServiceModel : PageModel
@@ -121,6 +123,8 @@ public class EndOfServiceModel : PageModel
         var f = Request.Form;
         DateOnly? D(string key) => DateOnly.TryParse(f[key], out var d) ? d : null;
         decimal Dec(string key) => decimal.TryParse(f[key], out var v) ? v : 0;
+        decimal? NullableDec(string key) =>
+            decimal.TryParse(f[key], out var v) ? Math.Max(0m, v) : null;
 
         var empId = int.TryParse(f["EmployeeId"], out var e) ? e : 0;
         var start = D("ServiceStartDate");
@@ -129,6 +133,10 @@ public class EndOfServiceModel : PageModel
         var leaveDays = Dec("LeaveBalanceDays");
         var otherDues = Dec("OtherDues");
         var deductions = Dec("Deductions");
+        var taxDueReviewed = NullableDec("TaxDueReviewed");
+        var gosiDueReviewed = NullableDec("GosiDueReviewed");
+        var includeTaxDifference = f["TaxDifferenceIncluded"] == "true";
+        var includeGosiDifference = f["GosiDifferenceIncluded"] == "true";
 
         if (empId <= 0) { TempData["PayrollMessage"] = "اختر الموظف."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (start is null || end is null) { TempData["PayrollMessage"] = "أدخل تاريخ بدء الخدمة وآخر يوم عمل."; TempData["PayrollOk"] = false; return RedirectToPage(); }
@@ -182,7 +190,39 @@ public class EndOfServiceModel : PageModel
             _db, employee.CompanyId, payrollPeriod.Year, payrollPeriod.Month);
         var dailyRate = PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor);
         var leaveEnc = Math.Round(leaveDays * dailyRate, 2);
-        var net = Math.Round(gratuity + leaveEnc + otherDues - deductions, 2);
+
+        var withholding = await TerminationSettlementStore.LoadYearAsync(
+            _db, scope, empId, end.Value.Year);
+
+        if (includeTaxDifference && taxDueReviewed is null)
+        {
+            TempData["PayrollMessage"] = "أدخل Tax Due المراجَع قبل اختيار تضمين فرق الضريبة.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+        if (includeGosiDifference && gosiDueReviewed is null)
+        {
+            TempData["PayrollMessage"] = "أدخل GOSI Due المراجَع قبل اختيار تضمين فرق الضمان.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var taxDifference = includeTaxDifference
+            ? new TerminationSettlementPolicy.Difference(
+                TerminationSettlementPolicy.ItemTax,
+                withholding.Tax,
+                taxDueReviewed!.Value).SignedAmount
+            : 0m;
+        var gosiDifference = includeGosiDifference
+            ? new TerminationSettlementPolicy.Difference(
+                TerminationSettlementPolicy.ItemGosi,
+                withholding.Gosi,
+                gosiDueReviewed!.Value).SignedAmount
+            : 0m;
+        var terminationDifferenceNet = Math.Round(
+            taxDifference + gosiDifference, 2, MidpointRounding.AwayFromZero);
+        var net = Math.Round(
+            gratuity + leaveEnc + otherDues - deductions + terminationDifferenceNet, 2);
 
         var id = int.TryParse(f["Id"], out var sid) ? sid : 0;
         if (id > 0 && await EndOfServiceStore.IsApprovedAsync(_db, id))
@@ -215,6 +255,13 @@ public class EndOfServiceModel : PageModel
             LeaveEncashment = leaveEnc,
             OtherDues = otherDues,
             Deductions = deductions,
+            TaxWithheldSnapshot = withholding.Tax,
+            TaxDueReviewed = taxDueReviewed,
+            TaxDifferenceIncluded = includeTaxDifference,
+            GosiWithheldSnapshot = withholding.Gosi,
+            GosiDueReviewed = gosiDueReviewed,
+            GosiDifferenceIncluded = includeGosiDifference,
+            TerminationDifferenceNet = terminationDifferenceNet,
             NetSettlement = net,
             Note = string.IsNullOrWhiteSpace(f["Note"]) ? null : f["Note"].ToString().Trim(),
             Status = "Draft"

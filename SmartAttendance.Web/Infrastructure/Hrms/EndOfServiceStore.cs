@@ -69,7 +69,11 @@ public static class EndOfServiceStore
         DateOnly? LastWorkingDate,
         decimal NetSettlement,
         string Status,
-        int? PayrollTransactionId);
+        int? PayrollTransactionId,
+        decimal TaxWithheldSnapshot,
+        bool TaxDifferenceIncluded,
+        decimal GosiWithheldSnapshot,
+        bool GosiDifferenceIncluded);
 
     public sealed class Settlement
     {
@@ -94,6 +98,13 @@ public static class EndOfServiceStore
         public decimal LeaveEncashment { get; set; }
         public decimal OtherDues { get; set; }
         public decimal Deductions { get; set; }
+        public decimal TaxWithheldSnapshot { get; set; }
+        public decimal? TaxDueReviewed { get; set; }
+        public bool TaxDifferenceIncluded { get; set; }
+        public decimal GosiWithheldSnapshot { get; set; }
+        public decimal? GosiDueReviewed { get; set; }
+        public bool GosiDifferenceIncluded { get; set; }
+        public decimal TerminationDifferenceNet { get; set; }
         public decimal NetSettlement { get; set; }
         public int? PayrollTransactionId { get; set; }
         public DateTime? PayrollPostedAt { get; set; }
@@ -134,6 +145,13 @@ BEGIN
         LeaveEncashment decimal(18,2) NOT NULL DEFAULT(0),
         OtherDues decimal(18,2) NOT NULL DEFAULT(0),
         Deductions decimal(18,2) NOT NULL DEFAULT(0),
+        TaxWithheldSnapshot decimal(18,2) NOT NULL DEFAULT(0),
+        TaxDueReviewed decimal(18,2) NULL,
+        TaxDifferenceIncluded bit NOT NULL DEFAULT(0),
+        GosiWithheldSnapshot decimal(18,2) NOT NULL DEFAULT(0),
+        GosiDueReviewed decimal(18,2) NULL,
+        GosiDifferenceIncluded bit NOT NULL DEFAULT(0),
+        TerminationDifferenceNet decimal(18,2) NOT NULL DEFAULT(0),
         NetSettlement decimal(18,2) NOT NULL DEFAULT(0),
         PayrollTransactionId int NULL,
         PayrollPostedAt datetime2 NULL,
@@ -164,6 +182,25 @@ BEGIN
     IF COL_LENGTH('EmployeeEndOfService','GratuityBasisAmount') IS NULL
         ALTER TABLE EmployeeEndOfService ADD GratuityBasisAmount decimal(18,2) NOT NULL
             CONSTRAINT DF_EOS_GratuityBasisAmount DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TaxWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TaxWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TaxDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','TaxDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_TaxDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GosiWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GosiDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_GosiDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TerminationDifferenceNet') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TerminationDifferenceNet decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TerminationDifferenceNet DEFAULT(0);
     IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NULL
         ALTER TABLE EmployeeEndOfService ADD PayrollTransactionId int NULL;
     IF COL_LENGTH('EmployeeEndOfService','PayrollPostedAt') IS NULL
@@ -317,7 +354,11 @@ SELECT TOP (1)
        s.LastWorkingDate,
        ISNULL(s.NetSettlement,0) AS NetSettlement,
        ISNULL(s.Status,N'Draft') AS Status,
-       s.PayrollTransactionId
+       s.PayrollTransactionId,
+       ISNULL(s.TaxWithheldSnapshot,0) AS TaxWithheldSnapshot,
+       ISNULL(s.TaxDifferenceIncluded,0) AS TaxDifferenceIncluded,
+       ISNULL(s.GosiWithheldSnapshot,0) AS GosiWithheldSnapshot,
+       ISNULL(s.GosiDifferenceIncluded,0) AS GosiDifferenceIncluded
 FROM EmployeeEndOfService s WITH (UPDLOCK, HOLDLOCK)
 INNER JOIN Employees e ON e.Id=s.EmployeeId
 WHERE s.Id=@Id
@@ -331,7 +372,11 @@ WHERE s.Id=@Id
                 HrmsDatabase.GetDateOnly(reader, "LastWorkingDate"),
                 reader["NetSettlement"] is decimal net ? net : 0m,
                 HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } status ? status : "Draft",
-                HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId")));
+                HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId"),
+                reader["TaxWithheldSnapshot"] is decimal taxWithheld ? taxWithheld : 0m,
+                HrmsDatabase.GetBool(reader, "TaxDifferenceIncluded"),
+                reader["GosiWithheldSnapshot"] is decimal gosiWithheld ? gosiWithheld : 0m,
+                HrmsDatabase.GetBool(reader, "GosiDifferenceIncluded")));
 
         var row = rows.FirstOrDefault();
         if (row is null)
@@ -347,6 +392,20 @@ WHERE s.Id=@Id
 
         if (row.LastWorkingDate is not { } lastWorkingDate)
             return new(false, false, null, null, null, "لا يمكن اعتماد التسوية بلا آخر يوم عمل.");
+
+        if (row.TaxDifferenceIncluded || row.GosiDifferenceIncluded)
+        {
+            var currentWithholding = await TerminationSettlementStore.LoadYearAsync(
+                dbContext, scope, row.EmployeeId, lastWorkingDate.Year);
+
+            if (row.TaxDifferenceIncluded && currentWithholding.Tax != row.TaxWithheldSnapshot)
+                return new(false, false, null, null, null,
+                    "تغيّر Tax Withheld في Payroll بعد حفظ التسوية. افتح التسوية واحفظها من جديد قبل الاعتماد.");
+
+            if (row.GosiDifferenceIncluded && currentWithholding.Gosi != row.GosiWithheldSnapshot)
+                return new(false, false, null, null, null,
+                    "تغيّر GOSI Withheld في Payroll بعد حفظ التسوية. افتح التسوية واحفظها من جديد قبل الاعتماد.");
+        }
 
         var posting = ToPayrollPosting(row.NetSettlement);
         int? payrollTransactionId = null;
@@ -454,11 +513,17 @@ WHERE Id=@Id AND ISNULL(Status,N'Draft')<>N'Approved';
 INSERT INTO EmployeeEndOfService
  (EmployeeId, ServiceStartDate, LastWorkingDate, YearsService, LastBasic, Reason, GratuityAmount,
   GratuityCalculationMode, GratuityEligible, GratuityWeeksPerYear, GratuityMultiplier, GratuityBasisAmount,
-  LeaveBalanceDays, LeaveEncashment, OtherDues, Deductions, NetSettlement, Note, Status, ReferenceNo, CreatedBy)
+  LeaveBalanceDays, LeaveEncashment, OtherDues, Deductions,
+  TaxWithheldSnapshot, TaxDueReviewed, TaxDifferenceIncluded,
+  GosiWithheldSnapshot, GosiDueReviewed, GosiDifferenceIncluded, TerminationDifferenceNet,
+  NetSettlement, Note, Status, ReferenceNo, CreatedBy)
 VALUES
  (@Emp, @Start, @End, @Years, @Basic, @Reason, @Gratuity,
   @GratuityMode, @GratuityEligible, @GratuityWeeks, @GratuityMultiplier, @GratuityBasis,
-  @LeaveDays, @LeaveEnc, @OtherDues, @Deductions, @Net, @Note, @Status, @Ref, @By);
+  @LeaveDays, @LeaveEnc, @OtherDues, @Deductions,
+  @TaxWithheld, @TaxDue, @TaxIncluded,
+  @GosiWithheld, @GosiDue, @GosiIncluded, @TerminationDifferenceNet,
+  @Net, @Note, @Status, @Ref, @By);
 """;
 
     private const string UpdateSql = """
@@ -469,7 +534,11 @@ UPDATE EmployeeEndOfService SET
   GratuityWeeksPerYear=@GratuityWeeks, GratuityMultiplier=@GratuityMultiplier,
   GratuityBasisAmount=@GratuityBasis,
   LeaveBalanceDays=@LeaveDays, LeaveEncashment=@LeaveEnc,
-  OtherDues=@OtherDues, Deductions=@Deductions, NetSettlement=@Net, Note=@Note, Status=@Status
+  OtherDues=@OtherDues, Deductions=@Deductions,
+  TaxWithheldSnapshot=@TaxWithheld, TaxDueReviewed=@TaxDue, TaxDifferenceIncluded=@TaxIncluded,
+  GosiWithheldSnapshot=@GosiWithheld, GosiDueReviewed=@GosiDue, GosiDifferenceIncluded=@GosiIncluded,
+  TerminationDifferenceNet=@TerminationDifferenceNet,
+  NetSettlement=@Net, Note=@Note, Status=@Status
 WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
 """;
 
@@ -496,6 +565,13 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         LeaveEncashment = reader["LeaveEncashment"] is decimal le ? le : 0,
         OtherDues = reader["OtherDues"] is decimal od ? od : 0,
         Deductions = reader["Deductions"] is decimal dd ? dd : 0,
+        TaxWithheldSnapshot = reader["TaxWithheldSnapshot"] is decimal tw ? tw : 0,
+        TaxDueReviewed = reader["TaxDueReviewed"] is decimal td ? td : null,
+        TaxDifferenceIncluded = HrmsDatabase.GetBool(reader, "TaxDifferenceIncluded"),
+        GosiWithheldSnapshot = reader["GosiWithheldSnapshot"] is decimal gwh ? gwh : 0,
+        GosiDueReviewed = reader["GosiDueReviewed"] is decimal gd ? gd : null,
+        GosiDifferenceIncluded = HrmsDatabase.GetBool(reader, "GosiDifferenceIncluded"),
+        TerminationDifferenceNet = reader["TerminationDifferenceNet"] is decimal dn ? dn : 0,
         NetSettlement = reader["NetSettlement"] is decimal ns ? ns : 0,
         PayrollTransactionId = HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId"),
         PayrollPostedAt = HrmsDatabase.GetDateTime(reader, "PayrollPostedAt"),
@@ -528,6 +604,13 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         HrmsDatabase.AddParameter(command, "@LeaveEnc", s.LeaveEncashment);
         HrmsDatabase.AddParameter(command, "@OtherDues", s.OtherDues);
         HrmsDatabase.AddParameter(command, "@Deductions", s.Deductions);
+        HrmsDatabase.AddParameter(command, "@TaxWithheld", Math.Max(0m, s.TaxWithheldSnapshot));
+        HrmsDatabase.AddParameter(command, "@TaxDue", (object?)s.TaxDueReviewed ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@TaxIncluded", s.TaxDifferenceIncluded ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@GosiWithheld", Math.Max(0m, s.GosiWithheldSnapshot));
+        HrmsDatabase.AddParameter(command, "@GosiDue", (object?)s.GosiDueReviewed ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@GosiIncluded", s.GosiDifferenceIncluded ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@TerminationDifferenceNet", s.TerminationDifferenceNet);
         HrmsDatabase.AddParameter(command, "@Net", s.NetSettlement);
         HrmsDatabase.AddParameter(command, "@Note", (object?)s.Note ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(s.Status) ? "Draft" : s.Status);

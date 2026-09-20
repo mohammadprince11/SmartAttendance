@@ -130,6 +130,12 @@ public sealed class PayrollIntegrityRegressionTests
         Assert.Contains("OnGetSettlementContextAsync", page);
         Assert.Contains("TerminationSettlementStore.LoadYearAsync", page);
         Assert.Contains("TerminationSettlementPolicy.TerminationMonthUnpaid", page);
+        Assert.Contains("new TerminationSettlementPolicy.Difference", page);
+        Assert.Contains("TaxDueReviewed", page);
+        Assert.Contains("GosiDueReviewed", page);
+        Assert.Contains("TaxDifferenceIncluded", markup);
+        Assert.Contains("GosiDifferenceIncluded", markup);
+        Assert.Contains("es-c-term-diff", markup);
         Assert.Contains("handler: 'SettlementContext'", markup);
         Assert.Contains("ES_SETTLEMENT_CONTEXT", markup);
         Assert.DoesNotContain("var daily = basic / 30", markup);
@@ -150,8 +156,14 @@ public sealed class PayrollIntegrityRegressionTests
         Assert.Contains("GratuityBasisAmount", migrator);
         Assert.Contains("20260920-08-payroll-eos-offcycle-link", migrator);
         Assert.Contains("PayrollTransactionId", migrator);
+        Assert.Contains("20260920-10-payroll-eos-termination-differences", migrator);
+        Assert.Contains("TaxWithheldSnapshot", migrator);
+        Assert.Contains("GosiWithheldSnapshot", migrator);
+        Assert.Contains("TerminationDifferenceNet", migrator);
 
         Assert.Contains("WITH (UPDLOCK, HOLDLOCK)", store);
+        Assert.Contains("TaxWithheldSnapshot", store);
+        Assert.Contains("GosiWithheldSnapshot", store);
         Assert.Contains("PaymentType = \"OutSalary\"", store);
         Assert.Contains("Source = \"EndOfService\"", store);
 
