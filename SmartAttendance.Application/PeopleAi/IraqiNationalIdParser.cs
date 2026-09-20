@@ -314,6 +314,16 @@ public static class IraqiNationalIdParser
         }
 
         result = CleanName(result);
+
+        if (noiseWords.Any(noiseWord =>
+                string.Equals(
+                    LabelForm(result),
+                    LabelForm(noiseWord),
+                    StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
         return IsPlausibleName(result)
             ? result
             : null;
