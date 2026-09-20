@@ -45,7 +45,7 @@ public static class PassportVisualParser
         "country", "issuingcountry",
         "رقمالجواز", "الجواز", "الاسمالكامل", "الاسم",
         "اللقب", "الجنسية", "الجنس", "تاريخالميلاد",
-        "مكانالميلاد", "اسمالام", "تاريخالانتهاء",
+        "مكانالميلاد", "محلالميلاد", "اسمالام", "تاريخالانتهاء",
         "تاريخالاصدار", "جهةالاصدار", "بلدالاصدار"
     ];
 
@@ -73,7 +73,7 @@ public static class PassportVisualParser
             FindValue(lines,
                 ["surname", "familyname", "اللقب"],
                 IsNameValue));
-        var nationality = CleanToken(
+        var nationality = NormalizeNationality(
             FindValue(lines,
                 ["nationality", "الجنسية"],
                 IsNationalityValue));
@@ -99,7 +99,7 @@ public static class PassportVisualParser
                 IsCountryValue));
         var placeOfBirth = CleanText(
             FindValue(lines,
-                ["placeofbirth", "مكانالميلاد"],
+                ["placeofbirth", "مكانالميلاد", "محلالميلاد"],
                 IsPlaceValue));
         var motherName = CleanText(
             FindValue(lines,
@@ -272,7 +272,21 @@ public static class PassportVisualParser
                cleaned.Length is >= 3 and <= 24 &&
                cleaned.Count(char.IsLetter) >= 3 &&
                !LooksLikeLabel(cleaned);
-    }    private static bool IsSexValue(string value) =>
+    }    private static string? NormalizeNationality(string? value)
+    {
+        var cleaned = CleanToken(value);
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return null;
+        }
+
+        var canonical = Canonical(cleaned);
+        return canonical is "IRAQI" or "IRAQ" or "عراقي" or "العراق"
+            ? "IRQ"
+            : cleaned;
+    }
+
+    private static bool IsSexValue(string value) =>
         NormalizeSex(value) is not null;
 
     private static bool IsDateValue(string value) =>

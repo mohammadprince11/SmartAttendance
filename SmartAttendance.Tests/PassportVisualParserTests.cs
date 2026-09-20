@@ -36,7 +36,7 @@ public sealed class PassportVisualParserTests
         Assert.Equal("A17346829", result.DocumentNumber);
         Assert.Equal("MOHAMMED ALI ZAIDAN", result.GivenNames);
         Assert.Equal("AL-SUDANI", result.Surname);
-        Assert.Equal("IRAQI", result.Nationality);
+        Assert.Equal("IRQ", result.Nationality);
         Assert.Equal("M", result.Sex);
         Assert.Equal("1992-03-25", result.DateOfBirth);
         Assert.Equal("2027-12-23", result.ExpiryDate);
@@ -56,6 +56,28 @@ public sealed class PassportVisualParserTests
         ]);
 
         Assert.Equal("MOHAMMED ALI ZAIDAN", result.GivenNames);
+    }
+
+    [Fact]
+    public void IraqiPassport_BilingualLabelsRecoverArabicVisualValues()
+    {
+        var result = PassportVisualParser.Parse(
+        [
+            L("Nationality/", 1331, 642, 1724, 698),
+            L("عراقي", 1386, 677, 1693, 759),
+            L("Sex", 724, 720, 795, 764),
+            L("ذكر", 727, 797, 907, 857),
+            L("Place of Birth", 2013, 768, 2226, 815),
+            L("محل الميلاد", 1869, 803, 2225, 851),
+            L("العراق بغداد", 1812, 837, 2220, 913),
+            L("جهة الاصدار", 1893, 1121, 2223, 1168),
+            L("BAGHDAD/بغداد", 1800, 1156, 2214, 1229)
+        ]);
+
+        Assert.Equal("IRQ", result.Nationality);
+        Assert.Equal("M", result.Sex);
+        Assert.Equal("العراق بغداد", result.PlaceOfBirth);
+        Assert.Equal("BAGHDAD/بغداد", result.IssuingAuthority);
     }
 
     private static PassportVisualOcrLine L(
