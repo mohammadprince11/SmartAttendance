@@ -420,6 +420,17 @@
             String(department.value || "0");
     });
 
+    const finalizeForm = department.closest("form");
+    if (finalizeForm) {
+        finalizeForm.addEventListener(
+            "submit",
+            () => {
+                departmentValue.value =
+                    String(department.value || "0");
+            },
+            true);
+    }
+
     branch.addEventListener("change", () => {
         syncDepartments(true);
         department.dispatchEvent(

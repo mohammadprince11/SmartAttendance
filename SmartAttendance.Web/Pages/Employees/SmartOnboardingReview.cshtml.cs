@@ -526,7 +526,7 @@ public sealed class SmartOnboardingReviewModel : PageModel
         return RedirectToSelf();
     }
 
-    public async Task<IActionResult> OnPostFinalizeAsync()
+    public async Task<IActionResult> OnPostFinalizeAsync(int departmentSelectionId)
     {
         var context = await GetAuthorizedContextAsync(requireReviewer: true);
         if (context is null)
@@ -552,6 +552,17 @@ public sealed class SmartOnboardingReviewModel : PageModel
             TempData["SmartOnboardingReviewError"] =
                 "الجلسة ليست في حالة Ready.";
             return RedirectToSelf();
+        }
+
+        var resolvedDepartmentId =
+            departmentSelectionId > 0
+                ? departmentSelectionId
+                : Finalize.DepartmentId;
+
+        if (resolvedDepartmentId > 0)
+        {
+            Finalize.DepartmentId = resolvedDepartmentId;
+            ModelState.Remove("Finalize.DepartmentId");
         }
 
         await LoadEmployeeCodeSchemaAsync();
