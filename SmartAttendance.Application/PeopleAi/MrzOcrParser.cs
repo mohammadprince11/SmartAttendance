@@ -159,7 +159,8 @@ public static class MrzOcrParser
                     var parsed = MrzParser.Parse(
                         lines[i] + Environment.NewLine +
                         lines[j]);
-                    if (parsed?.AllRequiredChecksValid == true)
+                    if (parsed?.AllRequiredChecksValid == true &&
+                        IsStructurallyPlausible(parsed))
                     {
                         return parsed;
                     }
@@ -186,7 +187,8 @@ public static class MrzOcrParser
                             lines[i] + Environment.NewLine +
                             lines[j] + Environment.NewLine +
                             lines[k]);
-                        if (parsed?.AllRequiredChecksValid == true)
+                        if (parsed?.AllRequiredChecksValid == true &&
+                            IsStructurallyPlausible(parsed))
                         {
                             return parsed;
                         }
@@ -301,6 +303,16 @@ public static class MrzOcrParser
 
         return normalized;
     }
+
+    private static bool IsStructurallyPlausible(
+        MrzParseResult result) =>
+        IsAlpha3(result.IssuingCountry) &&
+        IsAlpha3(result.Nationality) &&
+        (result.Sex is "M" or "F" or "X" or "");
+
+    private static bool IsAlpha3(string value) =>
+        value.Length == 3 &&
+        value.All(c => c is >= 'A' and <= 'Z');
 
     private static bool LooksLikeFirstLine(
         string value,
