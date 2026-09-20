@@ -500,6 +500,32 @@ WHERE SessionId = @SessionId
                 HrmsDatabase.AddParameter(command, "@Resolution", resolution);
             });
 
+    public static Task ResolveDocumentRuleAutomaticallyAsync(
+        ApplicationDbContext db,
+        long sessionId,
+        long documentId,
+        string ruleCode,
+        string resolution) =>
+        HrmsDatabase.ExecuteAsync(
+            db,
+            """
+UPDATE dbo.OnboardingValidationIssues
+SET Status = 'Resolved',
+    ResolvedAt = SYSUTCDATETIME(),
+    Resolution = @Resolution
+WHERE SessionId = @SessionId
+  AND OnboardingDocumentId = @DocumentId
+  AND RuleCode = @RuleCode
+  AND Status = 'Open';
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@SessionId", sessionId);
+                HrmsDatabase.AddParameter(command, "@DocumentId", documentId);
+                HrmsDatabase.AddParameter(command, "@RuleCode", ruleCode);
+                HrmsDatabase.AddParameter(command, "@Resolution", resolution);
+            });
+
     public static Task ResolveIssueAsync(
         ApplicationDbContext db,
         long sessionId,

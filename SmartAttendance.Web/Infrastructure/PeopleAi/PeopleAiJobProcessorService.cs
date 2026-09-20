@@ -695,9 +695,23 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 passportVisual.IssuingAuthority);
         }
 
+        if (isDeclaredPassport &&
+            (mrz is not null || hasStrongPassportVisualEvidence))
+        {
+            await PeopleAiReviewStore.ResolveDocumentRuleAutomaticallyAsync(
+                db,
+                input.SessionId,
+                input.DocumentId,
+                "PASSPORT_MRZ_NOT_FOUND",
+                mrz is not null
+                    ? "تمت قراءة MRZ بنجاح في إعادة المعالجة."
+                    : "تم استخراج بيانات الجواز المرئية بدرجة كافية للمراجعة.");
+        }
+
         if (mrz is null)
         {
-            if (isDeclaredPassport)
+            if (isDeclaredPassport &&
+                !hasStrongPassportVisualEvidence)
             {
                 await PeopleAiExtractionStore.AddValidationIssueAsync(
                     db,
@@ -707,9 +721,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                     "MRZ",
                     "Warning",
                     "MRZ",
-                    hasStrongPassportVisualEvidence
-                        ? "لم يتم العثور على MRZ صالح، لكن تم استخراج بيانات الجواز المرئية. يرجى التحقق منها أثناء المراجعة."
-                        : "لم يتم العثور على MRZ صالح في الجواز. يجب مراجعة المستند يدوياً.");
+                    "لم يتم العثور على MRZ صالح في الجواز، كما لم تكن البيانات المرئية كافية للاستخراج الآلي.");
             }
 
             if (hasStrongPassportVisualEvidence)
