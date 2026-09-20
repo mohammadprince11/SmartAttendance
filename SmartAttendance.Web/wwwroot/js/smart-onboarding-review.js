@@ -348,36 +348,76 @@
         return;
     }
 
-    const options = Array.from(department.options);
+    const normalizePositiveId = value => {
+        const parsed = Number.parseInt(
+            String(value ?? "").trim(),
+            10);
 
-    const syncDepartments = () => {
-        const branchId = branch.value;
-        const selected = department.value;
-        let selectedStillVisible = false;
+        return Number.isFinite(parsed) && parsed > 0
+            ? parsed
+            : 0;
+    };
 
-        for (const option of options) {
-            if (!option.value) {
+    // Keep an immutable source list. Rebuilding the native <select>
+    // avoids stale disabled options and makes the posted DepartmentId
+    // exactly match the option the reviewer selected.
+    const departmentOptions = Array
+        .from(department.options)
+        .map(option => option.cloneNode(true));
+
+    const syncDepartments = (resetSelection = false) => {
+        const branchId = normalizePositiveId(branch.value);
+        const previousValue = resetSelection
+            ? "0"
+            : String(department.value || "0");
+
+        const fragment = document.createDocumentFragment();
+
+        for (const sourceOption of departmentOptions) {
+            const option = sourceOption.cloneNode(true);
+            const optionId = normalizePositiveId(option.value);
+
+            // value=0 is the placeholder and must always stay usable.
+            if (optionId === 0) {
                 option.hidden = false;
                 option.disabled = false;
+                fragment.appendChild(option);
                 continue;
             }
 
-            const matches = option.dataset.branch === branchId;
-            option.hidden = !matches;
-            option.disabled = !matches;
+            const optionBranchId =
+                normalizePositiveId(option.dataset.branch);
 
-            if (matches && option.value === selected) {
-                selectedStillVisible = true;
+            if (branchId > 0 && optionBranchId === branchId) {
+                option.hidden = false;
+                option.disabled = false;
+                fragment.appendChild(option);
             }
         }
 
-        if (!selectedStillVisible) {
-            department.value = "0";
-        }
+        department.replaceChildren(fragment);
+
+        const previousStillAvailable = Array
+            .from(department.options)
+            .some(option =>
+                option.value === previousValue &&
+                !option.disabled);
+
+        department.value = previousStillAvailable
+            ? previousValue
+            : "0";
+
+        // No department can be valid before a work location is selected.
+        department.disabled = branchId === 0;
     };
 
-    branch.addEventListener("change", syncDepartments);
-    syncDepartments();
+    branch.addEventListener("change", () => {
+        syncDepartments(true);
+        department.dispatchEvent(
+            new Event("change", { bubbles: true }));
+    });
+
+    syncDepartments(false);
 
     const motherCountry =
         document.getElementById("sor-mother-country");
