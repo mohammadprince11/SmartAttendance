@@ -124,7 +124,7 @@
             x => $"{DocumentTypeFor(x)}\u001f{x.FieldKey}",
             StringComparer.OrdinalIgnoreCase)
         .Select(group => group
-            .OrderByDescending(x => x.ReviewStatus is "Accepted" or "Modified")
+            .OrderByDescending(x => x.ReviewStatus is "Accepted" or "Modified" or "Rejected")
             .ThenByDescending(x => !string.IsNullOrWhiteSpace(EffectiveValue(x)))
             .ThenByDescending(x => x.ValidationStatus == "Valid")
             .ThenByDescending(x => x.Id)
@@ -135,11 +135,15 @@
         .ToList();
 
     var reviewFields = semanticFields
-        .Where(x => x.ReviewStatus is not ("Accepted" or "Modified"))
+        .Where(x => x.ReviewStatus == "Pending")
         .ToList();
 
     var acceptedFields = semanticFields
         .Where(x => x.ReviewStatus is "Accepted" or "Modified")
+        .ToList();
+
+    var reviewStructuredRecords = Model.StructuredRecords
+        .Where(x => x.ReviewStatus == "Pending")
         .ToList();
 
     DateOnly? EffectiveDocumentExpiry(
@@ -226,6 +230,7 @@
     var hasActiveReviewWork =
         documentsToReview.Count > 0 ||
         reviewFields.Count > 0 ||
+        reviewStructuredRecords.Count > 0 ||
         openIssues.Count > 0 ||
         Model.DuplicateMatches.Count > 0;
 }
@@ -670,9 +675,9 @@
         }
 
 
-        @if (Model.StructuredRecords.Count > 0)
+        @if (reviewStructuredRecords.Count > 0)
         {
-            var pendingStructured = Model.StructuredRecords.Count(x => x.ReviewStatus == "Pending");
+            var pendingStructured = reviewStructuredRecords.Count;
             <section class="sor-card sor-cv-records">
                 <div class="sor-section-head">
                     <div>
@@ -687,7 +692,7 @@
                 </div>
 
                 <div class="sor-cv-record-list">
-                    @foreach (var record in Model.StructuredRecords)
+                    @foreach (var record in reviewStructuredRecords)
                     {
                         var recordLabel = record.RecordType switch
                         {
