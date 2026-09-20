@@ -357,7 +357,7 @@ public static class PassportVisualParser
 
         var text = Regex.Replace(
             value.Trim(),
-            @"s+",
+            @"\s+",
             " ");
         return text.Trim(' ', '/', '\\', '|', ':', ';');
     }

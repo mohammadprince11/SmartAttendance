@@ -46,6 +46,18 @@ public sealed class PassportVisualParserTests
         Assert.True(result.HasStrongIdentityEvidence);
     }
 
+    [Fact]
+    public void VisualNames_CollapseRepeatedWhitespace()
+    {
+        var result = PassportVisualParser.Parse(
+        [
+            L("Full Name", 100, 100, 300, 150),
+            L("MOHAMMED   ALI   ZAIDAN", 100, 155, 500, 220)
+        ]);
+
+        Assert.Equal("MOHAMMED ALI ZAIDAN", result.GivenNames);
+    }
+
     private static PassportVisualOcrLine L(
         string text, int x1, int y1, int x2, int y2) =>
         new(text, .95, [x1, y1, x2, y2]);
