@@ -401,6 +401,10 @@
             previousStillAvailable
                 ? previousValue
                 : "0";
+
+        if (typeof window.ZynoraRefreshSelectSystem === "function") {
+            window.ZynoraRefreshSelectSystem();
+        }
     };
 
     branch.addEventListener("change", () => {

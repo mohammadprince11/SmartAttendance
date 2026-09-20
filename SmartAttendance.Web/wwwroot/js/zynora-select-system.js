@@ -312,6 +312,7 @@
         panel.setAttribute("role", "listbox");
 
         Array.prototype.forEach.call(select.options, function (option, index) {
+            if (option.hidden) return;
             var item = document.createElement("button");
             item.type = "button";
             item.className = "nxcs-option";
