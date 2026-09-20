@@ -596,7 +596,8 @@ public sealed class SmartOnboardingReviewModel : PageModel
                     CompanyId,
                     context.Value.Access.Scope))
             .Any(x => x.Id == Finalize.DepartmentId &&
-                      x.BranchId == Finalize.BranchId &&
+                      (x.BranchId == 0 ||
+                       x.BranchId == Finalize.BranchId) &&
                       x.CompanyId == CompanyId &&
                       x.IsActive);
 

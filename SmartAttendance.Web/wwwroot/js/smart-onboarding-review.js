@@ -388,7 +388,15 @@
             const optionBranchId =
                 normalizePositiveId(option.dataset.branch);
 
-            if (branchId > 0 && optionBranchId === branchId) {
+            // BranchId=0 means an independent/company-level department.
+            // Show it for every valid work location, together with any
+            // department explicitly linked to the selected branch.
+            const matchesBranch =
+                branchId > 0 &&
+                (optionBranchId === 0 ||
+                 optionBranchId === branchId);
+
+            if (matchesBranch) {
                 option.hidden = false;
                 option.disabled = false;
                 fragment.appendChild(option);
@@ -396,6 +404,12 @@
         }
 
         department.replaceChildren(fragment);
+
+        if (typeof window.ZynoraRefreshSelectSystem === "function") {
+            window.requestAnimationFrame(() => {
+                window.ZynoraRefreshSelectSystem();
+            });
+        }
 
         const previousStillAvailable = Array
             .from(department.options)
