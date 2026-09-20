@@ -1042,17 +1042,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         }
         catch { RequireBiometricPunch = false; }
 
-        // رصيد الإجازات للوحة «إجراءاتي» — لوحة اختيارية لا تُسقط البوابة عند تعذّرها.
-        try
-        {
-            LeaveBalances = await LeaveBalanceCalculator.ForEmployeeAsync(
-                _dbContext, employeeId, DateTime.Now.Year);
-        }
-        catch
-        {
-            LeaveBalances = new();
-        }
-
         // أنواع الطلبات الداينمك (تبويبات + أنواع بضوابطها) لشاشة الإجازة.
         try
         {
@@ -1060,11 +1049,24 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             ReqCategories = await RequestTypeStore.ListCategoriesAsync(_dbContext, onlyActive: true);
             ReqTypes = await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true);
             ReqTypes = await FilterEligibleTypesAsync(ReqTypes, employeeId);
+
+            LeaveBalances = await CompanyLeavePolicyStore.GetBalanceSnapshotsAsync(
+                _dbContext, employeeId, DateOnly.FromDateTime(DateTime.Today));
+
+            var companyId = await HrmsDatabase.ScalarAsync<int>(
+                _dbContext,
+                "SELECT ISNULL(CompanyId,0) FROM Employees WHERE Id=@EmployeeId AND ISNULL(IsDeleted,0)=0;",
+                command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
+            LeavePolicies = companyId > 0
+                ? await CompanyLeavePolicyStore.ListForCompanyAsync(_dbContext, companyId, onlyActive: true)
+                : new();
         }
         catch
         {
             ReqCategories = new();
             ReqTypes = new();
+            LeaveBalances = new();
+            LeavePolicies = new();
         }
 
         // حقول «تعديل بياناتي» + طلبات التعديل المعلّقة (لعرضها بتبويب الطلبات مع تعديل/حذف).
@@ -1092,7 +1094,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         return RedirectToPage(new { tab = "requests" });
     }
 
-    public List<LeaveBalanceCalculator.TypeBalance> LeaveBalances { get; set; } = new();
+    public List<CompanyLeavePolicyStore.BalanceSnapshot> LeaveBalances { get; set; } = new();
+    public List<CompanyLeavePolicyStore.Policy> LeavePolicies { get; set; } = new();
     public List<RequestTypeStore.Category> ReqCategories { get; set; } = new();
     public List<RequestTypeStore.ReqType> ReqTypes { get; set; } = new();
     public List<DataChangeRequestStore.ProposedField> DataChangeFields { get; set; } = new();

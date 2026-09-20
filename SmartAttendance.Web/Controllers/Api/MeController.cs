@@ -87,18 +87,22 @@ WHERE e.Id = @Id;
         return Ok(mine);
     }
 
-    /// <summary>رصيد الإجازات (سنوي/مرضي) للسنة الحالية.</summary>
+    /// <summary>أرصدة الإجازات/المغادرات ذات الرصيد من سياسة الشركة الحالية.</summary>
     [HttpGet("leave-balance")]
     public async Task<IActionResult> LeaveBalance()
     {
         if (RequireEmployee() is { } bad) return bad;
-        var year = DateTime.Today.Year;
-        var balances = await LeaveBalanceCalculator.ForEmployeeAsync(_db, EmployeeId, year);
+        var balances = await CompanyLeavePolicyStore.GetBalanceSnapshotsAsync(
+            _db, EmployeeId, DateOnly.FromDateTime(DateTime.Today));
+
         return Ok(balances.Select(b => new
         {
-            type = b.Type.ToString(),
-            entitled = b.Entitled + b.CarriedOver,
-            used = b.Used,
+            requestTypeId = b.SourceRequestTypeId,
+            type = b.RequestTypeName,
+            category = b.CategoryName,
+            unit = b.Unit,
+            entitled = b.Entitlement,
+            used = b.Reserved,
             remaining = b.Remaining
         }));
     }

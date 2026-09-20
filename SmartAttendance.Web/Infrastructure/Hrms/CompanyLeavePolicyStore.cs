@@ -38,6 +38,15 @@ public static class CompanyLeavePolicyStore
     public sealed record ValidationResult(bool Ok, string Message, decimal Entitlement = 0m,
         decimal Reserved = 0m, decimal Requested = 0m, decimal RemainingAfter = 0m, string Unit = "Days");
 
+    public sealed record BalanceSnapshot(
+        int SourceRequestTypeId,
+        string RequestTypeName,
+        string CategoryName,
+        decimal Entitlement,
+        decimal Reserved,
+        decimal Remaining,
+        string Unit);
+
     private sealed record StoredPolicy(int RequestTypeId, bool RequiresBalance, decimal? EntitlementAmount,
         bool AllowNegative, int? BalanceSourceRequestTypeId, decimal HoursPerDayOverride, string BalanceUnit,
         decimal? NegativeLimitAmount, decimal? MaxPerRequestAmount, decimal? MaxPerYearAmount,
@@ -239,6 +248,55 @@ VALUES
 
         return new(true, string.Empty, lastEntitlement, lastReserved, grandRequested,
             lastRemaining, sourcePolicy.BalanceUnit);
+    }
+
+    public static async Task<List<BalanceSnapshot>> GetBalanceSnapshotsAsync(
+        ApplicationDbContext db,
+        int employeeId,
+        DateOnly asOf)
+    {
+        var facts = await LoadEmployeeFactsAsync(db, employeeId);
+        if (facts.CompanyId <= 0) return new();
+
+        await RequestTypeStore.EnsureAsync(db);
+        var types = await RequestTypeStore.ListTypesAsync(db, onlyActive: false);
+        var policies = await BuildPolicyMapAsync(db, facts.CompanyId, types);
+        var usage = await LoadUsageAsync(db, employeeId, currentRequestId: 0, asOf.Year);
+
+        var sourceIds = policies.Values
+            .Where(policy => policy.RequiresBalance)
+            .Select(policy => policy.BalanceSourceRequestTypeId ?? policy.RequestTypeId)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToList();
+
+        var result = new List<BalanceSnapshot>();
+        foreach (var sourceId in sourceIds)
+        {
+            if (!policies.TryGetValue(sourceId, out var sourcePolicy))
+                continue;
+
+            var entitlement = CalculateAccruedEntitlement(sourcePolicy, facts.HireDate, asOf);
+            entitlement += await CalculateCarryForwardAsync(
+                db, employeeId, facts, sourcePolicy, sourceId, policies, types, asOf);
+
+            var reserved = await SumUsageForSourceAsync(
+                db, employeeId, facts.CompanyId, sourceId, usage, policies, types);
+
+            result.Add(new BalanceSnapshot(
+                sourceId,
+                sourcePolicy.RequestTypeName,
+                sourcePolicy.CategoryName,
+                entitlement,
+                reserved,
+                entitlement - reserved,
+                sourcePolicy.BalanceUnit));
+        }
+
+        return result
+            .OrderBy(snapshot => snapshot.CategoryName)
+            .ThenBy(snapshot => snapshot.RequestTypeName)
+            .ToList();
     }
 
     private static List<RequestSlice> ExpandAcrossYears(IReadOnlyList<RequestSlice> requests)

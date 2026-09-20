@@ -111,10 +111,11 @@
                         {
                             @foreach (var b in Model.LeaveBalances)
                             {
+                                var unitLabel = b.Unit == "Hours" ? "ساعة" : "يوم";
                                 <div class="nxex-balance-item">
                                     <strong>@b.Remaining.ToString("0.#")</strong>
-                                    <span>@IndexModel.LeaveTypeArabic(b.Type)</span>
-                                    <small>من @b.Entitled.ToString("0.#") يوم</small>
+                                    <span>@b.RequestTypeName</span>
+                                    <small>من @b.Entitlement.ToString("0.#") @unitLabel</small>
                                 </div>
                             }
                         }
@@ -923,10 +924,13 @@
 
     @* ===== شاشة طلب الإجازة المنبثقة (منفصلة عن الاستوديو القديم) ===== *@
     @{
-        var annualRemaining = Model.LeaveBalances
-            .FirstOrDefault(b => b.Type == SmartAttendance.Domain.Enums.LeaveType.Annual)?.Remaining ?? 0m;
-        var sickRemaining = Model.LeaveBalances
-            .FirstOrDefault(b => b.Type == SmartAttendance.Domain.Enums.LeaveType.Sick)?.Remaining ?? 0m;
+        CompanyLeavePolicyStore.BalanceSnapshot? BalanceFor(RequestTypeStore.ReqType type)
+        {
+            var policy = Model.LeavePolicies.FirstOrDefault(p => p.RequestTypeId == type.Id);
+            if (policy is null || !policy.RequiresBalance) return null;
+            var sourceId = policy.BalanceSourceRequestTypeId ?? policy.RequestTypeId;
+            return Model.LeaveBalances.FirstOrDefault(b => b.SourceRequestTypeId == sourceId);
+        }
     }
     <div class="nxex-modal-backdrop" id="nxex-leave-backdrop" hidden></div>
     <div class="nxex-modal" id="nxex-leave-modal" role="dialog" aria-label="طلب إجازة" hidden>
@@ -938,11 +942,15 @@
         @{
             string BalanceSmall(RequestTypeStore.ReqType t)
             {
-                if (t.Name == "إجازة سنوية") return annualRemaining <= 0 ? "لا يوجد رصيد" : $"المتبقّي {annualRemaining:0.#} يوم";
-                if (t.Name == "إجازة مرضية") return $"المتبقّي {sickRemaining:0.#} يوم";
+                var balance = BalanceFor(t);
+                if (balance is not null)
+                {
+                    var unit = balance.Unit == "Hours" ? "ساعة" : "يوم";
+                    return $"المتبقّي {balance.Remaining:0.#} {unit}";
+                }
                 return t.AllowedDays.HasValue ? $"حتى {t.AllowedDays} يوم" : string.Empty;
             }
-            bool TypeDisabled(RequestTypeStore.ReqType t) => t.Name == "إجازة سنوية" && annualRemaining <= 0;
+            bool TypeDisabled(RequestTypeStore.ReqType t) => false;
         }
 
         <div class="nxex-modal-tabs">
