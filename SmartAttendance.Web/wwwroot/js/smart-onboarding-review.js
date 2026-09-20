@@ -50,43 +50,22 @@
         previewDialog?.querySelector("[data-review-preview-title]");
 
     if (previewDialog && previewFrame) {
-        const fitImageDocument = () => {
-            try {
-                const doc = previewFrame.contentDocument;
-                const image = doc?.querySelector("img");
-                if (!doc || !image) return;
-
-                doc.documentElement.style.inlineSize = "100%";
-                doc.documentElement.style.blockSize = "100%";
-                doc.documentElement.style.margin = "0";
-                doc.documentElement.style.overflow = "hidden";
-
-                if (doc.body) {
-                    doc.body.style.inlineSize = "100%";
-                    doc.body.style.blockSize = "100%";
-                    doc.body.style.margin = "0";
-                    doc.body.style.display = "flex";
-                    doc.body.style.alignItems = "center";
-                    doc.body.style.justifyContent = "center";
-                    doc.body.style.overflow = "hidden";
-                }
-
-                image.style.display = "block";
-                image.style.inlineSize = "auto";
-                image.style.blockSize = "auto";
-                image.style.maxInlineSize = "100%";
-                image.style.maxBlockSize = "100%";
-                image.style.objectFit = "contain";
-                image.style.margin = "auto";
-            } catch {
-                // PDFs and browser-native viewers do not need image fitting.
-            }
-        };
-
-        previewFrame.addEventListener("load", fitImageDocument);
-
+        let previewImage =
+            previewDialog.querySelector("[data-review-preview-image]");
+        if (!previewImage) {
+            const body = previewDialog.querySelector(".sor-preview-body");
+            previewImage = document.createElement("img");
+            previewImage.setAttribute("data-review-preview-image", "");
+            previewImage.className = "sor-preview-image";
+            previewImage.alt = "معاينة المستند المحمي";
+            previewImage.hidden = true;
+            body?.prepend(previewImage);
+        }
         const closePreview = () => {
             previewFrame.src = "about:blank";
+            previewFrame.hidden = false;
+            previewImage.removeAttribute("src");
+            previewImage.hidden = true;
             if (previewDialog.open) {
                 previewDialog.close();
             }
@@ -99,12 +78,26 @@
                 const url = openButton.dataset.previewUrl;
                 if (!url) return;
 
+                const previewName =
+                    openButton.dataset.previewName || "معاينة المستند";
                 if (previewTitle) {
-                    previewTitle.textContent =
-                        openButton.dataset.previewName ||
-                        "معاينة المستند";
+                    previewTitle.textContent = previewName;
                 }
-                previewFrame.src = url;
+
+                const isImage = /\.(png|jpe?g|webp)$/i.test(previewName);
+                if (isImage) {
+                    previewFrame.src = "about:blank";
+                    previewFrame.hidden = true;
+                    previewImage.src = url;
+                    previewImage.alt = previewName;
+                    previewImage.hidden = false;
+                } else {
+                    previewImage.removeAttribute("src");
+                    previewImage.hidden = true;
+                    previewFrame.hidden = false;
+                    previewFrame.src = url;
+                }
+
                 previewDialog.showModal();
                 return;
             }
@@ -123,6 +116,9 @@
         });
         previewDialog.addEventListener("close", () => {
             previewFrame.src = "about:blank";
+            previewFrame.hidden = false;
+            previewImage.removeAttribute("src");
+            previewImage.hidden = true;
         });
     }
 

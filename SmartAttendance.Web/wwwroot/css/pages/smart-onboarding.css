@@ -371,12 +371,27 @@
 .so-preview-body{
     min-block-size:0;
     padding:var(--sp-2);
-    background:var(--color-background)
+    background:var(--color-background);
+    overflow:hidden;
+    display:grid;
+    place-items:center
 }
+.so-preview-body [hidden]{display:none!important}
 .so-preview-body iframe{
     inline-size:100%;
     block-size:100%;
     min-block-size:520px;
+    border:1px solid var(--color-border);
+    border-radius:var(--radius);
+    background:var(--color-surface)
+}
+.so-preview-image{
+    display:block;
+    inline-size:auto;
+    block-size:auto;
+    max-inline-size:100%;
+    max-block-size:100%;
+    object-fit:contain;
     border:1px solid var(--color-border);
     border-radius:var(--radius);
     background:var(--color-surface)

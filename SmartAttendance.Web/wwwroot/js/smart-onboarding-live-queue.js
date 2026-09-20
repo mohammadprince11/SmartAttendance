@@ -230,43 +230,22 @@
 
         if (!dialog || !frame) return;
 
-        const fitImageDocument = () => {
-            try {
-                const doc = frame.contentDocument;
-                const image = doc?.querySelector("img");
-                if (!doc || !image) return;
-
-                doc.documentElement.style.inlineSize = "100%";
-                doc.documentElement.style.blockSize = "100%";
-                doc.documentElement.style.margin = "0";
-                doc.documentElement.style.overflow = "hidden";
-
-                if (doc.body) {
-                    doc.body.style.inlineSize = "100%";
-                    doc.body.style.blockSize = "100%";
-                    doc.body.style.margin = "0";
-                    doc.body.style.display = "flex";
-                    doc.body.style.alignItems = "center";
-                    doc.body.style.justifyContent = "center";
-                    doc.body.style.overflow = "hidden";
-                }
-
-                image.style.display = "block";
-                image.style.inlineSize = "auto";
-                image.style.blockSize = "auto";
-                image.style.maxInlineSize = "100%";
-                image.style.maxBlockSize = "100%";
-                image.style.objectFit = "contain";
-                image.style.margin = "auto";
-            } catch {
-                // PDFs and browser-native viewers do not need image fitting.
-            }
-        };
-
-        frame.addEventListener("load", fitImageDocument);
+        let image = dialog.querySelector("[data-preview-image]");
+        if (!image) {
+            const body = dialog.querySelector(".so-preview-body");
+            image = document.createElement("img");
+            image.setAttribute("data-preview-image", "");
+            image.className = "so-preview-image";
+            image.alt = "معاينة المستند المحمي";
+            image.hidden = true;
+            body?.prepend(image);
+        }
 
         const closePreview = () => {
             frame.src = "about:blank";
+            frame.hidden = false;
+            image.removeAttribute("src");
+            image.hidden = true;
             if (dialog.open) {
                 dialog.close();
             }
@@ -278,12 +257,26 @@
                 const url = openButton.dataset.previewUrl;
                 if (!url) return;
 
+                const previewName =
+                    openButton.dataset.previewName || "معاينة المستند";
                 if (title) {
-                    title.textContent =
-                        openButton.dataset.previewName || "معاينة المستند";
+                    title.textContent = previewName;
                 }
 
-                frame.src = url;
+                const isImage = /\.(png|jpe?g|webp)$/i.test(previewName);
+                if (isImage) {
+                    frame.src = "about:blank";
+                    frame.hidden = true;
+                    image.src = url;
+                    image.alt = previewName;
+                    image.hidden = false;
+                } else {
+                    image.removeAttribute("src");
+                    image.hidden = true;
+                    frame.hidden = false;
+                    frame.src = url;
+                }
+
                 dialog.showModal();
                 return;
             }
@@ -306,6 +299,9 @@
 
         dialog.addEventListener("close", () => {
             frame.src = "about:blank";
+            frame.hidden = false;
+            image.removeAttribute("src");
+            image.hidden = true;
         });
     }
 
