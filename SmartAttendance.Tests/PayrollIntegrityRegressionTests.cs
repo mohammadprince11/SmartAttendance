@@ -108,6 +108,22 @@ public sealed class PayrollIntegrityRegressionTests
     }
 
     [Fact]
+    public void End_of_service_is_policy_driven_and_company_scoped()
+    {
+        var root = FindRoot();
+        var store = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "EndOfServiceStore.cs"));
+        var provision = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "ProvisionCalculator.cs"));
+        var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Payroll", "EndOfService.cshtml.cs"));
+
+        Assert.DoesNotContain("DefaultTiers", store);
+        Assert.Contains("EndOfServicePolicy.Compute", store);
+        Assert.Contains("ISNULL(e.CompanyId, 0) AS CompanyId", provision);
+        Assert.DoesNotContain("ISNULL(b.CompanyId, 0) AS CompanyId", provision);
+        Assert.Contains("EndOfServicePolicy.LoadAsync", provision);
+        Assert.Contains("EndOfServicePolicy.LoadAsync", page);
+    }
+
+    [Fact]
     public void Payslip_delivery_and_reversal_are_idempotent_by_contract()
     {
         var root = FindRoot();

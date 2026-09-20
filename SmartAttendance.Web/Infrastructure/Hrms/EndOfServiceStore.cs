@@ -4,35 +4,31 @@ using SmartAttendance.Web.Infrastructure.Security;
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 /// <summary>
-/// تسويات نهاية الخدمة (مطابقة كيان «نهاية الخدمة / STB») — تحسب مكافأة نهاية الخدمة
-/// بشرائح سنوات الخدمة (EndOfServiceRule.Tiers) على آخر راتب أساسي، مضافاً إليها بدل
-/// رصيد الإجازات ومستحقات أخرى، ناقصاً الاقتطاعات = صافي التسوية. نمط self-healing.
-/// ⚠️ الشرائح الافتراضية تقريبية «تحتاج تأكيد محاسب/قانون العمل العراقي».
+/// تسويات نهاية الخدمة (نهاية الخدمة / STB). مبلغ المكافأة لا يعتمد أي شرائح
+/// قانونية مخمّنة داخل الكود؛ معدل الأسابيع لكل سنة يأتي صراحةً من سياسة الشركة،
+/// والأهلية/المضاعف يحددهما سياق التسوية.
 /// </summary>
 public static class EndOfServiceStore
 {
-    /// <summary>شرائح المكافأة الافتراضية: أشهر لكل سنة خدمة ضمن مدى السنوات (نمط EndOfServiceRule.Tiers).</summary>
-    private static readonly (decimal From, decimal To, decimal MonthsPerYear)[] DefaultTiers =
+    /// <summary>
+    /// يحسب مكافأة نهاية الخدمة من معدل أسابيع/سنة صريح. لا تفترض هذه الدالة
+    /// الأهلية القانونية؛ المستدعي يقرر الأهلية والمضاعف قبل الحساب.
+    /// </summary>
+    public static (decimal Gratuity, string Breakdown) ComputeGratuity(
+        decimal years,
+        decimal monthlyBasis,
+        decimal weeksPerYear,
+        decimal multiplier = 1m)
     {
-        (0m, 5m, 0.5m),      // أول 5 سنوات: نصف شهر عن كل سنة
-        (5m, 9999m, 1.0m),   // ما بعد 5 سنوات: شهر عن كل سنة
-    };
+        var amount = EndOfServicePolicy.Compute(
+            years, monthlyBasis, weeksPerYear, multiplier);
 
-    /// <summary>مكافأة نهاية الخدمة بالشرائح على آخر أساسي شهري + وصف نصّي للتفصيل.</summary>
-    public static (decimal Gratuity, string Breakdown) ComputeGratuity(decimal years, decimal monthlyBasic)
-    {
-        decimal total = 0;
-        var parts = new List<string>();
-        foreach (var t in DefaultTiers)
-        {
-            if (years <= t.From) continue;
-            var yearsInTier = Math.Min(years, t.To) - t.From;
-            if (yearsInTier <= 0) continue;
-            var amt = Math.Round(yearsInTier * t.MonthsPerYear * monthlyBasic, 2);
-            total += amt;
-            parts.Add($"{yearsInTier:0.##}س × {t.MonthsPerYear:0.##} شهر");
-        }
-        return (Math.Round(total, 2), parts.Count > 0 ? string.Join(" + ", parts) : "—");
+        if (amount <= 0m)
+            return (0m, "—");
+
+        return (
+            amount,
+            $"{years:0.##}س × {weeksPerYear:0.##} أسبوع/سنة × {multiplier:0.##}");
     }
 
     public static decimal YearsOfService(DateOnly start, DateOnly end)
@@ -104,6 +100,7 @@ END;
     public sealed class EmployeeInfo
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
         public string No { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public decimal Basic { get; set; }
@@ -119,7 +116,7 @@ END;
         return await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
-SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
+SELECT e.Id, ISNULL(e.CompanyId, 0) AS CompanyId, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary, COALESCE(e.HireDate, e.JoiningDate) AS HireDate
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
@@ -130,6 +127,7 @@ ORDER BY e.FullName;
             reader => new EmployeeInfo
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 No = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 Name = HrmsDatabase.GetString(reader, "FullName"),
                 Basic = reader["BasicSalary"] is decimal b ? b : 0,

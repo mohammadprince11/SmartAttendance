@@ -65,6 +65,7 @@ public class SettingsModel : PageModel
     public string SalaryDaysBasis { get; set; } = PayrollDivisorPolicy.BasisFixed30;
     /// <summary>الساعات المعيارية لليوم (مقام الأجر الساعي).</summary>
     public decimal StandardDailyHours { get; set; } = PayrollDivisorPolicy.DefaultDailyHours;
+    public EndOfServicePolicy.Policy EndOfServiceCalculationPolicy { get; set; } = EndOfServicePolicy.Policy.Default;
 
     /// <summary>وعاء الضمان/الضريبة: "Prorated" (القديم) أو "FullBasic" (على الأساسي الكامل).</summary>
     public string GosiTaxBaseMode { get; set; } = "Prorated";
@@ -94,6 +95,9 @@ public class SettingsModel : PageModel
             await GetSettingAsync(PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30));
         StandardDailyHours = PayrollDivisorPolicy.DailyHours(
             await GetSettingAsync(PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+        EndOfServiceCalculationPolicy = CompanyId is > 0
+            ? await EndOfServicePolicy.LoadAsync(_db, CompanyId.Value)
+            : EndOfServicePolicy.Policy.Default;
         GosiTaxBaseMode = (await GetSettingAsync("Payroll.GosiTaxBase", "Prorated")) == "FullBasic"
             ? "FullBasic" : "Prorated";
 
@@ -280,6 +284,37 @@ public class SettingsModel : PageModel
             $"سياسات الأوعية: أوفرتايم = {ModeLabel(otMode)} · إجازة غير مدفوعة = {ModeLabel(ulMode)} · "
             + $"مقام الأيام = {basisLabel} · ساعات اليوم = {hours:0.##}. تُطبَّق بالمسير القادم.";
         return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostSaveEndOfServicePolicyAsync(
+        bool eosAutoCalculationEnabled,
+        string? eosWeeksPerYear)
+    {
+        if (!await CanWriteCompanyAsync()) return Forbid();
+
+        if (!decimal.TryParse(
+                eosWeeksPerYear,
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var weeks)
+            || weeks <= 0m
+            || weeks > 52m)
+        {
+            TempData["PayrollMessage"] = "عدد أسابيع مكافأة نهاية الخدمة لكل سنة يجب أن يكون أكبر من صفر ولا يتجاوز 52.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage(new { companyId = CompanyId });
+        }
+
+        await TrackAsync(EndOfServicePolicy.AutoEnabledKey, eosAutoCalculationEnabled.ToString());
+        await TrackAsync(
+            EndOfServicePolicy.WeeksPerYearKey,
+            weeks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        TempData["PayrollMessage"] = eosAutoCalculationEnabled
+            ? $"حُفظت سياسة نهاية الخدمة: الحساب التلقائي مفعّل بمعدل {weeks:0.##} أسبوع/سنة. الأهلية والمضاعف يُحددان لكل تسوية."
+            : $"حُفظت سياسة نهاية الخدمة: الحساب التلقائي معطّل. القيمة المرجعية {weeks:0.##} أسبوع/سنة محفوظة للاستخدام عند التفعيل.";
+        TempData["PayrollOk"] = true;
+        return RedirectToPage(new { companyId = CompanyId });
     }
 
     /// <summary>

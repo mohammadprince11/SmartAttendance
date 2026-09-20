@@ -33,6 +33,7 @@ public class EndOfServiceModel : PageModel
 
     public List<EndOfServiceStore.Settlement> Items { get; set; } = new();
     public List<EndOfServiceStore.EmployeeInfo> Employees { get; set; } = new();
+    public Dictionary<int, EndOfServicePolicy.Policy> CompanyPolicies { get; set; } = new();
 
     public int TotalCount { get; set; }
     public int DraftCount { get; set; }
@@ -53,6 +54,8 @@ public class EndOfServiceModel : PageModel
         TotalCount = Items.Count;
 
         Employees = await EndOfServiceStore.EmployeeInfosAsync(_db, scope);
+        foreach (var companyId in Employees.Select(e => e.CompanyId).Where(id => id > 0).Distinct())
+            CompanyPolicies[companyId] = await EndOfServicePolicy.LoadAsync(_db, companyId);
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -74,9 +77,47 @@ public class EndOfServiceModel : PageModel
         if (end <= start) { TempData["PayrollMessage"] = "آخر يوم عمل يجب أن يكون بعد بدء الخدمة."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (lastBasic <= 0) { TempData["PayrollMessage"] = "آخر راتب أساسي يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
-        // كل الحسابات بالسيرفر
+        // كل الحسابات المالية بالسيرفر. الأهلية لا تُستنتج من نص سبب الانتهاء:
+        // المادة 45 لها استثناءات، لذلك القرار صريح لكل تسوية.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var employee = (await EndOfServiceStore.EmployeeInfosAsync(_db, scope))
+            .FirstOrDefault(item => item.Id == empId);
+        if (employee is null)
+        {
+            TempData["PayrollMessage"] = "لا صلاحية على هذا الموظف.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var eosPolicy = await EndOfServicePolicy.LoadAsync(_db, employee.CompanyId);
+        var gratuityEligible = f["GratuityEligible"] == "true";
+        var multiplier = Dec("GratuityMultiplier") == 2m ? 2m : 1m;
+        var manualGratuity = Math.Max(0m, Dec("ManualGratuityAmount"));
+
         var years = EndOfServiceStore.YearsOfService(start.Value, end.Value);
-        var (gratuity, _) = EndOfServiceStore.ComputeGratuity(years, lastBasic);
+        decimal gratuity;
+        if (!gratuityEligible)
+        {
+            gratuity = 0m;
+        }
+        else if (eosPolicy.AutoCalculationEnabled)
+        {
+            gratuity = EndOfServiceStore.ComputeGratuity(
+                years, lastBasic, eosPolicy.WeeksPerYear, multiplier).Gratuity;
+        }
+        else
+        {
+            if (manualGratuity <= 0m)
+            {
+                TempData["PayrollMessage"] =
+                    "الحساب التلقائي لمكافأة نهاية الخدمة غير مفعّل لهذه الشركة. أدخل مبلغ المكافأة يدوياً أو فعّل سياسة الشركة.";
+                TempData["PayrollOk"] = false;
+                return RedirectToPage();
+            }
+
+            gratuity = manualGratuity;
+        }
+
         var dailyRate = Math.Round(lastBasic / 30m, 4);
         var leaveEnc = Math.Round(leaveDays * dailyRate, 2);
         var net = Math.Round(gratuity + leaveEnc + otherDues - deductions, 2);
@@ -108,7 +149,6 @@ public class EndOfServiceModel : PageModel
             Status = "Draft"
         };
 
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         try
         {
             await EndOfServiceStore.SaveAsync(_db, scope, s, User?.Identity?.Name ?? "system");

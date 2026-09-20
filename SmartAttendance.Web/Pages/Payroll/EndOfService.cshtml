@@ -4,7 +4,8 @@
 
 @{
     ViewData["Title"] = "نهاية الخدمة";
-    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.No, e.Name, e.Basic, Hire = e.HireDate?.ToString("yyyy-MM-dd") ?? "" }));
+    var empJson = JsonSerializer.Serialize(Model.Employees.Select(e => new { e.Id, e.CompanyId, e.No, e.Name, e.Basic, Hire = e.HireDate?.ToString("yyyy-MM-dd") ?? "" }));
+    var policyJson = JsonSerializer.Serialize(Model.CompanyPolicies);
     string J(object o) => JsonSerializer.Serialize(o);
     string Dt(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
 }
@@ -17,7 +18,7 @@
     <header class="es-head">
         <div>
             <h1>🧾 نهاية الخدمة</h1>
-            <p>مكافأة نهاية الخدمة بشرائح سنوات الخدمة + بدل رصيد الإجازات + مستحقات − اقتطاعات = صافي التسوية.</p>
+            <p>تسوية نهاية الخدمة حسب سياسة الشركة + بدل رصيد الإجازات + مستحقات − اقتطاعات = صافي التسوية.</p>
         </div>
         <div class="zyu-d0cb022ba49e">
             <button type="button" class="es-btn" onclick="esOpen(0)">+ تسوية نهاية خدمة</button>
@@ -98,7 +99,7 @@
                                         </form>
                                         <button type="button" class="es-btn ghost sm" onclick="esEdit(this)" data-es="@J(new {
                                             s.Id, s.EmployeeId, ServiceStartDate=Dt(s.ServiceStartDate), LastWorkingDate=Dt(s.LastWorkingDate),
-                                            s.LastBasic, s.Reason, s.LeaveBalanceDays, s.OtherDues, s.Deductions, s.Note })">تعديل</button>
+                                            s.LastBasic, s.Reason, s.GratuityAmount, s.LeaveBalanceDays, s.OtherDues, s.Deductions, s.Note })">تعديل</button>
                                         <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف التسوية؟">
                                             <input type="hidden" name="id" value="@s.Id" />
                                             <button type="submit" class="es-btn danger sm">حذف</button>
@@ -156,6 +157,24 @@
                     </label>
                 </div>
 
+                <label class="zyu-95e15889185d">
+                    <input type="checkbox" name="GratuityEligible" value="true" id="es-GratuityEligible" onchange="esCalc()" />
+                    تأكيد استحقاق مكافأة نهاية الخدمة لهذه الحالة
+                </label>
+                <div class="es-grid2">
+                    <label>مضاعف المكافأة
+                        <select name="GratuityMultiplier" id="es-GratuityMultiplier" onchange="esCalc()">
+                            <option value="1">1× — الحالة القياسية</option>
+                            <option value="2">2× — عند وجود أساس معتمد للمضاعفة</option>
+                        </select>
+                    </label>
+                    <label id="es-manual-wrap">مبلغ المكافأة اليدوي
+                        <input type="number" name="ManualGratuityAmount" id="es-ManualGratuityAmount"
+                               min="0" step="0.01" value="0" oninput="esCalc()" />
+                    </label>
+                </div>
+                <small id="es-policy-note">اختر الموظف لعرض سياسة الشركة.</small>
+
                 <div class="es-grid2">
                     <label>رصيد الإجازات (أيام)<input type="number" name="LeaveBalanceDays" id="es-LeaveBalanceDays" step="0.5" min="0" value="0" oninput="esCalc()" /></label>
                     <label>مستحقات أخرى<input type="number" name="OtherDues" id="es-OtherDues" step="0.01" min="0" value="0" oninput="esCalc()" /></label>
@@ -172,7 +191,7 @@
                     <div class="row"><span>ناقص: اقتطاعات</span><b id="es-c-ded" class="zyu-94c76e9c8583">0</b></div>
                     <div class="row total"><span>صافي التسوية</span><b id="es-c-net">0</b></div>
                 </div>
-                <div class="es-warn">⚠️ شرائح المكافأة الافتراضية (½ شهر/سنة لأول 5 سنوات، شهر/سنة بعدها) تقريبية — أكّدها مع المحاسب وقانون العمل قبل الاعتماد.</div>
+                <div class="es-warn">⚠️ أهلية مكافأة نهاية الخدمة والمضاعف يجب تأكيدهما لكل حالة. الحساب التلقائي لا يعمل إلا بعد تفعيل سياسة الشركة.</div>
 
                 <label>ملاحظة<textarea name="Note" id="es-Note" rows="2"></textarea></label>
 
@@ -186,8 +205,7 @@
     <script src="~/js/emp-picker.js" asp-append-version="true"></script>
     <script>
         var ES_EMP = @Html.Raw(empJson);
-        // شرائح المكافأة (مطابقة للسيرفر EndOfServiceStore.DefaultTiers)
-        var ES_TIERS = [ {from:0, to:5, mpy:0.5}, {from:5, to:9999, mpy:1.0} ];
+        var ES_POLICIES = @Html.Raw(policyJson);
 
         function fmt(n){ return (Math.round(n*100)/100).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
@@ -213,16 +231,37 @@
             if (isNaN(s) || isNaN(e) || e <= s) return 0;
             return Math.round(((e - s) / (1000*60*60*24) / 365.25) * 100) / 100;
         }
+        function esCurrentPolicy(){
+            var empId = parseInt(document.getElementById('es-EmployeeId').value || '0');
+            var emp = ES_EMP.find(function(x){ return x.Id === empId; });
+            var policy = emp ? ES_POLICIES[String(emp.CompanyId)] : null;
+            return policy || { AutoCalculationEnabled:false, WeeksPerYear:2 };
+        }
+
         function esGratuity(years, monthly){
-            var total = 0, parts = [];
-            ES_TIERS.forEach(function(t){
-                if (years <= t.from) return;
-                var yit = Math.min(years, t.to) - t.from;
-                if (yit <= 0) return;
-                total += yit * t.mpy * monthly;
-                parts.push(fmt(yit) + 'س × ' + fmt(t.mpy) + ' شهر');
-            });
-            return { total: Math.round(total*100)/100, breakdown: parts.length ? parts.join(' + ') : '—' };
+            var eligible = document.getElementById('es-GratuityEligible').checked;
+            var policy = esCurrentPolicy();
+            var manualWrap = document.getElementById('es-manual-wrap');
+            manualWrap.hidden = !!policy.AutoCalculationEnabled;
+
+            document.getElementById('es-policy-note').textContent = policy.AutoCalculationEnabled
+                ? ('سياسة الشركة: حساب تلقائي · ' + fmt(policy.WeeksPerYear) + ' أسبوع/سنة.')
+                : 'سياسة الشركة: الحساب التلقائي معطّل — أدخل مبلغ المكافأة يدوياً عند تأكيد الاستحقاق.';
+
+            if (!eligible) return { total:0, breakdown:'غير مستحق/لم يتم تأكيد الاستحقاق' };
+
+            if (!policy.AutoCalculationEnabled){
+                var manual = parseFloat(document.getElementById('es-ManualGratuityAmount').value) || 0;
+                return { total:Math.round(manual*100)/100, breakdown:'مبلغ يدوي' };
+            }
+
+            var multiplier = parseFloat(document.getElementById('es-GratuityMultiplier').value) || 1;
+            var daysPerYear = (policy.WeeksPerYear || 0) * 7;
+            var total = years * daysPerYear * (monthly / 30) * multiplier;
+            return {
+                total:Math.round(total*100)/100,
+                breakdown:fmt(years) + 'س × ' + fmt(policy.WeeksPerYear) + ' أسبوع/سنة × ' + fmt(multiplier)
+            };
         }
 
         function esCalc(){
@@ -238,7 +277,7 @@
 
             document.getElementById('es-c-years').textContent = fmt(years);
             document.getElementById('es-c-gratuity').textContent = fmt(g.total);
-            document.getElementById('es-c-breakdown').textContent = g.breakdown === '—' ? '—' : ('التفصيل: ' + g.breakdown + ' × آخر أساسي');
+            document.getElementById('es-c-breakdown').textContent = g.breakdown === '—' ? '—' : ('التفصيل: ' + g.breakdown);
             document.getElementById('es-c-leave').textContent = fmt(leaveEnc);
             document.getElementById('es-c-other').textContent = fmt(other);
             document.getElementById('es-c-ded').textContent = '−' + fmt(ded);
@@ -257,7 +296,9 @@
             document.getElementById('es-Id').value = id || 0;
             document.getElementById('es-title').textContent = id ? 'تعديل تسوية' : 'تسوية نهاية خدمة';
             esPicker.set(null);
-            ['es-LeaveBalanceDays','es-OtherDues','es-Deductions'].forEach(function(x){ document.getElementById(x).value = '0'; });
+            ['es-LeaveBalanceDays','es-OtherDues','es-Deductions','es-ManualGratuityAmount'].forEach(function(x){ document.getElementById(x).value = '0'; });
+            document.getElementById('es-GratuityEligible').checked = false;
+            document.getElementById('es-GratuityMultiplier').value = '1';
 
             if (id && d){
                 var emp = ES_EMP.find(function(x){ return x.Id === d.EmployeeId; });
@@ -269,6 +310,8 @@
                 setVal('es-LastWorkingDate', d.LastWorkingDate);
                 setVal('es-LastBasic', d.LastBasic);
                 setVal('es-Reason', d.Reason || '');
+                document.getElementById('es-GratuityEligible').checked = (d.GratuityAmount || 0) > 0;
+                setVal('es-ManualGratuityAmount', d.GratuityAmount || 0);
                 setVal('es-LeaveBalanceDays', d.LeaveBalanceDays);
                 setVal('es-OtherDues', d.OtherDues);
                 setVal('es-Deductions', d.Deductions);

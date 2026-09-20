@@ -59,7 +59,7 @@ public static class ProvisionCalculator
 SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(d.Name, N'') AS DepartmentName, ISNULL(b.Name, N'') AS BranchName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary, COALESCE(e.HireDate, e.JoiningDate) AS HireDate,
-       ISNULL(b.CompanyId, 0) AS CompanyId
+       ISNULL(e.CompanyId, 0) AS CompanyId
 FROM Employees e
 LEFT JOIN Departments d ON d.Id = e.DepartmentId
 LEFT JOIN Branches b ON b.Id = e.BranchId
@@ -149,6 +149,10 @@ ORDER BY e.EmployeeNo;
         var defaultAnnual = IraqiLeavePolicy.GetDefaultEntitlement(Domain.Enums.LeaveType.Annual) ?? 0;
         var result = new Result();
 
+        var eosPolicies = new Dictionary<int, EndOfServicePolicy.Policy>();
+        foreach (var company in employees.Select(e => e.CompanyId).Where(id => id > 0).Distinct())
+            eosPolicies[company] = await EndOfServicePolicy.LoadAsync(db, company);
+
         foreach (var e in employees)
         {
             var hasLocalizedDisplay =
@@ -157,7 +161,10 @@ ORDER BY e.EmployeeNo;
                     out var localizedDisplay);
 
             var years = e.HireDate is { } hire ? EndOfServiceStore.YearsOfService(hire, asOf) : 0;
-            var (eos, _) = EndOfServiceStore.ComputeGratuity(years, e.Basic);
+            var eosPolicy = eosPolicies.GetValueOrDefault(e.CompanyId) ?? EndOfServicePolicy.Policy.Default;
+            var eos = eosPolicy.AutoCalculationEnabled
+                ? EndOfServiceStore.ComputeGratuity(years, e.Basic, eosPolicy.WeeksPerYear).Gratuity
+                : 0m;
 
             var entitled = overrides.TryGetValue(e.Id, out var o) ? o.Entitled + o.Carried : defaultAnnual;
             var remaining = entitled - used.GetValueOrDefault(e.Id);
