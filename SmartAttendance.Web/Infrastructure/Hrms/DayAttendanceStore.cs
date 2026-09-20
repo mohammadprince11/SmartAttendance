@@ -34,7 +34,13 @@ public static class DayAttendanceStore
         public decimal LateHours { get; set; }
         public decimal EarlyLeaveHours { get; set; }
         public decimal WorkedHours { get; set; }
-        public string Status { get; set; } = "Absent";    // Present | Late | Incomplete | Absent | Weekend | Rest
+        public string Status { get; set; } = "Absent";    // الحقيقة الخام المشتقة
+        public string? PolicyOverrideStatus { get; set; }
+        public string? PolicyOverrideReason { get; set; }
+        public string EffectiveStatus => string.IsNullOrWhiteSpace(PolicyOverrideStatus)
+            ? Status
+            : PolicyOverrideStatus;
+        public bool HasPolicyOverride => !string.IsNullOrWhiteSpace(PolicyOverrideStatus);
         public bool IsAnalyzed { get; set; }
 
         /// <summary>
@@ -52,6 +58,7 @@ public static class DayAttendanceStore
     /// <see cref="DayRow.Status"/> (Present · Late · Absent · Incomplete …) ولا يتصادم معها.
     /// </summary>
     public const string StaleFilterKey = "Stale";
+    public const string PolicyAbsentFilterKey = "PolicyAbsent";
 
     /// <summary>
     /// فلتر أزرار العدّادات بشاشة الحضور اليومي. فارغ = الكل.
@@ -66,6 +73,7 @@ public static class DayAttendanceStore
         {
             null or "" => rows.ToList(),
             StaleFilterKey => rows.Where(row => row.IsStale).ToList(),
+            PolicyAbsentFilterKey => rows.Where(row => row.PolicyOverrideStatus == "Absent").ToList(),
             _ => rows.Where(row => row.Status == statusFilter).ToList()
         };
 
@@ -1161,9 +1169,22 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
         WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Absent",
+        PolicyOverrideStatus = OptionalString(reader, "PolicyOverrideStatus"),
+        PolicyOverrideReason = OptionalString(reader, "PolicyOverrideReason"),
         IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed"),
         IsStale = HrmsDatabase.GetBool(reader, "IsStale")
     };
+
+    private static string? OptionalString(System.Data.Common.DbDataReader reader, string name)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (!string.Equals(reader.GetName(i), name, StringComparison.OrdinalIgnoreCase))
+                continue;
+            return reader.IsDBNull(i) ? null : Convert.ToString(reader.GetValue(i));
+        }
+        return null;
+    }
 
     private static async Task<string> StaleCaseSqlAsync(ApplicationDbContext dbContext)
     {
@@ -1234,6 +1255,7 @@ LEFT JOIN SelfServiceRequests ss
         public int LateCount { get; init; }
         public int AbsentCount { get; init; }
         public int IncompleteCount { get; init; }
+        public int PolicyAbsentCount { get; init; }
         public int StaleCount { get; init; }
         /// <summary>موظفو العرض الحالي المميَّزون — نطاق زرّ الإشعار.</summary>
         public int NotifyEmployeeCount { get; init; }
@@ -1257,6 +1279,7 @@ LEFT JOIN SelfServiceRequests ss
         if (scope.IsDeniedAll || pageSize <= 0) return new PagedDays();
 
         await EnsureAsync(dbContext);
+        await AttendancePolicyOverrideStore.EnsureAsync(dbContext);
 
         var companyClause = scope.IsUnrestricted
             ? string.Empty
@@ -1361,10 +1384,15 @@ WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}{sta
             dbContext,
             $"""
 SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    po.OverrideStatus AS PolicyOverrideStatus, po.Reason AS PolicyOverrideReason,
     Stale.IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
+LEFT JOIN AttendancePolicyOverrides po
+  ON po.EmployeeId = d.EmployeeId
+ AND po.WorkDate = d.WorkDate
+ AND po.PolicyKey = N'MonthlyLateAllowance'
 CROSS APPLY (SELECT {staleCase} AS IsStale) AS Stale
 WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}{statusClause}
 ORDER BY d.WorkDate DESC, e.EmployeeNo
@@ -1646,6 +1674,7 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
         if (employeeIds is { Count: 0 }) return new List<DayRow>();
 
         await EnsureAsync(dbContext);
+        await AttendancePolicyOverrideStore.EnsureAsync(dbContext);
 
         // الترشيح بالموظف يقع بالـSQL: النداء العام يمرّر null فيبقى الاستعلام حرفياً
         // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
@@ -1671,10 +1700,15 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
             dbContext,
             $"""
 SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    po.OverrideStatus AS PolicyOverrideStatus, po.Reason AS PolicyOverrideReason,
     {staleCase} AS IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
+LEFT JOIN AttendancePolicyOverrides po
+  ON po.EmployeeId = d.EmployeeId
+ AND po.WorkDate = d.WorkDate
+ AND po.PolicyKey = N'MonthlyLateAllowance'
 WHERE d.WorkDate >= @From AND d.WorkDate <= @To{employeeClause}{companyClause}
 ORDER BY e.EmployeeNo, d.WorkDate;
 """,

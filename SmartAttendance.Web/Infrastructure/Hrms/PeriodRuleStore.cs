@@ -441,7 +441,7 @@ VALUES (@Rule, @From, @To, @AType, @AText, @AValue, @Sort);
                 if (rule.Metric == "ConsecutiveAbsentDays")
                 {
                     var days = await DaysForAsync(row.CompanyId, row.Id);
-                    value = LongestAbsenceStreak(days.Select(day => (day.WorkDate, day.Status == "Absent")));
+                    value = LongestAbsenceStreak(days.Select(day => (day.WorkDate, day.EffectiveStatus == "Absent")));
                 }
                 else if (rule.Metric == "LateViolationDays")
                 {
