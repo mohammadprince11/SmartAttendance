@@ -87,7 +87,20 @@
         <section class="nxhs-panel">
             <header class="nxhs-search-head">
                 <h2>قوالب «@Model.SelectedType?.Label»</h2>
-                <button type="button" class="nxhs-modal-delete zyu-a5a382098f38" onclick="aptOpen(0)">+ قالب جديد</button>
+                <div class="zyu-667bbbde05a1">
+                    @if (Model.Type == "LeaveRequest")
+                    {
+                        <form method="post" asp-page-handler="CreateLeaveDurationPreset"
+                              asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId"
+                              class="zyu-6b8b63d565c4">
+                            <button type="submit" class="nxhs-modal-cancel"
+                                    data-zyconfirm="إنشاء قوالب الإجازات حسب المدة: أقل من 5، من 5 إلى 10، وأكثر من 10 أيام؟">
+                                إنشاء شرائح مدة الإجازة
+                            </button>
+                        </form>
+                    }
+                    <button type="button" class="nxhs-modal-delete zyu-a5a382098f38" onclick="aptOpen(0)">+ قالب جديد</button>
+                </div>
             </header>
             <p class="nxhs-helper">اسحب الصفوف لترتيب أولوية التنفيذ — المحرك يختار أول قالب نشط تنطبق شروطه.</p>
 
@@ -235,10 +248,10 @@
                 <label>تذكير بعد (ساعات)
                     <input type="number" name="ReminderHours" id="f_ReminderHours" min="1" />
                 </label>
-                <label>المبلغ من
+                <label>@(Model.Type == "LeaveRequest" ? "عدد الأيام من" : "المبلغ من")
                     <input type="number" name="CondMinAmount" id="f_CondMinAmount" min="0" step="0.01" />
                 </label>
-                <label>المبلغ إلى
+                <label>@(Model.Type == "LeaveRequest" ? "عدد الأيام إلى" : "المبلغ إلى")
                     <input type="number" name="CondMaxAmount" id="f_CondMaxAmount" min="0" step="0.01" />
                 </label>
                 <label class="full">عند تغيير حقل معين
