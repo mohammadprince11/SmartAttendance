@@ -35,6 +35,28 @@ public sealed class IraqiNationalIdParserTests
     }
 
     [Fact]
+    public void FrontSide_GluedKurdishFirstNameLabel_IsRemoved()
+    {
+        var result = IraqiNationalIdParser.Parse(
+        [
+            L("الاسم ناوسالم", 797, 809, 1117, 865)
+        ]);
+
+        Assert.Equal("سالم", result.FirstName);
+    }
+
+    [Fact]
+    public void FrontSide_LegitimateNameStartingWithNaoLetters_IsNotTrimmed()
+    {
+        var result = IraqiNationalIdParser.Parse(
+        [
+            L("الاسم نواف", 797, 809, 1117, 865)
+        ]);
+
+        Assert.Equal("نواف", result.FirstName);
+    }
+
+    [Fact]
     public void ArabicIndicDigits_AreNormalizedForIdentityNumbers()
     {
         var result = IraqiNationalIdParser.Parse(

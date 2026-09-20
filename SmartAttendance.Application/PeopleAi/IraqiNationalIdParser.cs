@@ -40,7 +40,7 @@ public static class IraqiNationalIdParser
         var firstName = FindName(
             lines,
             ["الاسم"],
-            ["لاناو"]);
+            ["لاناو", "ناو"]);
 
         var secondName = FindName(
             lines,
@@ -275,13 +275,42 @@ public static class IraqiNationalIdParser
     {
         var result = value;
 
-        foreach (var token in labels.Concat(noiseWords))
+        foreach (var label in labels)
         {
             result = Regex.Replace(
                 result,
-                Regex.Escape(token),
+                Regex.Escape(label),
                 " ",
                 RegexOptions.IgnoreCase);
+        }
+
+        result = result.Trim();
+
+        // Kurdish companion labels on Iraqi IDs are sometimes glued to the
+        // Arabic value by OCR (for example "الاسم ناومحمد"). Remove a known
+        // companion label only when it is a leading prefix and what remains
+        // is still a plausible multi-letter Arabic name. This avoids
+        // corrupting legitimate names such as "نواف".
+        foreach (var noiseWord in noiseWords
+                     .OrderByDescending(x => x.Length))
+        {
+            var match = Regex.Match(
+                result,
+                @"^\s*" + Regex.Escape(noiseWord),
+                RegexOptions.IgnoreCase);
+
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var candidate = CleanName(result[match.Length..]);
+            if (candidate.Count(IsArabicLetter) >= 2 &&
+                IsPlausibleName(candidate))
+            {
+                result = candidate;
+                break;
+            }
         }
 
         result = CleanName(result);
