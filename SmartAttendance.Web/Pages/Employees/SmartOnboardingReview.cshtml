@@ -219,15 +219,7 @@
 
     var openIssues = Model.Issues.Where(x => x.Status == "Open").ToList();
 
-    var isFinalStage =
-        Model.Session?.Status is "Ready" or "Completed";
 
-    var hasActiveReviewWork =
-        documentsToReview.Count > 0 ||
-        reviewFields.Count > 0 ||
-        reviewStructuredRecords.Count > 0 ||
-        openIssues.Count > 0 ||
-        Model.DuplicateMatches.Count > 0;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/smart-onboarding-review.css" asp-append-version="true" />
@@ -405,7 +397,7 @@
         </section>
         }
 
-        @if (!isFinalStage && hasActiveReviewWork && reviewedDocuments.Count > 0)
+        @if (reviewedDocuments.Count > 0)
         {
             <details class="sor-card sor-reviewed">
                 <summary>
@@ -822,7 +814,7 @@
             </section>
         }
 
-        @if (!isFinalStage && hasActiveReviewWork && acceptedFields.Count > 0)
+        @if (acceptedFields.Count > 0)
         {
             <details class="sor-card sor-reviewed">
                 <summary>
