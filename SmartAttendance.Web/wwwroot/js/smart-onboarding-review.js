@@ -48,24 +48,233 @@
         previewDialog?.querySelector("[data-review-preview-frame]");
     const previewTitle =
         previewDialog?.querySelector("[data-review-preview-title]");
+    const previewBody =
+        previewDialog?.querySelector(".sor-preview-body");
 
-    if (previewDialog && previewFrame) {
+    if (previewDialog && previewFrame && previewBody) {
+        let previewViewport =
+            previewBody.querySelector(".sor-preview-viewport");
+        if (!previewViewport) {
+            previewViewport = document.createElement("div");
+            previewViewport.className = "sor-preview-viewport";
+            previewViewport.hidden = true;
+            previewBody.prepend(previewViewport);
+        }
+
         let previewImage =
             previewDialog.querySelector("[data-review-preview-image]");
         if (!previewImage) {
-            const body = previewDialog.querySelector(".sor-preview-body");
             previewImage = document.createElement("img");
             previewImage.setAttribute("data-review-preview-image", "");
             previewImage.className = "sor-preview-image";
             previewImage.alt = "معاينة المستند المحمي";
             previewImage.hidden = true;
-            body?.prepend(previewImage);
         }
+        if (previewImage.parentElement !== previewViewport) {
+            previewViewport.append(previewImage);
+        }
+
+        let previewToolbar =
+            previewBody.querySelector(".sor-preview-toolbar");
+        if (!previewToolbar) {
+            previewToolbar = document.createElement("div");
+            previewToolbar.className = "sor-preview-toolbar";
+            previewToolbar.hidden = true;
+            previewToolbar.setAttribute("role", "toolbar");
+            previewToolbar.setAttribute(
+                "aria-label",
+                "أدوات التحكم بالمعاينة");
+            previewToolbar.innerHTML = [
+                '<button type="button" class="zy-btn" data-view-fit title="عرض الصورة كاملة">ملاءمة</button>',
+                '<button type="button" class="zy-btn sor-preview-icon-btn" data-view-out title="تصغير">−</button>',
+                '<span class="sor-preview-zoom" data-view-zoom>100%</span>',
+                '<button type="button" class="zy-btn sor-preview-icon-btn" data-view-in title="تكبير">+</button>',
+                '<button type="button" class="zy-btn sor-preview-icon-btn" data-view-left title="تدوير لليسار">↺</button>',
+                '<button type="button" class="zy-btn sor-preview-icon-btn" data-view-right title="تدوير لليمين">↻</button>',
+                '<button type="button" class="zy-btn" data-view-actual title="الحجم الحقيقي">100%</button>',
+                '<button type="button" class="zy-btn sor-preview-icon-btn" data-view-expand title="توسيع المعاينة">⛶</button>',
+                '<button type="button" class="zy-btn" data-view-reset title="إعادة ضبط الصورة">إعادة</button>'
+            ].join("");
+            previewBody.append(previewToolbar);
+        }
+
+        const zoomLabel =
+            previewToolbar.querySelector("[data-view-zoom]");
+        const state = {
+            scale: 1,
+            rotation: 0,
+            panX: 0,
+            panY: 0,
+            dragging: false,
+            lastX: 0,
+            lastY: 0,
+            fitMode: true
+        };
+
+        const clampScale = value =>
+            Math.min(8, Math.max(0.05, value));
+
+        const renderImage = () => {
+            previewImage.style.transform =
+                `translate(-50%, -50%) translate(${state.panX}px, ${state.panY}px) rotate(${state.rotation}deg) scale(${state.scale})`;
+            if (zoomLabel) {
+                zoomLabel.textContent =
+                    `${Math.round(state.scale * 100)}%`;
+            }
+        };
+
+        const fitImage = () => {
+            if (!previewImage.naturalWidth ||
+                !previewImage.naturalHeight) return;
+
+            const width = previewViewport.clientWidth;
+            const height = previewViewport.clientHeight;
+            if (width <= 0 || height <= 0) return;
+
+            const quarterTurn =
+                Math.abs(state.rotation % 180) === 90;
+            const visualWidth = quarterTurn
+                ? previewImage.naturalHeight
+                : previewImage.naturalWidth;
+            const visualHeight = quarterTurn
+                ? previewImage.naturalWidth
+                : previewImage.naturalHeight;
+
+            state.scale = clampScale(Math.min(
+                width / visualWidth,
+                height / visualHeight
+            ) * 0.98);
+            state.panX = 0;
+            state.panY = 0;
+            state.fitMode = true;
+            renderImage();
+        };
+
+        const setManualScale = scale => {
+            state.scale = clampScale(scale);
+            state.fitMode = false;
+            renderImage();
+        };
+
+        const resetImage = () => {
+            state.rotation = 0;
+            state.panX = 0;
+            state.panY = 0;
+            state.fitMode = true;
+            fitImage();
+        };
+
+        const setImageMode = enabled => {
+            previewViewport.hidden = !enabled;
+            previewToolbar.hidden = !enabled;
+            previewFrame.hidden = enabled;
+            previewBody.classList.toggle(
+                "is-image-preview",
+                enabled);
+            previewBody.classList.toggle(
+                "is-document-preview",
+                !enabled);
+        };
+
+        previewImage.addEventListener("load", () => {
+            requestAnimationFrame(fitImage);
+        });
+
+        previewToolbar.addEventListener("click", event => {
+            const button = event.target.closest("button");
+            if (!button) return;
+
+            if (button.matches("[data-view-fit]")) {
+                fitImage();
+            } else if (button.matches("[data-view-in]")) {
+                setManualScale(state.scale * 1.2);
+            } else if (button.matches("[data-view-out]")) {
+                setManualScale(state.scale / 1.2);
+            } else if (button.matches("[data-view-left]")) {
+                state.rotation = (state.rotation - 90) % 360;
+                fitImage();
+            } else if (button.matches("[data-view-right]")) {
+                state.rotation = (state.rotation + 90) % 360;
+                fitImage();
+            } else if (button.matches("[data-view-actual]")) {
+                state.panX = 0;
+                state.panY = 0;
+                setManualScale(1);
+            } else if (button.matches("[data-view-expand]")) {
+                previewDialog.classList.toggle("is-expanded");
+                requestAnimationFrame(() => {
+                    if (state.fitMode) fitImage();
+                    else renderImage();
+                });
+            } else if (button.matches("[data-view-reset]")) {
+                resetImage();
+            }
+        });
+
+        previewViewport.addEventListener("wheel", event => {
+            if (previewImage.hidden) return;
+            event.preventDefault();
+            const factor =
+                event.deltaY < 0 ? 1.12 : 1 / 1.12;
+            setManualScale(state.scale * factor);
+        }, { passive: false });
+
+        previewViewport.addEventListener(
+            "pointerdown",
+            event => {
+                if (previewImage.hidden) return;
+                state.dragging = true;
+                state.fitMode = false;
+                state.lastX = event.clientX;
+                state.lastY = event.clientY;
+                previewViewport.classList.add("is-dragging");
+                previewViewport.setPointerCapture(event.pointerId);
+            });
+
+        previewViewport.addEventListener(
+            "pointermove",
+            event => {
+                if (!state.dragging) return;
+                state.panX += event.clientX - state.lastX;
+                state.panY += event.clientY - state.lastY;
+                state.lastX = event.clientX;
+                state.lastY = event.clientY;
+                renderImage();
+            });
+
+        const stopDragging = event => {
+            if (!state.dragging) return;
+            state.dragging = false;
+            previewViewport.classList.remove("is-dragging");
+            if (event.pointerId !== undefined &&
+                previewViewport.hasPointerCapture(event.pointerId)) {
+                previewViewport.releasePointerCapture(event.pointerId);
+            }
+        };
+
+        previewViewport.addEventListener(
+            "pointerup",
+            stopDragging);
+        previewViewport.addEventListener(
+            "pointercancel",
+            stopDragging);
+        previewViewport.addEventListener(
+            "dblclick",
+            fitImage);
+
+        const observer = new ResizeObserver(() => {
+            if (state.fitMode && !previewViewport.hidden) {
+                fitImage();
+            }
+        });
+        observer.observe(previewViewport);
+
         const closePreview = () => {
             previewFrame.src = "about:blank";
-            previewFrame.hidden = false;
             previewImage.removeAttribute("src");
             previewImage.hidden = true;
+            setImageMode(false);
+            previewDialog.classList.remove("is-expanded");
             if (previewDialog.open) {
                 previewDialog.close();
             }
@@ -79,30 +288,40 @@
                 if (!url) return;
 
                 const previewName =
-                    openButton.dataset.previewName || "معاينة المستند";
+                    openButton.dataset.previewName ||
+                    "معاينة المستند";
                 if (previewTitle) {
                     previewTitle.textContent = previewName;
                 }
 
-                const isImage = /\.(png|jpe?g|webp)$/i.test(previewName);
+                const isImage =
+                    /\.(png|jpe?g|webp)$/i.test(previewName);
                 if (isImage) {
                     previewFrame.src = "about:blank";
-                    previewFrame.hidden = true;
+                    setImageMode(true);
+                    state.rotation = 0;
+                    state.panX = 0;
+                    state.panY = 0;
+                    state.fitMode = true;
                     previewImage.src = url;
                     previewImage.alt = previewName;
                     previewImage.hidden = false;
                 } else {
                     previewImage.removeAttribute("src");
                     previewImage.hidden = true;
-                    previewFrame.hidden = false;
+                    setImageMode(false);
                     previewFrame.src = url;
                 }
 
                 previewDialog.showModal();
+                if (isImage && previewImage.complete) {
+                    requestAnimationFrame(fitImage);
+                }
                 return;
             }
 
-            if (event.target.closest("[data-review-preview-close]")) {
+            if (event.target.closest(
+                    "[data-review-preview-close]")) {
                 closePreview();
             }
         });
@@ -116,9 +335,10 @@
         });
         previewDialog.addEventListener("close", () => {
             previewFrame.src = "about:blank";
-            previewFrame.hidden = false;
             previewImage.removeAttribute("src");
             previewImage.hidden = true;
+            setImageMode(false);
+            previewDialog.classList.remove("is-expanded");
         });
     }
 

@@ -227,25 +227,207 @@
         const dialog = document.querySelector("[data-preview-dialog]");
         const frame = dialog?.querySelector("[data-preview-frame]");
         const title = dialog?.querySelector("[data-preview-title]");
+        const body = dialog?.querySelector(".so-preview-body");
 
-        if (!dialog || !frame) return;
+        if (!dialog || !frame || !body) return;
+
+        let viewport = body.querySelector(".so-preview-viewport");
+        if (!viewport) {
+            viewport = document.createElement("div");
+            viewport.className = "so-preview-viewport";
+            viewport.hidden = true;
+            body.prepend(viewport);
+        }
 
         let image = dialog.querySelector("[data-preview-image]");
         if (!image) {
-            const body = dialog.querySelector(".so-preview-body");
             image = document.createElement("img");
             image.setAttribute("data-preview-image", "");
             image.className = "so-preview-image";
             image.alt = "معاينة المستند المحمي";
             image.hidden = true;
-            body?.prepend(image);
         }
+        if (image.parentElement !== viewport) {
+            viewport.append(image);
+        }
+
+        let toolbar = body.querySelector(".so-preview-toolbar");
+        if (!toolbar) {
+            toolbar = document.createElement("div");
+            toolbar.className = "so-preview-toolbar";
+            toolbar.hidden = true;
+            toolbar.setAttribute("role", "toolbar");
+            toolbar.setAttribute("aria-label", "أدوات التحكم بالمعاينة");
+            toolbar.innerHTML = [
+                '<button type="button" class="zy-btn" data-view-fit title="عرض الصورة كاملة">ملاءمة</button>',
+                '<button type="button" class="zy-btn so-preview-icon-btn" data-view-out title="تصغير">−</button>',
+                '<span class="so-preview-zoom" data-view-zoom>100%</span>',
+                '<button type="button" class="zy-btn so-preview-icon-btn" data-view-in title="تكبير">+</button>',
+                '<button type="button" class="zy-btn so-preview-icon-btn" data-view-left title="تدوير لليسار">↺</button>',
+                '<button type="button" class="zy-btn so-preview-icon-btn" data-view-right title="تدوير لليمين">↻</button>',
+                '<button type="button" class="zy-btn" data-view-actual title="الحجم الحقيقي">100%</button>',
+                '<button type="button" class="zy-btn so-preview-icon-btn" data-view-expand title="توسيع المعاينة">⛶</button>',
+                '<button type="button" class="zy-btn" data-view-reset title="إعادة ضبط الصورة">إعادة</button>'
+            ].join("");
+            body.append(toolbar);
+        }
+
+        const zoomLabel = toolbar.querySelector("[data-view-zoom]");
+        const state = {
+            scale: 1,
+            rotation: 0,
+            panX: 0,
+            panY: 0,
+            dragging: false,
+            lastX: 0,
+            lastY: 0,
+            fitMode: true
+        };
+
+        const clampScale = value => Math.min(8, Math.max(0.05, value));
+
+        const renderImage = () => {
+            image.style.transform =
+                `translate(-50%, -50%) translate(${state.panX}px, ${state.panY}px) rotate(${state.rotation}deg) scale(${state.scale})`;
+            if (zoomLabel) {
+                zoomLabel.textContent = `${Math.round(state.scale * 100)}%`;
+            }
+        };
+
+        const fitImage = () => {
+            if (!image.naturalWidth || !image.naturalHeight) return;
+            const width = viewport.clientWidth;
+            const height = viewport.clientHeight;
+            if (width <= 0 || height <= 0) return;
+
+            const quarterTurn = Math.abs(state.rotation % 180) === 90;
+            const visualWidth = quarterTurn
+                ? image.naturalHeight
+                : image.naturalWidth;
+            const visualHeight = quarterTurn
+                ? image.naturalWidth
+                : image.naturalHeight;
+
+            state.scale = clampScale(Math.min(
+                width / visualWidth,
+                height / visualHeight
+            ) * 0.98);
+            state.panX = 0;
+            state.panY = 0;
+            state.fitMode = true;
+            renderImage();
+        };
+
+        const setManualScale = scale => {
+            state.scale = clampScale(scale);
+            state.fitMode = false;
+            renderImage();
+        };
+
+        const resetImage = () => {
+            state.rotation = 0;
+            state.panX = 0;
+            state.panY = 0;
+            state.fitMode = true;
+            fitImage();
+        };
+
+        const setImageMode = enabled => {
+            viewport.hidden = !enabled;
+            toolbar.hidden = !enabled;
+            frame.hidden = enabled;
+            body.classList.toggle("is-image-preview", enabled);
+            body.classList.toggle("is-document-preview", !enabled);
+        };
+
+        image.addEventListener("load", () => {
+            requestAnimationFrame(fitImage);
+        });
+
+        toolbar.addEventListener("click", event => {
+            const button = event.target.closest("button");
+            if (!button) return;
+
+            if (button.matches("[data-view-fit]")) {
+                fitImage();
+            } else if (button.matches("[data-view-in]")) {
+                setManualScale(state.scale * 1.2);
+            } else if (button.matches("[data-view-out]")) {
+                setManualScale(state.scale / 1.2);
+            } else if (button.matches("[data-view-left]")) {
+                state.rotation = (state.rotation - 90) % 360;
+                fitImage();
+            } else if (button.matches("[data-view-right]")) {
+                state.rotation = (state.rotation + 90) % 360;
+                fitImage();
+            } else if (button.matches("[data-view-actual]")) {
+                state.panX = 0;
+                state.panY = 0;
+                setManualScale(1);
+            } else if (button.matches("[data-view-expand]")) {
+                dialog.classList.toggle("is-expanded");
+                requestAnimationFrame(() => {
+                    if (state.fitMode) fitImage();
+                    else renderImage();
+                });
+            } else if (button.matches("[data-view-reset]")) {
+                resetImage();
+            }
+        });
+
+        viewport.addEventListener("wheel", event => {
+            if (image.hidden) return;
+            event.preventDefault();
+            const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+            setManualScale(state.scale * factor);
+        }, { passive: false });
+
+        viewport.addEventListener("pointerdown", event => {
+            if (image.hidden) return;
+            state.dragging = true;
+            state.fitMode = false;
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            viewport.classList.add("is-dragging");
+            viewport.setPointerCapture(event.pointerId);
+        });
+
+        viewport.addEventListener("pointermove", event => {
+            if (!state.dragging) return;
+            state.panX += event.clientX - state.lastX;
+            state.panY += event.clientY - state.lastY;
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            renderImage();
+        });
+
+        const stopDragging = event => {
+            if (!state.dragging) return;
+            state.dragging = false;
+            viewport.classList.remove("is-dragging");
+            if (event.pointerId !== undefined &&
+                viewport.hasPointerCapture(event.pointerId)) {
+                viewport.releasePointerCapture(event.pointerId);
+            }
+        };
+
+        viewport.addEventListener("pointerup", stopDragging);
+        viewport.addEventListener("pointercancel", stopDragging);
+        viewport.addEventListener("dblclick", fitImage);
+
+        const observer = new ResizeObserver(() => {
+            if (state.fitMode && !viewport.hidden) {
+                fitImage();
+            }
+        });
+        observer.observe(viewport);
 
         const closePreview = () => {
             frame.src = "about:blank";
-            frame.hidden = false;
             image.removeAttribute("src");
             image.hidden = true;
+            setImageMode(false);
+            dialog.classList.remove("is-expanded");
             if (dialog.open) {
                 dialog.close();
             }
@@ -266,18 +448,25 @@
                 const isImage = /\.(png|jpe?g|webp)$/i.test(previewName);
                 if (isImage) {
                     frame.src = "about:blank";
-                    frame.hidden = true;
+                    setImageMode(true);
+                    state.rotation = 0;
+                    state.panX = 0;
+                    state.panY = 0;
+                    state.fitMode = true;
                     image.src = url;
                     image.alt = previewName;
                     image.hidden = false;
                 } else {
                     image.removeAttribute("src");
                     image.hidden = true;
-                    frame.hidden = false;
+                    setImageMode(false);
                     frame.src = url;
                 }
 
                 dialog.showModal();
+                if (isImage && image.complete) {
+                    requestAnimationFrame(fitImage);
+                }
                 return;
             }
 
@@ -299,9 +488,10 @@
 
         dialog.addEventListener("close", () => {
             frame.src = "about:blank";
-            frame.hidden = false;
             image.removeAttribute("src");
             image.hidden = true;
+            setImageMode(false);
+            dialog.classList.remove("is-expanded");
         });
     }
 

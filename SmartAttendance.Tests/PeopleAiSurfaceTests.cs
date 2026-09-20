@@ -354,6 +354,43 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void SmartOnboardingPreview_ProvidesInteractiveImageControls()
+    {
+        var root = FindRoot();
+        var liveJs = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "wwwroot", "js",
+            "smart-onboarding-live-queue.js"));
+        var reviewJs = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "wwwroot", "js",
+            "smart-onboarding-review.js"));
+        var onboardingCss = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "wwwroot", "css", "pages",
+            "smart-onboarding.css"));
+        var reviewCss = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "wwwroot", "css", "pages",
+            "smart-onboarding-review.css"));
+
+        foreach (var script in new[] { liveJs, reviewJs })
+        {
+            Assert.Contains("data-view-fit", script);
+            Assert.Contains("data-view-in", script);
+            Assert.Contains("data-view-out", script);
+            Assert.Contains("data-view-left", script);
+            Assert.Contains("data-view-right", script);
+            Assert.Contains("data-view-actual", script);
+            Assert.Contains("data-view-expand", script);
+            Assert.Contains("ResizeObserver", script);
+            Assert.Contains("pointerdown", script);
+            Assert.Contains("wheel", script);
+        }
+
+        Assert.Contains(".so-preview-toolbar", onboardingCss);
+        Assert.Contains(".so-preview-dialog.is-expanded", onboardingCss);
+        Assert.Contains(".sor-preview-toolbar", reviewCss);
+        Assert.Contains(".sor-preview-dialog.is-expanded", reviewCss);
+    }
+
+    [Fact]
     public void PeopleAiSchema_ContainsStagingIdentityAndAuditLayers()
     {
         var root = FindRoot();
