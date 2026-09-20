@@ -11,6 +11,37 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// </summary>
 public static class LeaveEncashmentPolicy
 {
+    public static DateOnly BalanceAsOfForYear(int year)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        if (year < today.Year) return new DateOnly(year, 12, 31);
+        if (year == today.Year) return today;
+        return new DateOnly(year, 1, 1);
+    }
+
+    public static async Task<int?> AnnualSourceRequestTypeIdAsync(
+        ApplicationDbContext db,
+        int employeeId)
+    {
+        if (employeeId <= 0) return null;
+
+        await RequestTypeStore.EnsureAsync(db);
+        var types = await RequestTypeStore.ListTypesAsync(db, onlyActive: false);
+        var annualType = types.FirstOrDefault(type =>
+            RequestTypeEffectCatalog.EffectiveCode(type) == RequestTypeEffectCatalog.LeaveAnnual);
+        if (annualType is null) return null;
+
+        var companyId = await HrmsDatabase.ScalarAsync<int>(
+            db,
+            "SELECT ISNULL(CompanyId,0) FROM Employees WHERE Id=@EmployeeId AND ISNULL(IsDeleted,0)=0;",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
+        if (companyId <= 0) return annualType.Id;
+
+        var policies = await CompanyLeavePolicyStore.ListForCompanyAsync(db, companyId, onlyActive: false);
+        var annualPolicy = policies.FirstOrDefault(policy => policy.RequestTypeId == annualType.Id);
+        return annualPolicy?.BalanceSourceRequestTypeId ?? annualType.Id;
+    }
+
     public static async Task<decimal> AvailableAnnualDaysAsync(
         ApplicationDbContext db,
         CompanyScope scope,
@@ -25,8 +56,12 @@ public static class LeaveEncashmentPolicy
             command => HrmsDatabase.AddParameter(command, "@Emp", employeeId));
         if (allowed != 1) return 0m;
 
-        var balances = await LeaveBalanceCalculator.ForEmployeeAsync(db, employeeId, year);
-        var annual = balances.FirstOrDefault(x => x.Type == LeaveType.Annual)?.Remaining ?? 0m;
+        var annualSourceId = await AnnualSourceRequestTypeIdAsync(db, employeeId);
+        if (annualSourceId is null) return 0m;
+
+        var balances = await CompanyLeavePolicyStore.GetBalanceSnapshotsAsync(
+            db, employeeId, BalanceAsOfForYear(year));
+        var annual = balances.FirstOrDefault(x => x.SourceRequestTypeId == annualSourceId.Value)?.Remaining ?? 0m;
 
         await PayrollTransactionStore.EnsureAsync(db);
         var alreadyEncashed = await HrmsDatabase.ScalarAsync<decimal>(db, """

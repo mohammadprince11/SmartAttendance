@@ -52,4 +52,19 @@ public class LeavePolicyTruthSourceTests
         Assert.Contains("requestTypeId = b.SourceRequestTypeId", source);
         Assert.Contains("unit = b.Unit", source);
     }
+
+    [Fact]
+    public void PayrollLeaveEncashment_UsesCompanyPolicySnapshots()
+    {
+        var policy = Read("Infrastructure", "Hrms", "LeaveEncashmentPolicy.cs");
+        var page = Read("Pages", "Payroll", "LeaveEncashment.cshtml.cs");
+
+        Assert.Contains("CompanyLeavePolicyStore.GetBalanceSnapshotsAsync", policy);
+        Assert.DoesNotContain("LeaveBalanceCalculator.ForEmployeeAsync", policy);
+        Assert.Contains("AnnualSourceRequestTypeIdAsync", policy);
+
+        Assert.Contains("CompanyLeavePolicyStore.GetBalanceSnapshotsAsync", page);
+        Assert.DoesNotContain("LeaveBalanceCalculator.ForEmployeeAsync", page);
+        Assert.Contains("AvailableAnnualDaysAsync", page);
+    }
 }
