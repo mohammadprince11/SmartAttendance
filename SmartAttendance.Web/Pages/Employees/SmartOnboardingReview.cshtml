@@ -583,12 +583,17 @@
                 </div>
                 <div class="sor-section-actions">
                     <span class="zy-badge zy-badge--info">@reviewFields.Count بحاجة مراجعة</span>
-                    @if (Model.CanReview && reviewFields.Any(x =>
-                        x.ReviewStatus == "Pending" &&
-                        x.ProviderConfidence >=
-                            SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.HighConfidenceThreshold &&
-                        !string.IsNullOrWhiteSpace(EffectiveValue(x)) &&
-                        FieldPolicy(x)?.AllowBulkApprove == true))
+                    @if (Model.CanReview && (
+                        reviewFields.Any(x =>
+                            x.ReviewStatus == "Pending" &&
+                            x.ProviderConfidence >=
+                                SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.HighConfidenceThreshold &&
+                            !string.IsNullOrWhiteSpace(EffectiveValue(x)) &&
+                            FieldPolicy(x)?.AllowBulkApprove == true) ||
+                        Model.StructuredRecords.Any(x =>
+                            x.ReviewStatus == "Pending" &&
+                            x.ProviderConfidence >=
+                                SmartAttendance.Web.Infrastructure.Hrms.PeopleAiStructuredRecordStore.HighConfidenceThreshold)))
                     {
                         <form method="post"
                               asp-page-handler="AcceptAll"
@@ -661,6 +666,140 @@
                     }
                 </div>
         </section>
+        }
+
+
+        @if (Model.StructuredRecords.Count > 0)
+        {
+            var pendingStructured = Model.StructuredRecords.Count(x => x.ReviewStatus == "Pending");
+            <section class="sor-card sor-cv-records">
+                <div class="sor-section-head">
+                    <div>
+                        <h2>CV Intelligence — الخبرة والتعليم والشهادات</h2>
+                        <p>كل سجل مستخرج يبقى Staging إلى أن تعتمده أو تعدله. لا يُكتب إلى ملف الموظف قبل Finalize.</p>
+                    </div>
+                    <span class="zy-badge zy-badge--info">
+                        @(pendingStructured > 0
+                            ? $"{pendingStructured} بحاجة مراجعة"
+                            : "تمت مراجعة كل السجلات")
+                    </span>
+                </div>
+
+                <div class="sor-cv-record-list">
+                    @foreach (var record in Model.StructuredRecords)
+                    {
+                        var recordLabel = record.RecordType switch
+                        {
+                            "Experience" => "خبرة عملية",
+                            "Education" => "مؤهل علمي",
+                            "Certificate" => "شهادة / اعتماد",
+                            _ => record.RecordType
+                        };
+                        var confidence = record.ProviderConfidence.HasValue
+                            ? $"{record.ProviderConfidence.Value * 100m:0.0}%"
+                            : "بدون درجة";
+                        var confidenceBand = !record.ProviderConfidence.HasValue
+                            ? "unknown"
+                            : record.ProviderConfidence.Value >= 0.90m
+                                ? "high"
+                                : record.ProviderConfidence.Value >= 0.70m
+                                    ? "medium"
+                                    : "low";
+
+                        <article class="sor-cv-record sor-cv-record--@record.ReviewStatus.ToLowerInvariant()">
+                            <header>
+                                <div>
+                                    <strong>@recordLabel</strong>
+                                    <small>@record.DocumentName · @record.ExtractionMethod</small>
+                                </div>
+                                <div class="sor-field-badges">
+                                    <span class="sor-confidence sor-confidence--@confidenceBand">@confidence</span>
+                                    <span>@record.ReviewStatus</span>
+                                </div>
+                            </header>
+
+                            <form method="post"
+                                  asp-page-handler="ReviewStructuredRecord"
+                                  class="sor-cv-record-form"
+                                  data-preserve-scroll>
+                                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                                <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                                <input type="hidden" name="recordId" value="@record.Id" />
+
+                                <label>
+                                    <span>العنوان الرئيسي</span>
+                                    <input name="title"
+                                           value="@record.EffectiveTitle"
+                                           readonly="@(!Model.CanReview)"
+                                           required />
+                                </label>
+
+                                <label>
+                                    <span>التفصيل / المسمى</span>
+                                    <input name="subtitle"
+                                           value="@record.EffectiveSubtitle"
+                                           readonly="@(!Model.CanReview)" />
+                                </label>
+
+                                <label>
+                                    <span>الدولة</span>
+                                    <input name="country"
+                                           value="@record.EffectiveCountry"
+                                           readonly="@(!Model.CanReview)" />
+                                </label>
+
+                                <label>
+                                    <span>الرقم المرجعي</span>
+                                    <input name="refNo"
+                                           value="@record.EffectiveRefNo"
+                                           readonly="@(!Model.CanReview)" />
+                                </label>
+
+                                <label>
+                                    <span>من</span>
+                                    <input type="date"
+                                           name="fromDate"
+                                           value="@(record.EffectiveFromDate?.ToString("yyyy-MM-dd"))"
+                                           readonly="@(!Model.CanReview)" />
+                                </label>
+
+                                <label>
+                                    <span>إلى</span>
+                                    <input type="date"
+                                           name="toDate"
+                                           value="@(record.EffectiveToDate?.ToString("yyyy-MM-dd"))"
+                                           readonly="@(!Model.CanReview || record.EffectiveIsCurrent)" />
+                                </label>
+
+                                <label class="sor-cv-current">
+                                    <input type="checkbox"
+                                           name="isCurrent"
+                                           value="true"
+                                           checked="@record.EffectiveIsCurrent"
+                                           disabled="@(!Model.CanReview)" />
+                                    <span>مستمر / حالي</span>
+                                </label>
+
+                                <label class="sor-cv-note">
+                                    <span>ملاحظات</span>
+                                    <input name="note"
+                                           value="@record.EffectiveNote"
+                                           readonly="@(!Model.CanReview)" />
+                                </label>
+
+                                @if (Model.CanReview)
+                                {
+                                    <div class="sor-field-actions sor-cv-actions">
+                                        <button type="submit" name="action" value="Accept" class="zy-btn">اعتماد</button>
+                                        <button type="submit" name="action" value="Modify" class="zy-btn zy-btn--primary">تعديل واعتماد</button>
+                                        <button type="submit" name="action" value="Reject" class="zy-btn">رفض</button>
+                                    </div>
+                                }
+                            </form>
+                        </article>
+                    }
+                </div>
+            </section>
         }
 
         @if (!isFinalStage && hasActiveReviewWork && acceptedFields.Count > 0)

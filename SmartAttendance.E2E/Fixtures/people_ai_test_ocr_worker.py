@@ -30,6 +30,23 @@ def cv_lines():
         line(0, "Synthetic Candidate"),
         line(1, "+964 770 123 4567"),
         line(2, "candidate.e2e@example.test"),
+        line(3, "Address: Baghdad, Iraq"),
+        line(4, "Nationality: Iraqi"),
+        line(5, "Experience"),
+        line(6, "HR Specialist at ZYNORA"),
+        line(7, "2022 - Present"),
+        line(8, "Payroll Officer at Example Group"),
+        line(9, "2019 - 2022"),
+        line(10, "Education"),
+        line(11, "Bachelor of Business Administration"),
+        line(12, "University of Baghdad"),
+        line(13, "2015 - 2019"),
+        line(14, "Certificates"),
+        line(15, "SHRM-CP Certificate"),
+        line(16, "Skills"),
+        line(17, "Payroll, Attendance, Power BI"),
+        line(18, "Languages"),
+        line(19, "Arabic, English"),
     ]
 
 def passport_lines():

@@ -86,8 +86,13 @@ CROSS JOIN (VALUES
     (N'Passport', N'IssuingCountry', N'بلد الإصدار', N'Optional', 80, CAST(1 AS bit)),
     (N'Residence', N'DocumentNumber', N'رقم الإقامة', N'Required', 10, CAST(1 AS bit)),
     (N'Residence', N'ExpiryDate', N'تاريخ الانتهاء', N'Required', 20, CAST(1 AS bit)),
-    (N'CV', N'Phone', N'الهاتف', N'Optional', 10, CAST(1 AS bit)),
-    (N'CV', N'PersonalEmail', N'البريد الشخصي', N'Optional', 20, CAST(1 AS bit))
+    (N'CV', N'FullName', N'الاسم الكامل', N'Optional', 10, CAST(1 AS bit)),
+    (N'CV', N'Phone', N'الهاتف', N'Optional', 20, CAST(1 AS bit)),
+    (N'CV', N'PersonalEmail', N'البريد الشخصي', N'Optional', 30, CAST(1 AS bit)),
+    (N'CV', N'Address', N'العنوان', N'Optional', 40, CAST(1 AS bit)),
+    (N'CV', N'Nationality', N'الجنسية', N'Optional', 50, CAST(1 AS bit)),
+    (N'CV', N'Skills', N'المهارات', N'Optional', 60, CAST(1 AS bit)),
+    (N'CV', N'Languages', N'اللغات', N'Optional', 70, CAST(1 AS bit))
 ) v(DocumentType, FieldKey, DisplayLabel, Requirement, SortOrder, AllowBulkApprove)
 WHERE ISNULL(c.IsDeleted, 0) = 0
   AND NOT EXISTS (

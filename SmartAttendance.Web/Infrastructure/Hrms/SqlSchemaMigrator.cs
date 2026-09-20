@@ -2935,6 +2935,10 @@ END;
         new(
             PeopleAiSchema.DocumentProcessingContractMigrationId,
             PeopleAiSchema.DocumentProcessingContractMigrationSql),
+
+        new(
+            PeopleAiSchema.CvIntelligenceMigrationId,
+            PeopleAiSchema.CvIntelligenceMigrationSql),
     };
 
     /// <summary>

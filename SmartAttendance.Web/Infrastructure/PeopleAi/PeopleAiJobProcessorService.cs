@@ -540,13 +540,44 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
         {
             var cvContact = CvContactParser.Parse(
                 response.AllLines.Select(line => line.Text));
+            var cv = CvIntelligenceParser.Parse(
+                response.AllLines.Select(line =>
+                    new CvIntelligenceLine(
+                        line.Text,
+                        line.Score)));
 
+            await SaveCvField(
+                "FullName",
+                cv.FullName);
             await SaveCvField(
                 "Phone",
                 cvContact.Phone);
             await SaveCvField(
                 "PersonalEmail",
                 cvContact.Email);
+            await SaveCvField(
+                "Address",
+                cv.Address);
+            await SaveCvField(
+                "Nationality",
+                cv.Nationality);
+            await SaveCvField(
+                "Skills",
+                cv.Skills.Count == 0
+                    ? null
+                    : string.Join("; ", cv.Skills));
+            await SaveCvField(
+                "Languages",
+                cv.Languages.Count == 0
+                    ? null
+                    : string.Join("; ", cv.Languages));
+
+            await PeopleAiStructuredRecordStore.ReplaceForRunAsync(
+                db,
+                input.SessionId,
+                input.DocumentId,
+                runId,
+                cv.Records);
         }
 
         var nationalId = IraqiNationalIdParser.Parse(

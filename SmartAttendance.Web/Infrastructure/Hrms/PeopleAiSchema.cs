@@ -15,6 +15,58 @@ public static class PeopleAiSchema
     public const string DocumentProcessingContractMigrationId =
         "20260919-02-people-ai-document-processing-contract";
 
+    public const string CvIntelligenceMigrationId =
+        "20260920-03-people-ai-cv-intelligence";
+
+    public static readonly string CvIntelligenceMigrationSql = """
+IF OBJECT_ID('dbo.OnboardingStructuredRecords', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.OnboardingStructuredRecords
+    (
+        Id bigint IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        SessionId bigint NOT NULL,
+        OnboardingDocumentId bigint NOT NULL,
+        ExtractionRunId bigint NOT NULL,
+        RecordType nvarchar(30) NOT NULL,
+        SequenceNo int NOT NULL,
+        Title nvarchar(300) NOT NULL,
+        Subtitle nvarchar(300) NULL,
+        Country nvarchar(120) NULL,
+        RefNo nvarchar(120) NULL,
+        FromDate date NULL,
+        ToDate date NULL,
+        IsCurrent bit NOT NULL CONSTRAINT DF_OnboardingStructuredRecords_Current DEFAULT(0),
+        Note nvarchar(1000) NULL,
+        ProviderConfidence decimal(6,5) NULL,
+        ExtractionMethod nvarchar(30) NOT NULL,
+        ReviewStatus nvarchar(30) NOT NULL CONSTRAINT DF_OnboardingStructuredRecords_Review DEFAULT('Pending'),
+        ReviewedTitle nvarchar(300) NULL,
+        ReviewedSubtitle nvarchar(300) NULL,
+        ReviewedCountry nvarchar(120) NULL,
+        ReviewedRefNo nvarchar(120) NULL,
+        ReviewedFromDate date NULL,
+        ReviewedToDate date NULL,
+        ReviewedIsCurrent bit NULL,
+        ReviewedNote nvarchar(1000) NULL,
+        ReviewedBySystemUserId int NULL,
+        ReviewedAt datetime2 NULL,
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_OnboardingStructuredRecords_Created DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_OnboardingStructuredRecords_Session
+            FOREIGN KEY (SessionId) REFERENCES dbo.EmployeeOnboardingSessions(Id),
+        CONSTRAINT FK_OnboardingStructuredRecords_Document
+            FOREIGN KEY (OnboardingDocumentId) REFERENCES dbo.OnboardingDocuments(Id),
+        CONSTRAINT FK_OnboardingStructuredRecords_Run
+            FOREIGN KEY (ExtractionRunId) REFERENCES dbo.DocumentExtractionRuns(Id)
+    );
+
+    CREATE UNIQUE INDEX UX_OnboardingStructuredRecords_RunSequence
+        ON dbo.OnboardingStructuredRecords(ExtractionRunId, RecordType, SequenceNo);
+
+    CREATE INDEX IX_OnboardingStructuredRecords_SessionReview
+        ON dbo.OnboardingStructuredRecords(SessionId, ReviewStatus, RecordType);
+END;
+""";
+
     public static readonly string DocumentProcessingContractMigrationSql = """
 IF COL_LENGTH('dbo.OnboardingDocuments', 'DetectionMethod') IS NULL
     ALTER TABLE dbo.OnboardingDocuments
@@ -440,6 +492,8 @@ IF OBJECT_ID('dbo.PeopleAiAuditLogs', 'U') IS NULL
     THROW 51000, 'People AI schema missing PeopleAiAuditLogs. Apply controlled database migrations before startup.', 1;
 IF OBJECT_ID('dbo.EmployeeIdentityDocuments', 'U') IS NULL
     THROW 51000, 'People AI schema missing EmployeeIdentityDocuments. Apply controlled database migrations before startup.', 1;
+IF OBJECT_ID('dbo.OnboardingStructuredRecords', 'U') IS NULL
+    THROW 51000, 'People AI schema missing OnboardingStructuredRecords. Apply controlled database migrations before startup.', 1;
 
 IF COL_LENGTH('dbo.OnboardingDocuments', 'OriginalVerificationStatus') IS NULL
    OR COL_LENGTH('dbo.OnboardingDocuments', 'ReviewedExpiryDate') IS NULL

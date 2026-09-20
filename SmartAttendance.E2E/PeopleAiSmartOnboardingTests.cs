@@ -312,6 +312,238 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
             ("@SessionId", sessionId)), Is.EqualTo(2));
     }
 
+
+    [Test]
+    public async Task CvIntelligence_ReviewedRecords_ArePromotedToEmployeeProfile()
+    {
+        await LoginAsync();
+        var (sessionId, companyId) = await StartSessionAsync();
+
+        await UploadAsync(
+            "NationalId",
+            "e2e-cv-national-id.png",
+            TinyPng);
+        await UploadAsync(
+            "Contract",
+            "e2e-cv-contract.png",
+            TinyPng);
+        await UploadAsync(
+            "CV",
+            "e2e-full-cv.png",
+            TinyPng);
+        await WaitForOnboardingProcessingAsync(sessionId);
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.OnboardingStructuredRecords
+                WHERE SessionId = @SessionId;
+                """,
+                ("@SessionId", sessionId)),
+            Is.EqualTo(4));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.DocumentExtractedFields f
+                JOIN dbo.DocumentExtractionRuns r
+                  ON r.Id = f.ExtractionRunId
+                JOIN dbo.OnboardingDocuments d
+                  ON d.Id = r.OnboardingDocumentId
+                WHERE d.SessionId = @SessionId
+                  AND d.DeclaredDocumentType = 'CV'
+                  AND f.FieldKey IN
+                      ('FullName','Phone','PersonalEmail',
+                       'Address','Nationality','Skills','Languages');
+                """,
+                ("@SessionId", sessionId)),
+            Is.EqualTo(7));
+
+        await Page.GetByRole(
+                AriaRole.Link,
+                new() { Name = "فتح المراجعة البشرية" })
+            .ClickAsync();
+        await Page.WaitForLoadStateAsync(
+            LoadState.DOMContentLoaded);
+
+        await Expect(Page.GetByText(
+                "CV Intelligence — الخبرة والتعليم والشهادات"))
+            .ToBeVisibleAsync();
+        await Expect(Page.Locator("article.sor-cv-record"))
+            .ToHaveCountAsync(4);
+
+        var nationalCard = Page.Locator(
+            "article.sor-doc-review",
+            new() { HasText = "e2e-cv-national-id.png" });
+        await nationalCard.Locator(
+                "form.sor-original-actions button[value='Verified']")
+            .ClickAsync();
+        await Page.WaitForLoadStateAsync(
+            LoadState.DOMContentLoaded);
+
+        await AcceptReviewFieldsAsync();
+        await ResolveOpenIssuesAsync();
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.OnboardingStructuredRecords
+                WHERE SessionId = @SessionId
+                  AND ReviewStatus IN ('Accepted','Modified');
+                """,
+                ("@SessionId", sessionId)),
+            Is.EqualTo(4));
+
+        var markReady = Page.GetByRole(
+            AriaRole.Button,
+            new() { Name = "اعتماد المراجعة" });
+        await Expect(markReady).ToBeEnabledAsync(
+            new LocatorAssertionsToBeEnabledOptions
+            {
+                Timeout = 15_000
+            });
+        await markReady.ClickAsync();
+        await Page.WaitForLoadStateAsync(
+            LoadState.DOMContentLoaded);
+
+        var employeeNo = Page.Locator(
+            "input[name='Finalize.EmployeeNo']:visible");
+        if (await employeeNo.CountAsync() > 0)
+        {
+            await employeeNo.FillAsync(
+                $"E2E-CV-{sessionId}");
+        }
+
+        await Page.Locator(
+                "select[name='Finalize.BranchId']")
+            .SelectOptionAsync(
+                new SelectOptionValue
+                {
+                    Label = "E2E Branch A"
+                });
+        await Page.Locator(
+                "select[name='Finalize.DepartmentId']")
+            .SelectOptionAsync(
+                new SelectOptionValue
+                {
+                    Label = "E2E Department A"
+                });
+        await Page.Locator(
+                "input[type='checkbox'][name='Finalize.IsCitizen']")
+            .CheckAsync();
+
+        await Page.GetByRole(
+                AriaRole.Button,
+                new()
+                {
+                    Name = "إنشاء الموظف وربط المستندات"
+                })
+            .ClickAsync();
+        await Page.WaitForURLAsync(
+            new Regex(@".*/Employees/Profile.*"),
+            new()
+            {
+                Timeout = 20_000,
+                WaitUntil = WaitUntilState.DOMContentLoaded
+            });
+
+        var employeeId = QueryInt(Page.Url, "id");
+        Assert.That(employeeId, Is.GreaterThan(0));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType = 2;
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(2));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType = 1
+                  AND Title = 'University of Baghdad'
+                  AND Subtitle =
+                      'Bachelor of Business Administration';
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(1));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType = 3
+                  AND Title LIKE 'SHRM-CP%';
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(1));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType IN (1,2,3);
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(4));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.EmployeeFileRecords
+                WHERE EmployeeId = @EmployeeId
+                  AND IsDeleted = 0
+                  AND RecordType = 7
+                  AND Title = 'Primary Address'
+                  AND Subtitle = 'Baghdad, Iraq';
+                """,
+                ("@EmployeeId", employeeId)),
+            Is.EqualTo(1));
+
+        Assert.That(
+            await ScalarIntAsync(
+                """
+                SELECT COUNT(*)
+                FROM dbo.Employees
+                WHERE Id = @EmployeeId
+                  AND CompanyId = @CompanyId;
+                """,
+                ("@EmployeeId", employeeId),
+                ("@CompanyId", companyId)),
+            Is.EqualTo(1));
+
+        // Keep the disposable suite isolated: later scenarios use the same
+        // deterministic identity fixture and must not see this test employee
+        // as a real duplicate candidate.
+        await ExecuteAsync(
+            """
+            UPDATE dbo.Employees
+            SET IsDeleted = 1,
+                IsActive = 0
+            WHERE Id = @EmployeeId;
+            """,
+            ("@EmployeeId", employeeId));
+    }
+
     [Test]
     public async Task SmartReview_PreviewConfidenceAndCrossDocumentConflict_AreEnforced()
     {

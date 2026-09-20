@@ -190,6 +190,7 @@ public sealed class SmartOnboardingReviewModel : PageModel
     public EmployeeOnboardingStore.SessionRow? Session { get; private set; }
     public List<EmployeeOnboardingStore.DocumentRow> Documents { get; private set; } = [];
     public List<PeopleAiReviewStore.ReviewField> Fields { get; private set; } = [];
+    public List<PeopleAiStructuredRecordStore.StructuredRecordRow> StructuredRecords { get; private set; } = [];
     public List<PeopleAiReviewStore.ValidationIssue> Issues { get; private set; } = [];
     public List<EmployeeDocumentPolicy> DocumentPolicies { get; private set; } = [];
     public List<PeopleAiFieldPolicy> FieldPolicies { get; private set; } = [];
@@ -264,6 +265,57 @@ public sealed class SmartOnboardingReviewModel : PageModel
         return RedirectToSelf();
     }
 
+
+    public async Task<IActionResult> OnPostReviewStructuredRecordAsync(
+        long recordId,
+        string action,
+        string? title,
+        string? subtitle,
+        string? country,
+        string? refNo,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        bool isCurrent,
+        string? note)
+    {
+        var context = await GetAuthorizedContextAsync(requireReviewer: true);
+        if (context is null)
+        {
+            return Forbid();
+        }
+
+        if (recordId <= 0 ||
+            action is not ("Accept" or "Modify" or "Reject"))
+        {
+            TempData["SmartOnboardingReviewError"] =
+                "إجراء مراجعة السجل غير صالح.";
+            return RedirectToSelf();
+        }
+
+        await PeopleAiStructuredRecordStore.ReviewAsync(
+            _db,
+            SessionId,
+            recordId,
+            context.Value.Access.SystemUserId!.Value,
+            action,
+            new PeopleAiStructuredRecordStore.ReviewInput(
+                title,
+                subtitle,
+                country,
+                refNo,
+                fromDate,
+                toDate,
+                isCurrent,
+                note));
+
+        TempData["SmartOnboardingReviewStatus"] =
+            action == "Reject"
+                ? "تم رفض السجل المستخرج."
+                : "تم اعتماد السجل المستخرج.";
+
+        return RedirectToSelf();
+    }
+
     public async Task<IActionResult> OnPostAcceptAllAsync()
     {
         var context = await GetAuthorizedContextAsync(requireReviewer: true);
@@ -284,10 +336,15 @@ public sealed class SmartOnboardingReviewModel : PageModel
                 SessionId,
                 context.Value.Access.SystemUserId!.Value);
 
+        await PeopleAiStructuredRecordStore.AcceptHighConfidenceAsync(
+            _db,
+            SessionId,
+            context.Value.Access.SystemUserId!.Value);
+
         TempData["SmartOnboardingReviewStatus"] =
             accepted > 0
-                ? $"تم اعتماد {accepted} حقل عالي الثقة (90% فأعلى)."
-                : "لا توجد حقول معلقة عالية الثقة ومسموح باعتمادها جماعياً.";
+                ? $"تم اعتماد {accepted} حقل وسجلات CV عالية الثقة (90% فأعلى)."
+                : "تم تطبيق اعتماد الثقة العالية على الحقول وسجلات CV.";
 
         return RedirectToSelf();
     }
@@ -459,6 +516,15 @@ public sealed class SmartOnboardingReviewModel : PageModel
             context.Value.Access,
             context.Value.Settings);
 
+        if (await PeopleAiStructuredRecordStore.HasPendingLatestAsync(
+                _db,
+                SessionId))
+        {
+            TempData["SmartOnboardingReviewError"] =
+                "راجع سجلات CV المستخرجة (الخبرة والتعليم والشهادات) قبل تحويل الجلسة إلى Ready.";
+            return RedirectToSelf();
+        }
+
         var ready = await PeopleAiReviewStore.MarkReadyAsync(
             _db,
             SessionId);
@@ -600,6 +666,8 @@ public sealed class SmartOnboardingReviewModel : PageModel
             return RedirectToSelf();
         }
 
+        await EmployeeRecordsSchema.EnsureAsync(_db);
+
         await using var transaction =
             await _db.Database.BeginTransactionAsync(
                 HttpContext.RequestAborted);
@@ -697,6 +765,12 @@ WHERE Id = @EmployeeId
 
             await SaveEmployeeNameTranslationsAsync(
                 employeeId.Value);
+
+            await PeopleAiStructuredRecordStore.PromoteAcceptedAsync(
+                _db,
+                SessionId,
+                employeeId.Value,
+                User.Identity?.Name ?? "HR");
 
             var onboardingDocuments =
                 await EmployeeOnboardingStore.ListDocumentsAsync(
@@ -817,6 +891,11 @@ WHERE Id = @EmployeeId
         Fields = await PeopleAiReviewStore
             .ListLatestFieldsAsync(_db, SessionId);
 
+        StructuredRecords =
+            await PeopleAiStructuredRecordStore.ListLatestAsync(
+                _db,
+                SessionId);
+
         var inferredCitizen = Documents.Any(document =>
             string.Equals(
                 document.DetectedDocumentType ??
@@ -857,6 +936,9 @@ WHERE Id = @EmployeeId
         CanMarkReady =
             CanReview &&
             string.IsNullOrWhiteSpace(DocumentPolicyError) &&
+            !await PeopleAiStructuredRecordStore.HasPendingLatestAsync(
+                _db,
+                SessionId) &&
             await PeopleAiReviewStore.CanMarkReadyAsync(
                 _db,
                 SessionId);
@@ -1602,7 +1684,9 @@ WHERE Id = @EmployeeId
         {
             FullName = !string.IsNullOrWhiteSpace(arabicFullName)
                 ? arabicFullName
-                : englishFullName,
+                : !string.IsNullOrWhiteSpace(englishFullName)
+                    ? englishFullName
+                    : Get("FullName") ?? string.Empty,
             FirstName = firstName,
             SecondName = secondName,
             ThirdName = thirdName,
