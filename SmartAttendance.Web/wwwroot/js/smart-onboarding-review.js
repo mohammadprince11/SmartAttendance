@@ -358,12 +358,7 @@
             : 0;
     };
 
-    // Keep an immutable source list. Rebuilding the native <select>
-    // avoids stale disabled options and makes the posted DepartmentId
-    // exactly match the option the reviewer selected.
-    const departmentOptions = Array
-        .from(department.options)
-        .map(option => option.cloneNode(true));
+    const departmentOptions = Array.from(department.options);
 
     const syncDepartments = (resetSelection = false) => {
         const branchId = normalizePositiveId(branch.value);
@@ -371,17 +366,15 @@
             ? "0"
             : String(department.value || "0");
 
-        const fragment = document.createDocumentFragment();
+        let previousStillAvailable = false;
 
-        for (const sourceOption of departmentOptions) {
-            const option = sourceOption.cloneNode(true);
+        for (const option of departmentOptions) {
             const optionId = normalizePositiveId(option.value);
 
-            // value=0 is the placeholder and must always stay usable.
+            // value=0 is always the placeholder.
             if (optionId === 0) {
                 option.hidden = false;
                 option.disabled = false;
-                fragment.appendChild(option);
                 continue;
             }
 
@@ -389,40 +382,25 @@
                 normalizePositiveId(option.dataset.branch);
 
             // BranchId=0 means an independent/company-level department.
-            // Show it for every valid work location, together with any
-            // department explicitly linked to the selected branch.
             const matchesBranch =
                 branchId > 0 &&
                 (optionBranchId === 0 ||
                  optionBranchId === branchId);
 
-            if (matchesBranch) {
-                option.hidden = false;
-                option.disabled = false;
-                fragment.appendChild(option);
+            option.hidden = !matchesBranch;
+            option.disabled = !matchesBranch;
+
+            if (matchesBranch &&
+                option.value === previousValue) {
+                previousStillAvailable = true;
             }
         }
 
-        department.replaceChildren(fragment);
-
-        if (typeof window.ZynoraRefreshSelectSystem === "function") {
-            window.requestAnimationFrame(() => {
-                window.ZynoraRefreshSelectSystem();
-            });
-        }
-
-        const previousStillAvailable = Array
-            .from(department.options)
-            .some(option =>
-                option.value === previousValue &&
-                !option.disabled);
-
-        department.value = previousStillAvailable
-            ? previousValue
-            : "0";
-
-        // No department can be valid before a work location is selected.
         department.disabled = branchId === 0;
+        department.value =
+            previousStillAvailable
+                ? previousValue
+                : "0";
     };
 
     branch.addEventListener("change", () => {
