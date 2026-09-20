@@ -735,7 +735,7 @@
 
                             <form method="post"
                                   asp-page-handler="ReviewStructuredRecord"
-                                  class="sor-cv-record-form"
+                                  class="sor-cv-record-form sor-cv-record-form--@record.RecordType.ToLowerInvariant()"
                                   data-preserve-scroll>
                                 <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
                                 <input type="hidden" name="SessionId" value="@Model.SessionId" />
