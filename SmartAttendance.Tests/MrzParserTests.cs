@@ -89,6 +89,29 @@ public sealed class MrzParserTests
         Assert.True(result.AllRequiredChecksValid);
     }
 
+    [Fact]
+    public void IraqiTd1_OcrDuplicates_AreRecombinedAndCommonIdPrefixIsRepaired()
+    {
+        var result = MrzOcrParser.Parse(
+        [
+            "IDIRQAR45439248199276728473<<<",
+            "9203251M29060251RQ<<<<<<<<<<<3",
+            "ALSWDANY<?MXHMD<??<<<<<<<<<<",
+            "9203251M2906025IRQ<<<<<<<<<<<3",
+            "ALSWDANY<<MXHMD<<<<<<<<<<<<<<<"
+        ]);
+
+        Assert.NotNull(result);
+        Assert.Equal("TD1", result!.Format);
+        Assert.True(result.AllRequiredChecksValid);
+        Assert.Equal("AR4543924", result.DocumentNumber);
+        Assert.Equal("IRQ", result.IssuingCountry);
+        Assert.Equal("IRQ", result.Nationality);
+        Assert.Equal(new DateOnly(1992, 3, 25), result.DateOfBirth);
+        Assert.Equal("M", result.Sex);
+        Assert.Equal(new DateOnly(2029, 6, 2), result.ExpiryDate);
+    }
+
     [Theory]
     [InlineData("L898902C3", '6')]
     [InlineData("740812", '2')]

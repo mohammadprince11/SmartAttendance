@@ -56,6 +56,27 @@ public sealed class IraqiNationalIdParserTests
         Assert.Equal("نواف", result.FirstName);
     }
 
+    [Fact]
+    public void FrontSide_NeighborKurdishLabels_AreRemovedFromNames()
+    {
+        var result = IraqiNationalIdParser.Parse(
+        [
+            L("الأب", 960, 850, 1120, 920),
+            L("رباوك علي", 760, 850, 940, 920),
+            L("الجد", 960, 920, 1120, 990),
+            L("بابير زيدان", 740, 920, 940, 990),
+            L("اللقب", 960, 990, 1120, 1060),
+            L("نازناو السوداني", 700, 990, 940, 1060),
+            L("الأم", 960, 1060, 1120, 1130),
+            L("ادايك سهاد", 760, 1060, 940, 1130)
+        ]);
+
+        Assert.Equal("علي", result.SecondName);
+        Assert.Equal("زيدان", result.ThirdName);
+        Assert.Equal("السوداني", result.LastName);
+        Assert.Equal("سهاد", result.MotherName);
+    }
+
     [Theory]
     [InlineData("الجنس ذكر", "M")]
     [InlineData("الجنس أنثى", "F")]

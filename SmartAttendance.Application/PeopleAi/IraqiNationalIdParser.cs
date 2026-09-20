@@ -56,7 +56,7 @@ public static class IraqiNationalIdParser
         var lastName = FindName(
             lines,
             ["اللقب"],
-            ["نارناو"]);
+            ["نازناو", "نارناو"]);
         var motherName = FindName(
             lines,
             ["الام", "الأم"],
@@ -299,7 +299,10 @@ public static class IraqiNationalIdParser
                 continue;
             }
 
-            var value = CleanName(lines[i].Text);
+            var value = CleanName(
+                StripLeadingNoise(
+                    lines[i].Text,
+                    noiseWords));
             if (!IsPlausibleName(value) ||
                 LooksLikeLabel(lines[i].Text))
             {
@@ -361,34 +364,9 @@ public static class IraqiNationalIdParser
                 RegexOptions.IgnoreCase);
         }
 
-        result = result.Trim();
-
-        // Kurdish companion labels on Iraqi IDs are sometimes glued to the
-        // Arabic value by OCR (for example "الاسم ناومحمد"). Remove a known
-        // companion label only when it is a leading prefix and what remains
-        // is still a plausible multi-letter Arabic name. This avoids
-        // corrupting legitimate names such as "نواف".
-        foreach (var noiseWord in noiseWords
-                     .OrderByDescending(x => x.Length))
-        {
-            var match = Regex.Match(
-                result,
-                @"^\s*" + Regex.Escape(noiseWord),
-                RegexOptions.IgnoreCase);
-
-            if (!match.Success)
-            {
-                continue;
-            }
-
-            var candidate = CleanName(result[match.Length..]);
-            if (candidate.Count(IsArabicLetter) >= 2 &&
-                IsPlausibleName(candidate))
-            {
-                result = candidate;
-                break;
-            }
-        }
+        result = StripLeadingNoise(
+            result.Trim(),
+            noiseWords);
 
         result = CleanName(result);
 
@@ -404,6 +382,55 @@ public static class IraqiNationalIdParser
         return IsPlausibleName(result)
             ? result
             : null;
+    }
+
+    private static string StripLeadingNoise(
+        string value,
+        IReadOnlyList<string> noiseWords)
+    {
+        var result = value ?? string.Empty;
+
+        foreach (var noiseWord in noiseWords
+                     .OrderByDescending(x => x.Length))
+        {
+            var patterns = new List<string>
+            {
+                @"^\s*" + Regex.Escape(noiseWord)
+            };
+
+            // OCR occasionally adds one stray Arabic letter before the
+            // Kurdish companion label (e.g. رباوك / ادايك).
+            if (noiseWord.Length >= 4)
+            {
+                patterns.Add(
+                    @"^\s*[\u0600-\u06FF]\s*" +
+                    Regex.Escape(noiseWord));
+            }
+
+            foreach (var pattern in patterns)
+            {
+                var match = Regex.Match(
+                    result,
+                    pattern,
+                    RegexOptions.IgnoreCase);
+
+                if (!match.Success)
+                {
+                    continue;
+                }
+
+                var candidate = CleanName(
+                    result[match.Length..]);
+
+                if (candidate.Count(IsArabicLetter) >= 2 &&
+                    IsPlausibleName(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return result;
     }
 
     private static bool LooksLikeLabel(string value)

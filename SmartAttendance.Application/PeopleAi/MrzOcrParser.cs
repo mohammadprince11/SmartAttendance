@@ -56,6 +56,24 @@ public static class MrzOcrParser
             }
         }
 
+        var validatedTd3 = TryValidatedAcrossFragments(
+            fragments,
+            44,
+            2);
+        if (validatedTd3 is not null)
+        {
+            return validatedTd3;
+        }
+
+        var validatedTd1 = TryValidatedAcrossFragments(
+            fragments,
+            30,
+            3);
+        if (validatedTd1 is not null)
+        {
+            return validatedTd1;
+        }
+
         var td3 = BuildCandidates(fragments, 44);
         for (var i = 0; i < td3.Count; i++)
         {
@@ -110,6 +128,68 @@ public static class MrzOcrParser
                     if (parsed is not null)
                     {
                         return parsed;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static MrzParseResult? TryValidatedAcrossFragments(
+        IReadOnlyList<string> fragments,
+        int lineLength,
+        int lineCount)
+    {
+        var lines = fragments
+            .Where(x => x.Length == lineLength)
+            .ToList();
+
+        if (lineCount == 2)
+        {
+            for (var i = 0; i < lines.Count; i++)
+            {
+                if (!LooksLikeFirstLine(lines[i], lineLength))
+                {
+                    continue;
+                }
+
+                for (var j = i + 1; j < lines.Count; j++)
+                {
+                    var parsed = MrzParser.Parse(
+                        lines[i] + Environment.NewLine +
+                        lines[j]);
+                    if (parsed?.AllRequiredChecksValid == true)
+                    {
+                        return parsed;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        if (lineCount == 3)
+        {
+            for (var i = 0; i < lines.Count; i++)
+            {
+                if (!LooksLikeFirstLine(lines[i], lineLength))
+                {
+                    continue;
+                }
+
+                for (var j = i + 1; j < lines.Count; j++)
+                {
+                    for (var k = j + 1; k < lines.Count; k++)
+                    {
+                        var parsed = MrzParser.Parse(
+                            lines[i] + Environment.NewLine +
+                            lines[j] + Environment.NewLine +
+                            lines[k]);
+                        if (parsed?.AllRequiredChecksValid == true)
+                        {
+                            return parsed;
+                        }
                     }
                 }
             }
@@ -207,7 +287,19 @@ public static class MrzOcrParser
             }
         }
 
-        return builder.ToString();
+        var normalized = builder.ToString();
+
+        // Common Iraqi TD1 OCR confusion: the filler '<' after the document
+        // code I is read as D, producing IDIRQ... instead of I<IRQ....
+        if (normalized.Length == 30 &&
+            normalized.StartsWith("ID", StringComparison.Ordinal) &&
+            normalized.Length >= 5 &&
+            normalized[2..5].All(char.IsLetter))
+        {
+            normalized = "I<" + normalized[2..];
+        }
+
+        return normalized;
     }
 
     private static bool LooksLikeFirstLine(
