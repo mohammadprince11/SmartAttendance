@@ -11,6 +11,7 @@ public static class CompanyLeavePolicyStore
         public int RequestTypeId { get; set; }
         public string RequestTypeName { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
+        public string EffectCode { get; set; } = string.Empty;
         public bool NeedsTime { get; set; }
         public bool RequiresBalance { get; set; }
         public decimal? EntitlementAmount { get; set; }
@@ -56,7 +57,7 @@ public static class CompanyLeavePolicyStore
 
     private sealed record UsageRow(int Id, int? RequestTypeId, string RequestType, DateOnly FromDate,
         DateOnly ToDate, TimeSpan? StartTime, TimeSpan? EndTime);
-    private sealed record EmployeeFacts(int CompanyId, DateOnly? HireDate);
+    private sealed record EmployeeFacts(int CompanyId, DateOnly? HireDate, string? WorkType);
 
     public static async Task<List<Policy>> ListForCompanyAsync(ApplicationDbContext db, int companyId, bool onlyActive = true)
     {
@@ -212,7 +213,7 @@ VALUES
                         $"الطلب يتجاوز الحد الأعلى للطلب الواحد ({maxRequest:0.##} {UnitLabel(sourcePolicy.BalanceUnit)}).",
                         Requested: requested, Unit: sourcePolicy.BalanceUnit);
 
-                var entitlement = CalculateAccruedEntitlement(sourcePolicy, facts.HireDate, request.FromDate);
+                var entitlement = CalculateAccruedEntitlement(sourcePolicy, facts, request.FromDate);
                 entitlement += await CalculateCarryForwardAsync(db, employeeId, facts, sourcePolicy,
                     sourceId, policies, types, request.FromDate);
                 var yearlyCap = policy.MaxPerYearAmount ?? sourcePolicy.MaxPerYearAmount;
@@ -276,7 +277,7 @@ VALUES
             if (!policies.TryGetValue(sourceId, out var sourcePolicy))
                 continue;
 
-            var entitlement = CalculateAccruedEntitlement(sourcePolicy, facts.HireDate, asOf);
+            var entitlement = CalculateAccruedEntitlement(sourcePolicy, facts, asOf);
             entitlement += await CalculateCarryForwardAsync(
                 db, employeeId, facts, sourcePolicy, sourceId, policies, types, asOf);
 
@@ -318,14 +319,17 @@ VALUES
 
     private static async Task<EmployeeFacts> LoadEmployeeFactsAsync(ApplicationDbContext db,int employeeId)
     {
-        var rows=await HrmsDatabase.QueryAsync(db,"SELECT TOP 1 ISNULL(CompanyId,0) CompanyId,HireDate FROM Employees WHERE Id=@Id AND IsDeleted=0;",
-            c=>HrmsDatabase.AddParameter(c,"@Id",employeeId),r=>new EmployeeFacts(HrmsDatabase.GetInt(r,"CompanyId"),HrmsDatabase.GetDateOnly(r,"HireDate")));
-        return rows.FirstOrDefault() ?? new(0,null);
+        var rows=await HrmsDatabase.QueryAsync(db,"SELECT TOP 1 ISNULL(CompanyId,0) CompanyId,HireDate,WorkType FROM Employees WHERE Id=@Id AND IsDeleted=0;",
+            c=>HrmsDatabase.AddParameter(c,"@Id",employeeId),r=>new EmployeeFacts(
+                HrmsDatabase.GetInt(r,"CompanyId"),
+                HrmsDatabase.GetDateOnly(r,"HireDate"),
+                HrmsDatabase.GetString(r,"WorkType") is { Length: > 0 } wt ? wt : null));
+        return rows.FirstOrDefault() ?? new(0,null,null);
     }
 
     private static async Task<Dictionary<int,Policy>> BuildPolicyMapAsync(ApplicationDbContext db,int companyId,IReadOnlyList<RequestTypeStore.ReqType> types)
     {
-        var stored=await LoadStoredAsync(db,companyId); var byId=stored.ToDictionary(x=>x.RequestTypeId); var names=types.ToDictionary(x=>x.Id,x=>x.Name);
+        var stored=await LoadStoredAsync(db,companyId); var byId=stored.ToDictionary(x=>x.RequestTypeId); var names=types.ToDictionary(x=>x.Id,x=>x.Name ?? string.Empty);
         return types.ToDictionary(type=>type.Id,type=>BuildEffective(companyId,type,byId,names));
     }
 
@@ -334,9 +338,9 @@ VALUES
         if (stored.TryGetValue(type.Id,out var row))
         {
             var sourceId=row.BalanceSourceRequestTypeId ?? type.Id;
-            return new Policy { CompanyId=companyId,RequestTypeId=type.Id,RequestTypeName=type.Name,CategoryName=type.CategoryName,NeedsTime=type.NeedsTime,
+            return new Policy { CompanyId=companyId,RequestTypeId=type.Id,RequestTypeName=type.Name ?? string.Empty,CategoryName=type.CategoryName ?? string.Empty,EffectCode=RequestTypeEffectCatalog.EffectiveCode(type) ?? string.Empty,NeedsTime=type.NeedsTime,
                 RequiresBalance=row.RequiresBalance,EntitlementAmount=row.EntitlementAmount,BalanceUnit=NormalizeUnit(row.BalanceUnit),AllowNegative=row.AllowNegative,
-                NegativeLimitAmount=row.NegativeLimitAmount,BalanceSourceRequestTypeId=row.BalanceSourceRequestTypeId,BalanceSourceName=names.GetValueOrDefault(sourceId,type.Name),
+                NegativeLimitAmount=row.NegativeLimitAmount,BalanceSourceRequestTypeId=row.BalanceSourceRequestTypeId,BalanceSourceName=names.GetValueOrDefault(sourceId) ?? type.Name ?? string.Empty,
                 HoursPerDayOverride=row.HoursPerDayOverride,MaxPerRequestAmount=row.MaxPerRequestAmount,MaxPerYearAmount=row.MaxPerYearAmount,MinimumNoticeDays=row.MinimumNoticeDays,
                 EligibilityDays=row.EligibilityDays,CarryForwardEnabled=row.CarryForwardEnabled,CarryForwardMaxAmount=row.CarryForwardMaxAmount,CarryForwardExpiryMonths=row.CarryForwardExpiryMonths,
                 AccrualMethod=NormalizeAccrual(row.AccrualMethod),ProrateOnHire=row.ProrateOnHire,AllowRetroactive=row.AllowRetroactive,ReasonRequired=row.ReasonRequired,
@@ -350,8 +354,8 @@ VALUES
         var code=RequestTypeEffectCatalog.EffectiveCode(type);
         decimal? entitlement=type.HasBalance ? type.AllowedDays : null;
         if (entitlement is null) entitlement=code switch { RequestTypeEffectCatalog.LeaveAnnual=>21m,RequestTypeEffectCatalog.LeaveSick=>30m,_=>null };
-        return new Policy { CompanyId=companyId,RequestTypeId=type.Id,RequestTypeName=type.Name,CategoryName=type.CategoryName,NeedsTime=type.NeedsTime,
-            RequiresBalance=type.HasBalance||entitlement.HasValue,EntitlementAmount=entitlement,BalanceUnit="Days",AllowNegative=false,BalanceSourceName=type.Name,
+        return new Policy { CompanyId=companyId,RequestTypeId=type.Id,RequestTypeName=type.Name ?? string.Empty,CategoryName=type.CategoryName ?? string.Empty,EffectCode=code ?? string.Empty,NeedsTime=type.NeedsTime,
+            RequiresBalance=type.HasBalance||entitlement.HasValue,EntitlementAmount=entitlement,BalanceUnit="Days",AllowNegative=false,BalanceSourceName=type.Name ?? string.Empty,
             HoursPerDayOverride=0m,AccrualMethod="FullUpfront",AllowRetroactive=true,AttachmentRequiredOverride=null,IsConfigured=false };
     }
 
@@ -395,9 +399,27 @@ FROM SelfServiceRequests WHERE EmployeeId=@EmployeeId AND Id<>@CurrentRequestId 
         return Math.Round(total,4,MidpointRounding.AwayFromZero);
     }
 
-    private static decimal CalculateAccruedEntitlement(Policy policy,DateOnly? hireDate,DateOnly asOf)
+    public static bool IsPartTimeWorkType(string? workType) =>
+        string.Equals(workType?.Trim(), "دوام جزئي", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(workType?.Trim(), "Part Time", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(workType?.Trim(), "Part-Time", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(workType?.Trim(), "PT", StringComparison.OrdinalIgnoreCase);
+
+    public static decimal EffectiveEntitlementForWorkType(Policy policy,string? workType)
     {
-        var annual=policy.EntitlementAmount??0m; if(annual<=0m)return 0m;
+        var amount=policy.EntitlementAmount??0m;
+        if(amount<=0m)return 0m;
+
+        return policy.EffectCode==RequestTypeEffectCatalog.LeaveAnnual
+               && IsPartTimeWorkType(workType)
+            ? Math.Round(amount*0.5m,4,MidpointRounding.AwayFromZero)
+            : amount;
+    }
+
+    private static decimal CalculateAccruedEntitlement(Policy policy,EmployeeFacts facts,DateOnly asOf)
+    {
+        var annual=EffectiveEntitlementForWorkType(policy,facts.WorkType); if(annual<=0m)return 0m;
+        var hireDate=facts.HireDate;
         if(hireDate is { } futureHire && futureHire>asOf) return 0m;
         var yearStart=new DateOnly(asOf.Year,1,1); var start=yearStart;
         if(hireDate is { } hire && hire.Year==asOf.Year && hire>start) start=hire;
@@ -412,7 +434,7 @@ FROM SelfServiceRequests WHERE EmployeeId=@EmployeeId AND Id<>@CurrentRequestId 
     {
         if(!sourcePolicy.CarryForwardEnabled||asOf.Year<=1)return 0m;
         if(sourcePolicy.CarryForwardExpiryMonths is { } months && months>=0 && asOf>new DateOnly(asOf.Year,1,1).AddMonths(months))return 0m;
-        var py=asOf.Year-1; var priorEnd=new DateOnly(py,12,31); var priorEntitlement=CalculateAccruedEntitlement(sourcePolicy,facts.HireDate,priorEnd); if(priorEntitlement<=0m)return 0m;
+        var py=asOf.Year-1; var priorEnd=new DateOnly(py,12,31); var priorEntitlement=CalculateAccruedEntitlement(sourcePolicy,facts,priorEnd); if(priorEntitlement<=0m)return 0m;
         var priorRows=await LoadUsageAsync(db,employeeId,0,py); var priorUsed=await SumUsageForSourceAsync(db,employeeId,facts.CompanyId,sourceId,priorRows,policies,types);
         var carry=Math.Max(0m,priorEntitlement-priorUsed); if(sourcePolicy.CarryForwardMaxAmount is { } cap)carry=Math.Min(carry,cap); return carry;
     }
