@@ -251,7 +251,7 @@
                 <div class="z360-contact">
                     <div class="z360-contact-row">
                         <span>البريد الإلكتروني</span>
-                        <strong>@Model.Display(employee.Email)</strong>
+                        <strong>@Model.Display(string.IsNullOrWhiteSpace(employee.Email) ? employee.PersonalEmail : employee.Email)</strong>
                     </div>
                     <div class="z360-contact-row">
                         <span>الهاتف</span>
