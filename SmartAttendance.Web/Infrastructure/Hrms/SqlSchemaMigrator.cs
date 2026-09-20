@@ -3082,6 +3082,32 @@ BEGIN
             CONSTRAINT DF_EOS_TerminationDifferenceNet DEFAULT(0);
 END;
 """),
+
+        new(
+            "20260920-11-payroll-reversal-idempotency",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns','OriginalRunId') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns','RunType') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT OriginalRunId
+        FROM PayrollRuns
+        WHERE OriginalRunId IS NOT NULL AND RunType=N'Reversal'
+        GROUP BY OriginalRunId
+        HAVING COUNT(*) > 1)
+        THROW 51000, 'Duplicate payroll reversal rows must be remediated before enabling the unique reversal guard.', 1;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id=OBJECT_ID('PayrollRuns')
+          AND name='UX_PayrollRuns_Reversal_OriginalRun')
+        EXEC sp_executesql N'
+            CREATE UNIQUE INDEX UX_PayrollRuns_Reversal_OriginalRun
+                ON PayrollRuns(OriginalRunId)
+                WHERE OriginalRunId IS NOT NULL AND RunType=N''Reversal'';';
+END;
+"""),
     };
 
     /// <summary>

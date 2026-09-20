@@ -1799,11 +1799,16 @@ ORDER BY e.EmployeeNo;
     // ---------------- دورة الحياة ----------------
     public static async Task<(bool, string)> LockAsync(ApplicationDbContext dbContext, int runId)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var run = await GetRunAsync(dbContext, runId);
         var res = await TransitionAsync(dbContext, runId, from: "Calculated", to: "Locked", "LockedAt", "قُفلت الدفعة.");
-        // قفل حركات الدفعة (لكل حركة) — الحركات الجديدة بعدها تبقى غير مقفلة
+
+        // تغيير حالة الدفعة وقفل الحركات عملية مالية واحدة: فشل قفل الحركات يجب أن
+        // يعيد الدفعة إلى Calculated تلقائياً عبر rollback، لا أن يتركها Locked جزئياً.
         if (res.Item1 && run != null)
             await PayrollTransactionStore.LockForRunAsync(dbContext, runId, run.Year, run.Month);
+
+        await transaction.CommitAsync();
         return res;
     }
 
@@ -1892,6 +1897,7 @@ ORDER BY e.EmployeeNo;
     /// </summary>
     public static async Task<(bool, string)> UnlockAsync(ApplicationDbContext dbContext, int runId)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var res = await TransitionAsync(dbContext, runId, from: "Locked", to: "Calculated", null, "أُلغي القفل — عادت الدفعة قابلة للتعديل.");
         if (res.Item1)
         {
@@ -1902,6 +1908,8 @@ ORDER BY e.EmployeeNo;
                 "UPDATE PayrollRuns SET ApprovedBy = NULL, ApprovedAt = NULL, ApprovalNote = NULL WHERE Id = @Id AND COL_LENGTH('PayrollRuns','ApprovedAt') IS NOT NULL;",
                 command => HrmsDatabase.AddParameter(command, "@Id", runId));
         }
+
+        await transaction.CommitAsync();
         return res;
     }
 

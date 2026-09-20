@@ -1136,8 +1136,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         await PayrollTransactionStore.EnsureAsync(db);
 
         var txA = await ScalarAsync(db, $"""
-INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,Status,IsLocked)
-VALUES({_employeeA},2089,2,N'Off-cycle bonus',125,N'Income',N'OutSalary',0,N'Approved',0);
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,TransactionDate,Status,IsLocked)
+VALUES({_employeeA},2089,2,N'Off-cycle bonus',125,N'Income',N'OutSalary',0,'2089-01-01',N'Approved',0);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """);
         var txB = await ScalarAsync(db, $"""
@@ -1164,8 +1164,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         Assert.Equal(0, await RawIntAsync(db, $"SELECT CAST(IsLocked AS int) FROM PayrollTransactions WHERE Id={txB};"));
 
         var retroTx = await ScalarAsync(db, $"""
-INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,RetroactiveDate,Status,IsLocked)
-VALUES({_employeeA},2089,2,N'Retroactive correction',75,N'Income',N'InSalary',1,'2089-01-01',N'Approved',0);
+INSERT INTO PayrollTransactions(EmployeeId,[Year],[Month],ItemName,Amount,TxType,PaymentType,IsRetroactive,TransactionDate,RetroactiveDate,Status,IsLocked)
+VALUES({_employeeA},2089,2,N'Retroactive correction',75,N'Income',N'InSalary',1,'2089-01-01','2089-01-01',N'Approved',0);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """);
         var retro = await PayrollRunStore.CreateRunAsync(
@@ -1188,6 +1188,13 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             $"SELECT NetSalary FROM PayrollRunLines WHERE RunId={reversal.RunId};")));
         Assert.Equal(PayrollRunStore.RunTypeReversal, await ScalarStringAsync(db,
             $"SELECT RunType FROM PayrollRuns WHERE Id={reversal.RunId};"));
+
+        var duplicateReversal = await PayrollRunStore.CreateRunAsync(
+            db, scope, _companyA, 2089, 4, PayrollRunScope.ModeAll, Array.Empty<int>(),
+            default, PayrollRunStore.RunTypeReversal, "Duplicate reversal must be rejected", created.RunId);
+        Assert.False(duplicateReversal.Ok);
+        Assert.Equal(1, await RawIntAsync(db,
+            "SELECT COUNT(*) FROM sys.indexes WHERE object_id=OBJECT_ID(N'PayrollRuns') AND name=N'UX_PayrollRuns_Reversal_OriginalRun' AND is_unique=1;"));
     }
 
     [SkippableFact]
