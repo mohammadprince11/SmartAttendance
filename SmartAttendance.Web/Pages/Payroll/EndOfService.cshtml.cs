@@ -7,9 +7,10 @@ using SmartAttendance.Web.Infrastructure.Security;
 namespace SmartAttendance.Web.Pages.Payroll;
 
 /// <summary>
-/// نهاية الخدمة (/Payroll/EndOfService) — مطابقة كيان «نهاية الخدمة/STB». تحسب مكافأة
-/// نهاية الخدمة بشرائح سنوات الخدمة على آخر أساسي + بدل رصيد الإجازات + مستحقات −
-/// اقتطاعات = صافي التسوية. كل الأرقام تُحتسب بالسيرفر (لا من العميل).
+/// نهاية الخدمة (/Payroll/EndOfService) — تسوية نهائية محكومة بسياسة الشركة.
+/// أهلية المكافأة صريحة لكل تسوية، وقيمتها إمّا Policy أو Manual، ثم يضاف بدل رصيد
+/// الإجازات والمستحقات الأخرى وتطرح الاقتطاعات. الاعتماد يرحّل الصافي إلى OffCycle Payroll.
+/// كل الأرقام تُحتسب بالسيرفر (لا من العميل).
 /// </summary>
 public class EndOfServiceModel : PageModel
 {
@@ -118,7 +119,11 @@ public class EndOfServiceModel : PageModel
             gratuity = manualGratuity;
         }
 
-        var dailyRate = Math.Round(lastBasic / 30m, 4);
+        var payrollPeriod = await EndOfServiceStore.ResolvePayrollPeriodAsync(
+            _db, employee.CompanyId, end.Value);
+        var rateBasis = await PayrollDivisorPolicy.ResolveForPeriodAsync(
+            _db, employee.CompanyId, payrollPeriod.Year, payrollPeriod.Month);
+        var dailyRate = PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor);
         var leaveEnc = Math.Round(leaveDays * dailyRate, 2);
         var net = Math.Round(gratuity + leaveEnc + otherDues - deductions, 2);
 

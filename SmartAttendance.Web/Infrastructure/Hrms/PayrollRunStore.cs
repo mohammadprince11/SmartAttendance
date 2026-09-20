@@ -876,7 +876,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
 
         var overtimeBaseMode = await GetPayrollSetting("Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
         var unpaidLeaveBaseMode = await GetPayrollSetting("Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
-        var salaryDaysBasis = await GetPayrollSetting(PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
+        var salaryDaysBasis = await PayrollDivisorPolicy.LoadSalaryDaysBasisAsync(dbContext, runCompanyForLoans);
         var standardDailyHours = PayrollDivisorPolicy.DailyHours(
             await GetPayrollSetting(PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
         var missingPunchPenaltyPercent = await MissingPunchPayrollPolicy.LoadPercentAsync(

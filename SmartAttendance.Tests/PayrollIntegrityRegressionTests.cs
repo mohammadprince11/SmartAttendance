@@ -121,6 +121,14 @@ public sealed class PayrollIntegrityRegressionTests
         Assert.DoesNotContain("ISNULL(b.CompanyId, 0) AS CompanyId", provision);
         Assert.Contains("EndOfServicePolicy.LoadAsync", provision);
         Assert.Contains("EndOfServicePolicy.LoadAsync", page);
+        Assert.Contains("EndOfServiceStore.ResolvePayrollPeriodAsync", page);
+        Assert.Contains("PayrollDivisorPolicy.ResolveForPeriodAsync", page);
+        Assert.Contains("PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor)", page);
+        Assert.DoesNotContain("lastBasic / 30m", page);
+        Assert.Contains("PayrollDivisorPolicy.ResolveForDateAsync", provision);
+        Assert.Contains("PayrollRateBasis.DailyRate(e.Basic, leaveRatePolicy.Divisor)", provision);
+        Assert.DoesNotContain("e.Basic / 30m", provision);
+        Assert.Contains("ResolveLabelForDateAsync", store);
         Assert.Contains("GratuityCalculationMode", store);
         Assert.Contains("GratuityWeeksPerYear", store);
 

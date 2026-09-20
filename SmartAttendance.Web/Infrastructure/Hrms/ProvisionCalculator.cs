@@ -8,8 +8,8 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// <summary>
 /// حساب الاحتياطي (نمط كيان — «احتياطي/مخصصات» الالتزامات): الالتزام المتراكم الذي
 /// يجب أن تحتجزه الشركة لكل موظف <b>نشط</b> بتاريخ محدّد = مخصص مكافأة نهاية الخدمة
-/// (كأن الموظف تُرك اليوم — بشرائح <see cref="EndOfServiceStore.ComputeGratuity"/>
-/// على آخر أساسي) + مخصص رصيد الإجازات السنوية غير المستخدمة (أيام × الأجر اليومي).
+/// وفق سياسة الشركة الفعّالة + مخصص رصيد الإجازات السنوية غير المستخدمة
+/// (أيام × الأجر اليومي وفق Payroll Salary Days Basis).
 /// حساب مُجمَّع (استعلامات bulk) لكل الموظفين دفعةً واحدة. تقرير للقراءة فقط.
 /// </summary>
 public static class ProvisionCalculator
@@ -153,6 +153,13 @@ ORDER BY e.EmployeeNo;
         foreach (var company in employees.Select(e => e.CompanyId).Where(id => id > 0).Distinct())
             eosPolicies[company] = await EndOfServicePolicy.LoadAsync(db, company);
 
+        var leaveRatePolicies = new Dictionary<int, PayrollDivisorPolicy.ResolvedBasis>();
+        foreach (var company in employees.Select(e => e.CompanyId).Distinct())
+        {
+            leaveRatePolicies[company] = await PayrollDivisorPolicy.ResolveForDateAsync(
+                db, company > 0 ? company : null, asOf);
+        }
+
         foreach (var e in employees)
         {
             var hasLocalizedDisplay =
@@ -169,7 +176,8 @@ ORDER BY e.EmployeeNo;
             var entitled = overrides.TryGetValue(e.Id, out var o) ? o.Entitled + o.Carried : defaultAnnual;
             var remaining = entitled - used.GetValueOrDefault(e.Id);
             var leaveDays = remaining > 0 ? remaining : 0;
-            var dailyRate = e.Basic > 0 ? Math.Round(e.Basic / 30m, 4) : 0;
+            var leaveRatePolicy = leaveRatePolicies[e.CompanyId];
+            var dailyRate = PayrollRateBasis.DailyRate(e.Basic, leaveRatePolicy.Divisor);
             var leaveProvision = Math.Round(leaveDays * dailyRate, 2);
 
             result.Rows.Add(new Row

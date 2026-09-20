@@ -44,31 +44,15 @@ public static class EndOfServiceStore
             _ => null
         };
 
-    public static async Task<(int Year, int Month)> ResolvePayrollPeriodAsync(
+    public static Task<(int Year, int Month)> ResolvePayrollPeriodAsync(
         ApplicationDbContext dbContext,
         int companyId,
-        DateOnly lastWorkingDate)
-    {
-        var label = new DateOnly(lastWorkingDate.Year, lastWorkingDate.Month, 1);
-
-        // نفحص الشهر السابق/الحالي/التالي لأن سياسة القطع قد تجعل 21/09 مثلاً
-        // جزءاً من مسير تشرين لا أيلول. بلا سياسة Terminations يعود الشهر التقويمي.
-        for (var offset = -1; offset <= 1; offset++)
-        {
-            var candidate = label.AddMonths(offset);
-            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
-                dbContext,
-                candidate.Year,
-                candidate.Month,
-                SmartAttendance.Domain.Enums.PayrollCutoffType.Terminations,
-                companyId);
-
-            if (lastWorkingDate >= period.From && lastWorkingDate <= period.To)
-                return (candidate.Year, candidate.Month);
-        }
-
-        return (lastWorkingDate.Year, lastWorkingDate.Month);
-    }
+        DateOnly lastWorkingDate) =>
+        AttendancePeriodPolicy.ResolveLabelForDateAsync(
+            dbContext,
+            lastWorkingDate,
+            SmartAttendance.Domain.Enums.PayrollCutoffType.Terminations,
+            companyId);
 
     public sealed record ApprovalResult(
         bool Ok,

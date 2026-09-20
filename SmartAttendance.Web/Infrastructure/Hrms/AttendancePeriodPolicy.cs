@@ -70,6 +70,31 @@ public static class AttendancePeriodPolicy
             select p.DayOfMonth ?? p.ToDay).FirstOrDefaultAsync();
     }
 
+    /// <summary>
+    /// يحسم اسم شهر المسير الذي يحتوي تاريخاً فعلياً حسب نوع سياسة القطع.
+    /// نفحص السابق/الحالي/التالي لأن الفترات العابرة للشهر قد تنسب التاريخ لشهر مجاور.
+    /// </summary>
+    public static async Task<(int Year, int Month)> ResolveLabelForDateAsync(
+        ApplicationDbContext dbContext,
+        DateOnly date,
+        SmartAttendance.Domain.Enums.PayrollCutoffType policyType,
+        int companyId)
+    {
+        var label = new DateOnly(date.Year, date.Month, 1);
+
+        for (var offset = -1; offset <= 1; offset++)
+        {
+            var candidate = label.AddMonths(offset);
+            var (period, _) = await ResolveFromPolicyAsync(
+                dbContext, candidate.Year, candidate.Month, policyType, companyId);
+
+            if (date >= period.From && date <= period.To)
+                return (candidate.Year, candidate.Month);
+        }
+
+        return (date.Year, date.Month);
+    }
+
     /// <summary>فترة محسومة: مداها، والشهر الذي تُسمّى به.</summary>
     public readonly record struct Period(
         DateOnly From,

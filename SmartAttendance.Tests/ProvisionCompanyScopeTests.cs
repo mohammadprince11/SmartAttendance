@@ -16,6 +16,9 @@ public sealed class ProvisionCompanyScopeTests
 
         Assert.Contains("ApplicationDbContext db, CompanyScope scope", source, StringComparison.Ordinal);
         Assert.True(Count(source, "EmployeeCompanyGuard.ListFilter(scope") >= 3);
+        Assert.Contains("PayrollDivisorPolicy.ResolveForDateAsync", source, StringComparison.Ordinal);
+        Assert.Contains("company > 0 ? company : null", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("e.Basic / 30m", source, StringComparison.Ordinal);
         Assert.DoesNotContain("employees = employees.Where", source, StringComparison.Ordinal);
     }
 
