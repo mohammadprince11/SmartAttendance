@@ -995,8 +995,12 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
             var factor = link.Factor;
             var proratedBasic = Math.Round(basic * factor, 2);
 
-            var dailyRate = basic > 0 ? Math.Round(basic / 30m, 4) : 0;
-            var hourlyRate = dailyRate > 0 ? Math.Round(dailyRate / 8m, 4) : 0;
+            // مصدر واحد لقيمة اليوم والساعة داخل كامل المسير. الافتراضي 30/8
+            // يحافظ على الأرقام القديمة، بينما PeriodDays/StandardDailyHours يطبّقان
+            // بالتساوي على تعديل أيام الراتب وبدل الإجازة والصيغ وباقي الحسابات.
+            var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
+            var dailyRate = PayrollRateBasis.DailyRate(basic, salaryDivisor);
+            var hourlyRate = PayrollRateBasis.HourlyRate(dailyRate, standardDailyHours);
 
             // سمات الموظف — تُقرأ مرّةً هنا لأنّ إنفاذ «معايير الاستحقاق» على عناصر
             // الراتب (العلاوات والصيغ) يسبق حسم ملفَّي الضريبة/الضمان لاحقاً.
@@ -1068,8 +1072,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
 
             // مقام أيام الراتب + أجرا الأوفرتايم والإجازة اليوميّان بوعاءيهما المهيَّأين.
             // الافتراضات تجعلهما = الأساسي ÷ 30 (÷ 8) حرفياً كسلوك المحرك القائم.
-            var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
-            var missingPunchDailyBasic = PayrollRateBasis.DailyRate(basic, salaryDivisor);
+            var missingPunchDailyBasic = dailyRate;
             var missingPunchPenalty = MissingPunchPayrollPolicy.Calculate(
                 missingPunchDailyBasic, incompleteDays, missingPunchPenaltyPercent);
             var overtimeHourlyRate = PayrollRateBasis.HourlyRate(

@@ -26,6 +26,18 @@ public class PayrollBasePolicyTests
     }
 
     [Fact]
+    public void PeriodDaysAndConfiguredHours_DriveOneConsistentRateBasis()
+    {
+        var divisor = PayrollDivisorPolicy.Divisor(PayrollDivisorPolicy.BasisPeriodDays, 31);
+        var daily = PayrollRateBasis.DailyRate(3_100_000m, divisor);
+        var hourly = PayrollRateBasis.HourlyRate(daily, 7.5m);
+
+        Assert.Equal(31m, divisor);
+        Assert.Equal(100_000m, daily);
+        Assert.Equal(13_333.3333m, hourly);
+    }
+
+    [Fact]
     public void UnpaidLeave_BasicOnly_LegacyNumber()
     {
         // الافتراض: الأساسي وحده ÷ 30 × يوم = 13,333.33 (سلوك سابق).

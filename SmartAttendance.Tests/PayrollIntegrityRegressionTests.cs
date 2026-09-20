@@ -78,6 +78,20 @@ public sealed class PayrollIntegrityRegressionTests
     }
 
     [Fact]
+    public void Payroll_run_uses_one_company_rate_basis_for_day_and_hour_amounts()
+    {
+        var root = FindRoot();
+        var runStore = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs"));
+
+        Assert.Contains("var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);", runStore);
+        Assert.Contains("var dailyRate = PayrollRateBasis.DailyRate(basic, salaryDivisor);", runStore);
+        Assert.Contains("var hourlyRate = PayrollRateBasis.HourlyRate(dailyRate, standardDailyHours);", runStore);
+        Assert.Contains("t.Days.Value * dailyRate", runStore);
+        Assert.DoesNotContain("Math.Round(basic / 30m, 4)", runStore);
+        Assert.DoesNotContain("Math.Round(dailyRate / 8m, 4)", runStore);
+    }
+
+    [Fact]
     public void Payroll_source_persists_deferred_deductions_and_validates_leave_encashment()
     {
         var root = FindRoot();
