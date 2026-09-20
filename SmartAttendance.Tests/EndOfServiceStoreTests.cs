@@ -57,6 +57,32 @@ public class EndOfServiceStoreTests
     }
 
     [Fact]
+    public void PayrollPosting_PositiveNet_IsOffCycleIncomeAmount()
+    {
+        var posting = EndOfServiceStore.ToPayrollPosting(125_000m);
+
+        Assert.NotNull(posting);
+        Assert.Equal(PayrollTransactionStore.Income, posting.Value.TxType);
+        Assert.Equal(125_000m, posting.Value.Amount);
+    }
+
+    [Fact]
+    public void PayrollPosting_NegativeNet_IsDeductionWithAbsoluteAmount()
+    {
+        var posting = EndOfServiceStore.ToPayrollPosting(-75_000m);
+
+        Assert.NotNull(posting);
+        Assert.Equal(PayrollTransactionStore.Deduction, posting.Value.TxType);
+        Assert.Equal(75_000m, posting.Value.Amount);
+    }
+
+    [Fact]
+    public void PayrollPosting_ZeroNet_CreatesNoTransaction()
+    {
+        Assert.Null(EndOfServiceStore.ToPayrollPosting(0m));
+    }
+
+    [Fact]
     public void YearsOfService_EndBeforeOrEqualStart_IsZero()
     {
         var d = new DateOnly(2020, 6, 1);

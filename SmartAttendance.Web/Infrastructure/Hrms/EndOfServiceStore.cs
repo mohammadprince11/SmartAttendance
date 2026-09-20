@@ -34,6 +34,59 @@ public static class EndOfServiceStore
     public static decimal YearsOfService(DateOnly start, DateOnly end)
         => end <= start ? 0 : Math.Round((decimal)(end.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).TotalDays / 365.25m, 2);
 
+    public readonly record struct PayrollPosting(string TxType, decimal Amount);
+
+    public static PayrollPosting? ToPayrollPosting(decimal netSettlement) =>
+        netSettlement switch
+        {
+            > 0m => new PayrollPosting(PayrollTransactionStore.Income, Math.Abs(netSettlement)),
+            < 0m => new PayrollPosting(PayrollTransactionStore.Deduction, Math.Abs(netSettlement)),
+            _ => null
+        };
+
+    public static async Task<(int Year, int Month)> ResolvePayrollPeriodAsync(
+        ApplicationDbContext dbContext,
+        int companyId,
+        DateOnly lastWorkingDate)
+    {
+        var label = new DateOnly(lastWorkingDate.Year, lastWorkingDate.Month, 1);
+
+        // نفحص الشهر السابق/الحالي/التالي لأن سياسة القطع قد تجعل 21/09 مثلاً
+        // جزءاً من مسير تشرين لا أيلول. بلا سياسة Terminations يعود الشهر التقويمي.
+        for (var offset = -1; offset <= 1; offset++)
+        {
+            var candidate = label.AddMonths(offset);
+            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                dbContext,
+                candidate.Year,
+                candidate.Month,
+                SmartAttendance.Domain.Enums.PayrollCutoffType.Terminations,
+                companyId);
+
+            if (lastWorkingDate >= period.From && lastWorkingDate <= period.To)
+                return (candidate.Year, candidate.Month);
+        }
+
+        return (lastWorkingDate.Year, lastWorkingDate.Month);
+    }
+
+    public sealed record ApprovalResult(
+        bool Ok,
+        bool PostedToPayroll,
+        int? PayrollTransactionId,
+        int? PayrollYear,
+        int? PayrollMonth,
+        string Message);
+
+    private sealed record ApprovalRow(
+        int EmployeeId,
+        int CompanyId,
+        string ReferenceNo,
+        DateOnly? LastWorkingDate,
+        decimal NetSettlement,
+        string Status,
+        int? PayrollTransactionId);
+
     public sealed class Settlement
     {
         public int Id { get; set; }
@@ -58,6 +111,9 @@ public static class EndOfServiceStore
         public decimal OtherDues { get; set; }
         public decimal Deductions { get; set; }
         public decimal NetSettlement { get; set; }
+        public int? PayrollTransactionId { get; set; }
+        public DateTime? PayrollPostedAt { get; set; }
+        public string? PayrollPostedBy { get; set; }
         public string? Note { get; set; }
         public string Status { get; set; } = "Draft";
         public DateTime? ApprovedAt { get; set; }
@@ -95,6 +151,9 @@ BEGIN
         OtherDues decimal(18,2) NOT NULL DEFAULT(0),
         Deductions decimal(18,2) NOT NULL DEFAULT(0),
         NetSettlement decimal(18,2) NOT NULL DEFAULT(0),
+        PayrollTransactionId int NULL,
+        PayrollPostedAt datetime2 NULL,
+        PayrollPostedBy nvarchar(150) NULL,
         Note nvarchar(500) NULL,
         Status nvarchar(30) NOT NULL DEFAULT(N'Draft'),
         ApprovedAt datetime2 NULL,
@@ -121,6 +180,17 @@ BEGIN
     IF COL_LENGTH('EmployeeEndOfService','GratuityBasisAmount') IS NULL
         ALTER TABLE EmployeeEndOfService ADD GratuityBasisAmount decimal(18,2) NOT NULL
             CONSTRAINT DF_EOS_GratuityBasisAmount DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollTransactionId int NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedAt') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedAt datetime2 NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedBy') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedBy nvarchar(150) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('EmployeeEndOfService') AND name='UX_EmployeeEndOfService_PayrollTransactionId')
+        CREATE UNIQUE INDEX UX_EmployeeEndOfService_PayrollTransactionId
+            ON EmployeeEndOfService(PayrollTransactionId)
+            WHERE PayrollTransactionId IS NOT NULL;
 END;
 """);
     }
@@ -238,23 +308,141 @@ ORDER BY s.CreatedAt DESC;
         });
     }
 
-    public static async Task<bool> ApproveAsync(ApplicationDbContext dbContext, CompanyScope scope, int id, string userName)
+    public static async Task<ApprovalResult> ApproveAsync(
+        ApplicationDbContext dbContext,
+        CompanyScope scope,
+        int id,
+        string userName)
     {
         ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll)
+            return new(false, false, null, null, null, "لا صلاحية على هذه التسوية.");
+
         await EnsureAsync(dbContext);
-        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
-                dbContext, EmployeeCompanyGuard.Tables.EmployeeEndOfService, "Id", id, scope))
-            return false;
-        if (await IsApprovedAsync(dbContext, id)) return false;
+        await PayrollTransactionStore.EnsureAsync(dbContext);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT TOP (1)
+       s.EmployeeId,
+       ISNULL(e.CompanyId,0) AS CompanyId,
+       ISNULL(s.ReferenceNo,N'') AS ReferenceNo,
+       s.LastWorkingDate,
+       ISNULL(s.NetSettlement,0) AS NetSettlement,
+       ISNULL(s.Status,N'Draft') AS Status,
+       s.PayrollTransactionId
+FROM EmployeeEndOfService s WITH (UPDLOCK, HOLDLOCK)
+INNER JOIN Employees e ON e.Id=s.EmployeeId
+WHERE s.Id=@Id
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => new ApprovalRow(
+                HrmsDatabase.GetInt(reader, "EmployeeId"),
+                HrmsDatabase.GetInt(reader, "CompanyId"),
+                HrmsDatabase.GetString(reader, "ReferenceNo"),
+                HrmsDatabase.GetDateOnly(reader, "LastWorkingDate"),
+                reader["NetSettlement"] is decimal net ? net : 0m,
+                HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } status ? status : "Draft",
+                HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId")));
+
+        var row = rows.FirstOrDefault();
+        if (row is null)
+            return new(false, false, null, null, null, "التسوية غير موجودة أو خارج نطاق الصلاحية.");
+
+        if (string.Equals(row.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            var message = row.PayrollTransactionId is > 0
+                ? "التسوية معتمدة ومُرحّلة مسبقاً إلى حركات OffCycle — لم تُنشأ حركة جديدة."
+                : "التسوية معتمدة مسبقاً. لم يُنشأ ترحيل تلقائي لسجل تاريخي بلا رابط كي لا يتكرر الصرف.";
+            return new(false, row.PayrollTransactionId is > 0, row.PayrollTransactionId, null, null, message);
+        }
+
+        if (row.LastWorkingDate is not { } lastWorkingDate)
+            return new(false, false, null, null, null, "لا يمكن اعتماد التسوية بلا آخر يوم عمل.");
+
+        var posting = ToPayrollPosting(row.NetSettlement);
+        int? payrollTransactionId = null;
+        int? payrollYear = null;
+        int? payrollMonth = null;
+
+        if (posting is { } explicitPosting)
+        {
+            var payrollPeriod = await ResolvePayrollPeriodAsync(
+                dbContext, row.CompanyId, lastWorkingDate);
+            payrollYear = payrollPeriod.Year;
+            payrollMonth = payrollPeriod.Month;
+
+            var reference = string.IsNullOrWhiteSpace(row.ReferenceNo)
+                ? $"EOS-{id}"
+                : row.ReferenceNo.Trim();
+
+            payrollTransactionId = await PayrollTransactionStore.SaveAsync(
+                dbContext,
+                scope,
+                new PayrollTransactionStore.Transaction
+                {
+                    EmployeeId = row.EmployeeId,
+                    Year = payrollPeriod.Year,
+                    Month = payrollPeriod.Month,
+                    ItemName = "تسوية نهاية الخدمة",
+                    Amount = explicitPosting.Amount,
+                    TxType = explicitPosting.TxType,
+                    Taxable = false,
+                    PaymentType = "OutSalary",
+                    TransactionDate = lastWorkingDate,
+                    EffectiveDate = lastWorkingDate,
+                    IsRetroactive = false,
+                    ReferenceNo = reference,
+                    Source = "EndOfService",
+                    Status = "Approved",
+                    Note = $"تسوية نهاية الخدمة {reference}"
+                },
+                userName);
+        }
+
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "UPDATE EmployeeEndOfService SET Status = N'Approved', ApprovedAt = SYSUTCDATETIME(), ApprovedBy = @By WHERE Id = @Id;",
+            """
+UPDATE EmployeeEndOfService
+SET Status=N'Approved',
+    ApprovedAt=SYSUTCDATETIME(),
+    ApprovedBy=@By,
+    PayrollTransactionId=@PayrollTransactionId,
+    PayrollPostedAt=CASE WHEN @PayrollTransactionId IS NULL THEN NULL ELSE SYSUTCDATETIME() END,
+    PayrollPostedBy=CASE WHEN @PayrollTransactionId IS NULL THEN NULL ELSE @By END
+WHERE Id=@Id AND ISNULL(Status,N'Draft')<>N'Approved';
+""",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@By", userName);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@PayrollTransactionId",
+                    (object?)payrollTransactionId ?? DBNull.Value);
             });
-        return true;
+
+        await transaction.CommitAsync();
+
+        return payrollTransactionId is > 0
+            ? new(
+                true,
+                true,
+                payrollTransactionId,
+                payrollYear,
+                payrollMonth,
+                $"اعتُمدت التسوية ورُحّلت مرة واحدة إلى قائمة OffCycle للفترة {payrollMonth:00}/{payrollYear}.")
+            : new(
+                true,
+                false,
+                null,
+                payrollYear,
+                payrollMonth,
+                "اعتُمدت التسوية. صافي التسوية صفر، لذلك لم تُنشأ حركة دفع.");
     }
 
     public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
@@ -325,6 +513,9 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         OtherDues = reader["OtherDues"] is decimal od ? od : 0,
         Deductions = reader["Deductions"] is decimal dd ? dd : 0,
         NetSettlement = reader["NetSettlement"] is decimal ns ? ns : 0,
+        PayrollTransactionId = HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId"),
+        PayrollPostedAt = HrmsDatabase.GetDateTime(reader, "PayrollPostedAt"),
+        PayrollPostedBy = HrmsDatabase.GetString(reader, "PayrollPostedBy") is { Length: > 0 } ppb ? ppb : null,
         Note = HrmsDatabase.GetString(reader, "Note") is { Length: > 0 } n ? n : null,
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Draft",
         ApprovedAt = HrmsDatabase.GetDateTime(reader, "ApprovedAt"),

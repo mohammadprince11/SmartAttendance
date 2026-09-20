@@ -127,6 +127,15 @@ public sealed class PayrollIntegrityRegressionTests
         var migrator = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs"));
         Assert.Contains("20260920-07-payroll-end-of-service-audit-snapshot", migrator);
         Assert.Contains("GratuityBasisAmount", migrator);
+        Assert.Contains("20260920-08-payroll-eos-offcycle-link", migrator);
+        Assert.Contains("PayrollTransactionId", migrator);
+
+        Assert.Contains("WITH (UPDLOCK, HOLDLOCK)", store);
+        Assert.Contains("PaymentType = \"OutSalary\"", store);
+        Assert.Contains("Source = \"EndOfService\"", store);
+
+        var transactions = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollTransactionStore.cs"));
+        Assert.Contains("ISNULL(PaymentType, N'InSalary') = N'InSalary'", transactions);
     }
 
     [Fact]

@@ -175,10 +175,11 @@ public class EndOfServiceModel : PageModel
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        var ok = await EndOfServiceStore.ApproveAsync(_db, scope, id, User?.Identity?.Name ?? "system");
-        TempData["PayrollMessage"] = ok ? "اعتُمدت التسوية." : "تعذّر الاعتماد (ربما معتمدة سابقاً).";
-        TempData["PayrollOk"] = ok;
-        return RedirectToPage(new { Tab = ok ? "Approved" : "Draft" });
+        var result = await EndOfServiceStore.ApproveAsync(
+            _db, scope, id, User?.Identity?.Name ?? "system");
+        TempData["PayrollMessage"] = result.Message;
+        TempData["PayrollOk"] = result.Ok;
+        return RedirectToPage(new { Tab = result.Ok || result.PostedToPayroll ? "Approved" : "Draft" });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)

@@ -3012,6 +3012,29 @@ BEGIN
         WHERE GratuityCalculationMode = N''Legacy'';';
 END;
 """),
+
+        new(
+            "20260920-08-payroll-eos-offcycle-link",
+            """
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollTransactionId int NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedAt') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedAt datetime2 NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedBy') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedBy nvarchar(150) NULL;
+
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NOT NULL
+       AND NOT EXISTS (
+            SELECT 1 FROM sys.indexes
+            WHERE object_id=OBJECT_ID('EmployeeEndOfService')
+              AND name='UX_EmployeeEndOfService_PayrollTransactionId')
+        CREATE UNIQUE INDEX UX_EmployeeEndOfService_PayrollTransactionId
+            ON EmployeeEndOfService(PayrollTransactionId)
+            WHERE PayrollTransactionId IS NOT NULL;
+END;
+"""),
     };
 
     /// <summary>
