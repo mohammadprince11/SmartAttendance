@@ -217,11 +217,6 @@
         .Where(DocumentReviewComplete)
         .ToList();
 
-    var evidenceFields = Model.Fields
-        .Where(x => x.FieldKey.StartsWith("OCR.", StringComparison.OrdinalIgnoreCase)
-                 || x.FieldKey.StartsWith("MRZ.Check.", StringComparison.OrdinalIgnoreCase))
-        .ToList();
-
     var openIssues = Model.Issues.Where(x => x.Status == "Open").ToList();
 
     var isFinalStage =
@@ -849,34 +844,6 @@
                     }
                 </div>
             </details>
-        }
-
-        @if (!isFinalStage && hasActiveReviewWork && evidenceFields.Count > 0)
-        {
-        <details class="sor-card sor-evidence">
-            <summary>
-                <span>OCR / MRZ Evidence</span>
-                <small>@evidenceFields.Count سجل — للمرجعية فقط ولا يُكتب مباشرة إلى الموظف</small>
-            </summary>
-
-            <div class="sor-evidence-list">
-                @foreach (var field in evidenceFields)
-                {
-                    <div>
-                        <strong>@field.FieldKey</strong>
-                        <span>@(field.NormalizedValue ?? field.RawValue)</span>
-                        <small>
-                            @field.ExtractionMethod
-                            @if (field.ProviderConfidence.HasValue)
-                            {
-                                <text> · @($"{field.ProviderConfidence.Value * 100m:0.0}%")</text>
-                            }
-                            · @field.ValidationStatus
-                        </small>
-                    </div>
-                }
-            </div>
-        </details>
         }
 
         @if (Model.Session.Status is "NeedsReview" or "Processing" or "Queued")
