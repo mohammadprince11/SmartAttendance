@@ -131,9 +131,10 @@ public static class DocumentProcessingContract
                 PeopleAiDocumentTypes.Passport,
                 StringComparison.OrdinalIgnoreCase))
         {
-            // TD3 MRZ is ICAO Latin text. English OCR is a semantic
-            // requirement, not an optional company display-language choice.
-            return "en";
+            // Passports can be bilingual while TD3 MRZ is Latin. Run Arabic
+            // and English together so visual fields remain recoverable when
+            // MRZ is cropped, rotated, blurred or otherwise unreadable.
+            return "ar,en";
         }
 
         if (string.Equals(

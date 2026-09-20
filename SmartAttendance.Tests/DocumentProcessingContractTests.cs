@@ -120,13 +120,13 @@ public sealed class DocumentProcessingContractTests
     }
 
     [Fact]
-    public void Passport_UsesEnglishForTd3Mrz()
+    public void Passport_UsesArabicAndEnglishForVisualFieldsAndTd3Mrz()
     {
         var profile = DocumentProcessingContract.ResolveOcrLanguageProfile(
             ["ar", "en"],
             PeopleAiDocumentTypes.Passport,
             "ar");
 
-        Assert.Equal("en", profile);
+        Assert.Equal("ar,en", profile);
     }
 }

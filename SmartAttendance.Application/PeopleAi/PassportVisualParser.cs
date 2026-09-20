@@ -170,8 +170,12 @@ public static class PassportVisualParser
                  i++)
             {
                 var candidate = lines[i];
-                if (!LooksLikeLabel(candidate.Text) &&
-                    predicate(candidate.Text))
+                if (LooksLikeLabel(candidate.Text))
+                {
+                    break;
+                }
+
+                if (predicate(candidate.Text))
                 {
                     return candidate.Text;
                 }
