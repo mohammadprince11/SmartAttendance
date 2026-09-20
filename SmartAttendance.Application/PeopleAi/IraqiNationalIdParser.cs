@@ -15,7 +15,8 @@ public sealed record IraqiNationalIdParseResult(
     string? SecondName,
     string? ThirdName,
     string? LastName,
-    string? MotherName);
+    string? MotherName,
+    string? Sex);
 
 public static class IraqiNationalIdParser
 {
@@ -60,6 +61,7 @@ public static class IraqiNationalIdParser
             lines,
             ["الام", "الأم"],
             ["دايك"]);
+        var sex = FindSex(lines);
 
         return new IraqiNationalIdParseResult(
             nationalNumber,
@@ -69,7 +71,82 @@ public static class IraqiNationalIdParser
             secondName,
             thirdName,
             lastName,
-            motherName);
+            motherName,
+            sex);
+    }
+
+    private static string? FindSex(
+        IReadOnlyList<IraqiNationalIdOcrLine> lines)
+    {
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var label = LabelForm(lines[i].Text);
+            if (!label.Contains("الجنس", StringComparison.Ordinal) &&
+                !label.Contains("sex", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var inline = ParseSexToken(lines[i].Text);
+            if (inline is not null)
+            {
+                return inline;
+            }
+
+            if (lines[i].Box is not { Length: >= 4 } labelBox)
+            {
+                continue;
+            }
+
+            var labelCenterY = (labelBox[1] + labelBox[3]) / 2d;
+            foreach (var candidate in lines)
+            {
+                if (candidate.Box is not { Length: >= 4 } candidateBox)
+                {
+                    continue;
+                }
+
+                var candidateCenterY =
+                    (candidateBox[1] + candidateBox[3]) / 2d;
+                if (Math.Abs(candidateCenterY - labelCenterY) > 55)
+                {
+                    continue;
+                }
+
+                var parsed = ParseSexToken(candidate.Text);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ParseSexToken(string value)
+    {
+        var compact = LabelForm(value);
+
+        if (compact.Contains("انثي", StringComparison.Ordinal) ||
+            compact.Contains("female", StringComparison.OrdinalIgnoreCase))
+        {
+            return "F";
+        }
+
+        if (compact.Contains("ذكر", StringComparison.Ordinal) ||
+            compact.Contains("male", StringComparison.OrdinalIgnoreCase))
+        {
+            return "M";
+        }
+
+        var latin = Regex.Match(
+            value ?? string.Empty,
+            @"(?:^|\s)([MF])(?:\s|$)",
+            RegexOptions.IgnoreCase);
+        return latin.Success
+            ? latin.Groups[1].Value.ToUpperInvariant()
+            : null;
     }
 
     private static string? FindNationalNumber(

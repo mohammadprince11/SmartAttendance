@@ -391,6 +391,29 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void IdentityOcr_UsesDocumentAwareQualityAndFamilyRecovery()
+    {
+        var root = FindRoot();
+        var worker = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "PeopleAI",
+            "local_ocr_worker.py"));
+        var client = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "PeopleAi",
+            "LocalOcrProcessClient.cs"));
+        var processor = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "PeopleAi",
+            "PeopleAiJobProcessorService.cs"));
+
+        Assert.Contains("PEOPLE_AI_OCR_IDENTITY_MAX_IMAGE_SIDE", worker);
+        Assert.Contains("\"2400\"", worker);
+        Assert.Contains("{6,24}", worker);
+        Assert.Contains("< 4", worker);
+        Assert.Contains("documentType", client);
+        Assert.Contains("input.DeclaredDocumentType", processor);
+        Assert.Contains("MrzOcrParser.Parse", processor);
+    }
+
+    [Fact]
     public void PeopleAiSchema_ContainsStagingIdentityAndAuditLayers()
     {
         var root = FindRoot();

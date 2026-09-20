@@ -56,6 +56,21 @@ public sealed class IraqiNationalIdParserTests
         Assert.Equal("نواف", result.FirstName);
     }
 
+    [Theory]
+    [InlineData("الجنس ذكر", "M")]
+    [InlineData("الجنس أنثى", "F")]
+    public void FrontSide_Sex_IsExtractedWhenClearlyReadable(
+        string line,
+        string expected)
+    {
+        var result = IraqiNationalIdParser.Parse(
+        [
+            L(line, 900, 1100, 1200, 1170)
+        ]);
+
+        Assert.Equal(expected, result.Sex);
+    }
+
     [Fact]
     public void ArabicIndicDigits_AreNormalizedForIdentityNumbers()
     {

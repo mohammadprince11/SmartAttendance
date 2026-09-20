@@ -87,6 +87,16 @@ public interface ILocalOcrProcessClient
         string? languageProfile,
         CancellationToken cancellationToken = default) =>
         ExtractAsync(physicalPath, cancellationToken);
+
+    Task<LocalOcrResponse> ExtractAsync(
+        string physicalPath,
+        string? languageProfile,
+        string? documentType,
+        CancellationToken cancellationToken = default) =>
+        ExtractAsync(
+            physicalPath,
+            languageProfile,
+            cancellationToken);
 }
 
 public sealed class LocalOcrProcessClient :
@@ -142,11 +152,23 @@ public sealed class LocalOcrProcessClient :
         ExtractAsync(
             physicalPath,
             _options.Language,
+            documentType: null,
+            cancellationToken);
+
+    public Task<LocalOcrResponse> ExtractAsync(
+        string physicalPath,
+        string? languageProfile,
+        CancellationToken cancellationToken = default) =>
+        ExtractAsync(
+            physicalPath,
+            languageProfile,
+            documentType: null,
             cancellationToken);
 
     public async Task<LocalOcrResponse> ExtractAsync(
         string physicalPath,
         string? languageProfile,
+        string? documentType,
         CancellationToken cancellationToken = default)
     {
         if (!IsEnabled)
@@ -174,7 +196,10 @@ public sealed class LocalOcrProcessClient :
                 path = physicalPath,
                 language = string.IsNullOrWhiteSpace(languageProfile)
                     ? _options.Language
-                    : languageProfile.Trim()
+                    : languageProfile.Trim(),
+                documentType = string.IsNullOrWhiteSpace(documentType)
+                    ? null
+                    : documentType.Trim()
             });
 
             await _process!.StandardInput.WriteLineAsync(request);

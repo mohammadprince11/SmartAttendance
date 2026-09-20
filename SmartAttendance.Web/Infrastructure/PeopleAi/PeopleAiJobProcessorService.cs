@@ -304,6 +304,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             var response = await _ocr.ExtractAsync(
                 physicalPath,
                 languageProfile,
+                input.DeclaredDocumentType,
                 cancellationToken);
 
             if (!response.Success)
@@ -627,6 +628,12 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             await SaveObservedField(
                 "MotherName",
                 nationalId.MotherName);
+            if (mrz is null)
+            {
+                await SaveObservedField(
+                    "Sex",
+                    nationalId.Sex);
+            }
         }
 
         if (mrz is null)
@@ -930,37 +937,9 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
     }
 
     private static MrzParseResult? TryParseMrz(
-        LocalOcrResponse response)
-    {
-        var candidates = response.AllLines
-            .Select(line => NormalizeMrzLine(line.Text))
-            .Where(line => line.Length is 30 or 44)
-            .ToList();
-
-        var td3 = candidates
-            .Where(line => line.Length == 44)
-            .Take(2)
-            .ToArray();
-
-        if (td3.Length == 2)
-        {
-            var parsed = MrzParser.Parse(
-                string.Join(Environment.NewLine, td3));
-            if (parsed is not null)
-            {
-                return parsed;
-            }
-        }
-
-        var td1 = candidates
-            .Where(line => line.Length == 30)
-            .Take(3)
-            .ToArray();
-
-        return td1.Length == 3
-            ? MrzParser.Parse(string.Join(Environment.NewLine, td1))
-            : null;
-    }
+        LocalOcrResponse response) =>
+        MrzOcrParser.Parse(
+            response.AllLines.Select(line => line.Text));
 
     private static bool HasReliableMrzNames(
         MrzParseResult mrz)

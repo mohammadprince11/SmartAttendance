@@ -107,4 +107,26 @@ public sealed class DocumentProcessingContractTests
             "AutomaticTextExtraction",
             decision.ProcessingMode);
     }
+
+    [Fact]
+    public void NationalId_UsesArabicAndEnglishForVisualAndMrzSides()
+    {
+        var profile = DocumentProcessingContract.ResolveOcrLanguageProfile(
+            ["ar", "en"],
+            PeopleAiDocumentTypes.NationalId,
+            "ar");
+
+        Assert.Equal("ar,en", profile);
+    }
+
+    [Fact]
+    public void Passport_UsesEnglishForTd3Mrz()
+    {
+        var profile = DocumentProcessingContract.ResolveOcrLanguageProfile(
+            ["ar", "en"],
+            PeopleAiDocumentTypes.Passport,
+            "ar");
+
+        Assert.Equal("en", profile);
+    }
 }

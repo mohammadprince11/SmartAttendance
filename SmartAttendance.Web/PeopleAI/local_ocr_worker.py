@@ -248,7 +248,7 @@ def to_plain(value):
     return str(value)
 
 @contextlib.contextmanager
-def prepared_ocr_input(path):
+def prepared_ocr_input(path, max_side_override=None):
     extension = os.path.splitext(path)[1].lower()
     if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
         yield path
@@ -256,7 +256,11 @@ def prepared_ocr_input(path):
 
     from PIL import Image, ImageOps
 
-    max_side = int(os.environ.get("PEOPLE_AI_OCR_MAX_IMAGE_SIDE", "1600"))
+    max_side = (
+        int(max_side_override)
+        if max_side_override
+        else int(os.environ.get("PEOPLE_AI_OCR_MAX_IMAGE_SIDE", "1600"))
+    )
     max_side = max(1200, min(max_side, 4096))
     temp_path = None
 
@@ -388,11 +392,11 @@ def _recover_family_number_line(ocr, prepared_path, results):
                     for i, raw_text in enumerate(variant_texts):
                         text = _normalize_digits(str(raw_text)).upper()
                         for match in re.finditer(
-                            r"(?<![A-Z0-9])([A-Z0-9]{13,24})(?![A-Z0-9])",
+                            r"(?<![A-Z0-9])([A-Z0-9]{6,24})(?![A-Z0-9])",
                             text,
                         ):
                             candidate = match.group(1)
-                            if sum(ch.isdigit() for ch in candidate) < 10:
+                            if sum(ch.isdigit() for ch in candidate) < 4:
                                 continue
                             score = (
                                 float(variant_scores[i])
@@ -1498,7 +1502,7 @@ def process_legacy_office_document(path, language):
         return result
 
 
-def process_file(ocr, path, language):
+def process_file(ocr, path, language, document_type=None):
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
 
@@ -1515,7 +1519,20 @@ def process_file(ocr, path, language):
         return process_xlsx_document(path, language)
 
     family_number_recovery = None
-    with prepared_ocr_input(path) as prepared_path:
+    document_type_key = (document_type or "").strip().lower()
+    identity_max_side = None
+    if document_type_key in {"nationalid", "passport"}:
+        identity_max_side = int(
+            os.environ.get(
+                "PEOPLE_AI_OCR_IDENTITY_MAX_IMAGE_SIDE",
+                "2400",
+            )
+        )
+
+    with prepared_ocr_input(
+        path,
+        max_side_override=identity_max_side,
+    ) as prepared_path:
         with contextlib.redirect_stdout(sys.stderr):
             results = list(ocr.predict(prepared_path))
 
@@ -1686,6 +1703,10 @@ def serve():
                 request.get("language")
                 or diagnostics["language"]
             )
+            document_type = (
+                request.get("documentType")
+                or ""
+            )
             languages = _normalize_language_profile(
                 requested_profile
             )
@@ -1710,7 +1731,12 @@ def serve():
                         ocr_cache[language] = engine
 
                     outputs.append(
-                        process_file(engine, path, language)
+                        process_file(
+                            engine,
+                            path,
+                            language,
+                            document_type,
+                        )
                     )
 
                 result = merge_ocr_results(outputs, profile)

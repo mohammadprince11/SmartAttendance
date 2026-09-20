@@ -45,6 +45,50 @@ public sealed class MrzParserTests
         Assert.True(result.AllRequiredChecksValid);
     }
 
+    [Fact]
+    public void OcrFragments_ReassembleTd3PassportMrz()
+    {
+        const string line1 =
+            "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<";
+        const string line2 =
+            "L898902C36UTO7408122F1204159ZE184226B<<<<<10";
+
+        var result = MrzOcrParser.Parse(
+        [
+            line1[..19],
+            line1[19..],
+            line2[..21],
+            line2[21..]
+        ]);
+
+        Assert.NotNull(result);
+        Assert.Equal("TD3", result!.Format);
+        Assert.Equal("L898902C3", result.DocumentNumber);
+        Assert.Equal("F", result.Sex);
+        Assert.True(result.AllRequiredChecksValid);
+    }
+
+    [Fact]
+    public void OcrFragments_ReassembleTd1NationalIdMrz()
+    {
+        const string line1 = "I<UTOD231458907<<<<<<<<<<<<<<<";
+        const string line2 = "7408122F1204159UTO<<<<<<<<<<<6";
+        const string line3 = "ERIKSSON<<ANNA<MARIA<<<<<<<<<<";
+
+        var result = MrzOcrParser.Parse(
+        [
+            line1[..14], line1[14..],
+            line2[..16], line2[16..],
+            line3[..12], line3[12..]
+        ]);
+
+        Assert.NotNull(result);
+        Assert.Equal("TD1", result!.Format);
+        Assert.Equal("D23145890", result.DocumentNumber);
+        Assert.Equal("F", result.Sex);
+        Assert.True(result.AllRequiredChecksValid);
+    }
+
     [Theory]
     [InlineData("L898902C3", '6')]
     [InlineData("740812", '2')]

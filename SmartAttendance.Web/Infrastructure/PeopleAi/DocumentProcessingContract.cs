@@ -141,8 +141,10 @@ public static class DocumentProcessingContract
                 PeopleAiDocumentTypes.NationalId,
                 StringComparison.OrdinalIgnoreCase))
         {
-            // Iraqi National ID extraction depends on Arabic field labels.
-            return "ar";
+            // Iraqi National ID uses Arabic/Kurdish labels on the visual side
+            // and a Latin TD1 MRZ on the machine-readable side. Both passes
+            // are required for a complete identity record.
+            return "ar,en";
         }
 
         if (languages.Contains("ar", StringComparer.OrdinalIgnoreCase) &&
