@@ -464,7 +464,7 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("lstrip(\"\\ufeff\")", worker);
         Assert.Contains("_recover_family_number_line", worker);
         Assert.Contains("Recovered FamilyNumber candidate", worker);
-        Assert.Contains("[A-Z0-9]{13,24}", worker);
+        Assert.Contains("[A-Z0-9]{6,24}", worker);
         Assert.Contains("Family numbers may be alphanumeric", worker);
     }
 
