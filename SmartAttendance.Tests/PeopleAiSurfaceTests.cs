@@ -74,10 +74,16 @@ public sealed class PeopleAiSurfaceTests
             "PeopleAiFinalizationStore.cs"));
 
         Assert.Contains("asp-page-handler=\"AcceptAll\"", page);
-        Assert.Contains("اعتماد الكل", page);
+        Assert.Contains("اعتماد عالي الثقة", page);
         Assert.Contains("data-preserve-scroll", page);
         Assert.Contains("OnPostAcceptAllAsync", model);
-        Assert.Contains("AcceptAllConfiguredFieldsAsync", store);
+        Assert.Contains(
+            "AcceptHighConfidenceConfiguredFieldsAsync",
+            store);
+        Assert.Contains(
+            "f.ProviderConfidence >= @HighConfidenceThreshold",
+            store);
+        Assert.Contains("HighConfidenceThreshold = 0.90m", store);
         Assert.Contains("CompanyPeopleAiFieldPolicies", store);
         Assert.Contains("sessionStorage.setItem", script);
         Assert.Contains("window.scrollTo", script);
@@ -221,6 +227,34 @@ public sealed class PeopleAiSurfaceTests
     }
 
     [Fact]
+    public void ProtectedPreview_IsSessionAndCompanyScoped()
+    {
+        var root = FindRoot();
+        var page = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "SmartOnboarding.cshtml.cs"));
+        var markup = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "SmartOnboarding.cshtml"));
+        var script = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "wwwroot", "js",
+            "smart-onboarding-live-queue.js"));
+
+        Assert.Contains("OnGetPreviewAsync", page);
+        Assert.Contains("a.CompanyId = s.CompanyId", page);
+        Assert.Contains("a.OwnerType = 'OnboardingSession'", page);
+        Assert.Contains("a.OwnerId = s.Id", page);
+        Assert.Contains("d.SessionId = @SessionId", page);
+        Assert.Contains("s.CompanyId = @CompanyId", page);
+        Assert.Contains("Cache-Control", page);
+        Assert.Contains("no-store", page);
+        Assert.Contains("X-Content-Type-Options", page);
+        Assert.Contains("data-preview-open", markup);
+        Assert.Contains("data-preview-dialog", markup);
+        Assert.Contains("initPreviewDialog", script);
+    }
+
+    [Fact]
     public void QueueTelemetry_UsesCurrentMobileOcrModelPerCompany()
     {
         var root = FindRoot();
@@ -233,6 +267,38 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("log.CompanyId = s.CompanyId", store);
         Assert.Contains("log.Provider = 'PaddleOCR'", store);
         Assert.Contains("log.Model = 'PP-OCRv5-Mobile'", store);
+    }
+
+    [Fact]
+    public void SmartReview_UsesConfidenceReconciliationAndProtectedPreview()
+    {
+        var root = FindRoot();
+        var page = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "SmartOnboardingReview.cshtml"));
+        var model = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "SmartOnboardingReview.cshtml.cs"));
+        var workerService = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "PeopleAi",
+            "PeopleAiJobProcessorService.cs"));
+        var store = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms",
+            "PeopleAiReviewStore.cs"));
+        var script = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "wwwroot", "js",
+            "smart-onboarding-review.js"));
+
+        Assert.Contains("sor-confidence--@confidenceBand", page);
+        Assert.Contains("CrossDocumentComparisons", page);
+        Assert.Contains("مقارنة البيانات بين المستندات", page);
+        Assert.Contains("RefreshCrossDocumentIssuesAsync", model);
+        Assert.Contains("UpsertDynamicIssueAsync", store);
+        Assert.Contains("CROSS_DOCUMENT_", model);
+        Assert.Contains("ResolveObservedConfidence", workerService);
+        Assert.Contains("data-review-preview-open", page);
+        Assert.Contains("data-review-preview-dialog", page);
+        Assert.Contains("data-review-preview-frame", script);
     }
 
     [Fact]

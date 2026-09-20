@@ -150,6 +150,34 @@ public sealed class SmartOnboardingReviewModel : PageModel
         PeopleAiDuplicateAction Action,
         IReadOnlyList<IdentityDuplicateCandidate> Candidates);
 
+    public sealed record CrossDocumentValue(
+        long DocumentId,
+        string DocumentType,
+        string DocumentName,
+        string Value,
+        decimal? Confidence,
+        string ReviewStatus);
+
+    public sealed record CrossDocumentComparison(
+        string FieldKey,
+        string Severity,
+        bool HasConflict,
+        IReadOnlyList<CrossDocumentValue> Values);
+
+    private static readonly IReadOnlyDictionary<string, string>
+        CrossDocumentTrackedFields =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["DateOfBirth"] = "Blocking",
+                ["NationalNumber"] = "Blocking",
+                ["FamilyNumber"] = "Blocking",
+                ["FirstName"] = "Warning",
+                ["SecondName"] = "Warning",
+                ["ThirdName"] = "Warning",
+                ["LastName"] = "Warning",
+                ["MotherName"] = "Warning"
+            };
+
     [BindProperty(SupportsGet = true)]
     public int CompanyId { get; set; }
 
@@ -166,6 +194,7 @@ public sealed class SmartOnboardingReviewModel : PageModel
     public List<EmployeeDocumentPolicy> DocumentPolicies { get; private set; } = [];
     public List<PeopleAiFieldPolicy> FieldPolicies { get; private set; } = [];
     public List<DuplicateView> DuplicateMatches { get; private set; } = [];
+    public List<CrossDocumentComparison> CrossDocumentComparisons { get; private set; } = [];
     public List<SmartAttendance.Application.Branches.ViewModels.BranchListViewModel> Branches { get; private set; } = [];
     public List<SmartAttendance.Application.Departments.ViewModels.DepartmentListViewModel> Departments { get; private set; } = [];
     public List<PositionOptionViewModel> Positions { get; private set; } = [];
@@ -174,6 +203,12 @@ public sealed class SmartOnboardingReviewModel : PageModel
     public List<string> GradeOptions { get; private set; } = [];
     public List<string> SponsorOptions { get; private set; } = [];
     public List<ManagerOption> ManagerOptions { get; private set; } = [];
+
+    public bool CanPreview(
+        EmployeeOnboardingStore.DocumentRow document) =>
+        DocumentProcessingContract.Resolve(
+            Path.GetExtension(document.OriginalFileName),
+            document.DeclaredDocumentType).Format.CanPreview;
 
     public bool CanReview { get; private set; }
     public bool CanVerifyOriginal { get; private set; }
@@ -242,16 +277,17 @@ public sealed class SmartOnboardingReviewModel : PageModel
             CompanyId,
             SessionId);
 
-        var accepted = await PeopleAiReviewStore.AcceptAllConfiguredFieldsAsync(
-            _db,
-            CompanyId,
-            SessionId,
-            context.Value.Access.SystemUserId!.Value);
+        var accepted =
+            await PeopleAiReviewStore.AcceptHighConfidenceConfiguredFieldsAsync(
+                _db,
+                CompanyId,
+                SessionId,
+                context.Value.Access.SystemUserId!.Value);
 
         TempData["SmartOnboardingReviewStatus"] =
             accepted > 0
-                ? $"تم اعتماد {accepted} حقل دفعة واحدة."
-                : "لا توجد حقول صالحة معلقة لاعتمادها جماعياً.";
+                ? $"تم اعتماد {accepted} حقل عالي الثقة (90% فأعلى)."
+                : "لا توجد حقول معلقة عالية الثقة ومسموح باعتمادها جماعياً.";
 
         return RedirectToSelf();
     }
@@ -415,6 +451,9 @@ public sealed class SmartOnboardingReviewModel : PageModel
                 documentPolicyError;
             return RedirectToSelf();
         }
+
+        await RefreshCrossDocumentIssuesAsync(
+            persistIssues: true);
 
         await RefreshDuplicateIssuesAsync(
             context.Value.Access,
@@ -802,6 +841,9 @@ WHERE Id = @EmployeeId
                 SessionId);
         }
 
+        await RefreshCrossDocumentIssuesAsync(
+            persistIssues: CanReview);
+
         if (CanReview)
         {
             await RefreshDuplicateIssuesAsync(
@@ -979,6 +1021,117 @@ WHERE Id = @EmployeeId
                 PeoplePermissionCodes.Create,
                 compatibilityAllowed: false,
                 HttpContext.RequestAborted);
+    }
+
+    private async Task RefreshCrossDocumentIssuesAsync(
+        bool persistIssues)
+    {
+        Documents = Documents.Count > 0
+            ? Documents
+            : await EmployeeOnboardingStore
+                .ListDocumentsAsync(_db, SessionId);
+
+        Fields = Fields.Count > 0
+            ? Fields
+            : await PeopleAiReviewStore
+                .ListLatestFieldsAsync(_db, SessionId);
+
+        CrossDocumentComparisons = [];
+
+        foreach (var tracked in CrossDocumentTrackedFields)
+        {
+            var fieldKey = tracked.Key;
+            var severity = tracked.Value;
+            var ruleCode = CrossDocumentRuleCode(fieldKey);
+
+            var values = Fields
+                .Where(field =>
+                    field.FieldKey.Equals(
+                        fieldKey,
+                        StringComparison.OrdinalIgnoreCase))
+                .Select(field => new
+                {
+                    Field = field,
+                    Value = EffectiveFieldValue(field),
+                    Document = Documents.FirstOrDefault(
+                        document => document.Id == field.DocumentId)
+                })
+                .Where(x =>
+                    x.Document is not null &&
+                    !string.IsNullOrWhiteSpace(x.Value))
+                .GroupBy(x => x.Field.DocumentId)
+                .Select(group => group
+                    .OrderByDescending(x =>
+                        x.Field.ReviewStatus is "Accepted" or "Modified")
+                    .ThenByDescending(x => x.Field.ProviderConfidence ?? 0m)
+                    .ThenByDescending(x => x.Field.Id)
+                    .First())
+                .Select(x => new CrossDocumentValue(
+                    x.Field.DocumentId,
+                    x.Document!.DetectedDocumentType ??
+                        x.Document.DeclaredDocumentType ??
+                        PeopleAiDocumentTypes.Unknown,
+                    x.Document.OriginalFileName,
+                    x.Value!,
+                    x.Field.ProviderConfidence,
+                    x.Field.ReviewStatus))
+                .ToList();
+
+            if (values.Count < 2)
+            {
+                if (persistIssues)
+                {
+                    await PeopleAiReviewStore.ResolveRuleAutomaticallyAsync(
+                        _db,
+                        SessionId,
+                        ruleCode,
+                        "لا توجد قيم متعددة كافية للمقارنة بين المستندات.");
+                }
+                continue;
+            }
+
+            var distinctValues = values
+                .Select(value =>
+                    NormalizeCrossDocumentValue(
+                        fieldKey,
+                        value.Value))
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var hasConflict = distinctValues.Count > 1;
+            CrossDocumentComparisons.Add(
+                new CrossDocumentComparison(
+                    fieldKey,
+                    severity,
+                    hasConflict,
+                    values));
+
+            if (!persistIssues)
+            {
+                continue;
+            }
+
+            if (hasConflict)
+            {
+                await PeopleAiReviewStore.UpsertDynamicIssueAsync(
+                    _db,
+                    SessionId,
+                    ruleCode,
+                    "CrossDocument",
+                    severity,
+                    fieldKey,
+                    $"القيم المستخرجة للحقل {fieldKey} تختلف بين {values.Count} مستندات. يلزم التحقق البشري.");
+            }
+            else
+            {
+                await PeopleAiReviewStore.ResolveRuleAutomaticallyAsync(
+                    _db,
+                    SessionId,
+                    ruleCode,
+                    "تطابقت القيم بين المستندات بعد المراجعة.");
+            }
+        }
     }
 
     private async Task RefreshDuplicateIssuesAsync(
@@ -1737,6 +1890,56 @@ WHERE Id = @EmployeeId
                 .ToArray());
 
         return $"{safeType}_{safeNumber}";
+    }
+
+    private static string CrossDocumentRuleCode(string fieldKey)
+    {
+        var safe = new string(fieldKey
+            .Where(char.IsLetterOrDigit)
+            .ToArray())
+            .ToUpperInvariant();
+
+        return "CROSS_DOCUMENT_" + safe;
+    }
+
+    private static string NormalizeCrossDocumentValue(
+        string fieldKey,
+        string value)
+    {
+        var cleaned = Clean(value) ?? string.Empty;
+        if (cleaned.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        if (fieldKey.Equals(
+                "DateOfBirth",
+                StringComparison.OrdinalIgnoreCase) &&
+            DateOnly.TryParse(cleaned, out var date))
+        {
+            return date.ToString("yyyy-MM-dd");
+        }
+
+        if (fieldKey.Equals(
+                "NationalNumber",
+                StringComparison.OrdinalIgnoreCase) ||
+            fieldKey.Equals(
+                "FamilyNumber",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return new string(cleaned
+                .Where(char.IsLetterOrDigit)
+                .ToArray())
+                .ToUpperInvariant();
+        }
+
+        return string.Join(
+                ' ',
+                cleaned.Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries |
+                    StringSplitOptions.TrimEntries))
+            .ToUpperInvariant();
     }
 
     private static string? EffectiveFieldValue(

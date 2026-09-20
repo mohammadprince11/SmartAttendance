@@ -19,17 +19,20 @@ public sealed class SmartOnboardingModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly IPeopleAiSessionAccessService _sessionAccess;
     private readonly IOnboardingProtectedAssetService _protectedAssets;
+    private readonly IWebHostEnvironment _environment;
     private readonly PeopleAiWorkerOptions _workerOptions;
 
     public SmartOnboardingModel(
         ApplicationDbContext db,
         IPeopleAiSessionAccessService sessionAccess,
         IOnboardingProtectedAssetService protectedAssets,
+        IWebHostEnvironment environment,
         Microsoft.Extensions.Options.IOptions<PeopleAiWorkerOptions> workerOptions)
     {
         _db = db;
         _sessionAccess = sessionAccess;
         _protectedAssets = protectedAssets;
+        _environment = environment;
         _workerOptions = workerOptions.Value;
     }
 
@@ -68,6 +71,124 @@ public sealed class SmartOnboardingModel : PageModel
     public async Task OnGetAsync()
     {
         await LoadAsync();
+    }
+
+    private sealed record PreviewAsset(
+        string StorageKey,
+        string OriginalFileName,
+        string Extension,
+        string MimeType);
+
+    public bool CanPreview(
+        EmployeeOnboardingStore.DocumentRow document) =>
+        DocumentProcessingContract.Resolve(
+            Path.GetExtension(document.OriginalFileName),
+            document.DeclaredDocumentType).Format.CanPreview;
+
+    public async Task<IActionResult> OnGetPreviewAsync(
+        int companyId,
+        long sessionId,
+        long documentId)
+    {
+        if (companyId <= 0 || sessionId <= 0 || documentId <= 0)
+        {
+            return NotFound();
+        }
+
+        var access = await _sessionAccess.ResolveAsync(
+            HttpContext,
+            HttpContext.RequestAborted);
+        var session = await EmployeeOnboardingStore.GetSessionAsync(
+            _db,
+            sessionId);
+
+        if (!_sessionAccess.CanAccessSession(session, companyId, access))
+        {
+            return Forbid();
+        }
+
+        var rows = await HrmsDatabase.QueryAsync(
+            _db,
+            """
+SELECT TOP (1)
+    a.StorageKey,
+    a.OriginalFileName,
+    a.Extension,
+    a.MimeType
+FROM dbo.OnboardingDocuments d
+JOIN dbo.EmployeeOnboardingSessions s
+  ON s.Id = d.SessionId
+JOIN dbo.ProtectedFileAssets a
+  ON a.Id = d.ProtectedFileAssetId
+ AND a.CompanyId = s.CompanyId
+ AND a.OwnerType = 'OnboardingSession'
+ AND a.OwnerId = s.Id
+ AND a.DeletedAt IS NULL
+WHERE d.Id = @DocumentId
+  AND d.SessionId = @SessionId
+  AND s.CompanyId = @CompanyId;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command, "@DocumentId", documentId);
+                HrmsDatabase.AddParameter(
+                    command, "@SessionId", sessionId);
+                HrmsDatabase.AddParameter(
+                    command, "@CompanyId", companyId);
+            },
+            reader => new PreviewAsset(
+                HrmsDatabase.GetString(reader, "StorageKey"),
+                HrmsDatabase.GetString(reader, "OriginalFileName"),
+                HrmsDatabase.GetString(reader, "Extension"),
+                HrmsDatabase.GetString(reader, "MimeType")));
+
+        var asset = rows.FirstOrDefault();
+        if (asset is null)
+        {
+            return NotFound();
+        }
+
+        var decision = DocumentProcessingContract.Resolve(
+            asset.Extension,
+            PeopleAiDocumentTypes.Unknown);
+        if (!decision.Format.CanPreview)
+        {
+            return NotFound();
+        }
+
+        var root = OnboardingProtectedAssetService.ResolveRoot(
+            _environment.ContentRootPath);
+        if (!ProtectedFileStore.TryResolvePhysicalPath(
+                root,
+                asset.StorageKey,
+                out var physicalPath) ||
+            !System.IO.File.Exists(physicalPath))
+        {
+            return NotFound();
+        }
+
+        Response.Headers["Cache-Control"] =
+            "private, no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+        Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
+
+        var fileName = Uri.EscapeDataString(
+            Path.GetFileName(asset.OriginalFileName));
+        Response.Headers["Content-Disposition"] =
+            $"inline; filename*=UTF-8''{fileName}";
+
+        var stream = System.IO.File.OpenRead(physicalPath);
+        return new FileStreamResult(
+            stream,
+            string.IsNullOrWhiteSpace(asset.MimeType)
+                ? ProtectedFileStore.ContentTypeFor(asset.Extension)
+                : asset.MimeType)
+        {
+            EnableRangeProcessing = true
+        };
     }
 
     public async Task<IActionResult> OnPostStartAsync(int companyId)

@@ -317,3 +317,80 @@
     background:var(--color-danger-soft);
     color:var(--color-danger)
 }
+
+.so-doc-actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:var(--sp-2)
+}
+.so-preview-button{
+    min-height:32px;
+    padding-inline:var(--sp-3)
+}
+.so-preview-dialog{
+    inline-size:min(1100px,calc(100vw - var(--sp-6)));
+    max-inline-size:none;
+    block-size:min(820px,calc(100vh - var(--sp-6)));
+    max-block-size:none;
+    padding:0;
+    border:1px solid var(--color-border-strong);
+    border-radius:var(--radius-lg);
+    background:var(--color-surface);
+    color:var(--color-text-primary);
+    box-shadow:var(--shadow);
+    overflow:hidden
+}
+.so-preview-dialog::backdrop{
+    background:color-mix(in srgb,var(--color-text-primary) 42%,transparent)
+}
+.so-preview-shell{
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr) auto;
+    block-size:100%
+}
+.so-preview-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:var(--sp-3);
+    padding:var(--sp-3) var(--sp-4);
+    border-bottom:1px solid var(--color-border);
+    background:var(--color-surface)
+}
+.so-preview-head>div{display:grid;gap:3px;min-width:0}
+.so-preview-head span,.so-preview-foot{
+    color:var(--color-text-secondary);
+    font-size:var(--fs-tiny)
+}
+.so-preview-head strong{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+}
+.so-preview-body{
+    min-block-size:0;
+    padding:var(--sp-2);
+    background:var(--color-background)
+}
+.so-preview-body iframe{
+    inline-size:100%;
+    block-size:100%;
+    min-block-size:520px;
+    border:1px solid var(--color-border);
+    border-radius:var(--radius);
+    background:var(--color-surface)
+}
+.so-preview-foot{
+    padding:var(--sp-2) var(--sp-4);
+    border-top:1px solid var(--color-border);
+    background:var(--color-surface)
+}
+@media(max-width:650px){
+    .so-doc-actions{align-items:flex-end;flex-direction:column}
+    .so-preview-dialog{
+        inline-size:calc(100vw - var(--sp-2));
+        block-size:calc(100vh - var(--sp-2))
+    }
+    .so-preview-body iframe{min-block-size:420px}
+}

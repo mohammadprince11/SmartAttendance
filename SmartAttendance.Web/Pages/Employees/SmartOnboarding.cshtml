@@ -319,7 +319,27 @@
                                         <strong>@document.OriginalFileName</strong>
                                         <span>@(document.DeclaredDocumentType ?? "Unknown") · @SizeLabel(document.SizeBytes)</span>
                                     </div>
-                                    <span class="so-status so-status--@displayStatus.ToLowerInvariant()">@StatusLabel(displayStatus)</span>
+                                    <div class="so-doc-actions">
+                                        @if (Model.CanPreview(document))
+                                        {
+                                            <button type="button"
+                                                    class="zy-btn so-preview-button"
+                                                    data-preview-open
+                                                    data-preview-name="@document.OriginalFileName"
+                                                    data-preview-url="@Url.Page(
+                                                        "./SmartOnboarding",
+                                                        "Preview",
+                                                        new
+                                                        {
+                                                            companyId = Model.CompanyId,
+                                                            sessionId = Model.Session!.Id,
+                                                            documentId = document.Id
+                                                        })">
+                                                معاينة
+                                            </button>
+                                        }
+                                        <span class="so-status so-status--@displayStatus.ToLowerInvariant()">@StatusLabel(displayStatus)</span>
+                                    </div>
                                 </div>
 
                                 <div class="so-doc-meta">
@@ -497,6 +517,33 @@
                 <span class="zy-badge zy-badge--info">لا يوجد إنشاء موظف تلقائي</span>
             }
         </section>
+
+        <dialog class="so-preview-dialog"
+                data-preview-dialog
+                aria-labelledby="so-preview-title">
+            <div class="so-preview-shell">
+                <header class="so-preview-head">
+                    <div>
+                        <span>Protected Document Preview</span>
+                        <strong id="so-preview-title" data-preview-title>معاينة المستند</strong>
+                    </div>
+                    <button type="button"
+                            class="zy-btn"
+                            data-preview-close
+                            aria-label="إغلاق المعاينة">
+                        إغلاق
+                    </button>
+                </header>
+                <div class="so-preview-body">
+                    <iframe data-preview-frame
+                            title="معاينة المستند المحمي"
+                            loading="eager"></iframe>
+                </div>
+                <footer class="so-preview-foot">
+                    <span>المعاينة محمية، لا تُخزن مؤقتاً، ولا تكشف مسار الملف الفعلي.</span>
+                </footer>
+            </div>
+        </dialog>
     }
 </div>
 

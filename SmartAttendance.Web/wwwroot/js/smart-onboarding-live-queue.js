@@ -223,6 +223,57 @@
         });
     }
 
+    function initPreviewDialog() {
+        const dialog = document.querySelector("[data-preview-dialog]");
+        const frame = dialog?.querySelector("[data-preview-frame]");
+        const title = dialog?.querySelector("[data-preview-title]");
+
+        if (!dialog || !frame) return;
+
+        const closePreview = () => {
+            frame.src = "about:blank";
+            if (dialog.open) {
+                dialog.close();
+            }
+        };
+
+        document.addEventListener("click", event => {
+            const openButton = event.target.closest("[data-preview-open]");
+            if (openButton) {
+                const url = openButton.dataset.previewUrl;
+                if (!url) return;
+
+                if (title) {
+                    title.textContent =
+                        openButton.dataset.previewName || "معاينة المستند";
+                }
+
+                frame.src = url;
+                dialog.showModal();
+                return;
+            }
+
+            if (event.target.closest("[data-preview-close]")) {
+                closePreview();
+            }
+        });
+
+        dialog.addEventListener("click", event => {
+            if (event.target === dialog) {
+                closePreview();
+            }
+        });
+
+        dialog.addEventListener("cancel", event => {
+            event.preventDefault();
+            closePreview();
+        });
+
+        dialog.addEventListener("close", () => {
+            frame.src = "about:blank";
+        });
+    }
+
     function start() {
         const current = panel();
         if (!current) return;
@@ -237,6 +288,7 @@
 
         updateTimers(document);
         initAjaxUpload();
+        initPreviewDialog();
         window.setInterval(() => updateTimers(document), 1000);
 
         refreshTimer = window.setInterval(refreshQueue, seconds * 1000);

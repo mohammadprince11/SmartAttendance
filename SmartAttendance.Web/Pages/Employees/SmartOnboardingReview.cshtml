@@ -80,6 +80,41 @@
             ?? string.Empty;
     }
 
+    string ConfidenceBand(
+        SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
+    {
+        if (!field.ProviderConfidence.HasValue)
+        {
+            return "unknown";
+        }
+
+        return field.ProviderConfidence.Value switch
+        {
+            >= 0.90m => "high",
+            >= 0.70m => "medium",
+            _ => "low"
+        };
+    }
+
+    string ConfidenceLabel(
+        SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
+    {
+        if (!field.ProviderConfidence.HasValue)
+        {
+            return field.ExtractionMethod == "Manual"
+                ? "Manual"
+                : "بدون درجة";
+        }
+
+        var percentage = field.ProviderConfidence.Value * 100m;
+        return ConfidenceBand(field) switch
+        {
+            "high" => $"High · {percentage:0.0}%",
+            "medium" => $"Medium · {percentage:0.0}%",
+            _ => $"Low · {percentage:0.0}%"
+        };
+    }
+
     var semanticFields = Model.Fields
         .Where(x => !x.FieldKey.StartsWith("OCR.", StringComparison.OrdinalIgnoreCase)
                  && !x.FieldKey.StartsWith("MRZ.Check.", StringComparison.OrdinalIgnoreCase))
@@ -290,6 +325,24 @@
                                 </small>
                             </div>
                             <div class="sor-field-badges">
+                                @if (Model.CanPreview(document))
+                                {
+                                    <button type="button"
+                                            class="zy-btn sor-preview-button"
+                                            data-review-preview-open
+                                            data-preview-name="@document.OriginalFileName"
+                                            data-preview-url="@Url.Page(
+                                                "./SmartOnboarding",
+                                                "Preview",
+                                                new
+                                                {
+                                                    companyId = Model.CompanyId,
+                                                    sessionId = Model.SessionId,
+                                                    documentId = document.Id
+                                                })">
+                                        معاينة المستند
+                                    </button>
+                                }
                                 @if (requireExpiry)
                                 {
                                     <span>Expiry مطلوب</span>
@@ -469,6 +522,57 @@
                 </div>
             </section>
         }
+        @if (Model.CrossDocumentComparisons.Count > 0)
+        {
+            var conflictCount = Model.CrossDocumentComparisons.Count(x => x.HasConflict);
+            <section class="sor-card sor-cross-doc">
+                <div class="sor-section-head">
+                    <div>
+                        <h2>مقارنة البيانات بين المستندات</h2>
+                        <p>زينورا يقارن الحقول المشتركة بين الهوية والجواز وبقية المستندات قبل الاعتماد النهائي.</p>
+                    </div>
+                    <span class="zy-badge zy-badge--info">
+                        @(conflictCount == 0
+                            ? "القيم المشتركة متطابقة"
+                            : $"{conflictCount} تعارض")
+                    </span>
+                </div>
+
+                <div class="sor-cross-list">
+                    @foreach (var comparison in Model.CrossDocumentComparisons)
+                    {
+                        <article class="sor-cross-item @(comparison.HasConflict ? "is-conflict" : "is-match")">
+                            <header>
+                                <div>
+                                    <strong>@DefaultFieldLabel(comparison.FieldKey)</strong>
+                                    <small>@comparison.Severity</small>
+                                </div>
+                                <span>
+                                    @(comparison.HasConflict ? "تعارض يحتاج قرار" : "متطابق")
+                                </span>
+                            </header>
+                            <div class="sor-cross-values">
+                                @foreach (var value in comparison.Values)
+                                {
+                                    <div>
+                                        <small>@value.DocumentType · @value.DocumentName</small>
+                                        <strong>@value.Value</strong>
+                                        <span>
+                                            @value.ReviewStatus
+                                            @if (value.Confidence.HasValue)
+                                            {
+                                                <text> · @($"{value.Confidence.Value * 100m:0.0}%")</text>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
         @if (reviewFields.Count > 0)
         {
         <section class="sor-card">
@@ -481,6 +585,8 @@
                     <span class="zy-badge zy-badge--info">@reviewFields.Count بحاجة مراجعة</span>
                     @if (Model.CanReview && reviewFields.Any(x =>
                         x.ReviewStatus == "Pending" &&
+                        x.ProviderConfidence >=
+                            SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.HighConfidenceThreshold &&
                         !string.IsNullOrWhiteSpace(EffectiveValue(x)) &&
                         FieldPolicy(x)?.AllowBulkApprove == true))
                     {
@@ -490,7 +596,7 @@
                             <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
                             <input type="hidden" name="SessionId" value="@Model.SessionId" />
                             <button type="submit" class="zy-btn zy-btn--primary">
-                                اعتماد الكل
+                                اعتماد عالي الثقة
                             </button>
                         </form>
                     }
@@ -503,9 +609,8 @@
                         var document = Model.Documents.FirstOrDefault(x => x.Id == field.DocumentId);
                         var policy = FieldPolicy(field)!;
                         var effectiveValue = EffectiveValue(field);
-                        var confidence = field.ProviderConfidence.HasValue
-                            ? $"{field.ProviderConfidence.Value * 100m:0.0}%"
-                            : field.ExtractionMethod == "Manual" ? "Manual" : "Rule-based";
+                        var confidenceBand = ConfidenceBand(field);
+                        var confidenceLabel = ConfidenceLabel(field);
 
                         <article id="field-@field.Id"
                                  class="sor-field sor-field--@field.ReviewStatus.ToLowerInvariant()">
@@ -524,7 +629,9 @@
                                         <span class="is-required">Required</span>
                                     }
                                     <span>@field.ValidationStatus</span>
-                                    <span>@confidence</span>
+                                    <span class="sor-confidence sor-confidence--@confidenceBand">
+                                        @confidenceLabel
+                                    </span>
                                     <span>@field.ReviewStatus</span>
                                 </div>
                             </div>
@@ -956,6 +1063,30 @@
                    class="zy-btn zy-btn--primary">فتح ملف الموظف</a>
             </section>
         }
+
+        <dialog class="sor-preview-dialog"
+                data-review-preview-dialog
+                aria-labelledby="sor-preview-title">
+            <div class="sor-preview-shell">
+                <header class="sor-preview-head">
+                    <div>
+                        <span>Protected Document Preview</span>
+                        <strong id="sor-preview-title"
+                                data-review-preview-title>معاينة المستند</strong>
+                    </div>
+                    <button type="button"
+                            class="zy-btn"
+                            data-review-preview-close>إغلاق</button>
+                </header>
+                <div class="sor-preview-body">
+                    <iframe data-review-preview-frame
+                            title="معاينة المستند المحمي"></iframe>
+                </div>
+                <footer class="sor-preview-foot">
+                    المعاينة محمية ولا تكشف مسار التخزين الفعلي.
+                </footer>
+            </div>
+        </dialog>
     }
 </div>
 

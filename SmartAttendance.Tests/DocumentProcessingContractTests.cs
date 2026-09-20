@@ -64,6 +64,36 @@ public sealed class DocumentProcessingContractTests
             decision.ProcessingMode);
     }
 
+    [Theory]
+    [InlineData(".png")]
+    [InlineData(".jpg")]
+    [InlineData(".jpeg")]
+    [InlineData(".webp")]
+    [InlineData(".pdf")]
+    public void BrowserSafeFormats_SupportProtectedPreview(
+        string extension)
+    {
+        var decision = DocumentProcessingContract.Resolve(
+            extension,
+            PeopleAiDocumentTypes.Unknown);
+
+        Assert.True(decision.Format.CanPreview);
+    }
+
+    [Theory]
+    [InlineData(".doc")]
+    [InlineData(".docx")]
+    [InlineData(".xls")]
+    [InlineData(".xlsx")]
+    public void OfficeFormats_DoNotUseInlinePreview(string extension)
+    {
+        var decision = DocumentProcessingContract.Resolve(
+            extension,
+            PeopleAiDocumentTypes.Unknown);
+
+        Assert.False(decision.Format.CanPreview);
+    }
+
     [Fact]
     public void Pdf_CustomType_StillQueuesTextExtraction()
     {

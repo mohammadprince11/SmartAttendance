@@ -42,6 +42,55 @@
         }
     }
 
+    const previewDialog =
+        document.querySelector("[data-review-preview-dialog]");
+    const previewFrame =
+        previewDialog?.querySelector("[data-review-preview-frame]");
+    const previewTitle =
+        previewDialog?.querySelector("[data-review-preview-title]");
+
+    if (previewDialog && previewFrame) {
+        const closePreview = () => {
+            previewFrame.src = "about:blank";
+            if (previewDialog.open) {
+                previewDialog.close();
+            }
+        };
+
+        document.addEventListener("click", event => {
+            const openButton =
+                event.target.closest("[data-review-preview-open]");
+            if (openButton) {
+                const url = openButton.dataset.previewUrl;
+                if (!url) return;
+
+                if (previewTitle) {
+                    previewTitle.textContent =
+                        openButton.dataset.previewName ||
+                        "معاينة المستند";
+                }
+                previewFrame.src = url;
+                previewDialog.showModal();
+                return;
+            }
+
+            if (event.target.closest("[data-review-preview-close]")) {
+                closePreview();
+            }
+        });
+
+        previewDialog.addEventListener("click", event => {
+            if (event.target === previewDialog) closePreview();
+        });
+        previewDialog.addEventListener("cancel", event => {
+            event.preventDefault();
+            closePreview();
+        });
+        previewDialog.addEventListener("close", () => {
+            previewFrame.src = "about:blank";
+        });
+    }
+
     const branch = document.getElementById("sor-branch");
     const department = document.getElementById("sor-department");
     if (!branch || !department) {

@@ -630,6 +630,8 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
         var validation = mrz.AllRequiredChecksValid
             ? "Valid"
             : "Invalid";
+        var mrzConfidence =
+            mrz.AllRequiredChecksValid ? 0.99 : 0.85;
 
         await SaveField(
             "MRZ.Format",
@@ -730,6 +732,32 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             null,
             mrz is null ? null : $"MRZ_{mrz.Format}");
 
+        double? ResolveObservedConfidence(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var needle = value.Trim();
+            var scores = response.AllLines
+                .Where(line =>
+                    line.Score.HasValue &&
+                    !string.IsNullOrWhiteSpace(line.Text) &&
+                    (line.Text.Contains(
+                         needle,
+                         StringComparison.OrdinalIgnoreCase) ||
+                     needle.Contains(
+                         line.Text.Trim(),
+                         StringComparison.OrdinalIgnoreCase)))
+                .Select(line => line.Score!.Value)
+                .ToList();
+
+            return scores.Count == 0
+                ? null
+                : scores.Max();
+        }
+
         Task SaveObservedField(
             string fieldKey,
             string? value) =>
@@ -741,7 +769,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                     fieldKey,
                     value,
                     value,
-                    confidence: null,
+                    ResolveObservedConfidence(value),
                     "Observed",
                     "OCR_LABEL");
 
@@ -756,7 +784,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                     fieldKey,
                     value,
                     value,
-                    confidence: null,
+                    ResolveObservedConfidence(value),
                     "Observed",
                     "CV_REGEX");
 
@@ -771,7 +799,7 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 fieldKey,
                 raw,
                 normalized,
-                confidence: null,
+                mrzConfidence,
                 fieldValidation,
                 "MRZ");
     }

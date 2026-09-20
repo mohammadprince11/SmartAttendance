@@ -4,6 +4,7 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 public static class PeopleAiReviewStore
 {
+    public const decimal HighConfidenceThreshold = 0.90m;
     public sealed record ReviewField(
         long Id,
         long ExtractionRunId,
@@ -156,7 +157,7 @@ FROM MissingFields mf;
             });
     }
 
-    public static async Task<int> AcceptAllConfiguredFieldsAsync(
+    public static async Task<int> AcceptHighConfidenceConfiguredFieldsAsync(
         ApplicationDbContext db,
         int companyId,
         long sessionId,
@@ -204,6 +205,7 @@ JOIN dbo.CompanyPeopleAiFieldPolicies fp
 WHERE lr.rn = 1
   AND f.ReviewStatus = 'Pending'
   AND f.ValidationStatus <> 'Invalid'
+  AND f.ProviderConfidence >= @HighConfidenceThreshold
   AND COALESCE(
         NULLIF(LTRIM(RTRIM(f.NormalizedValue)), ''),
         NULLIF(LTRIM(RTRIM(f.RawValue)), '')) IS NOT NULL;
@@ -215,6 +217,10 @@ SELECT @@ROWCOUNT;
                 HrmsDatabase.AddParameter(command, "@CompanyId", companyId);
                 HrmsDatabase.AddParameter(command, "@SessionId", sessionId);
                 HrmsDatabase.AddParameter(command, "@ReviewerId", systemUserId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@HighConfidenceThreshold",
+                    HighConfidenceThreshold);
             });
     }
 
@@ -414,6 +420,59 @@ END;
                 HrmsDatabase.AddParameter(command, "@Severity", severity);
                 HrmsDatabase.AddParameter(
                     command, "@FieldKey",
+                    (object?)fieldKey ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@Message", message);
+            });
+
+    public static Task UpsertDynamicIssueAsync(
+        ApplicationDbContext db,
+        long sessionId,
+        string ruleCode,
+        string category,
+        string severity,
+        string? fieldKey,
+        string message) =>
+        HrmsDatabase.ExecuteAsync(
+            db,
+            """
+IF EXISTS
+(
+    SELECT 1
+    FROM dbo.OnboardingValidationIssues
+    WHERE SessionId = @SessionId
+      AND RuleCode = @RuleCode
+      AND OnboardingDocumentId IS NULL
+)
+BEGIN
+    UPDATE dbo.OnboardingValidationIssues
+    SET Category = @Category,
+        Severity = @Severity,
+        FieldKey = @FieldKey,
+        Message = @Message
+    WHERE SessionId = @SessionId
+      AND RuleCode = @RuleCode
+      AND OnboardingDocumentId IS NULL
+      AND Status = 'Open';
+END
+ELSE
+BEGIN
+    INSERT INTO dbo.OnboardingValidationIssues
+        (SessionId, OnboardingDocumentId, RuleCode, Category,
+         Severity, FieldKey, Message, Status)
+    VALUES
+        (@SessionId, NULL, @RuleCode, @Category,
+         @Severity, @FieldKey, @Message, 'Open');
+END;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@SessionId", sessionId);
+                HrmsDatabase.AddParameter(command, "@RuleCode", ruleCode);
+                HrmsDatabase.AddParameter(command, "@Category", category);
+                HrmsDatabase.AddParameter(command, "@Severity", severity);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@FieldKey",
                     (object?)fieldKey ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Message", message);
             });

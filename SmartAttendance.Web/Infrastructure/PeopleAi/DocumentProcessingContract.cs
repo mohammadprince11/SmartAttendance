@@ -23,11 +23,11 @@ public static class DocumentProcessingContract
         Formats = new Dictionary<string, DocumentFormatCapability>(
             StringComparer.OrdinalIgnoreCase)
         {
-            [".png"] = new(".png", true, true, false, true),
-            [".jpg"] = new(".jpg", true, true, false, true),
-            [".jpeg"] = new(".jpeg", true, true, false, true),
-            [".webp"] = new(".webp", true, true, false, true),
-            [".pdf"] = new(".pdf", true, true, false, true),
+            [".png"] = new(".png", true, true, true, true),
+            [".jpg"] = new(".jpg", true, true, true, true),
+            [".jpeg"] = new(".jpeg", true, true, true, true),
+            [".webp"] = new(".webp", true, true, true, true),
+            [".pdf"] = new(".pdf", true, true, true, true),
             [".doc"] = new(".doc", true, true, false, true),
             [".docx"] = new(".docx", true, true, false, true),
             [".xls"] = new(".xls", true, true, false, true),
