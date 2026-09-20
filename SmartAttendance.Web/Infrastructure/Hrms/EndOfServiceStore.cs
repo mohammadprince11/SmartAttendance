@@ -48,6 +48,11 @@ public static class EndOfServiceStore
         public decimal LastBasic { get; set; }
         public string? Reason { get; set; }
         public decimal GratuityAmount { get; set; }
+        public string GratuityCalculationMode { get; set; } = "Legacy";
+        public bool GratuityEligible { get; set; }
+        public decimal? GratuityWeeksPerYear { get; set; }
+        public decimal GratuityMultiplier { get; set; } = 1m;
+        public decimal GratuityBasisAmount { get; set; }
         public decimal LeaveBalanceDays { get; set; }
         public decimal LeaveEncashment { get; set; }
         public decimal OtherDues { get; set; }
@@ -80,6 +85,11 @@ BEGIN
         LastBasic decimal(18,2) NOT NULL DEFAULT(0),
         Reason nvarchar(200) NULL,
         GratuityAmount decimal(18,2) NOT NULL DEFAULT(0),
+        GratuityCalculationMode nvarchar(20) NOT NULL DEFAULT(N'Legacy'),
+        GratuityEligible bit NOT NULL DEFAULT(0),
+        GratuityWeeksPerYear decimal(9,4) NULL,
+        GratuityMultiplier decimal(9,4) NOT NULL DEFAULT(1),
+        GratuityBasisAmount decimal(18,2) NOT NULL DEFAULT(0),
         LeaveBalanceDays decimal(9,2) NOT NULL DEFAULT(0),
         LeaveEncashment decimal(18,2) NOT NULL DEFAULT(0),
         OtherDues decimal(18,2) NOT NULL DEFAULT(0),
@@ -93,6 +103,24 @@ BEGIN
         CreatedBy nvarchar(150) NULL
     );
     CREATE INDEX IX_EmployeeEndOfService_Employee ON EmployeeEndOfService (EmployeeId);
+END;
+
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','GratuityCalculationMode') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityCalculationMode nvarchar(20) NOT NULL
+            CONSTRAINT DF_EOS_GratuityCalculationMode DEFAULT(N'Legacy');
+    IF COL_LENGTH('EmployeeEndOfService','GratuityEligible') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityEligible bit NOT NULL
+            CONSTRAINT DF_EOS_GratuityEligible DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityWeeksPerYear') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityWeeksPerYear decimal(9,4) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GratuityMultiplier') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityMultiplier decimal(9,4) NOT NULL
+            CONSTRAINT DF_EOS_GratuityMultiplier DEFAULT(1);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityBasisAmount') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityBasisAmount decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GratuityBasisAmount DEFAULT(0);
 END;
 """);
     }
@@ -253,16 +281,22 @@ ORDER BY s.CreatedAt DESC;
     private const string InsertSql = """
 INSERT INTO EmployeeEndOfService
  (EmployeeId, ServiceStartDate, LastWorkingDate, YearsService, LastBasic, Reason, GratuityAmount,
+  GratuityCalculationMode, GratuityEligible, GratuityWeeksPerYear, GratuityMultiplier, GratuityBasisAmount,
   LeaveBalanceDays, LeaveEncashment, OtherDues, Deductions, NetSettlement, Note, Status, ReferenceNo, CreatedBy)
 VALUES
  (@Emp, @Start, @End, @Years, @Basic, @Reason, @Gratuity,
+  @GratuityMode, @GratuityEligible, @GratuityWeeks, @GratuityMultiplier, @GratuityBasis,
   @LeaveDays, @LeaveEnc, @OtherDues, @Deductions, @Net, @Note, @Status, @Ref, @By);
 """;
 
     private const string UpdateSql = """
 UPDATE EmployeeEndOfService SET
   EmployeeId=@Emp, ServiceStartDate=@Start, LastWorkingDate=@End, YearsService=@Years, LastBasic=@Basic,
-  Reason=@Reason, GratuityAmount=@Gratuity, LeaveBalanceDays=@LeaveDays, LeaveEncashment=@LeaveEnc,
+  Reason=@Reason, GratuityAmount=@Gratuity,
+  GratuityCalculationMode=@GratuityMode, GratuityEligible=@GratuityEligible,
+  GratuityWeeksPerYear=@GratuityWeeks, GratuityMultiplier=@GratuityMultiplier,
+  GratuityBasisAmount=@GratuityBasis,
+  LeaveBalanceDays=@LeaveDays, LeaveEncashment=@LeaveEnc,
   OtherDues=@OtherDues, Deductions=@Deductions, NetSettlement=@Net, Note=@Note, Status=@Status
 WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
 """;
@@ -281,6 +315,11 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         LastBasic = reader["LastBasic"] is decimal lb ? lb : 0,
         Reason = HrmsDatabase.GetString(reader, "Reason") is { Length: > 0 } rs ? rs : null,
         GratuityAmount = reader["GratuityAmount"] is decimal ga ? ga : 0,
+        GratuityCalculationMode = HrmsDatabase.GetString(reader, "GratuityCalculationMode") is { Length: > 0 } gm ? gm : "Legacy",
+        GratuityEligible = HrmsDatabase.GetBool(reader, "GratuityEligible"),
+        GratuityWeeksPerYear = reader["GratuityWeeksPerYear"] is decimal gw ? gw : null,
+        GratuityMultiplier = reader["GratuityMultiplier"] is decimal gmult ? gmult : 1m,
+        GratuityBasisAmount = reader["GratuityBasisAmount"] is decimal gb ? gb : 0m,
         LeaveBalanceDays = reader["LeaveBalanceDays"] is decimal ld ? ld : 0,
         LeaveEncashment = reader["LeaveEncashment"] is decimal le ? le : 0,
         OtherDues = reader["OtherDues"] is decimal od ? od : 0,
@@ -302,6 +341,14 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         HrmsDatabase.AddParameter(command, "@Basic", s.LastBasic);
         HrmsDatabase.AddParameter(command, "@Reason", (object?)s.Reason ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Gratuity", s.GratuityAmount);
+        HrmsDatabase.AddParameter(command, "@GratuityMode",
+            string.IsNullOrWhiteSpace(s.GratuityCalculationMode) ? "Legacy" : s.GratuityCalculationMode);
+        HrmsDatabase.AddParameter(command, "@GratuityEligible", s.GratuityEligible ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@GratuityWeeks",
+            (object?)s.GratuityWeeksPerYear ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@GratuityMultiplier",
+            s.GratuityMultiplier > 0m ? s.GratuityMultiplier : 1m);
+        HrmsDatabase.AddParameter(command, "@GratuityBasis", Math.Max(0m, s.GratuityBasisAmount));
         HrmsDatabase.AddParameter(command, "@LeaveDays", s.LeaveBalanceDays);
         HrmsDatabase.AddParameter(command, "@LeaveEnc", s.LeaveEncashment);
         HrmsDatabase.AddParameter(command, "@OtherDues", s.OtherDues);

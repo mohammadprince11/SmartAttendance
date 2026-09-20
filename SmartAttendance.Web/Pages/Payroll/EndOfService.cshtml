@@ -99,7 +99,9 @@
                                         </form>
                                         <button type="button" class="es-btn ghost sm" onclick="esEdit(this)" data-es="@J(new {
                                             s.Id, s.EmployeeId, ServiceStartDate=Dt(s.ServiceStartDate), LastWorkingDate=Dt(s.LastWorkingDate),
-                                            s.LastBasic, s.Reason, s.GratuityAmount, s.LeaveBalanceDays, s.OtherDues, s.Deductions, s.Note })">تعديل</button>
+                                            s.LastBasic, s.Reason, s.GratuityAmount, s.GratuityCalculationMode, s.GratuityEligible,
+                                            s.GratuityWeeksPerYear, s.GratuityMultiplier, s.GratuityBasisAmount,
+                                            s.LeaveBalanceDays, s.OtherDues, s.Deductions, s.Note })">تعديل</button>
                                         <form method="post" asp-page-handler="Delete" data-zyconfirm="حذف التسوية؟">
                                             <input type="hidden" name="id" value="@s.Id" />
                                             <button type="submit" class="es-btn danger sm">حذف</button>
@@ -310,7 +312,10 @@
                 setVal('es-LastWorkingDate', d.LastWorkingDate);
                 setVal('es-LastBasic', d.LastBasic);
                 setVal('es-Reason', d.Reason || '');
-                document.getElementById('es-GratuityEligible').checked = (d.GratuityAmount || 0) > 0;
+                document.getElementById('es-GratuityEligible').checked =
+                    d.GratuityEligible === true || ((d.GratuityCalculationMode || 'Legacy') === 'Legacy' && (d.GratuityAmount || 0) > 0);
+                document.getElementById('es-GratuityMultiplier').value =
+                    String(d.GratuityMultiplier || 1);
                 setVal('es-ManualGratuityAmount', d.GratuityAmount || 0);
                 setVal('es-LeaveBalanceDays', d.LeaveBalanceDays);
                 setVal('es-OtherDues', d.OtherDues);

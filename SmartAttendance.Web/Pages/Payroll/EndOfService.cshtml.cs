@@ -140,6 +140,15 @@ public class EndOfServiceModel : PageModel
             LastBasic = lastBasic,
             Reason = string.IsNullOrWhiteSpace(f["Reason"]) ? null : f["Reason"].ToString().Trim(),
             GratuityAmount = gratuity,
+            GratuityCalculationMode = !gratuityEligible
+                ? "NotEligible"
+                : eosPolicy.AutoCalculationEnabled ? "Policy" : "Manual",
+            GratuityEligible = gratuityEligible,
+            GratuityWeeksPerYear = gratuityEligible && eosPolicy.AutoCalculationEnabled
+                ? eosPolicy.WeeksPerYear
+                : null,
+            GratuityMultiplier = multiplier,
+            GratuityBasisAmount = lastBasic,
             LeaveBalanceDays = leaveDays,
             LeaveEncashment = leaveEnc,
             OtherDues = otherDues,

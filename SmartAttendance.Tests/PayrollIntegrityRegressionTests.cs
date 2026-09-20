@@ -121,6 +121,12 @@ public sealed class PayrollIntegrityRegressionTests
         Assert.DoesNotContain("ISNULL(b.CompanyId, 0) AS CompanyId", provision);
         Assert.Contains("EndOfServicePolicy.LoadAsync", provision);
         Assert.Contains("EndOfServicePolicy.LoadAsync", page);
+        Assert.Contains("GratuityCalculationMode", store);
+        Assert.Contains("GratuityWeeksPerYear", store);
+
+        var migrator = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs"));
+        Assert.Contains("20260920-07-payroll-end-of-service-audit-snapshot", migrator);
+        Assert.Contains("GratuityBasisAmount", migrator);
     }
 
     [Fact]

@@ -2984,6 +2984,34 @@ BEGIN
         ON AttendancePolicyOverrides (WorkDate, EmployeeId);
 END;
 """),
+
+        new(
+            "20260920-07-payroll-end-of-service-audit-snapshot",
+            """
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','GratuityCalculationMode') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityCalculationMode nvarchar(20) NOT NULL
+            CONSTRAINT DF_EOS_GratuityCalculationMode DEFAULT(N'Legacy');
+    IF COL_LENGTH('EmployeeEndOfService','GratuityEligible') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityEligible bit NOT NULL
+            CONSTRAINT DF_EOS_GratuityEligible DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityWeeksPerYear') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityWeeksPerYear decimal(9,4) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GratuityMultiplier') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityMultiplier decimal(9,4) NOT NULL
+            CONSTRAINT DF_EOS_GratuityMultiplier DEFAULT(1);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityBasisAmount') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityBasisAmount decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GratuityBasisAmount DEFAULT(0);
+
+    EXEC sp_executesql N'
+        UPDATE EmployeeEndOfService
+        SET GratuityEligible = CASE WHEN GratuityAmount > 0 THEN 1 ELSE 0 END,
+            GratuityBasisAmount = CASE WHEN GratuityBasisAmount = 0 THEN LastBasic ELSE GratuityBasisAmount END
+        WHERE GratuityCalculationMode = N''Legacy'';';
+END;
+"""),
     };
 
     /// <summary>
