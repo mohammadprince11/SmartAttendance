@@ -515,19 +515,27 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = "requests" });
         }
 
-        // بوابة الرصيد للإجازة السنوية.
-        if (typeLabel == "إجازة سنوية")
+        // نفس محرك سياسة الشركة هو بوابة الحقيقة لكل أنواع الإجازات والمغادرات.
+        // لا نستخدم LeaveBalanceCalculator القديم هنا لأنه لا يعرف الرصيد المشترك،
+        // الساعات، التراكم، الحد السالب، مدة الاستحقاق أو المرفقات الخاصة بالشركة.
+        TimeSpan? startTs = TimeSpan.TryParse(fromTime, out var st) ? st : null;
+        TimeSpan? endTs = TimeSpan.TryParse(toTime, out var et) ? et : null;
+        var policyValidation = await CompanyLeavePolicyStore.ValidateRequestAsync(
+            _dbContext,
+            employeeId,
+            currentRequestId: 0,
+            requestTypeId: typeDef?.Id,
+            requestTypeName: typeLabel,
+            fromDate: DateOnly.FromDateTime(from.Value.Date),
+            toDate: DateOnly.FromDateTime(to.Value.Date),
+            startTime: startTs,
+            endTime: endTs,
+            reason: reason,
+            hasAttachment: attachment is { Length: > 0 });
+        if (!policyValidation.Ok)
         {
-            var balances = await LeaveBalanceCalculator.ForEmployeeAsync(
-                _dbContext, employeeId, from.Value.Year);
-            var annual = balances.FirstOrDefault(
-                b => b.Type == SmartAttendance.Domain.Enums.LeaveType.Annual);
-            var remaining = annual?.Remaining ?? 0m;
-            if (days > remaining)
-            {
-                StatusMessage = $"رصيد الإجازة السنوية غير كافٍ (المتبقّي {remaining:0.#} يوم، والمطلوب {days:0.#}).";
-                return RedirectToPage(new { tab = "requests" });
-            }
+            StatusMessage = policyValidation.Message;
+            return RedirectToPage(new { tab = "requests" });
         }
 
         // حفظ المرفق (صورة اختيارية).
@@ -542,22 +550,19 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
         reason = string.IsNullOrWhiteSpace(reason) ? "تم الإرسال من بوابة الموظف" : reason.Trim();
 
-        // وقت اختياري (للمغادرات): "HH:mm".
-        TimeSpan? startTs = TimeSpan.TryParse(fromTime, out var st) ? st : null;
-        TimeSpan? endTs = TimeSpan.TryParse(toTime, out var et) ? et : null;
-
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
 INSERT INTO SelfServiceRequests
-(EmployeeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath, RequestSource)
+(EmployeeId, RequestTypeId, RequestType, CreatedAt, FromDate, ToDate, StartTime, EndTime, Reason, Status, DaysCount, AttachmentPath, RequestSource)
 VALUES
-(@EmployeeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath, N'SelfService');
+(@EmployeeId, @RequestTypeId, @RequestType, SYSUTCDATETIME(), @FromDate, @ToDate, @StartTime, @EndTime, @Reason, 'Pending', @DaysCount, @AttachmentPath, N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@RequestTypeId", (object?)typeDef?.Id ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@RequestType", typeLabel);
                 HrmsDatabase.AddParameter(command, "@FromDate", from.Value);
                 HrmsDatabase.AddParameter(command, "@ToDate", to.Value);
