@@ -193,6 +193,12 @@
                     <div class="row"><span>ناقص: اقتطاعات</span><b id="es-c-ded" class="zyu-94c76e9c8583">0</b></div>
                     <div class="row total"><span>صافي التسوية</span><b id="es-c-net">0</b></div>
                 </div>
+                <div class="es-warn" id="es-payroll-context">
+                    <div id="es-rate-info">اختر الموظف وآخر يوم عمل لعرض أساس الأجر اليومي من Payroll.</div>
+                    <div id="es-withholding-info"></div>
+                    <div id="es-termination-payroll-warning"></div>
+                    <small>بيانات Tax/GOSI المعروضة للمراجعة فقط ولا تُضاف أو تُطرح من صافي التسوية تلقائياً.</small>
+                </div>
                 <div class="es-warn">⚠️ أهلية مكافأة نهاية الخدمة والمضاعف يجب تأكيدهما لكل حالة. الحساب التلقائي لا يعمل إلا بعد تفعيل سياسة الشركة.</div>
 
                 <label>ملاحظة<textarea name="Note" id="es-Note" rows="2"></textarea></label>
@@ -208,6 +214,9 @@
     <script>
         var ES_EMP = @Html.Raw(empJson);
         var ES_POLICIES = @Html.Raw(policyJson);
+        var ES_SETTLEMENT_CONTEXT = null;
+        var ES_CONTEXT_TIMER = null;
+        var ES_CONTEXT_SEQ = 0;
 
         function fmt(n){ return (Math.round(n*100)/100).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
@@ -266,24 +275,110 @@
             };
         }
 
-        function esCalc(){
+        function esContextKey(){
+            var empId = parseInt(document.getElementById('es-EmployeeId').value || '0');
+            var end = document.getElementById('es-LastWorkingDate').value || '';
+            var basic = parseFloat(document.getElementById('es-LastBasic').value) || 0;
+            var leaveDays = parseFloat(document.getElementById('es-LeaveBalanceDays').value) || 0;
+            return [empId, end, basic.toFixed(4), leaveDays.toFixed(4)].join('|');
+        }
+
+        function esRenderContext(ctx, message){
+            var rate = document.getElementById('es-rate-info');
+            var withholding = document.getElementById('es-withholding-info');
+            var warning = document.getElementById('es-termination-payroll-warning');
+
+            if (!ctx){
+                rate.textContent = message || 'اختر الموظف وآخر يوم عمل لعرض أساس الأجر اليومي من Payroll.';
+                withholding.textContent = '';
+                warning.textContent = '';
+                return;
+            }
+
+            var basis = ctx.salaryDaysBasis === 'PeriodDays' ? 'أيام فترة المسير' : '30 يوم ثابت';
+            rate.textContent = 'فترة Payroll: ' + String(ctx.payrollMonth).padStart(2, '0') + '/' + ctx.payrollYear
+                + ' · الأساس: ' + basis + ' · المقسوم عليه: ' + fmt(ctx.salaryDivisor)
+                + ' · الأجر اليومي: ' + fmt(ctx.dailyRate);
+            withholding.textContent = 'المقتطع فعلياً خلال ' + ctx.payrollYear + ': Tax '
+                + fmt(ctx.withheldTax) + ' · GOSI ' + fmt(ctx.withheldGosi)
+                + ' · أشهر Regular Payroll: ' + ctx.monthsPaid;
+            warning.textContent = ctx.terminationMonthUnpaid
+                ? '⚠ لا يوجد Regular Payroll نهائي يغطي شهر الإنهاء. راجع راتب شهر الإنهاء قبل الاعتماد.'
+                : ('آخر Regular Payroll نهائي: ' + (ctx.lastPaidPeriod || '—'));
+        }
+
+        function esScheduleContext(){
+            if (ES_CONTEXT_TIMER) clearTimeout(ES_CONTEXT_TIMER);
+
+            var empId = parseInt(document.getElementById('es-EmployeeId').value || '0');
+            var end = document.getElementById('es-LastWorkingDate').value || '';
+            var basic = parseFloat(document.getElementById('es-LastBasic').value) || 0;
+            var leaveDays = parseFloat(document.getElementById('es-LeaveBalanceDays').value) || 0;
+            var key = esContextKey();
+
+            if (empId <= 0 || !end || basic <= 0){
+                ES_SETTLEMENT_CONTEXT = null;
+                esRenderContext(null);
+                return;
+            }
+
+            if (ES_SETTLEMENT_CONTEXT && ES_SETTLEMENT_CONTEXT._key === key) return;
+
+            var seq = ++ES_CONTEXT_SEQ;
+            esRenderContext(null, 'جاري تحميل أساس Payroll والفروقات الفعلية…');
+            ES_CONTEXT_TIMER = setTimeout(function(){
+                var qs = new URLSearchParams({
+                    handler: 'SettlementContext',
+                    employeeId: String(empId),
+                    lastWorkingDate: end,
+                    lastBasic: String(basic),
+                    leaveDays: String(leaveDays)
+                });
+
+                fetch('?' + qs.toString(), { headers: { 'Accept': 'application/json' } })
+                    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                    .then(function(data){
+                        if (seq !== ES_CONTEXT_SEQ) return;
+                        if (!data || data.ok !== true) throw new Error((data && data.message) || 'تعذّر تحميل سياق Payroll.');
+                        data._key = key;
+                        ES_SETTLEMENT_CONTEXT = data;
+                        esRenderContext(data);
+                        esCalc(true);
+                    })
+                    .catch(function(err){
+                        if (seq !== ES_CONTEXT_SEQ) return;
+                        ES_SETTLEMENT_CONTEXT = null;
+                        esRenderContext(null, 'تعذّر تحميل سياق Payroll: ' + err.message);
+                        esCalc(true);
+                    });
+            }, 180);
+        }
+
+        function esCalc(skipContextRequest){
             var years = esYears(document.getElementById('es-ServiceStartDate').value, document.getElementById('es-LastWorkingDate').value);
             var basic = parseFloat(document.getElementById('es-LastBasic').value) || 0;
             var leaveDays = parseFloat(document.getElementById('es-LeaveBalanceDays').value) || 0;
             var other = parseFloat(document.getElementById('es-OtherDues').value) || 0;
             var ded = parseFloat(document.getElementById('es-Deductions').value) || 0;
             var g = esGratuity(years, basic);
-            var daily = basic / 30;
-            var leaveEnc = Math.round(leaveDays * daily * 100) / 100;
-            var net = Math.round((g.total + leaveEnc + other - ded) * 100) / 100;
+            var key = esContextKey();
+            var ctx = ES_SETTLEMENT_CONTEXT && ES_SETTLEMENT_CONTEXT._key === key
+                ? ES_SETTLEMENT_CONTEXT
+                : null;
+            var leaveEnc = ctx ? (parseFloat(ctx.leaveEncashment) || 0) : null;
+            var net = leaveEnc === null
+                ? null
+                : Math.round((g.total + leaveEnc + other - ded) * 100) / 100;
 
             document.getElementById('es-c-years').textContent = fmt(years);
             document.getElementById('es-c-gratuity').textContent = fmt(g.total);
             document.getElementById('es-c-breakdown').textContent = g.breakdown === '—' ? '—' : ('التفصيل: ' + g.breakdown);
-            document.getElementById('es-c-leave').textContent = fmt(leaveEnc);
+            document.getElementById('es-c-leave').textContent = leaveEnc === null ? '…' : fmt(leaveEnc);
             document.getElementById('es-c-other').textContent = fmt(other);
             document.getElementById('es-c-ded').textContent = '−' + fmt(ded);
-            document.getElementById('es-c-net').textContent = fmt(net);
+            document.getElementById('es-c-net').textContent = net === null ? '…' : fmt(net);
+
+            if (!skipContextRequest) esScheduleContext();
         }
 
         function setVal(id, v){ var el=document.getElementById(id); if(el) el.value = (v==null?'':v); }
@@ -295,6 +390,10 @@
 
         function esOpen(id, d){
             var f = document.querySelector('#es-slide form'); f.reset();
+            if (ES_CONTEXT_TIMER) clearTimeout(ES_CONTEXT_TIMER);
+            ES_SETTLEMENT_CONTEXT = null;
+            ES_CONTEXT_SEQ++;
+            esRenderContext(null);
             document.getElementById('es-Id').value = id || 0;
             document.getElementById('es-title').textContent = id ? 'تعديل تسوية' : 'تسوية نهاية خدمة';
             esPicker.set(null);

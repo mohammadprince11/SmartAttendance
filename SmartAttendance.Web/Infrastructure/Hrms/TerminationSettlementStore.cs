@@ -5,37 +5,53 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 /// <summary>
 /// قراءة ما اقتُطع فعلاً من موظف خلال سنة، لحساب بنود «الفروقات» بتسوية الإنهاء.
 ///
-/// المصدر <c>PayrollRunLineComponents</c> — الاقتطاعات مخزَّنة أصلاً بكل قسيمة،
-/// فالبيانات موجودة والحساب وحده كان ناقصاً (كما خلصت الدراسة).
+/// المصدر المالي هو <c>PayrollRunLines</c> من المسيرات النظامية النهائية غير
+/// المعكوسة؛ بذلك لا نعتمد أسماء البنود ولا نحسب Draft/Reversal كاقتطاع فعلي.
 ///
 /// ⚠️ <b>قراءة فقط.</b> هذا الملف لا يكتب بالمسير ولا يغيّر قسيمة صادرة.
 /// </summary>
 public static class TerminationSettlementStore
 {
-    /// <summary>
-    /// أنواع المكوّنات التي تُعدّ اقتطاعاً نظامياً. المطابقة بالاسم أو النوع لأن
-    /// المسير يخزّن <c>Kind</c> لبعضها واسماً حرّاً لبعضها الآخر.
-    /// </summary>
-    private static readonly string[] TaxKeys = { "tax", "ضريبة" };
-    private static readonly string[] GosiKeys = { "gosi", "socialsecurity", "ضمان" };
-
     public sealed record YearWithholding(decimal Tax, decimal Gosi, int MonthsPaid, int? LastMonthKey);
 
     /// <summary>
-    /// إجمالي ما اقتُطع من الموظف بسنةٍ ما، وعدد الأشهر المسيَّرة، وآخر شهر —
-    /// وهذا الأخير يغذّي تنبيه «لم يُحتسب راتب شهر الإنهاء».
+    /// إجمالي Tax/GOSI المقتطع فعلياً من المسيرات النظامية النهائية غير المعكوسة.
+    /// Draft/Calculated وOffCycle/Retroactive لا تُعدّ راتباً نظامياً مدفوعاً هنا،
+    /// والمسير الأصلي يُستبعد للموظف إذا وُجد له Reversal نهائي.
     /// </summary>
-    public static async Task<YearWithholding> LoadYearAsync(ApplicationDbContext db, int employeeId, int year)
+    public static async Task<YearWithholding> LoadYearAsync(
+        ApplicationDbContext db,
+        Security.CompanyScope scope,
+        int employeeId,
+        int year)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return new YearWithholding(0m, 0m, 0, null);
+
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
-SELECT r.Year, r.Month, ISNULL(c.Kind, N'') AS Kind, ISNULL(c.ItemName, N'') AS ItemName,
-       ISNULL(c.Amount, 0) AS Amount, ISNULL(c.IsAddition, 1) AS IsAddition
+            $"""
+SELECT r.[Year], r.[Month],
+       SUM(ISNULL(l.TaxAmount,0)) AS TaxAmount,
+       SUM(ISNULL(l.GosiEmployee,0)) AS GosiEmployee
 FROM PayrollRunLines l
 INNER JOIN PayrollRuns r ON r.Id = l.RunId
-LEFT JOIN PayrollRunLineComponents c ON c.LineId = l.Id
-WHERE l.EmployeeId = @EmployeeId AND r.Year = @Year;
+INNER JOIN Employees e ON e.Id = l.EmployeeId
+WHERE l.EmployeeId = @EmployeeId
+  AND r.[Year] = @Year
+  AND ISNULL(r.RunType,N'Regular') = N'Regular'
+  AND r.Status IN (N'Locked',N'Issued',N'PayslipSent')
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND NOT EXISTS (
+      SELECT 1
+      FROM PayrollRuns rr
+      INNER JOIN PayrollRunLines rl
+          ON rl.RunId = rr.Id AND rl.EmployeeId = l.EmployeeId
+      WHERE rr.OriginalRunId = r.Id
+        AND rr.RunType = N'Reversal'
+        AND rr.Status IN (N'Locked',N'Issued',N'PayslipSent')
+  )
+GROUP BY r.[Year], r.[Month];
 """,
             command =>
             {
@@ -44,49 +60,55 @@ WHERE l.EmployeeId = @EmployeeId AND r.Year = @Year;
             },
             reader => (
                 Month: HrmsDatabase.GetInt(reader, "Month"),
-                Kind: HrmsDatabase.GetString(reader, "Kind"),
-                Name: HrmsDatabase.GetString(reader, "ItemName"),
-                Amount: HrmsDatabase.GetNullableDecimal(reader, "Amount") ?? 0,
-                IsAddition: HrmsDatabase.GetBool(reader, "IsAddition")));
-
-        decimal tax = 0, gosi = 0;
-
-        foreach (var row in rows)
-        {
-            // الإضافات ليست اقتطاعاً — بندٌ باسم «ضريبة» لكنه إضافة يعني تسويةً
-            // سابقة لا اقتطاعاً، وجمعه هنا كان سيضاعف الفرق.
-            if (row.IsAddition) continue;
-
-            var haystack = $"{row.Kind} {row.Name}".ToLowerInvariant();
-
-            if (TaxKeys.Any(key => haystack.Contains(key))) tax += row.Amount;
-            else if (GosiKeys.Any(key => haystack.Contains(key))) gosi += row.Amount;
-        }
+                Tax: HrmsDatabase.GetNullableDecimal(reader, "TaxAmount") ?? 0m,
+                Gosi: HrmsDatabase.GetNullableDecimal(reader, "GosiEmployee") ?? 0m));
 
         var months = rows.Select(row => row.Month).Where(month => month > 0).Distinct().ToList();
 
         return new YearWithholding(
-            Math.Round(tax, 2, MidpointRounding.AwayFromZero),
-            Math.Round(gosi, 2, MidpointRounding.AwayFromZero),
+            Math.Round(rows.Sum(row => row.Tax), 2, MidpointRounding.AwayFromZero),
+            Math.Round(rows.Sum(row => row.Gosi), 2, MidpointRounding.AwayFromZero),
             months.Count,
             months.Count == 0 ? null : TerminationSettlementPolicy.MonthKey(year, months.Max()));
     }
 
-    /// <summary>آخر شهر مسيَّر للموظف عبر السنوات كلها — لتنبيه شهر الإنهاء.</summary>
-    public static async Task<int?> LastPaidMonthKeyAsync(ApplicationDbContext db, int employeeId)
+    /// <summary>
+    /// آخر شهر مسير نظامي نهائي وغير معكوس للموظف — OffCycle لا يغطي راتب شهر الإنهاء.
+    /// </summary>
+    public static async Task<int?> LastPaidMonthKeyAsync(
+        ApplicationDbContext db,
+        Security.CompanyScope scope,
+        int employeeId)
     {
+        ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll) return null;
+
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
-SELECT TOP 1 r.Year, r.Month
+            $"""
+SELECT TOP 1 r.[Year], r.[Month]
 FROM PayrollRunLines l
 INNER JOIN PayrollRuns r ON r.Id = l.RunId
+INNER JOIN Employees e ON e.Id = l.EmployeeId
 WHERE l.EmployeeId = @EmployeeId
-ORDER BY r.Year DESC, r.Month DESC;
+  AND ISNULL(r.RunType,N'Regular') = N'Regular'
+  AND r.Status IN (N'Locked',N'Issued',N'PayslipSent')
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
+  AND NOT EXISTS (
+      SELECT 1
+      FROM PayrollRuns rr
+      INNER JOIN PayrollRunLines rl
+          ON rl.RunId = rr.Id AND rl.EmployeeId = l.EmployeeId
+      WHERE rr.OriginalRunId = r.Id
+        AND rr.RunType = N'Reversal'
+        AND rr.Status IN (N'Locked',N'Issued',N'PayslipSent')
+  )
+ORDER BY r.[Year] DESC, r.[Month] DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
             reader => TerminationSettlementPolicy.MonthKey(
-                HrmsDatabase.GetInt(reader, "Year"), HrmsDatabase.GetInt(reader, "Month")));
+                HrmsDatabase.GetInt(reader, "Year"),
+                HrmsDatabase.GetInt(reader, "Month")));
 
         return rows.FirstOrDefault() is var key && key != 0 ? key : null;
     }

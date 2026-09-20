@@ -59,6 +59,63 @@ public class EndOfServiceModel : PageModel
             CompanyPolicies[companyId] = await EndOfServicePolicy.LoadAsync(_db, companyId);
     }
 
+    public async Task<IActionResult> OnGetSettlementContextAsync(
+        int employeeId,
+        string? lastWorkingDate,
+        decimal lastBasic = 0m,
+        decimal leaveDays = 0m)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var employee = (await EndOfServiceStore.EmployeeInfosAsync(_db, scope))
+            .FirstOrDefault(item => item.Id == employeeId);
+        if (employee is null)
+            return new JsonResult(new { ok = false, message = "الموظف خارج نطاق الصلاحية." });
+
+        if (!DateOnly.TryParse(lastWorkingDate, out var end))
+            return new JsonResult(new { ok = false, message = "أدخل آخر يوم عمل." });
+
+        lastBasic = Math.Max(0m, lastBasic);
+        leaveDays = Math.Max(0m, leaveDays);
+
+        var payrollPeriod = await EndOfServiceStore.ResolvePayrollPeriodAsync(
+            _db, employee.CompanyId, end);
+        var rateBasis = await PayrollDivisorPolicy.ResolveForPeriodAsync(
+            _db, employee.CompanyId, payrollPeriod.Year, payrollPeriod.Month);
+        var dailyRate = PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor);
+        var leaveEncashment = Math.Round(leaveDays * dailyRate, 2);
+
+        var withholding = await TerminationSettlementStore.LoadYearAsync(
+            _db, scope, employeeId, end.Year);
+        var lastPaidMonthKey = await TerminationSettlementStore.LastPaidMonthKeyAsync(
+            _db, scope, employeeId);
+        var terminationMonthUnpaid = TerminationSettlementPolicy.TerminationMonthUnpaid(
+            end, lastPaidMonthKey);
+
+        string? PeriodText(int? key)
+        {
+            if (key is not > 0) return null;
+            var year = (key.Value - 1) / 12;
+            var month = ((key.Value - 1) % 12) + 1;
+            return $"{month:00}/{year}";
+        }
+
+        return new JsonResult(new
+        {
+            ok = true,
+            payrollYear = payrollPeriod.Year,
+            payrollMonth = payrollPeriod.Month,
+            salaryDaysBasis = rateBasis.Basis,
+            salaryDivisor = rateBasis.Divisor,
+            dailyRate,
+            leaveEncashment,
+            withheldTax = withholding.Tax,
+            withheldGosi = withholding.Gosi,
+            monthsPaid = withholding.MonthsPaid,
+            lastPaidPeriod = PeriodText(lastPaidMonthKey),
+            terminationMonthUnpaid
+        });
+    }
+
     public async Task<IActionResult> OnPostSaveAsync()
     {
         var f = Request.Form;

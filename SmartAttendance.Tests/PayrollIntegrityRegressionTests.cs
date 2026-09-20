@@ -114,6 +114,8 @@ public sealed class PayrollIntegrityRegressionTests
         var store = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "EndOfServiceStore.cs"));
         var provision = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "ProvisionCalculator.cs"));
         var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Payroll", "EndOfService.cshtml.cs"));
+        var markup = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Payroll", "EndOfService.cshtml"));
+        var terminationStore = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "TerminationSettlementStore.cs"));
 
         Assert.DoesNotContain("DefaultTiers", store);
         Assert.Contains("EndOfServicePolicy.Compute", store);
@@ -125,6 +127,17 @@ public sealed class PayrollIntegrityRegressionTests
         Assert.Contains("PayrollDivisorPolicy.ResolveForPeriodAsync", page);
         Assert.Contains("PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor)", page);
         Assert.DoesNotContain("lastBasic / 30m", page);
+        Assert.Contains("OnGetSettlementContextAsync", page);
+        Assert.Contains("TerminationSettlementStore.LoadYearAsync", page);
+        Assert.Contains("TerminationSettlementPolicy.TerminationMonthUnpaid", page);
+        Assert.Contains("handler: 'SettlementContext'", markup);
+        Assert.Contains("ES_SETTLEMENT_CONTEXT", markup);
+        Assert.DoesNotContain("var daily = basic / 30", markup);
+        Assert.Contains("SUM(ISNULL(l.TaxAmount,0))", terminationStore);
+        Assert.Contains("SUM(ISNULL(l.GosiEmployee,0))", terminationStore);
+        Assert.Contains("ISNULL(r.RunType,N'Regular') = N'Regular'", terminationStore);
+        Assert.Contains("rr.OriginalRunId = r.Id", terminationStore);
+        Assert.Contains("EmployeeCompanyGuard.ListFilter(scope", terminationStore);
         Assert.Contains("PayrollDivisorPolicy.ResolveForDateAsync", provision);
         Assert.Contains("PayrollRateBasis.DailyRate(e.Basic, leaveRatePolicy.Divisor)", provision);
         Assert.DoesNotContain("e.Basic / 30m", provision);
