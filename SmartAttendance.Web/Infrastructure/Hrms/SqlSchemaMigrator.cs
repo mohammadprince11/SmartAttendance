@@ -2962,6 +2962,28 @@ BEGIN
         ALTER TABLE ShiftTypes ADD LateCompensationEndLimit nvarchar(5) NULL;
 END;
 """),
+
+        new(
+            "20260920-06-attendance-policy-overrides",
+            """
+IF OBJECT_ID('AttendancePolicyOverrides', 'U') IS NULL
+BEGIN
+    CREATE TABLE AttendancePolicyOverrides
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        WorkDate date NOT NULL,
+        PolicyKey nvarchar(80) NOT NULL,
+        OverrideStatus nvarchar(20) NOT NULL,
+        Reason nvarchar(300) NOT NULL CONSTRAINT DF_AttendancePolicyOverrides_Reason DEFAULT(N''),
+        GeneratedAt datetime2 NOT NULL CONSTRAINT DF_AttendancePolicyOverrides_GeneratedAt DEFAULT(SYSUTCDATETIME())
+    );
+    CREATE UNIQUE INDEX UX_AttendancePolicyOverrides_EmployeeDatePolicy
+        ON AttendancePolicyOverrides (EmployeeId, WorkDate, PolicyKey);
+    CREATE INDEX IX_AttendancePolicyOverrides_WorkDate
+        ON AttendancePolicyOverrides (WorkDate, EmployeeId);
+END;
+"""),
     };
 
     /// <summary>

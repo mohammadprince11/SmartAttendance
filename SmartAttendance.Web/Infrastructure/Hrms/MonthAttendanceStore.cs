@@ -96,6 +96,7 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
         await EnsureAsync(dbContext);
         await DayAttendanceStore.EnsureAsync(dbContext);
         await ShiftTypeStore.EnsureAsync(dbContext); // عمود TotalDurationMode مطلوب بالتجميع
+        await AttendancePolicyOverrideStore.EnsureAsync(dbContext);
 
         // نافذة التجميع تتبع **سياسة فترة الحضور** (المصدر الوحيد الذي تستخدمه اليوميات
         // وبقية الشاشات) لا الشهر التقويمي — بلا سياسة نشطة ترجع الشهر التقويمي كما كان.
@@ -110,6 +111,12 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
         var from = period.From;
         var to = period.To;
 
+        if (resolvedCompanyId is > 0)
+        {
+            await AttendancePolicyOverrideStore.RebuildLateAllowanceAsync(
+                dbContext, scope, year, month, resolvedCompanyId.Value);
+        }
+
         await HrmsDatabase.ExecuteAsync(
             dbContext,
             $"""
@@ -121,21 +128,26 @@ WITH Aggregated AS
     -- نسبةُ حضورٍ فوق 100% لموظفٍ عمل أسبوعاً من بيته.
     SELECT d.EmployeeId,
            SUM(CASE WHEN d.DayKind IN (N'Work', N'Remote', N'BusinessTrip') THEN 1 ELSE 0 END) AS WorkDays,
-           SUM(CASE WHEN d.Status IN (N'Present', N'Late') THEN 1 ELSE 0 END) AS PresentDays,
-           SUM(CASE WHEN d.Status = N'Absent' THEN 1 ELSE 0 END) AS AbsentDays,
-           SUM(CASE WHEN d.Status = N'Incomplete' THEN 1 ELSE 0 END) AS IncompleteDays,
-           SUM(CASE WHEN d.Status = N'LeaveUnpaid' THEN 1 ELSE 0 END) AS UnpaidLeaveDays,
-           SUM(d.LateHours) AS LateHours,
-           SUM(d.EarlyLeaveHours) AS EarlyLeaveHours,
-           -- TotalDurationMode للمناوبة: WorkOnly = ساعات أيام العمل فقط تدخل إجمالي
-           -- الشهر؛ IncludeOff/Both = تُضمّ أيضاً ساعات العطل/الراحة. صف اليوم يحتفظ
-           -- بساعاته الفعلية دوماً (مادة الأوفرتايم) — الوضع يحكم التجميع الشهري فقط.
-           SUM(CASE WHEN d.DayKind IN (N'Work', N'Remote', N'BusinessTrip')
-                      OR ISNULL(st.TotalDurationMode, N'WorkOnly') <> N'WorkOnly'
+           SUM(CASE WHEN po.Id IS NULL AND d.Status IN (N'Present', N'Late') THEN 1 ELSE 0 END) AS PresentDays,
+           SUM(CASE WHEN po.Id IS NOT NULL OR d.Status = N'Absent' THEN 1 ELSE 0 END) AS AbsentDays,
+           SUM(CASE WHEN po.Id IS NULL AND d.Status = N'Incomplete' THEN 1 ELSE 0 END) AS IncompleteDays,
+           SUM(CASE WHEN po.Id IS NULL AND d.Status = N'LeaveUnpaid' THEN 1 ELSE 0 END) AS UnpaidLeaveDays,
+           SUM(CASE WHEN po.Id IS NULL THEN d.LateHours ELSE 0 END) AS LateHours,
+           SUM(CASE WHEN po.Id IS NULL THEN d.EarlyLeaveHours ELSE 0 END) AS EarlyLeaveHours,
+           -- Policy override إلى غياب يحافظ على البصمات الخام لكنه يصفر أثر اليوم
+           -- بالتجميع المالي، فلا يُدفع بنمط الساعات ولا يُعاقَب كتأخير وغياب معاً.
+           SUM(CASE WHEN po.Id IS NULL
+                      AND (d.DayKind IN (N'Work', N'Remote', N'BusinessTrip')
+                           OR ISNULL(st.TotalDurationMode, N'WorkOnly') <> N'WorkOnly')
                     THEN d.WorkedHours ELSE 0 END) AS WorkedHours
     FROM DayAttendances d
     INNER JOIN Employees e ON e.Id = d.EmployeeId
     LEFT JOIN ShiftTypes st ON st.Id = d.ShiftTypeId
+    LEFT JOIN AttendancePolicyOverrides po
+      ON po.EmployeeId = d.EmployeeId
+     AND po.WorkDate = d.WorkDate
+     AND po.PolicyKey = N'MonthlyLateAllowance'
+     AND po.OverrideStatus = N'Absent'
     WHERE d.WorkDate >= @From AND d.WorkDate <= @To AND d.IsAnalyzed = 1
       AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
     GROUP BY d.EmployeeId

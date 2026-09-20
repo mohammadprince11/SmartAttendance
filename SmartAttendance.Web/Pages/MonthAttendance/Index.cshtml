@@ -23,10 +23,12 @@
             <p>دورة شهر الموظف: تحت المراجعة ← معتمد ← <b>مقفل للرواتب</b> — لا يتغير بإعادة البناء ولا يُفتح إلا بسببٍ مُسجّل.</p>
         </div>
         <form method="post" asp-page-handler="Build">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
             <input type="hidden" name="Month" value="@Model.Month" />
             <input type="hidden" name="Search" value="@Model.Search" />
             <input type="hidden" name="Filter" value="@Model.Filter" />
-            <button type="submit" class="mat-btn" data-zyconfirm="بناء الشهر — تأكيد؟">بناء الشهر من اليوميات</button>
+            <button type="submit" class="mat-btn" disabled="@(Model.CompanyId is null)"
+                    data-zyconfirm="بناء الشهر للشركة المختارة — تأكيد؟">بناء الشهر من اليوميات</button>
         </form>
     </header>
 
@@ -36,6 +38,15 @@
     }
 
     <form method="get" class="mat-bar">
+        <label>الشركة
+            <select name="CompanyId">
+                <option value="">كل الشركات — عرض فقط</option>
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+        </label>
         <label>الشهر
             <input type="month" name="Month" value="@Model.Month" />
         </label>
@@ -59,6 +70,7 @@
     </form>
 
     <form method="post" id="mat-form">
+        <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
         <input type="hidden" name="Month" value="@Model.Month" />
         <input type="hidden" name="Search" value="@Model.Search" />
         <input type="hidden" name="Filter" value="@Model.Filter" />
@@ -124,12 +136,12 @@
         <div class="mat-pager">
             @if (Model.PageNumber > 1)
             {
-                <a class="mat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber - 1)">السابق</a>
+                <a class="mat-btn ghost" href="?CompanyId=@Model.CompanyId&Month=@Model.Month&Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber - 1)">السابق</a>
             }
             <span>صفحة @Model.PageNumber من @Model.TotalPages (@Model.TotalRows موظف)</span>
             @if (Model.PageNumber < Model.TotalPages)
             {
-                <a class="mat-btn ghost" href="?Month=@Model.Month&Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber + 1)">التالي</a>
+                <a class="mat-btn ghost" href="?CompanyId=@Model.CompanyId&Month=@Model.Month&Search=@Model.Search&Filter=@Model.Filter&PageNumber=@(Model.PageNumber + 1)">التالي</a>
             }
         </div>
     }

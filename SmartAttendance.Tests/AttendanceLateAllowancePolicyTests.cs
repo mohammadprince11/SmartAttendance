@@ -87,4 +87,81 @@ public class AttendanceLateAllowancePolicyTests
         Assert.Equal(1, row.ExcessMinutes);
         Assert.Equal(0, row.AllowanceRemaining);
     }
+
+    [Fact]
+    public void PolicyOverride_ExactAllowance_CreatesNoAbsence()
+    {
+        var days = new[]
+        {
+            Day(1, 1, 0.50m),
+            Day(1, 2, 0.50m),
+            Day(1, 3, 1.00m)
+        };
+
+        var rows = AttendancePolicyOverrideStore.BuildLateAllowanceOverrides(
+            days,
+            new AttendanceLatenessPolicy.Policy(true, 120, true));
+
+        Assert.Empty(rows);
+    }
+
+    [Fact]
+    public void PolicyOverride_FirstDayCrossingAllowance_IsAbsent()
+    {
+        var days = new[]
+        {
+            Day(7, 1, 1.00m),
+            Day(7, 2, 1.00m),
+            Day(7, 3, 0.25m),
+            Day(7, 4, 0.10m)
+        };
+
+        var rows = AttendancePolicyOverrideStore.BuildLateAllowanceOverrides(
+            days,
+            new AttendanceLatenessPolicy.Policy(true, 120, true));
+
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(new DateOnly(2026, 9, 3), rows[0].WorkDate);
+        Assert.Equal(new DateOnly(2026, 9, 4), rows[1].WorkDate);
+        Assert.All(rows, row => Assert.Equal("Absent", row.OverrideStatus));
+    }
+
+    [Fact]
+    public void PolicyOverride_Disabled_CreatesNothing()
+    {
+        var rows = AttendancePolicyOverrideStore.BuildLateAllowanceOverrides(
+            new[] { Day(1, 1, 2m), Day(1, 2, 1m) },
+            new AttendanceLatenessPolicy.Policy(false, 120, true));
+
+        Assert.Empty(rows);
+    }
+
+    [Fact]
+    public void PolicyOverride_DoesNotMixEmployees()
+    {
+        var days = new[]
+        {
+            Day(1, 1, 1.50m),
+            Day(1, 2, 1.00m),
+            Day(2, 1, 0.50m),
+            Day(2, 2, 0.50m)
+        };
+
+        var rows = AttendancePolicyOverrideStore.BuildLateAllowanceOverrides(
+            days,
+            new AttendanceLatenessPolicy.Policy(true, 120, true));
+
+        var row = Assert.Single(rows);
+        Assert.Equal(1, row.EmployeeId);
+        Assert.Equal(new DateOnly(2026, 9, 2), row.WorkDate);
+    }
+
+    private static DayAttendanceStore.DayRow Day(int employeeId, int day, decimal lateHours) => new()
+    {
+        EmployeeId = employeeId,
+        WorkDate = new DateOnly(2026, 9, day),
+        DayKind = "Work",
+        Status = "Late",
+        LateHours = lateHours
+    };
 }

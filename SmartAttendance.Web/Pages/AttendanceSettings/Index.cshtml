@@ -49,6 +49,37 @@
         <div class="ats-alert">@TempData["SuccessMessage"]</div>
     }
 
+    @* ---------- سياسة التأخير الشهرية ---------- *@
+    <div class="ats-card">
+        <div class="ats-card-head">
+            <div>
+                <h2>سياسة التأخير الشهرية</h2>
+                <p>رصيد دقائق التأخير لكل دورة حضور. بعد نفاد الرصيد يمكن معاملة كل يوم تأخير لاحق كغياب، مع بقاء البصمات الخام محفوظة.</p>
+            </div>
+        </div>
+        <form method="post" asp-page-handler="SaveLatenessPolicy" class="ats-form zyu-df5afa5a8563">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+            <label class="zyu-95e15889185d">
+                <input type="checkbox" name="MonthlyLateAllowanceEnabled" value="true"
+                       checked="@Model.MonthlyLateAllowanceEnabled" disabled="@(Model.CompanyId is null)" />
+                تفعيل سماح التأخير الشهري لهذه الشركة
+            </label>
+            <label>إجمالي السماح لكل دورة حضور (دقائق)
+                <input type="number" name="MonthlyLateAllowanceMinutes"
+                       value="@Model.MonthlyLateAllowanceMinutes" min="0" max="10080" step="1"
+                       class="zyu-eb9e070a2eee" disabled="@(Model.CompanyId is null)" />
+                <span class="ats-hint">مثال: 120 = ساعتان خلال دورة الحضور الفعلية للشركة، وليس بالضرورة الشهر التقويمي.</span>
+            </label>
+            <label class="zyu-95e15889185d">
+                <input type="checkbox" name="LateAllowanceExceededAsAbsent" value="true"
+                       checked="@Model.LateAllowanceExceededAsAbsent" disabled="@(Model.CompanyId is null)" />
+                بعد نفاد السماح: كل يوم تأخير لاحق يُعامل كغياب في التجميع الشهري والرواتب
+            </label>
+            <span class="ats-hint">البصمات ووقت الدخول/الخروج لا تُحذف ولا تُغيَّر؛ السياسة تُحفظ كـPolicy Override قابل لإعادة البناء.</span>
+            <button type="submit" class="ats-btn zyu-0fd943ffe4c5" disabled="@(Model.CompanyId is null)">حفظ سياسة التأخير</button>
+        </form>
+    </div>
+
     @* ---------- قاعدة البصمة عبر الإنترنت (مهلة الانصراف) ---------- *@
     <div class="ats-card">
         <div class="ats-card-head">
