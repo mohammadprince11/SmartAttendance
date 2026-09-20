@@ -344,7 +344,10 @@
 
     const branch = document.getElementById("sor-branch");
     const department = document.getElementById("sor-department");
-    if (!branch || !department) {
+    const departmentValue =
+        document.getElementById("sor-department-value");
+
+    if (!branch || !department || !departmentValue) {
         return;
     }
 
@@ -364,7 +367,10 @@
         const branchId = normalizePositiveId(branch.value);
         const previousValue = resetSelection
             ? "0"
-            : String(department.value || "0");
+            : String(
+                departmentValue.value ||
+                department.value ||
+                "0");
 
         let previousStillAvailable = false;
 
@@ -402,10 +408,17 @@
                 ? previousValue
                 : "0";
 
+        departmentValue.value = department.value || "0";
+
         if (typeof window.ZynoraRefreshSelectSystem === "function") {
             window.ZynoraRefreshSelectSystem();
         }
     };
+
+    department.addEventListener("change", () => {
+        departmentValue.value =
+            String(department.value || "0");
+    });
 
     branch.addEventListener("change", () => {
         syncDepartments(true);
