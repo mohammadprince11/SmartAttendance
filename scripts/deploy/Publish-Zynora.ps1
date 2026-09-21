@@ -400,24 +400,35 @@ if ($SkipDbBackup) {
 $deploymentTaskDisabled = $false
 trap {
     $capturedError = $_
-    if ($deploymentTaskDisabled) {
-        try {
-            Enable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
-            Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-            Write-Warn 'فشل النشر قبل إعادة التشغيل؛ أُعيد تفعيل وتشغيل المهمة تلقائياً.'
+    try {
+        if ($deploymentTaskDisabled) {
+            Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null
         }
-        catch {
-            Write-Warn 'فشل أيضاً الاسترداد التلقائي للمهمة المجدولة؛ يلزم تشغيلها يدوياً.'
-        }
+
+        Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        Write-Warn 'فشل النشر قبل اكتماله؛ أُعيد تشغيل المهمة المجدولة تلقائياً.'
     }
+    catch {
+        Write-Warn 'فشل أيضاً الاسترداد التلقائي للمهمة المجدولة؛ يلزم تشغيلها يدوياً.'
+    }
+
     [Console]::Error.WriteLine($capturedError.ToString())
     exit 1
 }
 
 Write-Step '٣) إيقاف الموقع'
-Disable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
-$deploymentTaskDisabled = $true
-Stop-ScheduledTask    -TaskName $TaskName -ErrorAction SilentlyContinue
+try {
+    Disable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null
+    $deploymentTaskDisabled = $true
+}
+catch {
+    # بعض الحسابات التشغيلية تملك حق Stop/Start للمهمة، لكن لا تملك حق
+    # تغيير Enabled. في هذه الحالة تبقى المهمة مفعّلة ونوقف نسختها الجارية
+    # فقط؛ لا يجوز أن يتحول ذلك إلى فشل نشر زائف بعد نسخ الملفات بنجاح.
+    $deploymentTaskDisabled = $false
+    Write-Warn 'تعذر تعطيل المهمة (صلاحيات محدودة)؛ سيتم إيقاف النسخة الجارية مع إبقاء المهمة مفعّلة.'
+}
+Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 
 Stop-SiteProcesses -SitePath $SitePath
 
@@ -488,8 +499,10 @@ Write-Ok 'نُسخ والإعدادات وأصول الخادم سليمة'
 # ٦) تشغيل ثم قياس
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Step '٦) تشغيل وقياس'
-Enable-ScheduledTask -TaskName $TaskName | Out-Null
-Start-ScheduledTask  -TaskName $TaskName
+if ($deploymentTaskDisabled) {
+    Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null
+}
+Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
 $deploymentTaskDisabled = $false
 
 $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
