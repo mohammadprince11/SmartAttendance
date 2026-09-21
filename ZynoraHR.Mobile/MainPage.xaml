@@ -297,7 +297,7 @@
                                        VerticalOptions="Center" />
                             </Grid>
 
-                            <Grid RowDefinitions="Auto,Auto"
+                            <Grid RowDefinitions="Auto,Auto,Auto"
                                   ColumnDefinitions="*,*"
                                   RowSpacing="8"
                                   ColumnSpacing="8">
@@ -322,6 +322,13 @@
                                 <Button Grid.Row="1" Grid.Column="1"
                                         Text="◎  حسابي"
                                         Clicked="OnProfileTab"
+                                        Style="{StaticResource ZySecondaryButton}"
+                                        HeightRequest="46"
+                                        FontSize="11" />
+                                <Button Grid.Row="2"
+                                        Grid.ColumnSpan="2"
+                                        Text="◈  التعويضات والمزايا"
+                                        Clicked="OnCompensationTab"
                                         Style="{StaticResource ZySecondaryButton}"
                                         HeightRequest="46"
                                         FontSize="11" />
@@ -528,6 +535,132 @@
                                    IsVisible="False" />
                         </VerticalStackLayout>
                     </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout x:Name="CompensationPanel"
+                                     IsVisible="False"
+                                     Spacing="15">
+                    <VerticalStackLayout Spacing="4" Margin="0,2,0,2">
+                        <Label Text="COMPENSATION"
+                               Style="{StaticResource ZyEyebrow}"
+                               FlowDirection="LeftToRight" />
+                        <Label Text="التعويضات والمزايا"
+                               Style="{StaticResource ZyTitle}" />
+                        <Label Text="ملخص بياناتك المالية المسجلة في ZYNORA."
+                               Style="{StaticResource ZyBody}" />
+                    </VerticalStackLayout>
+
+                    <Border BackgroundColor="{StaticResource ZySurface2}"
+                            Stroke="#235A5A"
+                            StrokeThickness="1.2"
+                            StrokeShape="RoundRectangle 26"
+                            Padding="20">
+                        <VerticalStackLayout Spacing="9">
+                            <Label Text="صافي التعويض"
+                                   Style="{StaticResource ZyCaption}" />
+                            <Label x:Name="CompensationNetLabel"
+                                   Text="—"
+                                   Style="{StaticResource ZyMetric}"
+                                   FontSize="30"
+                                   FlowDirection="LeftToRight" />
+                            <Label x:Name="CompensationCurrencyLabel"
+                                   Text="IQD"
+                                   TextColor="{StaticResource ZyAccentBright}"
+                                   FontSize="10"
+                                   FontAttributes="Bold"
+                                   FlowDirection="LeftToRight" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Border Style="{StaticResource ZyCard}" Padding="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="الراتب الأساسي"
+                                       Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="CompensationBasicLabel"
+                                       Text="—"
+                                       TextColor="{StaticResource ZyText}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       FlowDirection="LeftToRight" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1"
+                                Style="{StaticResource ZyCard}"
+                                Padding="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="البدلات"
+                                       Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="CompensationAllowancesLabel"
+                                       Text="—"
+                                       TextColor="{StaticResource ZySuccess}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       FlowDirection="LeftToRight" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="2"
+                                Style="{StaticResource ZyCard}"
+                                Padding="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="الاستقطاعات"
+                                       Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="CompensationDeductionsLabel"
+                                       Text="—"
+                                       TextColor="{StaticResource ZyDanger}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       FlowDirection="LeftToRight" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <Border Style="{StaticResource ZyCard}">
+                        <VerticalStackLayout Spacing="13">
+                            <Label Text="بيانات الدفع"
+                                   Style="{StaticResource ZySectionTitle}" />
+                            <Grid RowDefinitions="Auto,Auto,Auto"
+                                  ColumnDefinitions="Auto,*"
+                                  RowSpacing="10"
+                                  ColumnSpacing="14">
+                                <Label Text="طريقة الدفع"
+                                       Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="CompensationPaymentMethodLabel"
+                                       Grid.Column="1"
+                                       Text="—"
+                                       TextColor="{StaticResource ZyText2}"
+                                       FontSize="12" />
+                                <Label Grid.Row="1"
+                                       Text="البنك"
+                                       Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="CompensationBankLabel"
+                                       Grid.Row="1"
+                                       Grid.Column="1"
+                                       Text="—"
+                                       TextColor="{StaticResource ZyText2}"
+                                       FontSize="12" />
+                                <Label Grid.Row="2"
+                                       Text="الحساب"
+                                       Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="CompensationAccountLabel"
+                                       Grid.Row="2"
+                                       Grid.Column="1"
+                                       Text="—"
+                                       TextColor="{StaticResource ZyText2}"
+                                       FontSize="12"
+                                       FlowDirection="LeftToRight" />
+                            </Grid>
+
+                            <Label x:Name="CompensationEmptyLabel"
+                                   Text="لا توجد بيانات تعويضات مسجلة لهذا الموظف حالياً."
+                                   Style="{StaticResource ZyCaption}"
+                                   IsVisible="False" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Button Text="العودة إلى الرئيسية"
+                            Clicked="OnHomeTab"
+                            Style="{StaticResource ZySecondaryButton}" />
                 </VerticalStackLayout>
 
                 <VerticalStackLayout x:Name="ProfilePanel"

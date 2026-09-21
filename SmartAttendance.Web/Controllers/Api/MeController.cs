@@ -99,6 +99,69 @@ WHERE e.Id = @Id;
             }));
     }
 
+    /// <summary>بيانات التعويضات المالية للموظف الحالي فقط.</summary>
+    [HttpGet("compensation")]
+    public async Task<IActionResult> Compensation()
+    {
+        if (RequireEmployee() is { } bad) return bad;
+
+        var row = (await HrmsDatabase.QueryAsync(
+            _db,
+            """
+SELECT TOP 1
+    ISNULL(BasicSalary, 0) AS BasicSalary,
+    ISNULL(Allowances, 0) AS Allowances,
+    ISNULL(Deductions, 0) AS Deductions,
+    ISNULL(PaymentMethod, N'') AS PaymentMethod,
+    ISNULL(BankName, N'') AS BankName,
+    ISNULL(BankAccount, N'') AS BankAccount,
+    ISNULL(Currency, N'IQD') AS Currency
+FROM EmployeeCompensations
+WHERE EmployeeId = @EmployeeId
+ORDER BY UpdatedAt DESC, Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", EmployeeId),
+            reader => new
+            {
+                basicSalary = Convert.ToDecimal(reader["BasicSalary"]),
+                allowances = Convert.ToDecimal(reader["Allowances"]),
+                deductions = Convert.ToDecimal(reader["Deductions"]),
+                paymentMethod = HrmsDatabase.GetString(reader, "PaymentMethod"),
+                bankName = HrmsDatabase.GetString(reader, "BankName"),
+                bankAccount = HrmsDatabase.GetString(reader, "BankAccount"),
+                currency = HrmsDatabase.GetString(reader, "Currency")
+            })).FirstOrDefault();
+
+        if (row is null)
+        {
+            return Ok(new
+            {
+                hasData = false,
+                basicSalary = 0m,
+                allowances = 0m,
+                deductions = 0m,
+                net = 0m,
+                paymentMethod = "",
+                bankName = "",
+                bankAccount = "",
+                currency = "IQD"
+            });
+        }
+
+        return Ok(new
+        {
+            hasData = true,
+            row.basicSalary,
+            row.allowances,
+            row.deductions,
+            net = row.basicSalary + row.allowances - row.deductions,
+            row.paymentMethod,
+            row.bankName,
+            row.bankAccount,
+            row.currency
+        });
+    }
+
     /// <summary>الحضور اليومي الأخير (من يوميات المحرك الرسمي).</summary>
     [HttpGet("attendance")]
     public async Task<IActionResult> Attendance([FromQuery] int days = 30)

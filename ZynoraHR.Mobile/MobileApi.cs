@@ -63,6 +63,11 @@ public sealed class MobileApi
             HttpMethod.Get,
             "api/v1/me/announcements?take=5");
 
+    public Task<MobileCompensation> CompensationAsync() =>
+        SendAsync<MobileCompensation>(
+            HttpMethod.Get,
+            "api/v1/me/compensation");
+
     public Task<ApiMessage> PunchAsync(string type,double lat,double lng) =>
         SendAsync<ApiMessage>(
             HttpMethod.Post,
@@ -238,6 +243,19 @@ public sealed class LeaveBalance
 
     public string BalanceSummary =>
         $"مستخدم {Used:0.##} من {Entitled:0.##}";
+}
+
+public sealed class MobileCompensation
+{
+    [JsonPropertyName("hasData")] public bool HasData { get; set; }
+    [JsonPropertyName("basicSalary")] public decimal BasicSalary { get; set; }
+    [JsonPropertyName("allowances")] public decimal Allowances { get; set; }
+    [JsonPropertyName("deductions")] public decimal Deductions { get; set; }
+    [JsonPropertyName("net")] public decimal Net { get; set; }
+    [JsonPropertyName("paymentMethod")] public string PaymentMethod { get; set; } = "";
+    [JsonPropertyName("bankName")] public string BankName { get; set; } = "";
+    [JsonPropertyName("bankAccount")] public string BankAccount { get; set; } = "";
+    [JsonPropertyName("currency")] public string Currency { get; set; } = "IQD";
 }
 
 public sealed class MobileAnnouncement

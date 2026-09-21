@@ -205,6 +205,15 @@ public partial class MainPage : ContentPage
             await LoadAsync();
     }
 
+    private async void OnCompensationTab(object? sender, EventArgs e)
+    {
+        ShowCompensation();
+        await MainScrollView.ScrollToAsync(0, 0, true);
+
+        if (Online() && !_busy)
+            await LoadAsync();
+    }
+
     private async void OnRequestsTab(object? sender, EventArgs e)
     {
         ShowRequests();
@@ -478,7 +487,22 @@ public partial class MainPage : ContentPage
                 // الإعلان إضافة تدريجية؛ لا نعطّل بيانات الموظف الأساسية عند تعذرها.
             }
 
-            RenderHome(profile, attendance, leave, announcements);
+            var compensation = new MobileCompensation();
+            try
+            {
+                compensation = await _api.CompensationAsync();
+            }
+            catch (MobileApiException)
+            {
+                // التعويضات حساسة وإضافية؛ تعذرها لا يعطّل باقي تجربة الموظف.
+            }
+
+            RenderHome(
+                profile,
+                attendance,
+                leave,
+                announcements,
+                compensation);
             await SaveHomeCacheAsync(profile, attendance, leave);
 
             ErrorLabel.IsVisible = false;
@@ -597,7 +621,8 @@ public partial class MainPage : ContentPage
         EmployeeProfile profile,
         List<AttendanceDay> attendance,
         List<LeaveBalance> leave,
-        List<MobileAnnouncement>? announcements = null)
+        List<MobileAnnouncement>? announcements = null,
+        MobileCompensation? compensation = null)
     {
         var now = DateTime.Now;
         GreetingLabel.Text = now.Hour switch
@@ -666,6 +691,8 @@ public partial class MainPage : ContentPage
         AnnouncementsList.ItemsSource = homeAnnouncements;
         AnnouncementsEmptyLabel.IsVisible = homeAnnouncements.Count == 0;
 
+        RenderCompensation(compensation ?? new MobileCompensation());
+
         if (attendance.Count > 0)
         {
             var row = attendance[0];
@@ -700,6 +727,46 @@ public partial class MainPage : ContentPage
             LeaveLabel.Text = "—";
             LeaveDetailLabel.Text = "لا يوجد رصيد";
         }
+    }
+
+    private void RenderCompensation(MobileCompensation compensation)
+    {
+        CompensationEmptyLabel.IsVisible = !compensation.HasData;
+
+        if (!compensation.HasData)
+        {
+            CompensationNetLabel.Text = "—";
+            CompensationCurrencyLabel.Text = "IQD";
+            CompensationBasicLabel.Text = "—";
+            CompensationAllowancesLabel.Text = "—";
+            CompensationDeductionsLabel.Text = "—";
+            CompensationPaymentMethodLabel.Text = "—";
+            CompensationBankLabel.Text = "—";
+            CompensationAccountLabel.Text = "—";
+            return;
+        }
+
+        var currency = string.IsNullOrWhiteSpace(compensation.Currency)
+            ? "IQD"
+            : compensation.Currency.Trim();
+
+        CompensationNetLabel.Text = compensation.Net.ToString("N0");
+        CompensationCurrencyLabel.Text = currency;
+        CompensationBasicLabel.Text = compensation.BasicSalary.ToString("N0");
+        CompensationAllowancesLabel.Text = compensation.Allowances.ToString("N0");
+        CompensationDeductionsLabel.Text = compensation.Deductions.ToString("N0");
+        CompensationPaymentMethodLabel.Text =
+            string.IsNullOrWhiteSpace(compensation.PaymentMethod)
+                ? "—"
+                : compensation.PaymentMethod;
+        CompensationBankLabel.Text =
+            string.IsNullOrWhiteSpace(compensation.BankName)
+                ? "—"
+                : compensation.BankName;
+        CompensationAccountLabel.Text =
+            string.IsNullOrWhiteSpace(compensation.BankAccount)
+                ? "—"
+                : compensation.BankAccount;
     }
 
     private async Task SaveHomeCacheAsync(
@@ -807,6 +874,7 @@ public partial class MainPage : ContentPage
         AttendancePanel.IsVisible = false;
         RequestsPanel.IsVisible = false;
         ProfilePanel.IsVisible = false;
+        CompensationPanel.IsVisible = false;
     }
 
     private void ShowHome()
@@ -833,6 +901,12 @@ public partial class MainPage : ContentPage
         ShowAuthenticatedPanel(ProfilePanel, ProfileTabButton);
     }
 
+    private void ShowCompensation()
+    {
+        _activeSection = "Compensation";
+        ShowAuthenticatedPanel(CompensationPanel, HomeTabButton);
+    }
+
     private void ShowActiveSection()
     {
         switch (_activeSection)
@@ -845,6 +919,9 @@ public partial class MainPage : ContentPage
                 break;
             case "Profile":
                 ShowProfile();
+                break;
+            case "Compensation":
+                ShowCompensation();
                 break;
             default:
                 ShowHome();
@@ -861,6 +938,7 @@ public partial class MainPage : ContentPage
         AttendancePanel.IsVisible = ReferenceEquals(activePanel, AttendancePanel);
         RequestsPanel.IsVisible = ReferenceEquals(activePanel, RequestsPanel);
         ProfilePanel.IsVisible = ReferenceEquals(activePanel, ProfilePanel);
+        CompensationPanel.IsVisible = ReferenceEquals(activePanel, CompensationPanel);
 
         SetNavState(activeTab);
     }
