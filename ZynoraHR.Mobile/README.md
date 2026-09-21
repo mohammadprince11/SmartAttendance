@@ -1,6 +1,6 @@
 ﻿# ZynoraHR Mobile
 
-## Phase 2 — 0.3.0
+## Phase 2 stabilization — 0.3.1
 
 Native employee mobile app built with .NET MAUI.
 
@@ -17,12 +17,16 @@ Native employee mobile app built with .NET MAUI.
 
 ### Phase 2
 - Native Requests tab
-- List employee self-service requests
-- Submit Leave / Personal Exit / Work Exit / Overtime
-- Cancel cancelable self-service requests
-- Dedicated Missing Punch submission
-- List Missing Punch requests
-- Existing `/api/v1/me/*` endpoints reused; no duplicate backend logic
+- Dynamic request types loaded from the active server catalog
+- RequestTypeId is authoritative; generic hard-coded leave names are no longer submitted
+- Timed requests send start/end time for permissions and overtime
+- Optional/required request attachments use the protected server file store
+- Company request policy and profile eligibility are enforced by the API
+- Legacy 0.3.0 request submission is blocked to prevent incomplete production records
+- Dedicated Missing Punch submission respects self-service permission
+- Offline home snapshot is encrypted in SecureStorage and cleared on logout
+- GPS punch rejects very low-accuracy locations before sending
+- Android manifest contains only permissions used by this phase
 
 Package: `com.zynorahr.employee`
 
@@ -38,4 +42,4 @@ Next:
 2. Device registration + FCM/APNs.
 3. Native biometric confirmation for attendance.
 4. Profile/documents/team pages.
-5. Offline-safe read cache.
+5. Expanded offline request/history cache.

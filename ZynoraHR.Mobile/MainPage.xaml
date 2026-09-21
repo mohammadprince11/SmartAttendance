@@ -129,15 +129,11 @@
                             <Label Text="طلب جديد" TextColor="#F4F7FB"
                                    FontSize="19" FontAttributes="Bold" />
 
-                            <Picker x:Name="RequestTypePicker" Title="نوع الطلب"
-                                    BackgroundColor="#091626" TextColor="#F4F7FB">
-                                <Picker.Items>
-                                    <x:String>إجازة</x:String>
-                                    <x:String>خروج شخصي</x:String>
-                                    <x:String>خروج عمل</x:String>
-                                    <x:String>أوفر تايم</x:String>
-                                </Picker.Items>
-                            </Picker>
+                            <Picker x:Name="RequestTypePicker"
+                                    Title="نوع الطلب"
+                                    SelectedIndexChanged="OnRequestTypeChanged"
+                                    BackgroundColor="#091626"
+                                    TextColor="#F4F7FB" />
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                 <VerticalStackLayout>
@@ -155,6 +151,49 @@
                                                 Format="yyyy-MM-dd" />
                                 </VerticalStackLayout>
                             </Grid>
+
+                            <Grid x:Name="RequestTimeFields"
+                                  IsVisible="False"
+                                  ColumnDefinitions="*,*"
+                                  ColumnSpacing="10">
+                                <VerticalStackLayout>
+                                    <Label Text="وقت البداية" TextColor="#8CA4BE" FontSize="11" />
+                                    <TimePicker x:Name="RequestStartTimePicker"
+                                                BackgroundColor="#091626"
+                                                TextColor="#F4F7FB"
+                                                Format="HH:mm" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1">
+                                    <Label Text="وقت النهاية" TextColor="#8CA4BE" FontSize="11" />
+                                    <TimePicker x:Name="RequestEndTimePicker"
+                                                BackgroundColor="#091626"
+                                                TextColor="#F4F7FB"
+                                                Format="HH:mm" />
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <VerticalStackLayout x:Name="RequestAttachmentFields"
+                                                 IsVisible="False"
+                                                 Spacing="7">
+                                <Label x:Name="RequestAttachmentHint"
+                                       Text="المرفق اختياري"
+                                       TextColor="#8CA4BE"
+                                       FontSize="11" />
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <Button Text="اختيار ملف"
+                                            Clicked="OnPickRequestAttachment"
+                                            BackgroundColor="#17314B"
+                                            TextColor="#DDEAF5"
+                                            CornerRadius="11" />
+                                    <Label x:Name="RequestAttachmentName"
+                                           Grid.Column="1"
+                                           Text="لم يتم اختيار ملف"
+                                           TextColor="#91A8BF"
+                                           FontSize="11"
+                                           VerticalTextAlignment="Center"
+                                           LineBreakMode="TailTruncation" />
+                                </Grid>
+                            </VerticalStackLayout>
 
                             <Editor x:Name="RequestReasonEditor"
                                     Placeholder="السبب / الملاحظات"
@@ -177,8 +216,11 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
-                            StrokeShape="RoundRectangle 22" Padding="17">
+                    <Border x:Name="MissingPunchRequestCard"
+                            BackgroundColor="#0E1C30"
+                            Stroke="#1D3550"
+                            StrokeShape="RoundRectangle 22"
+                            Padding="17">
                         <VerticalStackLayout Spacing="12">
                             <Label Text="طلب بصمة مفقودة"
                                    TextColor="#F4F7FB"
@@ -263,6 +305,9 @@
                                                        TextColor="#8FB4D0"
                                                        FontSize="11"
                                                        FlowDirection="LeftToRight" />
+                                                <Label Text="{Binding AttachmentText}"
+                                                       TextColor="#A9DBF3"
+                                                       FontSize="10" />
                                                 <Label Text="{Binding Reason}"
                                                        TextColor="#A6B8C9"
                                                        FontSize="11"

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Api;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Controllers.Api;
 
@@ -18,10 +19,12 @@ namespace SmartAttendance.Web.Controllers.Api;
 public sealed class MeController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IProtectedFileService _protectedFiles;
 
-    public MeController(ApplicationDbContext db)
+    public MeController(ApplicationDbContext db, IProtectedFileService protectedFiles)
     {
         _db = db;
+        _protectedFiles = protectedFiles;
     }
 
     private int EmployeeId =>
@@ -107,6 +110,74 @@ WHERE e.Id = @Id;
         }));
     }
 
+    /// <summary>كتالوج أنواع الطلبات الفعّالة المسموح بها للمستخدم الحالي.</summary>
+    [HttpGet("request-types")]
+    public async Task<IActionResult> RequestTypes()
+    {
+        if (RequireEmployee() is { } bad) return bad;
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+        if (!eligibility.IsEligible)
+            return Ok(new
+            {
+                eligible = false,
+                message = eligibility.Message,
+                canSubmitMissingPunch = false,
+                items = Array.Empty<object>()
+            });
+
+        var canSubmitMissingPunch = await SelfServiceAccessPolicy.IsAllowedAsync(
+            _db, HttpContext, "PunchCorrection");
+
+        await RequestTypeStore.EnsureAsync(_db);
+        var types = await RequestTypeStore.ListTypesAsync(_db, onlyActive: true);
+        var companyId = await HrmsDatabase.ScalarAsync<int>(
+            _db,
+            "SELECT ISNULL(CompanyId,0) FROM Employees WHERE Id=@Id AND ISNULL(IsDeleted,0)=0;",
+            command => HrmsDatabase.AddParameter(command, "@Id", EmployeeId));
+        var policyByType = companyId > 0
+            ? (await CompanyLeavePolicyStore.ListForCompanyAsync(_db, companyId, onlyActive: true))
+                .ToDictionary(policy => policy.RequestTypeId)
+            : new Dictionary<int, CompanyLeavePolicyStore.Policy>();
+        var items = new List<object>();
+
+        foreach (var type in types)
+        {
+            var action = ActionForRequestType(type);
+            if (action is null ||
+                !await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, action))
+                continue;
+
+            policyByType.TryGetValue(type.Id, out var policy);
+            var attachmentRequired =
+                policy?.AttachmentRequiredOverride ?? type.AttachmentRequired;
+
+            items.Add(new
+            {
+                id = type.Id,
+                name = type.Name,
+                nameEn = type.NameEn,
+                category = type.CategoryName,
+                needsTime = type.NeedsTime,
+                attachmentRequired,
+                attachmentLabel = type.AttachmentLabel,
+                reasonRequired = policy?.ReasonRequired ?? false,
+                allowedDays = type.AllowedDays,
+                effectCode = type.EffectCode,
+                hasBalance = type.HasBalance
+            });
+        }
+
+        return Ok(new
+        {
+            eligible = true,
+            message = (string?)null,
+            canSubmitMissingPunch,
+            items
+        });
+    }
+
     /// <summary>طلبات البصمة المفقودة الخاصة بي.</summary>
     [HttpGet("missing-punch")]
     public async Task<IActionResult> MyMissingPunches()
@@ -167,6 +238,16 @@ WHERE e.Id = @Id;
     public async Task<IActionResult> SubmitMissingPunch([FromBody] MissingPunchRequestBody body)
     {
         if (RequireEmployee() is { } bad) return bad;
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+        if (!eligibility.IsEligible)
+            return BadRequest(new { message = eligibility.Message });
+
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(
+                _db, HttpContext, "PunchCorrection"))
+            return Forbid();
+
         if (body is null || !DateOnly.TryParse(body.Date, out var d) || !TimeOnly.TryParse(body.Time, out var t))
             return BadRequest(new { message = "أدخل تاريخ ووقت البصمة." });
 
@@ -196,18 +277,25 @@ WHERE e.Id = @Id;
         var rows = await HrmsDatabase.QueryAsync(
             _db,
             """
-SELECT TOP 100 Id,RequestType, FromDate, ToDate, Reason, Status, CreatedAt
+SELECT TOP 100 Id,RequestTypeId,RequestType,FromDate,ToDate,StartTime,EndTime,
+       Reason,Status,CreatedAt,
+       CASE WHEN NULLIF(LTRIM(RTRIM(ISNULL(AttachmentPath,N''))),N'') IS NULL
+            THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS HasAttachment
 FROM SelfServiceRequests WHERE EmployeeId = @Id ORDER BY CreatedAt DESC;
 """,
             command => HrmsDatabase.AddParameter(command, "@Id", EmployeeId),
             reader => new
             {
                 id = HrmsDatabase.GetInt(reader,"Id"),
+                requestTypeId = HrmsDatabase.GetNullableInt(reader, "RequestTypeId"),
                 type = HrmsDatabase.GetString(reader, "RequestType"),
                 fromDate = HrmsDatabase.GetDateTime(reader, "FromDate")?.ToString("yyyy-MM-dd"),
                 toDate = HrmsDatabase.GetDateTime(reader, "ToDate")?.ToString("yyyy-MM-dd"),
+                startTime = HrmsDatabase.GetTimeSpan(reader, "StartTime")?.ToString(@"hh\:mm"),
+                endTime = HrmsDatabase.GetTimeSpan(reader, "EndTime")?.ToString(@"hh\:mm"),
                 reason = HrmsDatabase.GetString(reader, "Reason"),
                 status = HrmsDatabase.GetString(reader, "Status"),
+                hasAttachment = HrmsDatabase.GetBool(reader, "HasAttachment"),
                 createdAt = HrmsDatabase.GetDateTime(reader, "CreatedAt")?.ToString("yyyy-MM-dd HH:mm")
             });
         return Ok(rows);
@@ -215,49 +303,143 @@ FROM SelfServiceRequests WHERE EmployeeId = @Id ORDER BY CreatedAt DESC;
 
     public sealed record SelfServiceRequestBody(string RequestType, string FromDate, string? ToDate, string? Reason);
 
-    /// <summary>تقديم طلب خدمة ذاتية عام (إجازة/نسيان بصمة/خروج شخصي/خروج عمل/أوفر تايم).</summary>
+    /// <summary>
+    /// المسار القديم محفوظ فقط لمنع نسخ 0.3.0 من إنشاء طلبات ناقصة بلا هوية نوع/وقت/مرفق.
+    /// </summary>
     [HttpPost("requests")]
-    public async Task<IActionResult> SubmitRequest([FromBody] SelfServiceRequestBody body)
+    public IActionResult SubmitLegacyRequest([FromBody] SelfServiceRequestBody body) =>
+        BadRequest(new
+        {
+            message = "هذه النسخة من تطبيق ZYNORA قديمة لإرسال الطلبات. حدّث التطبيق ثم أعد المحاولة."
+        });
+
+    public sealed class MobileRequestForm
+    {
+        public int RequestTypeId { get; set; }
+        public string FromDate { get; set; } = string.Empty;
+        public string? ToDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public string? Reason { get; set; }
+        public IFormFile? Attachment { get; set; }
+    }
+
+    /// <summary>إنشاء طلب موبايل مُهيكل من كتالوج الشركة الفعّال.</summary>
+    [HttpPost("requests/create")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> CreateRequest([FromForm] MobileRequestForm form)
     {
         if (RequireEmployee() is { } bad) return bad;
 
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { "إجازة", "نسيان بصمة", "خروج شخصي", "خروج عمل", "أوفر تايم" };
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+        if (!eligibility.IsEligible)
+            return BadRequest(new { message = eligibility.Message });
 
-        if (body is null || string.IsNullOrWhiteSpace(body.RequestType) || !allowed.Contains(body.RequestType.Trim()))
-            return BadRequest(new { message = "نوع الطلب غير صالح." });
-        if (!DateOnly.TryParse(body.FromDate, out var from))
+        if (form is null || form.RequestTypeId <= 0)
+            return BadRequest(new { message = "اختر نوع الطلب." });
+
+        await RequestTypeStore.EnsureAsync(_db);
+        var type = await RequestTypeStore.GetTypeAsync(_db, form.RequestTypeId);
+        if (type is null || !type.IsActive)
+            return BadRequest(new { message = "نوع الطلب غير متاح حالياً." });
+
+        var action = ActionForRequestType(type);
+        if (action is null ||
+            !await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, action))
+            return Forbid();
+
+        if (!DateOnly.TryParse(form.FromDate, out var from))
             return BadRequest(new { message = "تاريخ البداية مطلوب." });
 
-        DateOnly? to = DateOnly.TryParse(body.ToDate, out var t) ? t : null;
-        if (to is { } tov && tov < from)
+        var to = DateOnly.TryParse(form.ToDate, out var parsedTo) ? parsedTo : from;
+        if (to < from)
             return BadRequest(new { message = "تاريخ النهاية قبل البداية." });
 
-        var reason = string.IsNullOrWhiteSpace(body.Reason) ? "تم الإرسال من تطبيق الموبايل" : body.Reason!.Trim();
+        TimeSpan? startTime = null;
+        TimeSpan? endTime = null;
+        if (type.NeedsTime)
+        {
+            if (!TimeSpan.TryParse(form.StartTime, out var parsedStart) ||
+                !TimeSpan.TryParse(form.EndTime, out var parsedEnd))
+                return BadRequest(new { message = "وقت البداية والنهاية مطلوبان لهذا النوع." });
+
+            startTime = parsedStart;
+            endTime = parsedEnd;
+            if (to == from && parsedEnd <= parsedStart)
+                to = from.AddDays(1);
+
+            var incomplete = await FindIncompletePunchDayAsync(EmployeeId, from, to);
+            if (incomplete is { } missingDate)
+                return BadRequest(new
+                {
+                    message = $"لا يمكن تقديم طلب زمني قبل معالجة البصمة الناقصة ليوم {missingDate:yyyy-MM-dd}."
+                });
+        }
+
+        var hasAttachment = form.Attachment is { Length: > 0 };
+
+        var days = to.DayNumber - from.DayNumber + 1;
+        if (type.AllowedDays is int maxDays && days > maxDays)
+            return BadRequest(new { message = $"عدد الأيام يتجاوز المسموح ({maxDays} يوم)." });
+
+        var reason = string.IsNullOrWhiteSpace(form.Reason)
+            ? "تم الإرسال من تطبيق الموبايل"
+            : form.Reason.Trim();
+
+        var policy = await CompanyLeavePolicyStore.ValidateRequestAsync(
+            _db, EmployeeId, 0, type.Id, type.Name,
+            from, to, startTime, endTime, reason, hasAttachment);
+        if (!policy.Ok)
+            return BadRequest(new { message = policy.Message });
+
+        string? attachmentPath = null;
+        if (hasAttachment)
+        {
+            attachmentPath = await _protectedFiles.SaveAsync(
+                form.Attachment, EmployeeId, "request", HttpContext.RequestAborted);
+            if (attachmentPath is null)
+                return BadRequest(new
+                {
+                    message = "تعذر قبول المرفق. استخدم ملفاً مدعوماً وبحجم مسموح ثم أعد المحاولة."
+                });
+        }
 
         var requestId = await HrmsDatabase.ScalarAsync<int>(
             _db,
             """
-INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, FromDate, ToDate, Reason, Status, RequestSource)
-VALUES (@Emp, @Type, SYSUTCDATETIME(), @From, @To, @Reason, 'Pending', N'SelfService');
+INSERT INTO SelfServiceRequests
+(EmployeeId,RequestTypeId,RequestType,CreatedAt,FromDate,ToDate,StartTime,EndTime,
+ Reason,Status,DaysCount,AttachmentPath,RequestSource)
+VALUES
+(@Emp,@TypeId,@Type,SYSUTCDATETIME(),@From,@To,@Start,@End,
+ @Reason,'Pending',@Days,@Attachment,N'SelfService');
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Emp", EmployeeId);
-                HrmsDatabase.AddParameter(command, "@Type", body.RequestType.Trim());
+                HrmsDatabase.AddParameter(command, "@TypeId", type.Id);
+                HrmsDatabase.AddParameter(command, "@Type", type.Name);
                 HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
-                HrmsDatabase.AddParameter(command, "@To", (object?)to?.ToDateTime(TimeOnly.MinValue) ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@Start", (object?)startTime ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@End", (object?)endTime ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Reason", reason);
+                HrmsDatabase.AddParameter(command, "@Days", (decimal)days);
+                HrmsDatabase.AddParameter(command, "@Attachment", (object?)attachmentPath ?? DBNull.Value);
             });
 
-        if (requestId > 0)
-        {
-            var start=await ApprovalWorkflowEngine.StartAsync(_db, requestId, body.RequestType.Trim(), EmployeeId);
-            if(!start.Ok) return BadRequest(new { message=start.Message, requestId });
-        }
+        var start = await ApprovalWorkflowEngine.StartAsync(
+            _db, requestId, type.Name, EmployeeId);
+        if (!start.Ok)
+            return BadRequest(new { message = start.Message, requestId });
 
-        return Ok(new { message = $"تم إرسال طلب {body.RequestType.Trim()} وهو قيد المراجعة.", requestId });
+        return Ok(new
+        {
+            message = $"تم إرسال طلب {type.Name} وهو قيد المراجعة.",
+            requestId
+        });
     }
 
     public sealed record CancelRequestBody(string? Reason);
@@ -340,5 +522,34 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         var start=await ApprovalWorkflowEngine.StartAsync(_db, requestId, DataChangeRequestStore.RequestTypeLabel, EmployeeId);
         if(!start.Ok) return BadRequest(new { message=start.Message, requestId });
         return Ok(new { message = $"تم إرسال طلب تعديل البيانات ({savedCount} حقل) وهو قيد المراجعة.", requestId });
+    }
+
+    private static string? ActionForRequestType(RequestTypeStore.ReqType type)
+    {
+        var effect = type.EffectCode?.Trim() ?? string.Empty;
+        if (effect.Contains("Overtime", StringComparison.OrdinalIgnoreCase))
+            return "OvertimeRequest";
+        if (effect.Contains("ExitPermission", StringComparison.OrdinalIgnoreCase))
+            return "ExitPermission";
+        if (effect.Contains("MissingPunch", StringComparison.OrdinalIgnoreCase))
+            return "PunchCorrection";
+        if (effect.StartsWith("Leave", StringComparison.OrdinalIgnoreCase) ||
+            effect.Equals("BusinessTrip", StringComparison.OrdinalIgnoreCase))
+            return "LeaveRequest";
+
+        return SelfServiceAccessPolicy.ActionForRequestType(type.Name);
+    }
+
+    private async Task<DateOnly?> FindIncompletePunchDayAsync(
+        int employeeId, DateOnly from, DateOnly to)
+    {
+        for (var day = from; day <= to; day = day.AddDays(1))
+        {
+            var times = await PunchTypingEngine.DayPunchTimesAsync(_db, employeeId, day);
+            if (times.Count % 2 != 0)
+                return day;
+        }
+
+        return null;
     }
 }

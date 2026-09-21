@@ -67,17 +67,40 @@ public sealed class MobileApi
     public Task<List<MobileRequest>> RequestsAsync() =>
         SendAsync<List<MobileRequest>>(HttpMethod.Get,"api/v1/me/requests");
 
-    public Task<ApiMessage> SubmitRequestAsync(
-        string requestType,DateTime fromDate,DateTime? toDate,string? reason) =>
-        SendAsync<ApiMessage>(
-            HttpMethod.Post,
-            "api/v1/me/requests",
-            new {
-                requestType,
-                fromDate=fromDate.ToString("yyyy-MM-dd"),
-                toDate=toDate?.ToString("yyyy-MM-dd"),
-                reason=string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
-            });
+    public Task<RequestCatalogResponse> RequestTypesAsync() =>
+        SendAsync<RequestCatalogResponse>(HttpMethod.Get,"api/v1/me/request-types");
+
+    public async Task<ApiMessage> SubmitRequestAsync(
+        MobileRequestType requestType,
+        DateTime fromDate,
+        DateTime toDate,
+        TimeSpan? startTime,
+        TimeSpan? endTime,
+        string? reason,
+        FileResult? attachment)
+    {
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(requestType.Id.ToString()), "RequestTypeId");
+        content.Add(new StringContent(fromDate.ToString("yyyy-MM-dd")), "FromDate");
+        content.Add(new StringContent(toDate.ToString("yyyy-MM-dd")), "ToDate");
+
+        if (startTime is { } start)
+            content.Add(new StringContent($"{(int)start.TotalHours:00}:{start.Minutes:00}"), "StartTime");
+        if (endTime is { } end)
+            content.Add(new StringContent($"{(int)end.TotalHours:00}:{end.Minutes:00}"), "EndTime");
+        if (!string.IsNullOrWhiteSpace(reason))
+            content.Add(new StringContent(reason.Trim()), "Reason");
+
+        if (attachment is not null)
+        {
+            var stream = await attachment.OpenReadAsync();
+            var fileContent = new StreamContent(stream);
+            content.Add(fileContent, "Attachment", attachment.FileName);
+        }
+
+        return await SendContentAsync<ApiMessage>(
+            HttpMethod.Post, "api/v1/me/requests/create", content);
+    }
 
     public Task<ApiMessage> CancelRequestAsync(int requestId,string? reason=null) =>
         SendAsync<ApiMessage>(
@@ -98,6 +121,28 @@ public sealed class MobileApi
                 time=$"{(int)time.TotalHours:00}:{time.Minutes:00}",
                 reason=string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
             });
+
+    private async Task<T> SendContentAsync<T>(
+        HttpMethod method,
+        string path,
+        HttpContent content)
+    {
+        using var request = await AuthorizedAsync(method, path);
+        request.Content = content;
+        using var response = await _http.SendAsync(request);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            SecureStorage.Default.Remove(TokenKey);
+            throw new MobileSessionExpiredException();
+        }
+
+        if (!response.IsSuccessStatusCode)
+            throw new MobileApiException(await ErrorAsync(response));
+
+        return await response.Content.ReadFromJsonAsync<T>(Json)
+            ?? throw new MobileApiException("لم تصل بيانات صالحة من الخادم.");
+    }
 
     private async Task<T> SendAsync<T>(HttpMethod method,string path,object? body=null)
     {
@@ -184,20 +229,63 @@ public sealed class LeaveBalance
     [JsonPropertyName("remaining")] public decimal Remaining { get; set; }
 }
 
+public sealed class RequestCatalogResponse
+{
+    [JsonPropertyName("eligible")] public bool Eligible { get; set; }
+    [JsonPropertyName("message")] public string? Message { get; set; }
+    [JsonPropertyName("canSubmitMissingPunch")] public bool CanSubmitMissingPunch { get; set; }
+    [JsonPropertyName("items")] public List<MobileRequestType> Items { get; set; } = new();
+}
+
+public sealed class MobileRequestType
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("nameEn")] public string? NameEn { get; set; }
+    [JsonPropertyName("category")] public string Category { get; set; } = "";
+    [JsonPropertyName("needsTime")] public bool NeedsTime { get; set; }
+    [JsonPropertyName("attachmentRequired")] public bool AttachmentRequired { get; set; }
+    [JsonPropertyName("attachmentLabel")] public string? AttachmentLabel { get; set; }
+    [JsonPropertyName("reasonRequired")] public bool ReasonRequired { get; set; }
+    [JsonPropertyName("allowedDays")] public int? AllowedDays { get; set; }
+    [JsonPropertyName("effectCode")] public string? EffectCode { get; set; }
+    [JsonPropertyName("hasBalance")] public bool HasBalance { get; set; }
+
+    public string DisplayName =>
+        string.IsNullOrWhiteSpace(Category) ? Name : $"{Name} · {Category}";
+}
+
 public sealed class MobileRequest
 {
     [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("requestTypeId")] public int? RequestTypeId { get; set; }
     [JsonPropertyName("type")] public string Type { get; set; } = "";
     [JsonPropertyName("fromDate")] public string? FromDate { get; set; }
     [JsonPropertyName("toDate")] public string? ToDate { get; set; }
+    [JsonPropertyName("startTime")] public string? StartTime { get; set; }
+    [JsonPropertyName("endTime")] public string? EndTime { get; set; }
     [JsonPropertyName("reason")] public string Reason { get; set; } = "";
     [JsonPropertyName("status")] public string Status { get; set; } = "";
+    [JsonPropertyName("hasAttachment")] public bool HasAttachment { get; set; }
     [JsonPropertyName("createdAt")] public string? CreatedAt { get; set; }
 
-    public string DateRange =>
-        string.IsNullOrWhiteSpace(ToDate) || string.Equals(FromDate,ToDate,StringComparison.Ordinal)
-            ? (FromDate ?? "—")
-            : $"{FromDate ?? "—"} → {ToDate}";
+    public string DateRange
+    {
+        get
+        {
+            var dates =
+                string.IsNullOrWhiteSpace(ToDate) ||
+                string.Equals(FromDate, ToDate, StringComparison.Ordinal)
+                    ? (FromDate ?? "—")
+                    : $"{FromDate ?? "—"} → {ToDate}";
+
+            return string.IsNullOrWhiteSpace(StartTime) || string.IsNullOrWhiteSpace(EndTime)
+                ? dates
+                : $"{dates} · {StartTime} → {EndTime}";
+        }
+    }
+
+    public string AttachmentText => HasAttachment ? "📎 مرفق" : string.Empty;
 
     public string StatusLabel =>
         Status.ToLowerInvariant() switch

@@ -1,18 +1,28 @@
-﻿namespace ZynoraHR.Mobile;
+﻿using System.Text.Json;
+
+namespace ZynoraHR.Mobile;
 
 public partial class MainPage : ContentPage
 {
+    private const string HomeCacheKey = "zynora.mobile.home_cache.v1";
+    private static readonly JsonSerializerOptions CacheJson =
+        new(JsonSerializerDefaults.Web);
+
     private readonly MobileApi _api = new();
     private bool _initialized;
     private bool _busy;
+    private FileResult? _requestAttachment;
 
     public MainPage()
     {
         InitializeComponent();
 
-        RequestTypePicker.SelectedIndex = 0;
+        RequestTypePicker.ItemDisplayBinding =
+            new Binding(nameof(MobileRequestType.DisplayName));
         FromDatePicker.Date = DateTime.Today;
         ToDatePicker.Date = DateTime.Today;
+        RequestStartTimePicker.Time = DateTime.Now.TimeOfDay;
+        RequestEndTimePicker.Time = DateTime.Now.AddHours(1).TimeOfDay;
         MissingDatePicker.Date = DateTime.Today;
         MissingTimePicker.Time = DateTime.Now.TimeOfDay;
     }
@@ -123,6 +133,13 @@ public partial class MainPage : ContentPage
                     return;
                 }
 
+                if (location.Accuracy is double accuracy && accuracy > 150)
+                {
+                    PunchLabel.Text =
+                        $"دقة الموقع الحالية ±{accuracy:0} م. فعّل الموقع الدقيق ثم أعد المحاولة.";
+                    return;
+                }
+
                 var result =
                     await _api.PunchAsync(
                         type,
@@ -184,6 +201,34 @@ public partial class MainPage : ContentPage
             await LoadRequestsAsync();
     }
 
+    private void OnRequestTypeChanged(object? sender, EventArgs e)
+    {
+        UpdateRequestTypeFields();
+    }
+
+    private async void OnPickRequestAttachment(object? sender, EventArgs e)
+    {
+        if (_busy) return;
+
+        try
+        {
+            var picked = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "اختر مرفق الطلب"
+            });
+
+            if (picked is null) return;
+
+            _requestAttachment = picked;
+            RequestAttachmentName.Text = picked.FileName;
+            RequestStatusLabel.Text = "";
+        }
+        catch
+        {
+            RequestStatusLabel.Text = "تعذر فتح منتقي الملفات.";
+        }
+    }
+
     private async void OnSubmitRequest(object? sender, EventArgs e)
     {
         if (_busy) return;
@@ -194,10 +239,7 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        var requestType =
-            RequestTypePicker.SelectedItem?.ToString();
-
-        if (string.IsNullOrWhiteSpace(requestType))
+        if (RequestTypePicker.SelectedItem is not MobileRequestType requestType)
         {
             RequestStatusLabel.Text = "اختر نوع الطلب.";
             return;
@@ -205,10 +247,35 @@ public partial class MainPage : ContentPage
 
         var from = FromDatePicker.Date ?? DateTime.Today;
         var to = ToDatePicker.Date ?? from;
-
         if (to < from)
         {
             RequestStatusLabel.Text = "تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.";
+            return;
+        }
+
+        TimeSpan? startTime = null;
+        TimeSpan? endTime = null;
+        if (requestType.NeedsTime)
+        {
+            startTime = RequestStartTimePicker.Time;
+            endTime = RequestEndTimePicker.Time;
+            if (startTime is null || endTime is null)
+            {
+                RequestStatusLabel.Text = "حدد وقت البداية والنهاية.";
+                return;
+            }
+        }
+
+        if (requestType.AttachmentRequired && _requestAttachment is null)
+        {
+            RequestStatusLabel.Text = "هذا النوع يتطلب مرفقاً قبل الإرسال.";
+            return;
+        }
+
+        if (requestType.ReasonRequired &&
+            string.IsNullOrWhiteSpace(RequestReasonEditor.Text))
+        {
+            RequestStatusLabel.Text = "سبب الطلب إلزامي حسب سياسة الشركة.";
             return;
         }
 
@@ -216,15 +283,18 @@ public partial class MainPage : ContentPage
         {
             try
             {
-                var result =
-                    await _api.SubmitRequestAsync(
-                        requestType,
-                        from,
-                        to,
-                        RequestReasonEditor.Text);
+                var result = await _api.SubmitRequestAsync(
+                    requestType,
+                    from,
+                    to,
+                    startTime,
+                    endTime,
+                    RequestReasonEditor.Text,
+                    _requestAttachment);
 
                 RequestStatusLabel.Text = result.Message;
                 RequestReasonEditor.Text = "";
+                ResetRequestAttachment();
                 await LoadRequestsCoreAsync();
             }
             catch (MobileSessionExpiredException ex)
@@ -330,6 +400,8 @@ public partial class MainPage : ContentPage
             try { await _api.LogoutAsync(); }
             catch { }
 
+            SecureStorage.Default.Remove(HomeCacheKey);
+            ResetRequestAttachment();
             UsernameEntry.Text = "";
             PasswordEntry.Text = "";
             ShowLogin();
@@ -342,11 +414,14 @@ public partial class MainPage : ContentPage
 
         if (!Online())
         {
+            var loadedCache = await LoadHomeCacheAsync();
             AuthNav.IsVisible = true;
             HomePanel.IsVisible = true;
             RequestsPanel.IsVisible = false;
             LoginCard.IsVisible = false;
-            PunchLabel.Text = "أنت غير متصل بالإنترنت.";
+            PunchLabel.Text = loadedCache
+                ? "وضع عدم الاتصال — يتم عرض آخر بيانات محفوظة على الجهاز."
+                : "أنت غير متصل بالإنترنت ولا توجد بيانات محفوظة بعد.";
             return;
         }
 
@@ -367,54 +442,8 @@ public partial class MainPage : ContentPage
             var attendance = await attendanceTask;
             var leave = await leaveTask;
 
-            NameLabel.Text =
-                string.IsNullOrWhiteSpace(profile.FullName)
-                    ? "موظف ZYNORA"
-                    : profile.FullName;
-
-            PositionLabel.Text =
-                string.IsNullOrWhiteSpace(profile.Position)
-                    ? "بدون منصب"
-                    : profile.Position;
-
-            OrgLabel.Text =
-                string.Join(
-                    " · ",
-                    new[] { profile.Department, profile.Branch }
-                        .Where(x => !string.IsNullOrWhiteSpace(x)));
-
-            EmployeeNoLabel.Text = profile.EmployeeNo;
-
-            if (attendance.Count > 0)
-            {
-                var row = attendance[0];
-                AttendanceLabel.Text = row.Status;
-                AttendanceDetailLabel.Text =
-                    $"{row.Date} · {row.CheckIn ?? "—"} → {row.CheckOut ?? "—"}";
-            }
-            else
-            {
-                AttendanceLabel.Text = "لا توجد بيانات";
-                AttendanceDetailLabel.Text = "آخر 7 أيام";
-            }
-
-            var annual =
-                leave.FirstOrDefault(x =>
-                    x.Type.Contains("Annual", StringComparison.OrdinalIgnoreCase) ||
-                    x.Type.Contains("سن", StringComparison.OrdinalIgnoreCase))
-                ?? leave.FirstOrDefault();
-
-            if (annual is not null)
-            {
-                LeaveLabel.Text = annual.Remaining.ToString("0.##");
-                LeaveDetailLabel.Text =
-                    $"{annual.Type} · مستخدم {annual.Used:0.##} من {annual.Entitled:0.##} {annual.Unit}";
-            }
-            else
-            {
-                LeaveLabel.Text = "—";
-                LeaveDetailLabel.Text = "لا يوجد رصيد";
-            }
+            RenderHome(profile, attendance, leave);
+            await SaveHomeCacheAsync(profile, attendance, leave);
 
             ErrorLabel.IsVisible = false;
             LoginCard.IsVisible = false;
@@ -430,11 +459,27 @@ public partial class MainPage : ContentPage
         }
         catch (MobileApiException ex)
         {
-            Error(ex.Message);
+            if (LoginCard.IsVisible)
+            {
+                Error(ex.Message);
+            }
+            else
+            {
+                await LoadHomeCacheAsync();
+                PunchLabel.Text = ex.Message;
+            }
         }
         catch
         {
-            Error("تعذر تحديث بيانات الموظف.");
+            if (LoginCard.IsVisible)
+            {
+                Error("تعذر تحديث بيانات الموظف.");
+            }
+            else
+            {
+                await LoadHomeCacheAsync();
+                PunchLabel.Text = "تعذر تحديث البيانات؛ يتم عرض آخر نسخة محفوظة.";
+            }
         }
     }
 
@@ -457,11 +502,47 @@ public partial class MainPage : ContentPage
         {
             var requestsTask = _api.RequestsAsync();
             var missingTask = _api.MissingPunchesAsync();
+            var catalogTask = _api.RequestTypesAsync();
 
-            await Task.WhenAll(requestsTask, missingTask);
+            await Task.WhenAll(requestsTask, missingTask, catalogTask);
 
             RequestsList.ItemsSource = await requestsTask;
             MissingPunchesList.ItemsSource = await missingTask;
+
+            var catalog = await catalogTask;
+            var currentId =
+                (RequestTypePicker.SelectedItem as MobileRequestType)?.Id;
+
+            MissingPunchRequestCard.IsVisible =
+                catalog.Eligible && catalog.CanSubmitMissingPunch;
+
+            RequestTypePicker.ItemsSource = catalog.Items;
+            RequestTypePicker.IsEnabled =
+                catalog.Eligible && catalog.Items.Count > 0;
+
+            if (!catalog.Eligible)
+            {
+                RequestStatusLabel.Text =
+                    catalog.Message ?? "لا يمكنك تقديم طلب حالياً.";
+                RequestTypePicker.SelectedIndex = -1;
+            }
+            else if (catalog.Items.Count == 0)
+            {
+                RequestStatusLabel.Text =
+                    "لا توجد أنواع طلبات متاحة لهذا الحساب.";
+                RequestTypePicker.SelectedIndex = -1;
+            }
+            else
+            {
+                var selectedIndex = currentId is int id
+                    ? catalog.Items.FindIndex(x => x.Id == id)
+                    : -1;
+
+                RequestTypePicker.SelectedIndex =
+                    selectedIndex >= 0 ? selectedIndex : 0;
+            }
+
+            UpdateRequestTypeFields();
         }
         catch (MobileSessionExpiredException ex)
         {
@@ -476,6 +557,141 @@ public partial class MainPage : ContentPage
         {
             RequestStatusLabel.Text = "تعذر تحميل الطلبات.";
         }
+    }
+
+    private void RenderHome(
+        EmployeeProfile profile,
+        List<AttendanceDay> attendance,
+        List<LeaveBalance> leave)
+    {
+        NameLabel.Text =
+            string.IsNullOrWhiteSpace(profile.FullName)
+                ? "موظف ZYNORA"
+                : profile.FullName;
+
+        PositionLabel.Text =
+            string.IsNullOrWhiteSpace(profile.Position)
+                ? "بدون منصب"
+                : profile.Position;
+
+        OrgLabel.Text =
+            string.Join(
+                " · ",
+                new[] { profile.Department, profile.Branch }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        EmployeeNoLabel.Text = profile.EmployeeNo;
+
+        if (attendance.Count > 0)
+        {
+            var row = attendance[0];
+            AttendanceLabel.Text = row.Status;
+            AttendanceDetailLabel.Text =
+                $"{row.Date} · {row.CheckIn ?? "—"} → {row.CheckOut ?? "—"}";
+        }
+        else
+        {
+            AttendanceLabel.Text = "لا توجد بيانات";
+            AttendanceDetailLabel.Text = "آخر 7 أيام";
+        }
+
+        var annual =
+            leave.FirstOrDefault(x =>
+                x.Type.Contains("Annual", StringComparison.OrdinalIgnoreCase) ||
+                x.Type.Contains("سن", StringComparison.OrdinalIgnoreCase))
+            ?? leave.FirstOrDefault();
+
+        if (annual is not null)
+        {
+            LeaveLabel.Text = annual.Remaining.ToString("0.##");
+            LeaveDetailLabel.Text =
+                $"{annual.Type} · مستخدم {annual.Used:0.##} من {annual.Entitled:0.##} {annual.Unit}";
+        }
+        else
+        {
+            LeaveLabel.Text = "—";
+            LeaveDetailLabel.Text = "لا يوجد رصيد";
+        }
+    }
+
+    private async Task SaveHomeCacheAsync(
+        EmployeeProfile profile,
+        List<AttendanceDay> attendance,
+        List<LeaveBalance> leave)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(
+                new HomeCacheSnapshot
+                {
+                    Profile = profile,
+                    Attendance = attendance,
+                    Leave = leave,
+                    CachedAtUtc = DateTime.UtcNow
+                },
+                CacheJson);
+
+            await SecureStorage.Default.SetAsync(HomeCacheKey, json);
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task<bool> LoadHomeCacheAsync()
+    {
+        try
+        {
+            var json = await SecureStorage.Default.GetAsync(HomeCacheKey);
+            if (string.IsNullOrWhiteSpace(json))
+                return false;
+
+            var cache = JsonSerializer.Deserialize<HomeCacheSnapshot>(json, CacheJson);
+            if (cache?.Profile is null)
+                return false;
+
+            RenderHome(
+                cache.Profile,
+                cache.Attendance ?? new(),
+                cache.Leave ?? new());
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void UpdateRequestTypeFields()
+    {
+        if (RequestTypePicker.SelectedItem is not MobileRequestType type)
+        {
+            RequestTimeFields.IsVisible = false;
+            RequestAttachmentFields.IsVisible = false;
+            return;
+        }
+
+        RequestTimeFields.IsVisible = type.NeedsTime;
+        RequestAttachmentFields.IsVisible = true;
+
+        var attachmentText = type.AttachmentRequired
+            ? "المرفق إلزامي"
+            : "المرفق اختياري";
+
+        if (!string.IsNullOrWhiteSpace(type.AttachmentLabel))
+            attachmentText += $" · {type.AttachmentLabel}";
+
+        RequestAttachmentHint.Text = attachmentText;
+        RequestReasonEditor.Placeholder = type.ReasonRequired
+            ? "السبب / الملاحظات (إلزامي)"
+            : "السبب / الملاحظات";
+    }
+
+    private void ResetRequestAttachment()
+    {
+        _requestAttachment = null;
+        RequestAttachmentName.Text = "لم يتم اختيار ملف";
     }
 
     private async Task Busy(string text, Func<Task> action)
@@ -540,4 +756,12 @@ public partial class MainPage : ContentPage
 
     private static bool Online() =>
         Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+
+    private sealed class HomeCacheSnapshot
+    {
+        public EmployeeProfile? Profile { get; set; }
+        public List<AttendanceDay>? Attendance { get; set; }
+        public List<LeaveBalance>? Leave { get; set; }
+        public DateTime CachedAtUtc { get; set; }
+    }
 }
