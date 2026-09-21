@@ -118,4 +118,55 @@
         <Setter Property="StrokeShape" Value="RoundRectangle 99" />
         <Setter Property="Padding" Value="10,5" />
     </Style>
+
+    <!-- Native transcription of zynora-employee-experience.css -->
+    <LinearGradientBrush x:Key="NxPanelBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#071426" Offset="0.0" />
+        <GradientStop Color="#040C17" Offset="1.0" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="NxBalanceBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#173848" Offset="0.0" />
+        <GradientStop Color="#102A3E" Offset="1.0" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="NxPrimaryBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#12D3E0" Offset="0.0" />
+        <GradientStop Color="#1F9BD6" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <Style x:Key="NxPanel" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource NxPanelBrush}" />
+        <Setter Property="Stroke" Value="#27415B" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+    </Style>
+
+    <Style x:Key="NxCard" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="#071526" />
+        <Setter Property="Stroke" Value="#20384F" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+        <Setter Property="Padding" Value="13" />
+    </Style>
+
+    <Style x:Key="NxQuickButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="#0D1B2A" />
+        <Setter Property="BorderColor" Value="#20384F" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="TextColor" Value="#CFE0F0" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="HeightRequest" Value="74" />
+        <Setter Property="Padding" Value="3" />
+    </Style>
+
+    <Style x:Key="NxBottomButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="#7F95AB" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="9" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="HeightRequest" Value="58" />
+        <Setter Property="Padding" Value="2" />
+    </Style>
 </ResourceDictionary>

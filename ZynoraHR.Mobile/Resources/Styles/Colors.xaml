@@ -3,48 +3,48 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <Color x:Key="ZyBg">#07111F</Color>
-    <Color x:Key="ZyBgSoft">#0A1726</Color>
-    <Color x:Key="ZySurface">#0D1B2A</Color>
-    <Color x:Key="ZySurface2">#102438</Color>
-    <Color x:Key="ZySurface3">#132C42</Color>
-    <Color x:Key="ZyStroke">#1D3A50</Color>
-    <Color x:Key="ZyStrokeSoft">#183044</Color>
+    <Color x:Key="ZyBg">#050D18</Color>
+    <Color x:Key="ZyBgSoft">#06101D</Color>
+    <Color x:Key="ZySurface">#071526</Color>
+    <Color x:Key="ZySurface2">#091A2D</Color>
+    <Color x:Key="ZySurface3">#0B2035</Color>
+    <Color x:Key="ZyStroke">#1B334A</Color>
+    <Color x:Key="ZyStrokeSoft">#162D42</Color>
 
-    <Color x:Key="ZyText">#F6FAFD</Color>
-    <Color x:Key="ZyText2">#C9D8E4</Color>
-    <Color x:Key="ZyMuted">#8FA9BE</Color>
-    <Color x:Key="ZyMuted2">#607E96</Color>
+    <Color x:Key="ZyText">#EEF7FF</Color>
+    <Color x:Key="ZyText2">#DCE7F3</Color>
+    <Color x:Key="ZyMuted">#96A9BD</Color>
+    <Color x:Key="ZyMuted2">#7F95AB</Color>
 
-    <Color x:Key="ZyAccent">#18C7BD</Color>
-    <Color x:Key="ZyAccentBright">#42DED3</Color>
+    <Color x:Key="ZyAccent">#19D3E0</Color>
+    <Color x:Key="ZyAccentBright">#DFFFFF</Color>
     <Color x:Key="ZyBlue">#2D8CFF</Color>
-    <Color x:Key="ZySuccess">#3FD49B</Color>
-    <Color x:Key="ZyWarning">#F0BA65</Color>
-    <Color x:Key="ZyDanger">#FF7383</Color>
-    <Color x:Key="ZyGold">#D4B36A</Color>
+    <Color x:Key="ZySuccess">#59D98C</Color>
+    <Color x:Key="ZyWarning">#D7A84F</Color>
+    <Color x:Key="ZyDanger">#E45D65</Color>
+    <Color x:Key="ZyGold">#D7A84F</Color>
 
     <Color x:Key="White">#FFFFFF</Color>
     <Color x:Key="Black">#000000</Color>
     <!-- Compatibility keys retained for MAUI default controls. -->
-    <Color x:Key="Primary">#18C7BD</Color>
-    <Color x:Key="PrimaryDark">#42DED3</Color>
-    <Color x:Key="PrimaryDarkText">#07111F</Color>
-    <Color x:Key="Secondary">#102438</Color>
-    <Color x:Key="SecondaryDarkText">#8FA9BE</Color>
+    <Color x:Key="Primary">#19D3E0</Color>
+    <Color x:Key="PrimaryDark">#DFFFFF</Color>
+    <Color x:Key="PrimaryDarkText">#050D18</Color>
+    <Color x:Key="Secondary">#091A2D</Color>
+    <Color x:Key="SecondaryDarkText">#96A9BD</Color>
     <Color x:Key="Tertiary">#2D8CFF</Color>
-    <Color x:Key="Magenta">#FF7383</Color>
-    <Color x:Key="MidnightBlue">#07111F</Color>
-    <Color x:Key="OffBlack">#0A1726</Color>
+    <Color x:Key="Magenta">#E45D65</Color>
+    <Color x:Key="MidnightBlue">#050D18</Color>
+    <Color x:Key="OffBlack">#06101D</Color>
 
     <Color x:Key="Gray100">#E8EFF5</Color>
-    <Color x:Key="Gray200">#C9D8E4</Color>
+    <Color x:Key="Gray200">#DCE7F3</Color>
     <Color x:Key="Gray300">#A8BBCB</Color>
-    <Color x:Key="Gray400">#8FA9BE</Color>
-    <Color x:Key="Gray500">#607E96</Color>
+    <Color x:Key="Gray400">#96A9BD</Color>
+    <Color x:Key="Gray500">#7F95AB</Color>
     <Color x:Key="Gray600">#35536A</Color>
-    <Color x:Key="Gray900">#102438</Color>
-    <Color x:Key="Gray950">#07111F</Color>
+    <Color x:Key="Gray900">#091A2D</Color>
+    <Color x:Key="Gray950">#050D18</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>

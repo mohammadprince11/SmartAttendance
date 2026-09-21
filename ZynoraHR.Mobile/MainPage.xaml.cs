@@ -205,6 +205,28 @@ public partial class MainPage : ContentPage
             await LoadAsync();
     }
 
+    private void OnMoreTab(object? sender, EventArgs e)
+    {
+        MoreOverlay.IsVisible = true;
+        SetNavState(ProfileTabButton);
+    }
+
+    private async void OnProfileFromMore(object? sender, EventArgs e)
+    {
+        MoreOverlay.IsVisible = false;
+        ShowProfile();
+        await MainScrollView.ScrollToAsync(0, 0, true);
+
+        if (Online() && !_busy)
+            await LoadAsync();
+    }
+
+    private void OnCloseMoreTapped(object? sender, TappedEventArgs e)
+    {
+        MoreOverlay.IsVisible = false;
+        ShowActiveSection();
+    }
+
     private async void OnCompensationTab(object? sender, EventArgs e)
     {
         ShowCompensation();
@@ -212,6 +234,15 @@ public partial class MainPage : ContentPage
 
         if (Online() && !_busy)
             await LoadAsync();
+    }
+
+    private async void OnFeatureComingSoon(object? sender, EventArgs e)
+    {
+        MoreOverlay.IsVisible = false;
+        await DisplayAlertAsync(
+            "ZYNORA HR",
+            "هذه الوحدة موجودة في بوابة الموظف القديمة وسيتم نقلها Native في المرحلة التالية.",
+            "حسناً");
     }
 
     private async void OnRequestsTab(object? sender, EventArgs e)
@@ -625,12 +656,7 @@ public partial class MainPage : ContentPage
         MobileCompensation? compensation = null)
     {
         var now = DateTime.Now;
-        GreetingLabel.Text = now.Hour switch
-        {
-            < 12 => "صباح الخير",
-            < 17 => "مساء الخير",
-            _ => "مساء الخير"
-        };
+        GreetingLabel.Text = "EMPLOYEE EXPERIENCE PORTAL";
         TodayLabel.Text = now.ToString(
             "dddd، d MMMM",
             CultureInfo.GetCultureInfo("ar-IQ"));
@@ -640,10 +666,13 @@ public partial class MainPage : ContentPage
         _currentAttendance = attendance;
         _currentLeave = leave;
 
-        NameLabel.Text =
+        var employeeName =
             string.IsNullOrWhiteSpace(profile.FullName)
                 ? "موظف ZYNORA"
                 : profile.FullName;
+
+        NameLabel.Text = $"أهلاً {employeeName}";
+        IdentityNameLabel.Text = employeeName;
 
         PositionLabel.Text =
             string.IsNullOrWhiteSpace(profile.Position)
@@ -687,9 +716,23 @@ public partial class MainPage : ContentPage
         AttendanceEmptyLabel.IsVisible = attendance.Count == 0;
         ProfileLeaveBalancesContainer.BindingContext = leave;
 
+        HomeLeaveBalancesContainer.BindingContext = leave;
+        HomeLeaveEmptyLabel.IsVisible = leave.Count == 0;
+        BalanceYearLabel.Text = now.Year.ToString(
+            CultureInfo.InvariantCulture);
+
         var homeAnnouncements = announcements ?? new List<MobileAnnouncement>();
         AnnouncementsList.ItemsSource = homeAnnouncements;
         AnnouncementsEmptyLabel.IsVisible = homeAnnouncements.Count == 0;
+        AnnouncementCountLabel.Text =
+            $"{homeAnnouncements.Count} منشور";
+
+        EmployeeInsightLabel.Text =
+            attendance.Any(row =>
+                string.IsNullOrWhiteSpace(row.CheckOut) &&
+                !string.IsNullOrWhiteSpace(row.CheckIn))
+                ? "لديك حركة حضور تحتاج إلى مراجعة"
+                : "لا توجد تنبيهات مهمة حالياً";
 
         RenderCompensation(compensation ?? new MobileCompensation());
 
@@ -870,6 +913,8 @@ public partial class MainPage : ContentPage
         _activeSection = "Login";
         LoginCard.IsVisible = true;
         AuthNav.IsVisible = false;
+        RequestFab.IsVisible = false;
+        MoreOverlay.IsVisible = false;
         HomePanel.IsVisible = false;
         AttendancePanel.IsVisible = false;
         RequestsPanel.IsVisible = false;
@@ -904,7 +949,7 @@ public partial class MainPage : ContentPage
     private void ShowCompensation()
     {
         _activeSection = "Compensation";
-        ShowAuthenticatedPanel(CompensationPanel, HomeTabButton);
+        ShowAuthenticatedPanel(CompensationPanel, CompensationTabButton);
     }
 
     private void ShowActiveSection()
@@ -933,6 +978,7 @@ public partial class MainPage : ContentPage
     {
         LoginCard.IsVisible = false;
         AuthNav.IsVisible = true;
+        RequestFab.IsVisible = true;
 
         HomePanel.IsVisible = ReferenceEquals(activePanel, HomePanel);
         AttendancePanel.IsVisible = ReferenceEquals(activePanel, AttendancePanel);
@@ -950,20 +996,20 @@ public partial class MainPage : ContentPage
                      HomeTabButton,
                      AttendanceTabButton,
                      RequestsTabButton,
+                     CompensationTabButton,
                      ProfileTabButton
                  })
         {
             button.BackgroundColor = Colors.Transparent;
-            button.TextColor = Color.FromArgb("#8FA9BE");
+            button.TextColor = Color.FromArgb("#7F95AB");
         }
 
-        activeButton.BackgroundColor = Color.FromArgb("#18C7BD");
-        activeButton.TextColor = Color.FromArgb("#07111F");
+        activeButton.BackgroundColor = Color.FromArgb("#1119D3E0");
+        activeButton.TextColor = Color.FromArgb("#19D3E0");
     }
 
     private void SetPunchMessage(string message)
     {
-        PunchLabel.Text = message;
         AttendancePunchLabel.Text = message;
     }
 

@@ -11,32 +11,53 @@
           RowDefinitions="*,Auto">
         <ScrollView x:Name="MainScrollView"
                     Grid.Row="0">
-            <VerticalStackLayout Padding="20,18,20,28" Spacing="14">
+            <VerticalStackLayout Padding="8,8,8,22" Spacing="10">
 
-                <Grid ColumnDefinitions="*,Auto"
-                      FlowDirection="LeftToRight"
-                      MinimumHeightRequest="42">
-                    <VerticalStackLayout Spacing="0" VerticalOptions="Center">
-                        <Label Text="ZYNORA HR"
-                               TextColor="{StaticResource ZyText}"
-                               FontSize="17"
-                               FontAttributes="Bold"
-                               CharacterSpacing="2.1" />
-                        <Label Text="WORKFORCE OS"
-                               Style="{StaticResource ZyEyebrow}"
-                               FontSize="9"
-                               FlowDirection="LeftToRight" />
-                    </VerticalStackLayout>
-                    <Border Grid.Column="1"
-                            WidthRequest="42"
-                            HeightRequest="42"
-                            BackgroundColor="{StaticResource ZySurface2}"
-                            Stroke="{StaticResource ZyStroke}"
-                            StrokeShape="RoundRectangle 14"
-                            Padding="9">
-                        <Image Source="zynora_symbol.svg" />
-                    </Border>
-                </Grid>
+                <Border Style="{StaticResource NxPanel}"
+                        Padding="10,8"
+                        Margin="0,0,0,2">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                            <Label Text="بوابة الموظف الذكية"
+                                   TextColor="#FFFFFF"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   LineBreakMode="TailTruncation" />
+                            <Label Text="ZYNORA HR · تجربة الموظف"
+                                   TextColor="#9FB3C7"
+                                   FontSize="10"
+                                   FontAttributes="Bold"
+                                   FlowDirection="LeftToRight"
+                                   LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                        <HorizontalStackLayout Grid.Column="1"
+                                               Spacing="6"
+                                               VerticalOptions="Center">
+                            <Border WidthRequest="36"
+                                    HeightRequest="36"
+                                    BackgroundColor="#0B1C2F"
+                                    Stroke="#20384F"
+                                    StrokeShape="RoundRectangle 12">
+                                <Label Text="●"
+                                       TextColor="#19D3E0"
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center" />
+                            </Border>
+                            <Border WidthRequest="36"
+                                    HeightRequest="36"
+                                    BackgroundColor="#0B1C2F"
+                                    Stroke="#20384F"
+                                    StrokeShape="RoundRectangle 12">
+                                <Label Text="⚙"
+                                       TextColor="#CFE0F0"
+                                       FontSize="16"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center" />
+                            </Border>
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Border>
 
                 <Border x:Name="OfflineBanner"
                         IsVisible="False"
@@ -136,262 +157,280 @@
 
                 <VerticalStackLayout x:Name="HomePanel"
                                      IsVisible="False"
-                                     Spacing="16">
+                                     Spacing="10">
 
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <VerticalStackLayout Spacing="3">
-                            <Label x:Name="GreetingLabel"
-                                   Text="أهلاً بك"
-                                   Style="{StaticResource ZyEyebrow}" />
-                            <Label x:Name="NameLabel"
-                                   Style="{StaticResource ZyTitle}" />
-                            <Label x:Name="PositionLabel"
-                                   Style="{StaticResource ZyBody}" />
+                    <Border Style="{StaticResource NxPanel}"
+                            Padding="14">
+                        <VerticalStackLayout Spacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label x:Name="GreetingLabel"
+                                       Text="EMPLOYEE EXPERIENCE PORTAL"
+                                       TextColor="#D7A84F"
+                                       FontSize="9"
+                                       FontAttributes="Bold"
+                                       CharacterSpacing="0.8"
+                                       FlowDirection="LeftToRight" />
+                                <Label x:Name="NameLabel"
+                                       Text="أهلاً بك"
+                                       TextColor="#FFFFFF"
+                                       FontSize="21"
+                                       FontAttributes="Bold"
+                                       LineHeight="1.35" />
+                                <Label Text="هذه هي صفحة السينك الرسمية: الإعلانات، الاستبيانات، الحضور، الراتب، الطلبات، الشكاوي، والتقييمات تظهر هنا من قاعدة البيانات."
+                                       TextColor="#A9BBCF"
+                                       FontSize="11.5"
+                                       FontAttributes="Bold"
+                                       LineHeight="1.55"
+                                       MaxLines="2"
+                                       LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+
+                            <Border BackgroundColor="#102B34"
+                                    Stroke="#27555D"
+                                    StrokeShape="RoundRectangle 15"
+                                    Padding="10">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <Border WidthRequest="42"
+                                            HeightRequest="42"
+                                            BackgroundColor="#153B43"
+                                            Stroke="#2B6A70"
+                                            StrokeShape="RoundRectangle 13"
+                                            Padding="0">
+                                        <Label Text="Z"
+                                               TextColor="#DFFFFF"
+                                               FontSize="13"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               VerticalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </Border>
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         Spacing="1"
+                                                         VerticalOptions="Center">
+                                        <Label x:Name="IdentityNameLabel"
+                                               Text="—"
+                                               TextColor="#FFFFFF"
+                                               FontSize="13"
+                                               FontAttributes="Bold"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label x:Name="PositionLabel"
+                                               Text="—"
+                                               TextColor="#9FB3C7"
+                                               FontSize="10"
+                                               FontAttributes="Bold"
+                                               LineBreakMode="TailTruncation" />
+                                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="5">
+                                            <Label x:Name="EmployeeNoLabel"
+                                                   Text="—"
+                                                   TextColor="#9FB3C7"
+                                                   FontSize="10"
+                                                   FontAttributes="Bold"
+                                                   FlowDirection="LeftToRight" />
+                                            <Label Grid.Column="1"
+                                                   Text="·"
+                                                   TextColor="#607B94"
+                                                   FontSize="10" />
+                                            <Label x:Name="OrgLabel"
+                                                   Grid.Column="2"
+                                                   Text="—"
+                                                   TextColor="#9FB3C7"
+                                                   FontSize="10"
+                                                   FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
                         </VerticalStackLayout>
-                        <Border Grid.Column="1"
-                                WidthRequest="48"
-                                HeightRequest="48"
-                                BackgroundColor="{StaticResource ZySurface2}"
-                                Stroke="{StaticResource ZyStroke}"
-                                StrokeShape="RoundRectangle 16"
-                                Padding="12">
-                            <Label Text="Z"
-                                   TextColor="{StaticResource ZyAccent}"
-                                   FontSize="18"
+                    </Border>
+
+                    <Border Background="{StaticResource NxBalanceBrush}"
+                            Stroke="#245D65"
+                            StrokeShape="RoundRectangle 18"
+                            Padding="12">
+                        <VerticalStackLayout Spacing="9">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="رصيد إجازاتي"
+                                       TextColor="#E6F0FA"
+                                       FontSize="13"
+                                       FontAttributes="Bold" />
+                                <Label x:Name="BalanceYearLabel"
+                                       Grid.Column="1"
+                                       Text="2026"
+                                       TextColor="#7F95AB"
+                                       FontSize="11"
+                                       FontAttributes="Bold"
+                                       FlowDirection="LeftToRight" />
+                            </Grid>
+
+                            <HorizontalStackLayout x:Name="HomeLeaveBalancesContainer"
+                                                   BindableLayout.ItemsSource="{Binding}"
+                                                   Spacing="8">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BackgroundColor="#16283A"
+                                                Stroke="#294158"
+                                                StrokeShape="RoundRectangle 14"
+                                                Padding="10,8"
+                                                WidthRequest="148">
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding Remaining, StringFormat='{0:0.#}'}"
+                                                       TextColor="#19D3E0"
+                                                       FontSize="24"
+                                                       FontAttributes="Bold"
+                                                       HorizontalTextAlignment="Center" />
+                                                <Label Text="{Binding Type}"
+                                                       TextColor="#CFE0F0"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       HorizontalTextAlignment="Center"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding BalanceSummary}"
+                                                       TextColor="#7F95AB"
+                                                       FontSize="9"
+                                                       HorizontalTextAlignment="Center" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+
+                            <Label x:Name="HomeLeaveEmptyLabel"
+                                   Text="لا يوجد رصيد إجازات مسجّل بعد"
+                                   TextColor="#7F95AB"
+                                   FontSize="11"
                                    FontAttributes="Bold"
                                    HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   FlowDirection="LeftToRight" />
-                        </Border>
+                                   IsVisible="False" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid RowDefinitions="Auto,Auto"
+                          ColumnDefinitions="*,*,*,*"
+                          RowSpacing="7"
+                          ColumnSpacing="7">
+                        <Button Grid.Row="0" Grid.Column="0"
+                                Text="＋&#10;طلب جديد"
+                                Clicked="OnRequestsTab"
+                                Background="{StaticResource NxPrimaryBrush}"
+                                BorderColor="#42DCE5"
+                                BorderWidth="1"
+                                TextColor="#041018"
+                                FontAttributes="Bold"
+                                FontSize="10"
+                                CornerRadius="14"
+                                HeightRequest="74" />
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Text="☷&#10;طلباتي"
+                                Clicked="OnRequestsTab"
+                                Style="{StaticResource NxQuickButton}" />
+                        <Button Grid.Row="0" Grid.Column="2"
+                                Text="▣&#10;الحضور"
+                                Clicked="OnAttendanceTab"
+                                Style="{StaticResource NxQuickButton}"
+                                TextColor="#8EF2C8" />
+                        <Button Grid.Row="0" Grid.Column="3"
+                                Text="◷&#10;بصمة"
+                                Clicked="OnAttendanceTab"
+                                Style="{StaticResource NxQuickButton}"
+                                TextColor="#FFD27F" />
+                        <Button Grid.Row="1" Grid.Column="0"
+                                Text="⌁&#10;الاستبيانات"
+                                Clicked="OnFeatureComingSoon"
+                                Style="{StaticResource NxQuickButton}"
+                                TextColor="#C9A3FF" />
+                        <Button Grid.Row="1" Grid.Column="1"
+                                Text="▢&#10;الشكاوي"
+                                Clicked="OnFeatureComingSoon"
+                                Style="{StaticResource NxQuickButton}"
+                                TextColor="#FF9FB2" />
+                        <Button Grid.Row="1" Grid.Column="2"
+                                Text="◎&#10;ملفي"
+                                Clicked="OnProfileTab"
+                                Style="{StaticResource NxQuickButton}"
+                                TextColor="#19D3E0" />
+                        <Button Grid.Row="1" Grid.Column="3"
+                                Text="◇&#10;التقييم"
+                                Clicked="OnFeatureComingSoon"
+                                Style="{StaticResource NxQuickButton}"
+                                TextColor="#FFC47F" />
                     </Grid>
 
-                    <Border x:Name="AttendanceCard"
-                            BackgroundColor="{StaticResource ZySurface2}"
-                            Stroke="#235A5A"
-                            StrokeThickness="1.2"
-                            StrokeShape="RoundRectangle 26"
-                            Padding="20">
-                        <VerticalStackLayout Spacing="15">
+                    <Border Style="{StaticResource NxCard}">
+                        <VerticalStackLayout Spacing="10">
                             <Grid ColumnDefinitions="*,Auto">
                                 <VerticalStackLayout Spacing="3">
-                                    <Label Text="TODAY COMMAND CENTER"
-                                           Style="{StaticResource ZyEyebrow}"
-                                           FlowDirection="LeftToRight" />
-                                    <Label x:Name="TodayLabel"
-                                           Text="اليوم"
-                                           Style="{StaticResource ZySectionTitle}" />
+                                    <Label Text="حائط الموظف"
+                                           TextColor="#FFFFFF"
+                                           FontSize="16"
+                                           FontAttributes="Bold" />
+                                    <Label Text="كل إعلان منشور من الإدارة وموجه لك يظهر هنا."
+                                           TextColor="#96A9BD"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           LineHeight="1.45" />
                                 </VerticalStackLayout>
                                 <Border Grid.Column="1"
-                                        Style="{StaticResource ZyPill}"
+                                        BackgroundColor="#102B22"
+                                        Stroke="#28533E"
+                                        StrokeShape="RoundRectangle 99"
+                                        Padding="9,4"
                                         VerticalOptions="Start">
-                                    <Label x:Name="AttendanceLabel"
-                                           Text="—"
-                                           TextColor="{StaticResource ZyAccentBright}"
-                                           FontSize="11"
+                                    <Label x:Name="AnnouncementCountLabel"
+                                           Text="0 منشور"
+                                           TextColor="#BFFFD8"
+                                           FontSize="9"
                                            FontAttributes="Bold" />
                                 </Border>
                             </Grid>
-
-                            <Label x:Name="AttendanceDetailLabel"
-                                   Text="—"
-                                   Style="{StaticResource ZyBody}"
-                                   FlowDirection="LeftToRight" />
-
-                            <BoxView HeightRequest="1"
-                                     BackgroundColor="{StaticResource ZyStrokeSoft}" />
-
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                <Button x:Name="InButton"
-                                        Text="●  تسجيل دخول"
-                                        Clicked="OnCheckIn"
-                                        Style="{StaticResource ZySuccessButton}" />
-                                <Button x:Name="OutButton"
-                                        Grid.Column="1"
-                                        Text="◼  تسجيل خروج"
-                                        Clicked="OnCheckOut"
-                                        Style="{StaticResource ZyWarningButton}" />
-                            </Grid>
-
-                            <Label x:Name="PunchLabel"
-                                   Text="سيتم التحقق من موقعك قبل تسجيل الحضور."
-                                   Style="{StaticResource ZyCaption}" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="11">
-                        <Border Style="{StaticResource ZyCard}">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="رصيد الإجازة"
-                                       Style="{StaticResource ZyCaption}" />
-                                <Label x:Name="LeaveLabel"
-                                       Text="—"
-                                       Style="{StaticResource ZyMetric}" />
-                                <Label x:Name="LeaveDetailLabel"
-                                       Text="—"
-                                       Style="{StaticResource ZyCaption}"
-                                       LineBreakMode="TailTruncation" />
-                            </VerticalStackLayout>
-                        </Border>
-
-                        <Border Grid.Column="1"
-                                Style="{StaticResource ZyCard}">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="الرقم الوظيفي"
-                                       Style="{StaticResource ZyCaption}" />
-                                <Label x:Name="EmployeeNoLabel"
-                                       Text="—"
-                                       Style="{StaticResource ZyMetric}"
-                                       FontSize="20"
-                                       FlowDirection="LeftToRight" />
-                                <Label Text="Employee ID"
-                                       Style="{StaticResource ZyCaption}"
-                                       FlowDirection="LeftToRight" />
-                            </VerticalStackLayout>
-                        </Border>
-                    </Grid>
-
-                    <Border Style="{StaticResource ZyCard}">
-                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="مكانك في المنظمة"
-                                       Style="{StaticResource ZyCaption}" />
-                                <Label x:Name="OrgLabel"
-                                       Text="—"
-                                       Style="{StaticResource ZySectionTitle}"
-                                       FontSize="15" />
-                            </VerticalStackLayout>
-                            <Border Grid.Column="1"
-                                    BackgroundColor="#132F35"
-                                    Stroke="#205052"
-                                    StrokeShape="RoundRectangle 12"
-                                    Padding="9,5"
-                                    VerticalOptions="Center">
-                                <Label Text="ACTIVE"
-                                       TextColor="{StaticResource ZySuccess}"
-                                       FontSize="9"
-                                       FontAttributes="Bold"
-                                       FlowDirection="LeftToRight" />
-                            </Border>
-                            <Label Grid.Row="1"
-                                   Grid.ColumnSpan="2"
-                                   Text="بياناتك الوظيفية مرتبطة مباشرةً بملف ZYNORA."
-                                   Style="{StaticResource ZyCaption}"
-                                   Margin="0,8,0,0" />
-                        </Grid>
-                    </Border>
-
-                    <Border Style="{StaticResource ZyCard}">
-                        <VerticalStackLayout Spacing="12">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <VerticalStackLayout Spacing="3">
-                                    <Label Text="اختصارات سريعة"
-                                           Style="{StaticResource ZySectionTitle}" />
-                                    <Label Text="نفس فكرة Quick Actions في البوابة القديمة."
-                                           Style="{StaticResource ZyCaption}" />
-                                </VerticalStackLayout>
-                                <Label Grid.Column="1"
-                                       Text="QUICK ACTIONS"
-                                       Style="{StaticResource ZyEyebrow}"
-                                       FontSize="9"
-                                       FlowDirection="LeftToRight"
-                                       VerticalOptions="Center" />
-                            </Grid>
-
-                            <Grid RowDefinitions="Auto,Auto,Auto"
-                                  ColumnDefinitions="*,*"
-                                  RowSpacing="8"
-                                  ColumnSpacing="8">
-                                <Button Grid.Row="0" Grid.Column="0"
-                                        Text="+  طلب جديد"
-                                        Clicked="OnRequestsTab"
-                                        Style="{StaticResource ZyPrimaryButton}"
-                                        HeightRequest="46"
-                                        FontSize="11" />
-                                <Button Grid.Row="0" Grid.Column="1"
-                                        Text="◉  الدوام"
-                                        Clicked="OnAttendanceTab"
-                                        Style="{StaticResource ZySecondaryButton}"
-                                        HeightRequest="46"
-                                        FontSize="11" />
-                                <Button Grid.Row="1" Grid.Column="0"
-                                        Text="◇  طلباتي"
-                                        Clicked="OnRequestsTab"
-                                        Style="{StaticResource ZySecondaryButton}"
-                                        HeightRequest="46"
-                                        FontSize="11" />
-                                <Button Grid.Row="1" Grid.Column="1"
-                                        Text="◎  حسابي"
-                                        Clicked="OnProfileTab"
-                                        Style="{StaticResource ZySecondaryButton}"
-                                        HeightRequest="46"
-                                        FontSize="11" />
-                                <Button Grid.Row="2"
-                                        Grid.ColumnSpan="2"
-                                        Text="◈  التعويضات والمزايا"
-                                        Clicked="OnCompensationTab"
-                                        Style="{StaticResource ZySecondaryButton}"
-                                        HeightRequest="46"
-                                        FontSize="11" />
-                            </Grid>
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Border Style="{StaticResource ZyCard}">
-                        <VerticalStackLayout Spacing="12">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <VerticalStackLayout Spacing="3">
-                                    <Label Text="إعلانات الموظف"
-                                           Style="{StaticResource ZySectionTitle}" />
-                                    <Label Text="آخر ما نُشر لك من الشركة."
-                                           Style="{StaticResource ZyCaption}" />
-                                </VerticalStackLayout>
-                                <Label Grid.Column="1"
-                                       Text="EMPLOYEE FEED"
-                                       Style="{StaticResource ZyEyebrow}"
-                                       FontSize="9"
-                                       FlowDirection="LeftToRight"
-                                       VerticalOptions="Center" />
-                            </Grid>
-
+                            <BoxView HeightRequest="1" BackgroundColor="#1D3043" />
                             <Label x:Name="AnnouncementsEmptyLabel"
                                    Text="لا توجد إعلانات منشورة حالياً."
-                                   Style="{StaticResource ZyCaption}"
-                                   IsVisible="False"
+                                   TextColor="#7F95AB"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
                                    HorizontalTextAlignment="Center"
-                                   Margin="0,12" />
-
+                                   Margin="0,18"
+                                   IsVisible="False" />
                             <CollectionView x:Name="AnnouncementsList"
                                             SelectionMode="None"
-                                            HeightRequest="250">
+                                            HeightRequest="330">
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BackgroundColor="{StaticResource ZyBgSoft}"
-                                                Stroke="{StaticResource ZyStrokeSoft}"
-                                                StrokeShape="RoundRectangle 16"
+                                        <Border BackgroundColor="#0D1B2A"
+                                                Stroke="#20384F"
+                                                StrokeShape="RoundRectangle 18"
                                                 Padding="13"
-                                                Margin="0,0,0,8">
-                                            <VerticalStackLayout Spacing="6">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <Label Text="{Binding Title}"
-                                                           TextColor="{StaticResource ZyText}"
-                                                           FontAttributes="Bold"
-                                                           FontSize="13" />
-                                                    <Border Grid.Column="1"
-                                                            Style="{StaticResource ZyPill}"
+                                                Margin="0,0,0,9">
+                                            <VerticalStackLayout Spacing="8">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <Border BackgroundColor="#112333"
+                                                            Stroke="#2A4258"
+                                                            StrokeShape="RoundRectangle 99"
                                                             Padding="8,4">
                                                         <Label Text="{Binding Category}"
-                                                               TextColor="{StaticResource ZyAccentBright}"
-                                                               FontSize="9" />
+                                                               TextColor="#DCE7F3"
+                                                               FontSize="9"
+                                                               FontAttributes="Bold" />
                                                     </Border>
+                                                    <Label Grid.Column="1"
+                                                           Text="{Binding PublishDate}"
+                                                           TextColor="#7F95AB"
+                                                           FontSize="9"
+                                                           HorizontalTextAlignment="End"
+                                                           FlowDirection="LeftToRight" />
                                                 </Grid>
+                                                <Label Text="{Binding Title}"
+                                                       TextColor="#FFFFFF"
+                                                       FontSize="17"
+                                                       FontAttributes="Bold" />
                                                 <Label Text="{Binding Body}"
-                                                       Style="{StaticResource ZyCaption}"
-                                                       MaxLines="3"
+                                                       TextColor="#DCE7F3"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       LineHeight="1.55"
+                                                       MaxLines="4"
                                                        LineBreakMode="TailTruncation" />
-                                                <Label Text="{Binding Meta}"
-                                                       TextColor="{StaticResource ZyMuted2}"
-                                                       FontSize="9"
-                                                       FlowDirection="LeftToRight" />
                                             </VerticalStackLayout>
                                         </Border>
                                     </DataTemplate>
@@ -400,11 +439,33 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <Button Text="تسجيل الخروج من الحساب"
-                            Clicked="OnLogout"
-                            Style="{StaticResource ZyDangerButton}" />
-                </VerticalStackLayout>
+                    <Border Style="{StaticResource NxCard}">
+                        <VerticalStackLayout Spacing="7">
+                            <Label Text="HR INSIGHT"
+                                   TextColor="#D7A84F"
+                                   FontSize="10"
+                                   FontAttributes="Bold"
+                                   FlowDirection="LeftToRight" />
+                            <Label x:Name="EmployeeInsightLabel"
+                                   Text="لا توجد تنبيهات مهمة حالياً"
+                                   TextColor="#FFFFFF"
+                                   FontSize="18"
+                                   FontAttributes="Bold" />
+                            <Label Text="هذه قراءة مبدئية من بيانات الحضور والطلبات والشكاوي."
+                                   TextColor="#9FB3C7"
+                                   FontSize="11"
+                                   LineHeight="1.55" />
+                        </VerticalStackLayout>
+                    </Border>
 
+                    <VerticalStackLayout IsVisible="False">
+                        <Label x:Name="TodayLabel" />
+                        <Label x:Name="AttendanceLabel" />
+                        <Label x:Name="AttendanceDetailLabel" />
+                        <Label x:Name="LeaveLabel" />
+                        <Label x:Name="LeaveDetailLabel" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
                 <VerticalStackLayout x:Name="AttendancePanel"
                                      IsVisible="False"
                                      Spacing="15">
@@ -1126,54 +1187,120 @@
         <Border x:Name="AuthNav"
                 Grid.Row="1"
                 IsVisible="False"
-                Margin="14,4,14,10"
-                Padding="6"
-                BackgroundColor="{StaticResource ZySurface}"
-                Stroke="{StaticResource ZyStrokeSoft}"
-                StrokeShape="RoundRectangle 22">
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="4">
+                Padding="6,5,6,8"
+                BackgroundColor="#F006101D"
+                Stroke="#263E55"
+                StrokeShape="Rectangle">
+            <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="2">
                 <Button x:Name="HomeTabButton"
                         Grid.Column="0"
                         Text="⌂&#10;الرئيسية"
                         Clicked="OnHomeTab"
-                        BackgroundColor="{StaticResource ZyAccent}"
-                        TextColor="{StaticResource ZyBg}"
-                        FontAttributes="Bold"
-                        FontSize="9"
-                        CornerRadius="16"
-                        HeightRequest="54" />
+                        Style="{StaticResource NxBottomButton}"
+                        TextColor="#19D3E0" />
                 <Button x:Name="AttendanceTabButton"
                         Grid.Column="1"
-                        Text="◉&#10;الدوام"
+                        Text="▣&#10;الحضور"
                         Clicked="OnAttendanceTab"
-                        BackgroundColor="Transparent"
-                        TextColor="{StaticResource ZyMuted}"
-                        FontAttributes="Bold"
-                        FontSize="9"
-                        CornerRadius="16"
-                        HeightRequest="54" />
+                        Style="{StaticResource NxBottomButton}" />
                 <Button x:Name="RequestsTabButton"
                         Grid.Column="2"
-                        Text="◇&#10;الطلبات"
+                        Text="▱&#10;طلباتي"
                         Clicked="OnRequestsTab"
-                        BackgroundColor="Transparent"
-                        TextColor="{StaticResource ZyMuted}"
-                        FontAttributes="Bold"
-                        FontSize="9"
-                        CornerRadius="16"
-                        HeightRequest="54" />
-                <Button x:Name="ProfileTabButton"
+                        Style="{StaticResource NxBottomButton}" />
+                <Button x:Name="CompensationTabButton"
                         Grid.Column="3"
-                        Text="◎&#10;حسابي"
-                        Clicked="OnProfileTab"
-                        BackgroundColor="Transparent"
-                        TextColor="{StaticResource ZyMuted}"
-                        FontAttributes="Bold"
-                        FontSize="9"
-                        CornerRadius="16"
-                        HeightRequest="54" />
+                        Text="▤&#10;الراتب"
+                        Clicked="OnCompensationTab"
+                        Style="{StaticResource NxBottomButton}" />
+                <Button x:Name="ProfileTabButton"
+                        Grid.Column="4"
+                        Text="▦&#10;المزيد"
+                        Clicked="OnMoreTab"
+                        Style="{StaticResource NxBottomButton}" />
             </Grid>
         </Border>
+
+        <Button x:Name="RequestFab"
+                Grid.RowSpan="2"
+                IsVisible="False"
+                Text="+"
+                Clicked="OnRequestsTab"
+                WidthRequest="56"
+                HeightRequest="56"
+                CornerRadius="28"
+                Padding="0"
+                FontSize="28"
+                FontAttributes="Bold"
+                Background="{StaticResource NxPrimaryBrush}"
+                TextColor="#041018"
+                HorizontalOptions="Start"
+                VerticalOptions="End"
+                Margin="18,0,0,82" />
+
+        <Grid x:Name="MoreOverlay"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              BackgroundColor="#88020810"
+              ZIndex="40">
+            <BoxView BackgroundColor="Transparent">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCloseMoreTapped" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+
+            <Border VerticalOptions="End"
+                    BackgroundColor="#0A1A2E"
+                    Stroke="#263E55"
+                    StrokeShape="RoundRectangle 22,22,0,0"
+                    Padding="16,10,16,22">
+                <VerticalStackLayout Spacing="12">
+                    <BoxView WidthRequest="42"
+                             HeightRequest="4"
+                             CornerRadius="2"
+                             BackgroundColor="#597086"
+                             HorizontalOptions="Center" />
+                    <Label Text="أقسام أخرى"
+                           TextColor="#E6F0FA"
+                           FontSize="14"
+                           FontAttributes="Bold" />
+
+                    <Grid RowDefinitions="Auto,Auto"
+                          ColumnDefinitions="*,*"
+                          RowSpacing="10"
+                          ColumnSpacing="10">
+                        <Button Grid.Row="0"
+                                Grid.Column="0"
+                                Text="◎  ملفي الشخصي"
+                                Clicked="OnProfileFromMore"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="56"
+                                FontSize="11" />
+                        <Button Grid.Row="0"
+                                Grid.Column="1"
+                                Text="⌁  الاستبيانات"
+                                Clicked="OnFeatureComingSoon"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="56"
+                                FontSize="11" />
+                        <Button Grid.Row="1"
+                                Grid.Column="0"
+                                Text="▢  الشكاوي والمقترحات"
+                                Clicked="OnFeatureComingSoon"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="56"
+                                FontSize="11" />
+                        <Button Grid.Row="1"
+                                Grid.Column="1"
+                                Text="◇  التقييم والانضباط"
+                                Clicked="OnFeatureComingSoon"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="56"
+                                FontSize="11" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
 
         <Grid x:Name="LoadingLayer"
               Grid.RowSpan="2"
