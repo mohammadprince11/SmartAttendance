@@ -50,6 +50,16 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <Grid x:Name="AuthNav" IsVisible="False"
+                      ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button x:Name="HomeTabButton" Text="الرئيسية"
+                            Clicked="OnHomeTab" BackgroundColor="#18AEE8"
+                            TextColor="White" CornerRadius="13" />
+                    <Button x:Name="RequestsTabButton" Grid.Column="1" Text="الطلبات"
+                            Clicked="OnRequestsTab" BackgroundColor="#17314B"
+                            TextColor="#DDEAF5" CornerRadius="13" />
+                </Grid>
+
                 <VerticalStackLayout x:Name="HomePanel" IsVisible="False" Spacing="15">
                     <Border BackgroundColor="#0D2035" Stroke="#214663"
                             StrokeShape="RoundRectangle 22" Padding="18">
@@ -74,6 +84,7 @@
                                        TextColor="#91A8BF" FontSize="11" />
                             </VerticalStackLayout>
                         </Border>
+
                         <Border Grid.Column="1" BackgroundColor="#0E1C30" Stroke="#1D3550"
                                 StrokeShape="RoundRectangle 18" Padding="15">
                             <VerticalStackLayout>
@@ -110,15 +121,246 @@
                                 BackgroundColor="#3A1E29" TextColor="#FFC4CF" CornerRadius="13" />
                     </Grid>
                 </VerticalStackLayout>
+
+                <VerticalStackLayout x:Name="RequestsPanel" IsVisible="False" Spacing="15">
+                    <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
+                            StrokeShape="RoundRectangle 22" Padding="17">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="طلب جديد" TextColor="#F4F7FB"
+                                   FontSize="19" FontAttributes="Bold" />
+
+                            <Picker x:Name="RequestTypePicker" Title="نوع الطلب"
+                                    BackgroundColor="#091626" TextColor="#F4F7FB">
+                                <Picker.Items>
+                                    <x:String>إجازة</x:String>
+                                    <x:String>خروج شخصي</x:String>
+                                    <x:String>خروج عمل</x:String>
+                                    <x:String>أوفر تايم</x:String>
+                                </Picker.Items>
+                            </Picker>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <VerticalStackLayout>
+                                    <Label Text="من تاريخ" TextColor="#8CA4BE" FontSize="11" />
+                                    <DatePicker x:Name="FromDatePicker"
+                                                BackgroundColor="#091626"
+                                                TextColor="#F4F7FB"
+                                                Format="yyyy-MM-dd" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1">
+                                    <Label Text="إلى تاريخ" TextColor="#8CA4BE" FontSize="11" />
+                                    <DatePicker x:Name="ToDatePicker"
+                                                BackgroundColor="#091626"
+                                                TextColor="#F4F7FB"
+                                                Format="yyyy-MM-dd" />
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <Editor x:Name="RequestReasonEditor"
+                                    Placeholder="السبب / الملاحظات"
+                                    AutoSize="TextChanges"
+                                    HeightRequest="95"
+                                    BackgroundColor="#091626"
+                                    TextColor="#F4F7FB"
+                                    PlaceholderColor="#60778F" />
+
+                            <Button Text="إرسال الطلب"
+                                    Clicked="OnSubmitRequest"
+                                    BackgroundColor="#18AEE8"
+                                    TextColor="White"
+                                    CornerRadius="14"
+                                    HeightRequest="48" />
+
+                            <Label x:Name="RequestStatusLabel"
+                                   TextColor="#A9C1D7"
+                                   FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
+                            StrokeShape="RoundRectangle 22" Padding="17">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="طلب بصمة مفقودة"
+                                   TextColor="#F4F7FB"
+                                   FontSize="19"
+                                   FontAttributes="Bold" />
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <DatePicker x:Name="MissingDatePicker"
+                                            BackgroundColor="#091626"
+                                            TextColor="#F4F7FB"
+                                            Format="yyyy-MM-dd" />
+                                <TimePicker x:Name="MissingTimePicker"
+                                            Grid.Column="1"
+                                            BackgroundColor="#091626"
+                                            TextColor="#F4F7FB"
+                                            Format="HH:mm" />
+                            </Grid>
+
+                            <Editor x:Name="MissingReasonEditor"
+                                    Placeholder="سبب نسيان البصمة"
+                                    AutoSize="TextChanges"
+                                    HeightRequest="80"
+                                    BackgroundColor="#091626"
+                                    TextColor="#F4F7FB"
+                                    PlaceholderColor="#60778F" />
+
+                            <Button Text="إرسال طلب البصمة"
+                                    Clicked="OnSubmitMissingPunch"
+                                    BackgroundColor="#355E7B"
+                                    TextColor="White"
+                                    CornerRadius="14"
+                                    HeightRequest="48" />
+
+                            <Label x:Name="MissingStatusLabel"
+                                   TextColor="#A9C1D7"
+                                   FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
+                            StrokeShape="RoundRectangle 22" Padding="17">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="طلباتي" TextColor="#F4F7FB"
+                                       FontSize="19" FontAttributes="Bold" />
+                                <Button Grid.Column="1" Text="تحديث"
+                                        Clicked="OnRefreshRequests"
+                                        BackgroundColor="#17314B"
+                                        TextColor="#DDEAF5"
+                                        CornerRadius="11"
+                                        Padding="14,7" />
+                            </Grid>
+
+                            <CollectionView x:Name="RequestsList"
+                                            SelectionMode="None"
+                                            HeightRequest="420">
+                                <CollectionView.EmptyView>
+                                    <Label Text="لا توجد طلبات حالياً."
+                                           TextColor="#7E95AC"
+                                           HorizontalTextAlignment="Center"
+                                           Margin="0,24" />
+                                </CollectionView.EmptyView>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BackgroundColor="#091626"
+                                                Stroke="#1D3550"
+                                                StrokeShape="RoundRectangle 14"
+                                                Padding="13"
+                                                Margin="0,0,0,9">
+                                            <VerticalStackLayout Spacing="5">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <Label Text="{Binding Type}"
+                                                           TextColor="#F4F7FB"
+                                                           FontAttributes="Bold"
+                                                           FontSize="14" />
+                                                    <Label Grid.Column="1"
+                                                           Text="{Binding StatusLabel}"
+                                                           TextColor="#7BE0BC"
+                                                           FontSize="11" />
+                                                </Grid>
+                                                <Label Text="{Binding DateRange}"
+                                                       TextColor="#8FB4D0"
+                                                       FontSize="11"
+                                                       FlowDirection="LeftToRight" />
+                                                <Label Text="{Binding Reason}"
+                                                       TextColor="#A6B8C9"
+                                                       FontSize="11"
+                                                       LineBreakMode="WordWrap" />
+                                                <Button Text="إلغاء الطلب"
+                                                        IsVisible="{Binding IsCancelable}"
+                                                        CommandParameter="{Binding Id}"
+                                                        Clicked="OnCancelRequest"
+                                                        BackgroundColor="#3A1E29"
+                                                        TextColor="#FFC4CF"
+                                                        CornerRadius="10"
+                                                        HeightRequest="38"
+                                                        FontSize="11" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
+                            StrokeShape="RoundRectangle 22" Padding="17">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="طلبات البصمة"
+                                   TextColor="#F4F7FB"
+                                   FontSize="19"
+                                   FontAttributes="Bold" />
+
+                            <CollectionView x:Name="MissingPunchesList"
+                                            SelectionMode="None"
+                                            HeightRequest="300">
+                                <CollectionView.EmptyView>
+                                    <Label Text="لا توجد طلبات بصمة."
+                                           TextColor="#7E95AC"
+                                           HorizontalTextAlignment="Center"
+                                           Margin="0,24" />
+                                </CollectionView.EmptyView>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BackgroundColor="#091626"
+                                                Stroke="#1D3550"
+                                                StrokeShape="RoundRectangle 14"
+                                                Padding="13"
+                                                Margin="0,0,0,9">
+                                            <VerticalStackLayout Spacing="4">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <Label Text="{Binding PunchType}"
+                                                           TextColor="#F4F7FB"
+                                                           FontAttributes="Bold"
+                                                           FontSize="13" />
+                                                    <Label Grid.Column="1"
+                                                           Text="{Binding Status}"
+                                                           TextColor="#A9DBF3"
+                                                           FontSize="11" />
+                                                </Grid>
+                                                <Label Text="{Binding PunchAt}"
+                                                       TextColor="#8FB4D0"
+                                                       FontSize="11"
+                                                       FlowDirection="LeftToRight" />
+                                                <Label Text="{Binding RefNo}"
+                                                       TextColor="#607F99"
+                                                       FontSize="10"
+                                                       FlowDirection="LeftToRight" />
+                                                <Label Text="{Binding Reason}"
+                                                       TextColor="#A6B8C9"
+                                                       FontSize="11" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Button Text="تسجيل الخروج"
+                            Clicked="OnLogout"
+                            BackgroundColor="#3A1E29"
+                            TextColor="#FFC4CF"
+                            CornerRadius="13" />
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
 
-        <Grid x:Name="LoadingLayer" IsVisible="False" BackgroundColor="#D9081426">
-            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="12">
-                <ActivityIndicator IsRunning="True" Color="#18AEE8"
-                                   WidthRequest="40" HeightRequest="40" />
-                <Label x:Name="LoadingLabel" Text="جاري التحميل..."
-                       TextColor="#F4F7FB" FontSize="13" />
+        <Grid x:Name="LoadingLayer"
+              IsVisible="False"
+              BackgroundColor="#D9081426">
+            <VerticalStackLayout HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="12">
+                <ActivityIndicator IsRunning="True"
+                                   Color="#18AEE8"
+                                   WidthRequest="40"
+                                   HeightRequest="40" />
+                <Label x:Name="LoadingLabel"
+                       Text="جاري التحميل..."
+                       TextColor="#F4F7FB"
+                       FontSize="13" />
             </VerticalStackLayout>
         </Grid>
     </Grid>
