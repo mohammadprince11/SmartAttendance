@@ -58,6 +58,13 @@ public class EditModel : PageModel
     public EmployeeEditViewModel Employee { get; set; } = new();
 
     [BindProperty]
+    public decimal? BasicSalary { get; set; }
+
+    public bool CanEditCompensation { get; set; }
+
+    public string CurrentCompanyName { get; set; } = string.Empty;
+
+    [BindProperty]
     public List<EmployeeNameTranslationInput> EmployeeNameTranslations { get; set; } = [];
 
     [BindProperty]
@@ -268,6 +275,13 @@ WHERE Id = @IdentityId
         if (employee == null) return NotFound();
 
         Employee = employee;
+        CanEditCompensation = await CanEditCompensationAsync(Employee.Id);
+        if (CanEditCompensation)
+        {
+            BasicSalary = await LoadBasicSalaryAsync(Employee.Id);
+        }
+
+        CurrentCompanyName = await ResolveEmployeeCompanyNameAsync(Employee.BranchId);
         PrefillQuadNameFromFullName();
         await LoadFamilyNumberAsync(Employee.Id);
         var companyId = await ResolveEmployeeCompanyIdAsync(Employee.BranchId);
@@ -295,6 +309,9 @@ WHERE Id = @IdentityId
             return Forbid();
         }
 
+        CanEditCompensation = await CanEditCompensationAsync(Employee.Id);
+        CurrentCompanyName = await ResolveEmployeeCompanyNameAsync(Employee.BranchId);
+
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
@@ -319,6 +336,20 @@ WHERE Id = @IdentityId
 
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
+
+        if (BasicSalary is < 0)
+        {
+            ModelState.AddModelError(
+                nameof(BasicSalary),
+                "الراتب الأساسي لا يمكن أن يكون سالباً.");
+        }
+
+        if (BasicSalary.HasValue && !CanEditCompensation)
+        {
+            ModelState.AddModelError(
+                nameof(BasicSalary),
+                "لا تملك صلاحية إدخال أو تعديل الراتب الأساسي.");
+        }
 
         if (!ModelState.IsValid) return Page();
 
@@ -415,6 +446,7 @@ WHERE Id = @IdentityId
             }
 
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
+            await SaveBasicSalaryAsync(Employee.Id);
 
             await _dataLocalization.SaveValuesAsync(
                 companyId,
@@ -447,6 +479,91 @@ WHERE Id = @IdentityId
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
 
+    // SP20_EDIT_COMPENSATION_PARITY
+    private async Task<bool> CanEditCompensationAsync(int employeeId)
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        return await _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId,
+            PeoplePermissionCodes.EditCompensation,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(
+                role,
+                PeoplePermissionCodes.EditCompensation),
+            HttpContext.RequestAborted);
+    }
+
+    private async Task<decimal?> LoadBasicSalaryAsync(int employeeId)
+    {
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        return await HrmsDatabase.ScalarAsync<decimal?>(
+            _dbContext,
+            """
+SELECT TOP 1 BasicSalary
+FROM dbo.EmployeeFinancialInfos
+WHERE EmployeeId = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0
+ORDER BY Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId));
+    }
+
+    private async Task SaveBasicSalaryAsync(int employeeId)
+    {
+        if (!BasicSalary.HasValue ||
+            !CanEditCompensation ||
+            employeeId <= 0)
+        {
+            return;
+        }
+
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+UPDATE dbo.EmployeeFinancialInfos
+SET BasicSalary = @BasicSalary,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE EmployeeId = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0;
+
+IF @@ROWCOUNT = 0
+BEGIN
+    INSERT INTO dbo.EmployeeFinancialInfos
+        (EmployeeId, BasicSalary, CreatedAt, IsDeleted)
+    VALUES
+        (@EmployeeId, @BasicSalary, SYSUTCDATETIME(), 0);
+END;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@BasicSalary",
+                    BasicSalary.Value);
+            });
+    }
+
+    private async Task<string> ResolveEmployeeCompanyNameAsync(int branchId)
+    {
+        return await _dbContext.Branches
+            .AsNoTracking()
+            .Where(item => item.Id == branchId && !item.IsDeleted)
+            .Select(item => item.Company.Name)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted)
+            ?? string.Empty;
+    }
     private async Task<int> ResolveEmployeeCompanyIdAsync(int branchId) =>
         await _dbContext.Branches.AsNoTracking()
             .Where(item => item.Id == branchId && !item.IsDeleted)

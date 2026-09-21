@@ -72,6 +72,9 @@ public class CreateModel : PageModel
     public IFormFile? EmployeePhoto { get; set; }
 
     [BindProperty]
+    public IFormFile? EmployeeSignature { get; set; }
+
+    [BindProperty]
     public List<string> InitialDocumentTypes { get; set; } = new();
 
     [BindProperty]
@@ -103,6 +106,16 @@ public class CreateModel : PageModel
     public IEnumerable<BranchListViewModel> Branches { get; set; } = new List<BranchListViewModel>();
 
     public IReadOnlyList<EmployeeCompanyChoice> CompanyOptions { get; set; } = [];
+
+    public sealed class ManagerOption
+    {
+        public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public string EmployeeNo { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+    }
+
+    public IReadOnlyList<ManagerOption> Managers { get; set; } = [];
 
     public IEnumerable<DepartmentListViewModel> Departments { get; set; } = new List<DepartmentListViewModel>();
 
@@ -172,6 +185,7 @@ public class CreateModel : PageModel
         CanEditCompensation = await CanEditCompensationGloballyAsync();
         CanUseSmartOnboarding = await CanUseSmartOnboardingAsync();
         await LoadScopedOrganizationAsync();
+        await LoadManagersAsync();
         await LocalizeBusinessLookupsAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
@@ -192,6 +206,7 @@ public class CreateModel : PageModel
         CanEditCompensation = await CanEditCompensationGloballyAsync();
         CanUseSmartOnboarding = await CanUseSmartOnboardingAsync();
         await LoadScopedOrganizationAsync();
+        await LoadManagersAsync();
         await LocalizeBusinessLookupsAsync();
         ProfileDynamicSections = await EmployeeProfileDynamicFields.LoadSectionsAsync(_dbContext, 0);
         await LoadLookupsAsync();
@@ -295,9 +310,13 @@ public class CreateModel : PageModel
             await SaveBasicSalaryAsync(employeeId);
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, employeeId, Request.Form);
             var photoResult = await SaveEmployeePhotoAsync(employeeId);
+            var signatureResult = await SaveEmployeeSignatureAsync(employeeId);
             var documentResult = await SaveInitialDocumentsAsync(employeeId);
             var loginResult = await CreateEmployeeLoginAsync(employeeId, loginUsername);
-            var extraResult = string.Join(" ", new[] { photoResult, documentResult, loginResult }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            var extraResult = string.Join(
+                " ",
+                new[] { photoResult, signatureResult, documentResult, loginResult }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
 
             if (!string.IsNullOrWhiteSpace(extraResult))
             {
@@ -355,6 +374,41 @@ public class CreateModel : PageModel
             HttpContext.RequestAborted);
     }
 
+    // SP20_CREATE_EDIT_PARITY
+    private async Task LoadManagersAsync()
+    {
+        var allowedCompanyIds = CompanyOptions
+            .Select(item => item.Id)
+            .Where(id => id > 0)
+            .ToHashSet();
+
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT
+    e.Id,
+    b.CompanyId,
+    ISNULL(e.EmployeeNo, '') AS EmployeeNo,
+    ISNULL(e.FullName, '') AS FullName
+FROM dbo.Employees e
+INNER JOIN dbo.Branches b ON b.Id = e.BranchId
+WHERE ISNULL(e.IsDeleted, 0) = 0
+  AND e.IsActive = 1
+ORDER BY e.FullName, e.EmployeeNo;
+""",
+            configure: null,
+            reader => new ManagerOption
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
+                EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
+                FullName = HrmsDatabase.GetString(reader, "FullName")
+            });
+
+        Managers = rows
+            .Where(item => allowedCompanyIds.Contains(item.CompanyId))
+            .ToList();
+    }
     private async Task SaveBasicSalaryAsync(int employeeId)
     {
         if (!BasicSalary.HasValue || !CanEditCompensation || employeeId <= 0)
@@ -739,6 +793,48 @@ VALUES ('UnifiedIdentity', @EntityId, 'Create Employee Login On Employee Create'
         return $"وأُنشئ حساب دخول باسم «{username}».";
     }
 
+    private async Task<string> SaveEmployeeSignatureAsync(int employeeId)
+    {
+        if (EmployeeSignature == null || EmployeeSignature.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(EmployeeSignature.FileName);
+        if (string.IsNullOrWhiteSpace(extension) ||
+            !AllowedEmployeePhotoExtensions.Contains(extension))
+        {
+            return "صيغة التوقيع غير مدعومة.";
+        }
+
+        if (EmployeeSignature.Length > 2 * 1024 * 1024)
+        {
+            return "حجم التوقيع أكبر من 2MB.";
+        }
+
+        if (!await UploadSignatureValidator.IsValidImageAsync(EmployeeSignature))
+        {
+            return "محتوى ملف التوقيع ليس صورة صالحة.";
+        }
+
+        var stored = await _protectedFiles.SaveAsync(
+            EmployeeSignature,
+            employeeId,
+            "signature",
+            HttpContext.RequestAborted);
+
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return "تعذر حفظ توقيع الموظف.";
+        }
+
+        await _dbContext.Employees
+            .Where(x => x.Id == employeeId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(x => x.SignaturePath, stored));
+
+        return "تم حفظ توقيع الموظف.";
+    }
     private async Task<string> SaveEmployeePhotoAsync(int employeeId)
     {
         if (EmployeePhoto == null || EmployeePhoto.Length == 0)

@@ -391,12 +391,32 @@ public class EmployeeService : IEmployeeService
             return null;
         }
 
+        if (model.DirectManagerId.HasValue)
+        {
+            var managerValid = await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == model.DirectManagerId.Value &&
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.Branch.CompanyId == companyId.Value);
+
+            if (!managerValid)
+            {
+                return null;
+            }
+        }
+
         var employee = _mapper.Map<Employee>(model);
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
         employee.CompanyId = companyId;
         employee.PositionId = model.PositionId;
         employee.Position = position?.Name;
+        employee.DirectManagerId = model.DirectManagerId;
+        employee.EmploymentStatus =
+            Trimmed(model.EmploymentStatus) ??
+            (model.IsActive ? "Active" : "Inactive");
 
         employee.FirstName = Trimmed(model.FirstName);
         employee.SecondName = Trimmed(model.SecondName);
@@ -511,6 +531,9 @@ public class EmployeeService : IEmployeeService
         employee.Country = model.Country;
         employee.IsActive = model.IsActive;
         employee.DirectManagerId = model.DirectManagerId;
+        employee.EmploymentStatus =
+            Trimmed(model.EmploymentStatus) ??
+            (model.IsActive ? "Active" : employee.EmploymentStatus);
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
 

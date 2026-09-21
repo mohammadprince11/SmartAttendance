@@ -42,6 +42,11 @@ public class EmployeeCreateViewModel
     [StringLength(50)] public string? WorkType { get; set; }
     [StringLength(100)] public string? JobGrade { get; set; }
 
+    [StringLength(100)]
+    public string? EmploymentStatus { get; set; } = "Active";
+
+    public int? DirectManagerId { get; set; }
+
     [StringLength(50, ErrorMessage = "رقم الهاتف يجب ألا يتجاوز 50 حرفاً.")]
     public string? Phone { get; set; }
 

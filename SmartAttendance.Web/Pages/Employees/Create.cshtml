@@ -404,6 +404,22 @@
                     <span asp-validation-for="Employee.PositionId" class="text-danger"></span>
                 </div>
 
+                <!-- SP20_CREATE_PARITY_FIELDS -->
+                <div class="nxr-field">
+                    <label asp-for="Employee.DirectManagerId">المدير المباشر</label>
+                    <select asp-for="Employee.DirectManagerId"
+                            class="nxr-native-select"
+                            id="Employee_DirectManagerId">
+                        <option value="">-- بدون مدير --</option>
+                        @foreach (var manager in Model.Managers)
+                        {
+                            <option value="@manager.Id"
+                                    data-company-id="@manager.CompanyId">
+                                @manager.EmployeeNo - @manager.FullName
+                            </option>
+                        }
+                    </select>
+                </div>
                 <div class="nxr-field">
                     <label asp-for="Employee.HireDate">تاريخ التعيين (العقد)</label>
                     <input asp-for="Employee.HireDate" type="date" />
@@ -431,6 +447,28 @@
                     </select>
                 </div>
 
+                <div class="nxr-field">
+                    <label asp-for="Employee.EmploymentStatus">حالة التوظيف</label>
+                    <input asp-for="Employee.EmploymentStatus"
+                           placeholder="Active" />
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="Employee.IsActive">حالة الموظف</label>
+                    <select asp-for="Employee.IsActive"
+                            class="nxr-native-select">
+                        <option value="true">نشط</option>
+                        <option value="false">غير نشط</option>
+                    </select>
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="EmployeeSignature">توقيع الموظف</label>
+                    <input asp-for="EmployeeSignature"
+                           type="file"
+                           accept="image/png,image/jpeg,image/webp" />
+                    <small>PNG / JPG / WEBP · الحد الأقصى 2MB</small>
+                </div>
                 @if (Model.CanEditCompensation)
                 {
                     <div class="nxr-field">
@@ -664,8 +702,9 @@
             const workLocation = document.getElementById("Employee_BranchId");
             const department = document.getElementById("Employee_DepartmentId");
             const position = document.getElementById("Employee_PositionId");
+            const manager = document.getElementById("Employee_DirectManagerId");
 
-            if (!company || !workLocation || !department || !position) {
+            if (!company || !workLocation || !department || !position || !manager) {
                 return;
             }
 
@@ -717,6 +756,7 @@
                 const companyId = company.value || "";
 
                 filterByCompany(workLocation, companyId);
+                filterByCompany(manager, companyId);
                 document.querySelectorAll("[data-language-company]").forEach(section => {
                     const active = companyId && section.dataset.languageCompany === companyId;
                     section.hidden = !active;

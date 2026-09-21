@@ -145,6 +145,13 @@
                     <input asp-for="Employee.Email" />
                     <span asp-validation-for="Employee.Email"></span>
                 </div>
+                <!-- SP20_EDIT_PARITY_FIELDS -->
+                <div class="nxr-edit-field">
+                    <label>الشركة</label>
+                    <input value="@Model.CurrentCompanyName"
+                           readonly
+                           aria-readonly="true" />
+                </div>
                 <div class="nxr-edit-field">
                     <label asp-for="Employee.BranchId">موقع العمل</label>
                     <select asp-for="Employee.BranchId" class="nxr-native-select" id="Employee_BranchId">
@@ -365,7 +372,25 @@
                         @foreach (var grade in Model.GradeOptions) { <option value="@grade">@grade</option> }
                     </select>
                 </div>
-            </div>
+                <div class="nxr-edit-field">
+                    <label asp-for="Employee.EmploymentStatus">حالة التوظيف</label>
+                    <input asp-for="Employee.EmploymentStatus"
+                           placeholder="Active" />
+                </div>
+
+                @if (Model.CanEditCompensation)
+                {
+                    <div class="nxr-edit-field">
+                        <label asp-for="BasicSalary">الراتب الأساسي</label>
+                        <input asp-for="BasicSalary"
+                               type="number"
+                               min="0"
+                               step="0.001"
+                               inputmode="decimal"
+                               placeholder="0" />
+                        <span asp-validation-for="BasicSalary"></span>
+                    </div>
+                }            </div>
 
         @if (Model.ProfileDynamicSections.Any(profileSection => profileSection.Fields.Count > 0))
         {
