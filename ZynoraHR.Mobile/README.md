@@ -1,28 +1,27 @@
-# ZynoraHR Mobile
+﻿# ZynoraHR Mobile
 
-تطبيق موظفي ZYNORA HR المؤقت، مبني بـ .NET MAUI ويغلف بوابة الموظف المنشورة مع معالجة الاتصال، شاشة تحميل، وحصر التنقل داخل نطاق ZynoraHR الموثوق.
+## Phase 1 — 0.2.0
 
-## الهوية
+The mobile app now starts as a native .NET MAUI employee app instead of a raw WebView.
 
-- Display name: `ZYNORA HR`
-- Android package / iOS bundle: `com.zynorahr.employee`
-- Start URL: `https://zynorahr.com/EmployeePortal`
+Implemented:
+- Native login via `POST /api/v1/auth/login`
+- Bearer token in MAUI SecureStorage
+- Session restore
+- Employee profile via `GET /api/v1/me`
+- Recent attendance via `GET /api/v1/me/attendance`
+- Leave balances via `GET /api/v1/me/leave-balance`
+- GPS check-in/check-out via `POST /api/v1/me/online-punch`
+- Logout revokes the server token
+- Connectivity handling
 
-## البناء
+Package: `com.zynorahr.employee`
 
+Build:
 ```powershell
 dotnet restore ZynoraHR.Mobile/ZynoraHR.Mobile.csproj
-dotnet build ZynoraHR.Mobile/ZynoraHR.Mobile.csproj -f net10.0-android -c Debug
+dotnet build ZynoraHR.Mobile/ZynoraHR.Mobile.csproj -f net10.0-android -c Release
 dotnet publish ZynoraHR.Mobile/ZynoraHR.Mobile.csproj -f net10.0-android -c Release -p:AndroidPackageFormats=apk
 ```
 
-ملفا Android SDK وOpenJDK المحليان محفوظان تحت `.mobile-tools` ويُكتشفان تلقائياً من ملف المشروع. لا يدخل هذا المجلد إلى Git.
-
-يبنى هدف iOS من جهاز macOS بعد تثبيت workload الخاص بـ iOS وإضافة شهادات Apple والتوقيع.
-
-## الخطوات التالية
-
-1. جسر Android/iOS أصلي للموقع والبصمة والكاميرا واختيار الملفات.
-2. إشعارات FCM وAPNs بدلاً من Web Push داخل الغلاف.
-3. تخزين الجلسة وتسجيل الجهاز بصورة مشفرة.
-4. استبدال الشاشات ذات الأولوية بواجهات MAUI أصلية تدريجياً.
+Next: requests/approvals, push notifications, native biometric confirmation, profile/documents/team.

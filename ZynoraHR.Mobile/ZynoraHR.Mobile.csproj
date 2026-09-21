@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
@@ -21,6 +21,7 @@
 		<!-- The APK is distributed and installed directly, so it must contain the
 		     managed assemblies instead of relying on IDE Fast Deployment files. -->
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<AndroidPackageFormats>apk</AndroidPackageFormats>
 
 		<!-- أدوات Android تُحفظ محلياً خارج Git لتكون أوامر البناء قابلة للتكرار. -->
 		<LocalMobileToolsRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\.mobile-tools'))</LocalMobileToolsRoot>
@@ -42,8 +43,8 @@
 		<ApplicationId>com.zynorahr.employee</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>0.1.1</ApplicationDisplayVersion>
-		<ApplicationVersion>2</ApplicationVersion>
+		<ApplicationDisplayVersion>0.2.0</ApplicationDisplayVersion>
+		<ApplicationVersion>3</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>

@@ -1,41 +1,124 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="ZynoraHR.Mobile.MainPage"
-             Shell.NavBarIsVisible="False"
-             BackgroundColor="#081426">
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="ZynoraHR.Mobile.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#081426"
+    FlowDirection="RightToLeft">
 
     <Grid>
-        <WebView x:Name="PortalWebView"
-                 Navigating="OnPortalNavigating"
-                 Navigated="OnPortalNavigated"
-                 BackgroundColor="#081426" />
+        <ScrollView>
+            <VerticalStackLayout Padding="22,28,22,36" Spacing="18">
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout>
+                        <Label Text="ZYNORA HR" TextColor="#F4F7FB"
+                               FontSize="25" FontAttributes="Bold" CharacterSpacing="2" />
+                        <Label Text="Employee Mobile" TextColor="#8CA4BE"
+                               FontSize="12" FlowDirection="LeftToRight" />
+                    </VerticalStackLayout>
+                    <Image Grid.Column="1" Source="zynora_symbol.svg"
+                           WidthRequest="54" HeightRequest="54" />
+                </Grid>
 
-        <Grid x:Name="LoadingLayer" BackgroundColor="#081426">
-            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="18">
-                <Image Source="zynora_symbol.svg" WidthRequest="116" HeightRequest="116"
-                       SemanticProperties.Description="شعار زينورا" />
-                <Label Text="ZYNORA HR" TextColor="#F4F7FB" FontSize="24" FontAttributes="Bold"
-                       CharacterSpacing="3" HorizontalTextAlignment="Center" />
-                <ActivityIndicator IsRunning="True" Color="#18C7BD" WidthRequest="32" HeightRequest="32" />
-                <Label Text="جاري فتح بوابة الموظف..." TextColor="#9FB0C5" FontSize="14"
-                       HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-        </Grid>
-
-        <Grid x:Name="OfflineLayer" IsVisible="False" BackgroundColor="#081426" Padding="32">
-            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center"
-                                 MaximumWidthRequest="420" Spacing="16">
-                <Border BackgroundColor="#10223A" Stroke="#26415F" StrokeShape="RoundRectangle 22" Padding="22">
-                    <Label Text="!" TextColor="#D4B36A" FontSize="34" FontAttributes="Bold"
-                           HorizontalTextAlignment="Center" />
+                <Border x:Name="OfflineBanner" IsVisible="False"
+                        BackgroundColor="#352B22" Stroke="#705737"
+                        StrokeShape="RoundRectangle 14" Padding="12">
+                    <Label Text="لا يوجد اتصال بالإنترنت."
+                           TextColor="#F5D6A4" FontSize="13" />
                 </Border>
-                <Label Text="لا يوجد اتصال بالإنترنت" TextColor="#F4F7FB" FontSize="22"
-                       FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                <Label Text="تحقق من الاتصال ثم أعد المحاولة. لن تُرسل أي حركة حضور أثناء انقطاع الشبكة في هذه النسخة."
-                       TextColor="#9FB0C5" FontSize="14" LineHeight="1.45" HorizontalTextAlignment="Center" />
-                <Button Text="إعادة المحاولة" Clicked="OnRetryClicked" BackgroundColor="#4E789E"
-                        TextColor="#071322" CornerRadius="12" Padding="24,12" HorizontalOptions="Fill" />
+
+                <Border x:Name="LoginCard" BackgroundColor="#0E1C30"
+                        Stroke="#1D3550" StrokeShape="RoundRectangle 22" Padding="20">
+                    <VerticalStackLayout Spacing="13">
+                        <Label Text="تسجيل الدخول" TextColor="#F4F7FB"
+                               FontSize="22" FontAttributes="Bold" />
+                        <Label Text="استخدم حساب الموظف نفسه في ZYNORA HR."
+                               TextColor="#91A8BF" FontSize="13" />
+                        <Entry x:Name="UsernameEntry" Placeholder="اسم المستخدم"
+                               FlowDirection="LeftToRight" BackgroundColor="#091626"
+                               TextColor="#F4F7FB" PlaceholderColor="#60778F" />
+                        <Entry x:Name="PasswordEntry" Placeholder="كلمة المرور"
+                               IsPassword="True" FlowDirection="LeftToRight"
+                               BackgroundColor="#091626" TextColor="#F4F7FB"
+                               PlaceholderColor="#60778F" />
+                        <Label x:Name="ErrorLabel" IsVisible="False"
+                               TextColor="#FF9A9A" FontSize="12" />
+                        <Button x:Name="LoginButton" Text="دخول"
+                                Clicked="OnLoginClicked" BackgroundColor="#18AEE8"
+                                TextColor="White" CornerRadius="14" HeightRequest="50" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout x:Name="HomePanel" IsVisible="False" Spacing="15">
+                    <Border BackgroundColor="#0D2035" Stroke="#214663"
+                            StrokeShape="RoundRectangle 22" Padding="18">
+                        <VerticalStackLayout Spacing="5">
+                            <Label x:Name="NameLabel" TextColor="#F4F7FB"
+                                   FontSize="22" FontAttributes="Bold" />
+                            <Label x:Name="PositionLabel" TextColor="#8FB4D0" FontSize="13" />
+                            <Label x:Name="OrgLabel" TextColor="#8CA4BE" FontSize="12" />
+                            <Label x:Name="EmployeeNoLabel" TextColor="#A9DBF3"
+                                   FontSize="12" FlowDirection="LeftToRight" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
+                                StrokeShape="RoundRectangle 18" Padding="15">
+                            <VerticalStackLayout>
+                                <Label Text="آخر حضور" TextColor="#8CA4BE" FontSize="12" />
+                                <Label x:Name="AttendanceLabel" Text="—"
+                                       TextColor="#F4F7FB" FontSize="15" FontAttributes="Bold" />
+                                <Label x:Name="AttendanceDetailLabel" Text="—"
+                                       TextColor="#91A8BF" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" BackgroundColor="#0E1C30" Stroke="#1D3550"
+                                StrokeShape="RoundRectangle 18" Padding="15">
+                            <VerticalStackLayout>
+                                <Label Text="رصيد الإجازة" TextColor="#8CA4BE" FontSize="12" />
+                                <Label x:Name="LeaveLabel" Text="—"
+                                       TextColor="#F4F7FB" FontSize="18" FontAttributes="Bold" />
+                                <Label x:Name="LeaveDetailLabel" Text="—"
+                                       TextColor="#91A8BF" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <Border BackgroundColor="#0E1C30" Stroke="#1D3550"
+                            StrokeShape="RoundRectangle 22" Padding="17">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="تسجيل الحضور بالموقع"
+                                   TextColor="#F4F7FB" FontSize="18" FontAttributes="Bold" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <Button x:Name="InButton" Text="دخول" Clicked="OnCheckIn"
+                                        BackgroundColor="#16865F" TextColor="White"
+                                        CornerRadius="14" HeightRequest="50" />
+                                <Button x:Name="OutButton" Grid.Column="1" Text="خروج"
+                                        Clicked="OnCheckOut" BackgroundColor="#9A5A2C"
+                                        TextColor="White" CornerRadius="14" HeightRequest="50" />
+                            </Grid>
+                            <Label x:Name="PunchLabel" TextColor="#A9C1D7" FontSize="12" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Button Text="تحديث" Clicked="OnRefresh"
+                                BackgroundColor="#17314B" TextColor="#DDEAF5" CornerRadius="13" />
+                        <Button Grid.Column="1" Text="تسجيل الخروج" Clicked="OnLogout"
+                                BackgroundColor="#3A1E29" TextColor="#FFC4CF" CornerRadius="13" />
+                    </Grid>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid x:Name="LoadingLayer" IsVisible="False" BackgroundColor="#D9081426">
+            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="12">
+                <ActivityIndicator IsRunning="True" Color="#18AEE8"
+                                   WidthRequest="40" HeightRequest="40" />
+                <Label x:Name="LoadingLabel" Text="جاري التحميل..."
+                       TextColor="#F4F7FB" FontSize="13" />
             </VerticalStackLayout>
         </Grid>
     </Grid>
