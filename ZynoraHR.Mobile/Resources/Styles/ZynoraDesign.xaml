@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <Style x:Key="ZyEyebrow" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyAccent}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="CharacterSpacing" Value="1.4" />
+    </Style>
+
+    <Style x:Key="ZyDisplay" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyText}" />
+        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="LineHeight" Value="1.05" />
+    </Style>
+
+    <Style x:Key="ZyTitle" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyText}" />
+        <Setter Property="FontSize" Value="21" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style x:Key="ZySectionTitle" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyText}" />
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+    <Style x:Key="ZyBody" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyText2}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="LineHeight" Value="1.35" />
+    </Style>
+
+    <Style x:Key="ZyCaption" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyMuted}" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+
+    <Style x:Key="ZyMetric" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource ZyText}" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style x:Key="ZyCard" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource ZySurface}" />
+        <Setter Property="Stroke" Value="{StaticResource ZyStrokeSoft}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="Padding" Value="18" />
+    </Style>
+
+    <Style x:Key="ZyCardStrong" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource ZySurface2}" />
+        <Setter Property="Stroke" Value="{StaticResource ZyStroke}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+        <Setter Property="Padding" Value="20" />
+    </Style>
+    <Style x:Key="ZyInput" TargetType="Entry">
+        <Setter Property="TextColor" Value="{StaticResource ZyText}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource ZyMuted2}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource ZyBgSoft}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="HeightRequest" Value="54" />
+        <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <Style x:Key="ZyPrimaryButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource ZyAccent}" />
+        <Setter Property="TextColor" Value="{StaticResource ZyBg}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="HeightRequest" Value="54" />
+        <Setter Property="Padding" Value="18,12" />
+    </Style>
+
+    <Style x:Key="ZySecondaryButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource ZySurface3}" />
+        <Setter Property="TextColor" Value="{StaticResource ZyText2}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="HeightRequest" Value="50" />
+        <Setter Property="Padding" Value="16,10" />
+    </Style>
+    <Style x:Key="ZySuccessButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="#173E36" />
+        <Setter Property="TextColor" Value="{StaticResource ZySuccess}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="HeightRequest" Value="52" />
+    </Style>
+
+    <Style x:Key="ZyWarningButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="#3D3021" />
+        <Setter Property="TextColor" Value="{StaticResource ZyWarning}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="HeightRequest" Value="52" />
+    </Style>
+
+    <Style x:Key="ZyDangerButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="#351D29" />
+        <Setter Property="TextColor" Value="#FFC5CE" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="HeightRequest" Value="48" />
+    </Style>
+
+    <Style x:Key="ZyPill" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="#122E33" />
+        <Setter Property="Stroke" Value="#1C4B4E" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 99" />
+        <Setter Property="Padding" Value="10,5" />
+    </Style>
+</ResourceDictionary>

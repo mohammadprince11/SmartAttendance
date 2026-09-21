@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Api;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -20,11 +21,16 @@ public sealed class MeController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
     private readonly IProtectedFileService _protectedFiles;
+    private readonly IAnnouncementService _announcements;
 
-    public MeController(ApplicationDbContext db, IProtectedFileService protectedFiles)
+    public MeController(
+        ApplicationDbContext db,
+        IProtectedFileService protectedFiles,
+        IAnnouncementService announcements)
     {
         _db = db;
         _protectedFiles = protectedFiles;
+        _announcements = announcements;
     }
 
     private int EmployeeId =>
@@ -66,6 +72,31 @@ WHERE e.Id = @Id;
             })).FirstOrDefault();
 
         return row is null ? NotFound(new { message = "الموظف غير موجود." }) : Ok(row);
+    }
+
+    /// <summary>آخر إعلانات الموظف كما تظهر في بوابة الموظف.</summary>
+    [HttpGet("announcements")]
+    public async Task<IActionResult> Announcements([FromQuery] int take = 5)
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        take = Math.Clamp(take, 1, 20);
+
+        var items = await _announcements.GetEmployeeFeedAsync(
+            EmployeeId,
+            HttpContext.RequestAborted);
+
+        return Ok(items
+            .Take(take)
+            .Select(item => new
+            {
+                id = item.Id,
+                title = item.Title,
+                body = item.Body,
+                category = item.Category,
+                publishDate = item.PublishDate?.ToString("yyyy-MM-dd"),
+                isRead = item.IsRead,
+                firstReadAtUtc = item.FirstReadAtUtc
+            }));
     }
 
     /// <summary>الحضور اليومي الأخير (من يوميات المحرك الرسمي).</summary>

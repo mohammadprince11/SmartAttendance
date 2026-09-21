@@ -58,6 +58,11 @@ public sealed class MobileApi
     public Task<List<LeaveBalance>> LeaveBalancesAsync() =>
         SendAsync<List<LeaveBalance>>(HttpMethod.Get,"api/v1/me/leave-balance");
 
+    public Task<List<MobileAnnouncement>> AnnouncementsAsync() =>
+        SendAsync<List<MobileAnnouncement>>(
+            HttpMethod.Get,
+            "api/v1/me/announcements?take=5");
+
     public Task<ApiMessage> PunchAsync(string type,double lat,double lng) =>
         SendAsync<ApiMessage>(
             HttpMethod.Post,
@@ -218,6 +223,9 @@ public sealed class AttendanceDay
     [JsonPropertyName("status")] public string Status { get; set; } = "";
     [JsonPropertyName("checkIn")] public string? CheckIn { get; set; }
     [JsonPropertyName("checkOut")] public string? CheckOut { get; set; }
+
+    public string AttendanceTimeline =>
+        $"{CheckIn ?? "—"}  →  {CheckOut ?? "—"}";
 }
 
 public sealed class LeaveBalance
@@ -227,6 +235,26 @@ public sealed class LeaveBalance
     [JsonPropertyName("entitled")] public decimal Entitled { get; set; }
     [JsonPropertyName("used")] public decimal Used { get; set; }
     [JsonPropertyName("remaining")] public decimal Remaining { get; set; }
+
+    public string BalanceSummary =>
+        $"مستخدم {Used:0.##} من {Entitled:0.##}";
+}
+
+public sealed class MobileAnnouncement
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("title")] public string Title { get; set; } = "";
+    [JsonPropertyName("body")] public string Body { get; set; } = "";
+    [JsonPropertyName("category")] public string Category { get; set; } = "";
+    [JsonPropertyName("publishDate")] public string? PublishDate { get; set; }
+    [JsonPropertyName("isRead")] public bool IsRead { get; set; }
+    [JsonPropertyName("firstReadAtUtc")] public DateTime? FirstReadAtUtc { get; set; }
+
+    public string Meta =>
+        string.Join(
+            " · ",
+            new[] { Category, PublishDate }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
 }
 
 public sealed class RequestCatalogResponse

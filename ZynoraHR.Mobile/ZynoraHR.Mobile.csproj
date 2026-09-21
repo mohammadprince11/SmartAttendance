@@ -43,8 +43,8 @@
 		<ApplicationId>com.zynorahr.employee</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>0.3.1</ApplicationDisplayVersion>
-		<ApplicationVersion>5</ApplicationVersion>
+		<ApplicationDisplayVersion>0.4.2</ApplicationDisplayVersion>
+		<ApplicationVersion>8</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
@@ -61,7 +61,7 @@
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#F4F7FB" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#081426" BaseSize="256,256" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#07111F" BaseSize="256,256" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />

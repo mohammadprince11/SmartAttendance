@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 
 namespace ZynoraHR.Mobile;
 
@@ -11,7 +12,11 @@ public partial class MainPage : ContentPage
     private readonly MobileApi _api = new();
     private bool _initialized;
     private bool _busy;
+    private string _activeSection = "Home";
     private FileResult? _requestAttachment;
+    private EmployeeProfile? _currentProfile;
+    private List<AttendanceDay> _currentAttendance = new();
+    private List<LeaveBalance> _currentLeave = new();
 
     public MainPage()
     {
@@ -101,7 +106,7 @@ public partial class MainPage : ContentPage
 
         if (!Online())
         {
-            PunchLabel.Text = "لا يمكن تسجيل البصمة بدون إنترنت.";
+            SetPunchMessage("لا يمكن تسجيل البصمة بدون إنترنت.");
             return;
         }
 
@@ -117,7 +122,7 @@ public partial class MainPage : ContentPage
 
                 if (permission != PermissionStatus.Granted)
                 {
-                    PunchLabel.Text = "يجب منح صلاحية الموقع لتسجيل البصمة.";
+                    SetPunchMessage("يجب منح صلاحية الموقع لتسجيل البصمة.");
                     return;
                 }
 
@@ -129,14 +134,14 @@ public partial class MainPage : ContentPage
 
                 if (location is null)
                 {
-                    PunchLabel.Text = "تعذر الحصول على موقع الجهاز.";
+                    SetPunchMessage("تعذر الحصول على موقع الجهاز.");
                     return;
                 }
 
                 if (location.Accuracy is double accuracy && accuracy > 150)
                 {
-                    PunchLabel.Text =
-                        $"دقة الموقع الحالية ±{accuracy:0} م. فعّل الموقع الدقيق ثم أعد المحاولة.";
+                    SetPunchMessage(
+                        $"دقة الموقع الحالية ±{accuracy:0} م. فعّل الموقع الدقيق ثم أعد المحاولة.");
                     return;
                 }
 
@@ -146,7 +151,7 @@ public partial class MainPage : ContentPage
                         location.Latitude,
                         location.Longitude);
 
-                PunchLabel.Text = result.Message;
+                SetPunchMessage(result.Message);
                 await LoadCoreAsync();
             }
             catch (MobileSessionExpiredException ex)
@@ -156,19 +161,19 @@ public partial class MainPage : ContentPage
             }
             catch (MobileApiException ex)
             {
-                PunchLabel.Text = ex.Message;
+                SetPunchMessage(ex.Message);
             }
             catch (PermissionException)
             {
-                PunchLabel.Text = "صلاحية الموقع مرفوضة.";
+                SetPunchMessage("صلاحية الموقع مرفوضة.");
             }
             catch (FeatureNotEnabledException)
             {
-                PunchLabel.Text = "GPS غير مفعّل.";
+                SetPunchMessage("GPS غير مفعّل.");
             }
             catch
             {
-                PunchLabel.Text = "تعذر تسجيل البصمة حالياً.";
+                SetPunchMessage("تعذر تسجيل البصمة حالياً.");
             }
         });
     }
@@ -176,6 +181,25 @@ public partial class MainPage : ContentPage
     private async void OnHomeTab(object? sender, EventArgs e)
     {
         ShowHome();
+        await MainScrollView.ScrollToAsync(0, 0, true);
+
+        if (Online() && !_busy)
+            await LoadAsync();
+    }
+
+    private async void OnAttendanceTab(object? sender, EventArgs e)
+    {
+        ShowAttendance();
+        await MainScrollView.ScrollToAsync(0, 0, true);
+
+        if (Online() && !_busy)
+            await LoadAsync();
+    }
+
+    private async void OnProfileTab(object? sender, EventArgs e)
+    {
+        ShowProfile();
+        await MainScrollView.ScrollToAsync(0, 0, true);
 
         if (Online() && !_busy)
             await LoadAsync();
@@ -184,6 +208,7 @@ public partial class MainPage : ContentPage
     private async void OnRequestsTab(object? sender, EventArgs e)
     {
         ShowRequests();
+        await MainScrollView.ScrollToAsync(0, 0, true);
 
         if (!Online())
         {
@@ -416,12 +441,13 @@ public partial class MainPage : ContentPage
         {
             var loadedCache = await LoadHomeCacheAsync();
             AuthNav.IsVisible = true;
-            HomePanel.IsVisible = true;
-            RequestsPanel.IsVisible = false;
             LoginCard.IsVisible = false;
-            PunchLabel.Text = loadedCache
+            ShowActiveSection();
+
+            var message = loadedCache
                 ? "وضع عدم الاتصال — يتم عرض آخر بيانات محفوظة على الجهاز."
                 : "أنت غير متصل بالإنترنت ولا توجد بيانات محفوظة بعد.";
+            SetPunchMessage(message);
             return;
         }
 
@@ -442,15 +468,23 @@ public partial class MainPage : ContentPage
             var attendance = await attendanceTask;
             var leave = await leaveTask;
 
-            RenderHome(profile, attendance, leave);
+            var announcements = new List<MobileAnnouncement>();
+            try
+            {
+                announcements = await _api.AnnouncementsAsync();
+            }
+            catch (MobileApiException)
+            {
+                // الإعلان إضافة تدريجية؛ لا نعطّل بيانات الموظف الأساسية عند تعذرها.
+            }
+
+            RenderHome(profile, attendance, leave, announcements);
             await SaveHomeCacheAsync(profile, attendance, leave);
 
             ErrorLabel.IsVisible = false;
             LoginCard.IsVisible = false;
             AuthNav.IsVisible = true;
-
-            if (!RequestsPanel.IsVisible)
-                ShowHome();
+            ShowActiveSection();
         }
         catch (MobileSessionExpiredException ex)
         {
@@ -466,7 +500,7 @@ public partial class MainPage : ContentPage
             else
             {
                 await LoadHomeCacheAsync();
-                PunchLabel.Text = ex.Message;
+                SetPunchMessage(ex.Message);
             }
         }
         catch
@@ -478,7 +512,7 @@ public partial class MainPage : ContentPage
             else
             {
                 await LoadHomeCacheAsync();
-                PunchLabel.Text = "تعذر تحديث البيانات؛ يتم عرض آخر نسخة محفوظة.";
+                SetPunchMessage("تعذر تحديث البيانات؛ يتم عرض آخر نسخة محفوظة.");
             }
         }
     }
@@ -562,8 +596,25 @@ public partial class MainPage : ContentPage
     private void RenderHome(
         EmployeeProfile profile,
         List<AttendanceDay> attendance,
-        List<LeaveBalance> leave)
+        List<LeaveBalance> leave,
+        List<MobileAnnouncement>? announcements = null)
     {
+        var now = DateTime.Now;
+        GreetingLabel.Text = now.Hour switch
+        {
+            < 12 => "صباح الخير",
+            < 17 => "مساء الخير",
+            _ => "مساء الخير"
+        };
+        TodayLabel.Text = now.ToString(
+            "dddd، d MMMM",
+            CultureInfo.GetCultureInfo("ar-IQ"));
+        AttendancePageTodayLabel.Text = TodayLabel.Text;
+
+        _currentProfile = profile;
+        _currentAttendance = attendance;
+        _currentLeave = leave;
+
         NameLabel.Text =
             string.IsNullOrWhiteSpace(profile.FullName)
                 ? "موظف ZYNORA"
@@ -582,17 +633,54 @@ public partial class MainPage : ContentPage
 
         EmployeeNoLabel.Text = profile.EmployeeNo;
 
+        ProfileNameLabel.Text =
+            string.IsNullOrWhiteSpace(profile.FullName)
+                ? "موظف ZYNORA"
+                : profile.FullName;
+        ProfilePositionLabel.Text =
+            string.IsNullOrWhiteSpace(profile.Position)
+                ? "بدون منصب"
+                : profile.Position;
+        ProfileEmployeeNoLabel.Text =
+            string.IsNullOrWhiteSpace(profile.EmployeeNo)
+                ? "—"
+                : profile.EmployeeNo;
+        ProfileDepartmentLabel.Text =
+            string.IsNullOrWhiteSpace(profile.Department)
+                ? "—"
+                : profile.Department;
+        ProfileBranchLabel.Text =
+            string.IsNullOrWhiteSpace(profile.Branch)
+                ? "—"
+                : profile.Branch;
+        ProfileStatusLabel.Text = profile.IsActive ? "ACTIVE" : "INACTIVE";
+        ProfileStatusLabel.TextColor = profile.IsActive
+            ? Color.FromArgb("#3FD49B")
+            : Color.FromArgb("#FF7383");
+
+        AttendanceHistoryContainer.BindingContext = attendance;
+        AttendanceEmptyLabel.IsVisible = attendance.Count == 0;
+        ProfileLeaveBalancesContainer.BindingContext = leave;
+
+        var homeAnnouncements = announcements ?? new List<MobileAnnouncement>();
+        AnnouncementsList.ItemsSource = homeAnnouncements;
+        AnnouncementsEmptyLabel.IsVisible = homeAnnouncements.Count == 0;
+
         if (attendance.Count > 0)
         {
             var row = attendance[0];
             AttendanceLabel.Text = row.Status;
             AttendanceDetailLabel.Text =
                 $"{row.Date} · {row.CheckIn ?? "—"} → {row.CheckOut ?? "—"}";
+            AttendancePageStatusLabel.Text = row.Status;
+            AttendancePageDetailLabel.Text = AttendanceDetailLabel.Text;
         }
         else
         {
             AttendanceLabel.Text = "لا توجد بيانات";
             AttendanceDetailLabel.Text = "آخر 7 أيام";
+            AttendancePageStatusLabel.Text = "لا توجد بيانات";
+            AttendancePageDetailLabel.Text = "لا توجد حركات حضور في آخر 7 أيام.";
         }
 
         var annual =
@@ -712,36 +800,93 @@ public partial class MainPage : ContentPage
 
     private void ShowLogin()
     {
+        _activeSection = "Login";
         LoginCard.IsVisible = true;
         AuthNav.IsVisible = false;
         HomePanel.IsVisible = false;
+        AttendancePanel.IsVisible = false;
         RequestsPanel.IsVisible = false;
+        ProfilePanel.IsVisible = false;
     }
 
     private void ShowHome()
     {
-        LoginCard.IsVisible = false;
-        AuthNav.IsVisible = true;
-        HomePanel.IsVisible = true;
-        RequestsPanel.IsVisible = false;
+        _activeSection = "Home";
+        ShowAuthenticatedPanel(HomePanel, HomeTabButton);
+    }
 
-        HomeTabButton.BackgroundColor = Color.FromArgb("#18AEE8");
-        HomeTabButton.TextColor = Colors.White;
-        RequestsTabButton.BackgroundColor = Color.FromArgb("#17314B");
-        RequestsTabButton.TextColor = Color.FromArgb("#DDEAF5");
+    private void ShowAttendance()
+    {
+        _activeSection = "Attendance";
+        ShowAuthenticatedPanel(AttendancePanel, AttendanceTabButton);
     }
 
     private void ShowRequests()
     {
+        _activeSection = "Requests";
+        ShowAuthenticatedPanel(RequestsPanel, RequestsTabButton);
+    }
+
+    private void ShowProfile()
+    {
+        _activeSection = "Profile";
+        ShowAuthenticatedPanel(ProfilePanel, ProfileTabButton);
+    }
+
+    private void ShowActiveSection()
+    {
+        switch (_activeSection)
+        {
+            case "Attendance":
+                ShowAttendance();
+                break;
+            case "Requests":
+                ShowRequests();
+                break;
+            case "Profile":
+                ShowProfile();
+                break;
+            default:
+                ShowHome();
+                break;
+        }
+    }
+
+    private void ShowAuthenticatedPanel(View activePanel, Button activeTab)
+    {
         LoginCard.IsVisible = false;
         AuthNav.IsVisible = true;
-        HomePanel.IsVisible = false;
-        RequestsPanel.IsVisible = true;
 
-        RequestsTabButton.BackgroundColor = Color.FromArgb("#18AEE8");
-        RequestsTabButton.TextColor = Colors.White;
-        HomeTabButton.BackgroundColor = Color.FromArgb("#17314B");
-        HomeTabButton.TextColor = Color.FromArgb("#DDEAF5");
+        HomePanel.IsVisible = ReferenceEquals(activePanel, HomePanel);
+        AttendancePanel.IsVisible = ReferenceEquals(activePanel, AttendancePanel);
+        RequestsPanel.IsVisible = ReferenceEquals(activePanel, RequestsPanel);
+        ProfilePanel.IsVisible = ReferenceEquals(activePanel, ProfilePanel);
+
+        SetNavState(activeTab);
+    }
+
+    private void SetNavState(Button activeButton)
+    {
+        foreach (var button in new[]
+                 {
+                     HomeTabButton,
+                     AttendanceTabButton,
+                     RequestsTabButton,
+                     ProfileTabButton
+                 })
+        {
+            button.BackgroundColor = Colors.Transparent;
+            button.TextColor = Color.FromArgb("#8FA9BE");
+        }
+
+        activeButton.BackgroundColor = Color.FromArgb("#18C7BD");
+        activeButton.TextColor = Color.FromArgb("#07111F");
+    }
+
+    private void SetPunchMessage(string message)
+    {
+        PunchLabel.Text = message;
+        AttendancePunchLabel.Text = message;
     }
 
     private void Error(string message)
