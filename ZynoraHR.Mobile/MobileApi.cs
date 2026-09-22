@@ -63,6 +63,37 @@ public sealed class MobileApi
             HttpMethod.Get,
             "api/v1/me/announcements?take=5");
 
+    public Task<List<MobileBiometricKey>> BiometricKeysAsync() =>
+        SendAsync<List<MobileBiometricKey>>(
+            HttpMethod.Get,
+            "api/v1/me/biometric-keys");
+
+    public Task<WebAuthnRegistrationOptions> BeginBiometricRegistrationAsync() =>
+        SendAsync<WebAuthnRegistrationOptions>(
+            HttpMethod.Post,
+            "api/v1/webauthn/register/options");
+
+    public async Task<ApiMessage> CompleteBiometricRegistrationAsync(
+        string key,
+        string registrationResponseJson,
+        string? deviceLabel)
+    {
+        using var document = JsonDocument.Parse(registrationResponseJson);
+        var attestation = document.RootElement.Clone();
+
+        return await SendAsync<ApiMessage>(
+            HttpMethod.Post,
+            "api/v1/webauthn/register/complete",
+            new
+            {
+                key,
+                label = string.IsNullOrWhiteSpace(deviceLabel)
+                    ? null
+                    : deviceLabel.Trim(),
+                attestation
+            });
+    }
+
     public Task<MobileCompensation> CompensationAsync() =>
         SendAsync<MobileCompensation>(
             HttpMethod.Get,
@@ -371,6 +402,23 @@ public sealed class MobileAnnouncement
             " · ",
             new[] { Category, PublishDate }
                 .Where(value => !string.IsNullOrWhiteSpace(value)));
+}
+
+public sealed class MobileBiometricKey
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("deviceLabel")] public string? DeviceLabel { get; set; }
+    [JsonPropertyName("status")] public string Status { get; set; } = "";
+    [JsonPropertyName("statusText")] public string StatusText { get; set; } = "";
+    [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("approvedAt")] public DateTime? ApprovedAt { get; set; }
+    [JsonPropertyName("lastUsedAt")] public DateTime? LastUsedAt { get; set; }
+}
+
+public sealed class WebAuthnRegistrationOptions
+{
+    [JsonPropertyName("key")] public string Key { get; set; } = "";
+    [JsonPropertyName("options")] public JsonElement Options { get; set; }
 }
 
 public sealed class DataChangeOption

@@ -694,6 +694,42 @@ app.UseAuthorization();
 // وتردّ 401 على CSS وJS وعامل خدمة الـPWA — أي أن صفحة الدخول نفسها تفقد تنسيقها
 // وتطبيق الموظف ينكسر. إعفاؤها صريح: الحماية على البيانات لا على ملفات الواجهة.
 app.MapStaticAssets().AllowAnonymous();
+
+app.MapGet("/.well-known/assetlinks.json", (IConfiguration configuration) =>
+{
+    var packageName = configuration["AndroidApp:PackageName"]?.Trim();
+    var fingerprints = configuration
+        .GetSection("AndroidApp:Sha256CertFingerprints")
+        .Get<string[]>()?
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Select(value => value.Trim())
+        .ToArray();
+
+    if (string.IsNullOrWhiteSpace(packageName) ||
+        fingerprints is null ||
+        fingerprints.Length == 0)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Json(new object[]
+    {
+        new
+        {
+            relation = new[]
+            {
+                "delegate_permission/common.get_login_creds"
+            },
+            target = new
+            {
+                @namespace = "android_app",
+                package_name = packageName,
+                sha256_cert_fingerprints = fingerprints
+            }
+        }
+    });
+}).AllowAnonymous();
+
 // Compatibility aliases after deleting the old hidden Razor redirect pages.
 // AttendanceOperations is the single physical destination.
 app.MapGet("/AttendanceProcessing", () =>

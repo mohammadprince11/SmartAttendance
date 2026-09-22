@@ -99,6 +99,25 @@ WHERE e.Id = @Id;
             }));
     }
 
+    /// <summary>مفاتيح بصمة/وجه الحضور للموظف الحالي.</summary>
+    [HttpGet("biometric-keys")]
+    public async Task<IActionResult> BiometricKeys()
+    {
+        if (RequireEmployee() is { } bad) return bad;
+
+        var items = await WebAuthnCredentialStore.ListForEmployeeAsync(_db, EmployeeId);
+        return Ok(items.Select(item => new
+        {
+            id = item.Id,
+            deviceLabel = item.DeviceLabel,
+            status = item.Status,
+            statusText = item.StatusText,
+            createdAt = item.CreatedAt,
+            approvedAt = item.ApprovedAt,
+            lastUsedAt = item.LastUsedAt
+        }));
+    }
+
     /// <summary>بيانات التعويضات المالية للموظف الحالي فقط.</summary>
     [HttpGet("compensation")]
     public async Task<IActionResult> Compensation()

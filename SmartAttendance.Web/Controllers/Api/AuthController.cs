@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Api;
@@ -20,14 +21,23 @@ public sealed class AuthController : ControllerBase
 
     private readonly ApplicationDbContext _db;
     private readonly ILoginIdentityService _identity;
+    private readonly IMemoryCache _cache;
 
-    public AuthController(ApplicationDbContext db, ILoginIdentityService identity)
+    public AuthController(
+        ApplicationDbContext db,
+        ILoginIdentityService identity,
+        IMemoryCache cache)
     {
         _db = db;
         _identity = identity;
+        _cache = cache;
     }
 
     public sealed record LoginRequest(string Username, string Password);
+    public sealed record ChangePasswordRequest(
+        string CurrentPassword,
+        string NewPassword,
+        string ConfirmPassword);
 
     [HttpPost("login")]
     [AllowAnonymous]
@@ -115,6 +125,64 @@ public sealed class AuthController : ControllerBase
                 role = user.Role,
                 employeeId = user.EmployeeId
             }
+        });
+    }
+
+    [HttpPost("change-password")]
+    [Authorize(AuthenticationSchemes = ApiTokenAuthHandler.SchemeName)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body)
+    {
+        if (body is null ||
+            string.IsNullOrWhiteSpace(body.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(body.NewPassword) ||
+            string.IsNullOrWhiteSpace(body.ConfirmPassword))
+            return BadRequest(new { message = "جميع الحقول مطلوبة." });
+
+        if (body.NewPassword.Length < 8)
+            return BadRequest(new { message = "كلمة المرور الجديدة يجب ألا تقل عن 8 محارف." });
+
+        if (!string.Equals(body.NewPassword, body.ConfirmPassword, StringComparison.Ordinal))
+            return BadRequest(new { message = "كلمة المرور الجديدة وتأكيدها غير متطابقين." });
+
+        if (string.Equals(body.NewPassword, body.CurrentPassword, StringComparison.Ordinal))
+            return BadRequest(new { message = "كلمة المرور الجديدة يجب أن تختلف عن الحالية." });
+
+        var username = User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(username))
+            return Unauthorized(new { message = "انتهت الجلسة. سجل الدخول من جديد." });
+
+        var user = await LoginDatabase.GetByUsernameAsync(_db, username.Trim());
+        if (user is null || !user.IsActive)
+            return Unauthorized(new { message = "الحساب غير متاح." });
+
+        if (!SimplePasswordHasher.Verify(
+                body.CurrentPassword,
+                user.PasswordSalt,
+                user.PasswordHash))
+            return BadRequest(new { message = "كلمة المرور الحالية غير صحيحة." });
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        await LoginDatabase.UpgradePasswordHashAsync(
+            _db,
+            user,
+            body.NewPassword,
+            ip);
+
+        await AccountSecurityStore.BumpStampAsync(
+            _db,
+            _cache,
+            user.Id,
+            "Password changed from mobile app",
+            user.Username);
+
+        var header = Request.Headers.Authorization.ToString();
+        if (header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            await ApiTokenStore.RevokeAsync(_db, header["Bearer ".Length..].Trim());
+
+        return Ok(new
+        {
+            message = "تم تغيير كلمة المرور. سجل الدخول من جديد.",
+            requiresLogin = true
         });
     }
 

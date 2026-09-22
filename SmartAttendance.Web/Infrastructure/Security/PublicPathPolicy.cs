@@ -49,12 +49,14 @@ public static class PublicPathPolicy
             return PathAccessClass.AnyAuthenticated;
         }
 
-        // ملفات الـPWA بالجذر يجب أن تُخدَم بلا مصادقة (المتصفح يجلبها قبل/بعد الدخول).
+        // ملفات الـPWA وDigital Asset Links يجب أن تُخدَم بلا مصادقة.
+        // Android Credential Manager يجلب assetlinks قبل وجود جلسة ZYNORA.
         // ملاحظة: .NET يبصم اسم الملف (manifest.<hash>.webmanifest) فنطابق اللاحقة.
         if (path.EndsWith(".webmanifest") ||
             path == "/sw.js" ||
             path == "/offline.html" ||
-            path == "/app.apk")
+            path == "/app.apk" ||
+            path == "/.well-known/assetlinks.json")
         {
             return PathAccessClass.Public;
         }

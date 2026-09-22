@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Api;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -21,7 +22,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 [ApiController]
 [Route("api/v1/webauthn")]
 [Route("api/webauthn")]
-[Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme + "," + ApiTokenAuthHandler.SchemeName)]
 public class WebAuthnController : ControllerBase
 {
     private static readonly TimeSpan ChallengeLifetime = TimeSpan.FromMinutes(5);
@@ -30,17 +31,20 @@ public class WebAuthnController : ControllerBase
     private readonly IMemoryCache _cache;
     private readonly SmartAttendance.Application.Common.Security.ILoginIdentityService _loginIdentityService;
     private readonly ReverseProxyOptions _reverseProxy;
+    private readonly IConfiguration _configuration;
 
     public WebAuthnController(
         ApplicationDbContext db,
         IMemoryCache cache,
         SmartAttendance.Application.Common.Security.ILoginIdentityService loginIdentityService,
-        Microsoft.Extensions.Options.IOptions<ReverseProxyOptions> reverseProxyOptions)
+        Microsoft.Extensions.Options.IOptions<ReverseProxyOptions> reverseProxyOptions,
+        IConfiguration configuration)
     {
         _db = db;
         _cache = cache;
         _loginIdentityService = loginIdentityService;
         _reverseProxy = reverseProxyOptions.Value;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -51,9 +55,32 @@ public class WebAuthnController : ControllerBase
     /// </summary>
     private Fido2 CreateFido2()
     {
-        // المرحلة 10: لا نقرأ X-Forwarded-Proto الخام هنا — ForwardedHeadersMiddleware
-        // يطبّعه لوسطاء موثوقين فقط ثم نبني الأصل من القيم المطبَّعة، مع قائمة
-        // مضيفات بيضاء اختيارية بالإعدادات. أصل غير موثوق ⟹ رفض صريح لا تخمين.
+        if (User.Identity?.AuthenticationType == ApiTokenAuthHandler.SchemeName)
+        {
+            var rpId = _configuration["WebAuthn:MobileRpId"]?.Trim();
+            var mobileOrigins = _configuration
+                .GetSection("WebAuthn:MobileOrigins")
+                .Get<string[]>()?
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .ToHashSet(StringComparer.Ordinal);
+
+            if (string.IsNullOrWhiteSpace(rpId) ||
+                mobileOrigins is null ||
+                mobileOrigins.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "إعداد WebAuthn الخاص بتطبيق الموبايل غير مكتمل.");
+            }
+
+            return new Fido2(new Fido2Configuration
+            {
+                ServerDomain = rpId,
+                ServerName = "Zynora HR",
+                Origins = mobileOrigins
+            });
+        }
+
         var origin = ForwardedOriginResolver.Resolve(
             Request.Scheme,
             Request.Host.Value,

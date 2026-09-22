@@ -38,22 +38,30 @@
                                     BackgroundColor="#0B1C2F"
                                     Stroke="#20384F"
                                     StrokeShape="RoundRectangle 12">
-                                <Label Text="●"
-                                       TextColor="#19D3E0"
-                                       FontSize="13"
-                                       HorizontalTextAlignment="Center"
-                                       VerticalTextAlignment="Center" />
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnNotificationsTapped" />
+                                </Border.GestureRecognizers>
+                                <Image Source="ic_notifications.svg"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       InputTransparent="True" />
                             </Border>
                             <Border WidthRequest="36"
                                     HeightRequest="36"
                                     BackgroundColor="#0B1C2F"
                                     Stroke="#20384F"
                                     StrokeShape="RoundRectangle 12">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnSettingsTapped" />
+                                </Border.GestureRecognizers>
                                 <Label Text="⚙"
                                        TextColor="#CFE0F0"
                                        FontSize="16"
                                        HorizontalTextAlignment="Center"
-                                       VerticalTextAlignment="Center" />
+                                       VerticalTextAlignment="Center"
+                                       InputTransparent="True" />
                             </Border>
                         </HorizontalStackLayout>
                     </Grid>
@@ -1024,6 +1032,7 @@
                     </Border>
 
                     <Border x:Name="MissingPunchRequestCard"
+                            IsVisible="False"
                             Style="{StaticResource ZyCard}">
                         <VerticalStackLayout Spacing="12">
                             <Grid ColumnDefinitions="*,Auto">

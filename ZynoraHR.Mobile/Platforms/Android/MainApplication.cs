@@ -3,7 +3,11 @@ using Android.Runtime;
 
 namespace ZynoraHR.Mobile;
 
-[Application]
+#if DEBUG
+[Application(UsesCleartextTraffic = true)]
+#else
+[Application(UsesCleartextTraffic = false)]
+#endif
 public class MainApplication : MauiApplication
 {
 	public MainApplication(IntPtr handle, JniHandleOwnership ownership)

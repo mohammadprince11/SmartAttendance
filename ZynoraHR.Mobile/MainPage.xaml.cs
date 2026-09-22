@@ -7,6 +7,7 @@ namespace ZynoraHR.Mobile;
 public partial class MainPage : ContentPage
 {
     private const string HomeCacheKey = "zynora.mobile.home_cache.v1";
+    private const string BiometricLockKey = "zynora.mobile.biometric_lock.v1";
     private static readonly JsonSerializerOptions CacheJson =
         new(JsonSerializerDefaults.Web);
 
@@ -64,7 +65,29 @@ public partial class MainPage : ContentPage
 
     private async Task InitializeAsync()
     {
-        if (await _api.HasSessionAsync()) await LoadAsync();
+        var hasSession = await _api.HasSessionAsync();
+        if (hasSession && Preferences.Default.Get(BiometricLockKey, false))
+        {
+            if (!DeviceBiometricAuth.IsAvailable())
+            {
+                ShowLogin();
+                Error("قفل البصمة مفعّل لكن لا توجد بصمة/وجه متاحة على هذا الجهاز.");
+                return;
+            }
+
+            var unlocked = await DeviceBiometricAuth.AuthenticateAsync(
+                "فتح ZYNORA HR",
+                "تحقق ببصمة الوجه أو الأصبع للمتابعة.");
+
+            if (!unlocked)
+            {
+                ShowLogin();
+                Error("تم إلغاء التحقق البيومتري. يمكنك تسجيل الدخول بكلمة المرور.");
+                return;
+            }
+        }
+
+        if (hasSession) await LoadAsync();
         else ShowLogin();
     }
 
@@ -449,6 +472,514 @@ public partial class MainPage : ContentPage
         BackgroundColor = Color.FromArgb("#0B2033")
     };
 
+    private async void OnNotificationsTapped(object? sender, TappedEventArgs e)
+    {
+        await BuildNotificationsServiceAsync();
+    }
+
+    private void OnSettingsTapped(object? sender, TappedEventArgs e)
+    {
+        BuildSettingsService();
+    }
+
+    private async Task BuildNotificationsServiceAsync()
+    {
+        OpenServiceRequest(
+            "الإشعارات",
+            "آخر الإعلانات والتنبيهات الموجهة لك من ZYNORA HR.");
+
+        var status = ServiceStatus();
+        status.Text = "جاري تحميل الإشعارات...";
+        ServiceRequestHost.Children.Add(status);
+
+        if (_currentProfile is null)
+        {
+            status.Text = "سجل الدخول أولاً لعرض الإشعارات.";
+            return;
+        }
+
+        if (!Online())
+        {
+            status.Text = "اتصل بالإنترنت لتحديث الإشعارات.";
+            return;
+        }
+
+        try
+        {
+            var items = await _api.AnnouncementsAsync();
+            status.Text = items.Count == 0
+                ? "لا توجد إشعارات أو إعلانات موجهة لك حالياً."
+                : $"آخر {items.Count} إشعار/إعلان";
+
+            foreach (var item in items)
+            {
+                var metaParts = new List<string>();
+                if (!item.IsRead)
+                    metaParts.Add("جديد");
+                if (!string.IsNullOrWhiteSpace(item.Category))
+                    metaParts.Add(item.Category);
+                if (!string.IsNullOrWhiteSpace(item.PublishDate))
+                    metaParts.Add(item.PublishDate!);
+
+                var cardContent = new VerticalStackLayout
+                {
+                    Spacing = 6
+                };
+
+                if (metaParts.Count > 0)
+                {
+                    cardContent.Children.Add(new Label
+                    {
+                        Text = string.Join(" · ", metaParts),
+                        TextColor = item.IsRead
+                            ? Color.FromArgb("#8FA6BA")
+                            : Color.FromArgb("#19CFE0"),
+                        FontSize = 10.5,
+                        FontAttributes = FontAttributes.Bold
+                    });
+                }
+
+                cardContent.Children.Add(new Label
+                {
+                    Text = string.IsNullOrWhiteSpace(item.Title)
+                        ? "إشعار"
+                        : item.Title,
+                    TextColor = Color.FromArgb("#E6F0FA"),
+                    FontSize = 15,
+                    FontAttributes = FontAttributes.Bold,
+                    LineBreakMode = LineBreakMode.WordWrap
+                });
+
+                if (!string.IsNullOrWhiteSpace(item.Body))
+                {
+                    cardContent.Children.Add(new Label
+                    {
+                        Text = item.Body,
+                        TextColor = Color.FromArgb("#B9CADB"),
+                        FontSize = 11.5,
+                        LineHeight = 1.45,
+                        LineBreakMode = LineBreakMode.WordWrap
+                    });
+                }
+
+                ServiceRequestHost.Children.Add(new Border
+                {
+                    BackgroundColor = Color.FromArgb("#0D1B2A"),
+                    Padding = new Thickness(13),
+                    Margin = new Thickness(0, 0, 0, 5),
+                    Content = cardContent
+                });
+            }
+        }
+        catch (MobileSessionExpiredException ex)
+        {
+            CloseServiceRequest();
+            ShowLogin();
+            Error(ex.Message);
+        }
+        catch (MobileApiException ex)
+        {
+            status.Text = ex.Message;
+        }
+        catch
+        {
+            status.Text = "تعذر تحميل الإشعارات حالياً.";
+        }
+    }
+
+    private void BuildSettingsService()
+    {
+        OpenServiceRequest(
+            "الإعدادات",
+            "الحساب، اللغة، الأمان والخصوصية، وإدارة الجلسة.");
+
+        var profileName = string.IsNullOrWhiteSpace(_currentProfile?.FullName)
+            ? "غير مسجل"
+            : _currentProfile!.FullName;
+        var employeeNo = string.IsNullOrWhiteSpace(_currentProfile?.EmployeeNo)
+            ? "—"
+            : _currentProfile!.EmployeeNo;
+        var position = string.IsNullOrWhiteSpace(_currentProfile?.Position)
+            ? "—"
+            : _currentProfile!.Position;
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("الحساب"));
+        ServiceRequestHost.Children.Add(new Label
+        {
+            Text = $"{profileName}\n{employeeNo} · {position}",
+            TextColor = Color.FromArgb("#CFE0F0"),
+            FontSize = 12.5,
+            LineHeight = 1.45
+        });
+
+        var languageButton = ServiceSelectorButton("لغة التطبيق  ·  العربية");
+        languageButton.Clicked += (_, _) => BuildLanguageSettingsService();
+        ServiceRequestHost.Children.Add(languageButton);
+
+        var securityButton = ServiceSelectorButton("الأمان والخصوصية");
+        securityButton.Clicked += (_, _) => BuildSecurityPrivacyService();
+        ServiceRequestHost.Children.Add(securityButton);
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("التطبيق"));
+        ServiceRequestHost.Children.Add(ServiceHint(
+            $"ZYNORA HR · الإصدار {AppInfo.Current.VersionString}\n" +
+            $"حالة الاتصال: {(Online() ? "متصل" : "غير متصل")}"));
+
+        if (_currentProfile is not null)
+        {
+            var profileButton = ServiceSelectorButton("فتح ملفي الشخصي");
+            profileButton.Clicked += async (_, _) =>
+            {
+                CloseServiceRequest();
+                ShowProfile();
+                await MainScrollView.ScrollToAsync(0, 0, true);
+            };
+            ServiceRequestHost.Children.Add(profileButton);
+
+            var refreshButton = ServiceSelectorButton("تحديث البيانات الآن");
+            refreshButton.Clicked += async (_, _) =>
+            {
+                CloseServiceRequest();
+                if (!_busy)
+                    await LoadAsync();
+            };
+            ServiceRequestHost.Children.Add(refreshButton);
+        }
+
+        var logoutButton = ServiceSelectorButton("تسجيل الخروج من ZYNORA");
+        logoutButton.TextColor = Color.FromArgb("#FFB8C3");
+        logoutButton.BorderColor = Color.FromArgb("#7A3344");
+        logoutButton.Clicked += async (_, _) =>
+        {
+            var confirmed = await DisplayAlertAsync(
+                "تسجيل الخروج",
+                "سيتم إنهاء الجلسة على هذا الجهاز. هل تريد المتابعة؟",
+                "تسجيل الخروج",
+                "إلغاء");
+            if (confirmed)
+            {
+                CloseServiceRequest();
+                OnLogout(logoutButton, EventArgs.Empty);
+            }
+        };
+        ServiceRequestHost.Children.Add(logoutButton);
+    }
+
+    private void BuildLanguageSettingsService()
+    {
+        OpenServiceRequest(
+            "لغة التطبيق",
+            "لغة واجهة ZYNORA HR على هذا الجهاز.");
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("اللغة الحالية"));
+        ServiceRequestHost.Children.Add(ServiceHint("العربية · العراق"));
+
+        var arabic = ServiceSelectorButton("العربية  ✓");
+        arabic.IsEnabled = false;
+        ServiceRequestHost.Children.Add(arabic);
+
+        var english = ServiceSelectorButton("English  ·  قريباً");
+        english.IsEnabled = false;
+        ServiceRequestHost.Children.Add(english);
+
+        var kurdish = ServiceSelectorButton("کوردی  ·  قريباً");
+        kurdish.IsEnabled = false;
+        ServiceRequestHost.Children.Add(kurdish);
+
+        ServiceRequestHost.Children.Add(ServiceHint(
+            "التبديل الكامل للغة يحتاج تحويل النصوص الحالية إلى Localization Resources. " +
+            "لن يتم عرض لغة جزئية أو مختلطة للمستخدم."));
+    }
+
+    private void BuildSecurityPrivacyService()
+    {
+        OpenServiceRequest(
+            "الأمان والخصوصية",
+            "إدارة حماية الحساب والجهاز والجلسة.");
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("المصادقة الثنائية (2FA)"));
+        ServiceRequestHost.Children.Add(ServiceHint(
+            "الحالة: غير مفعلة في تطبيق الموبايل حالياً. " +
+            "سيتم دعم Authenticator/TOTP كعامل ثانٍ مستقل بدون الاعتماد على SMS."));
+
+        var twoFactor = ServiceSelectorButton("إعداد المصادقة الثنائية  ·  غير متاح حالياً");
+        twoFactor.IsEnabled = false;
+        ServiceRequestHost.Children.Add(twoFactor);
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("قفل التطبيق بالبصمة / الوجه"));
+        var biometricLockEnabled =
+            Preferences.Default.Get(BiometricLockKey, false);
+        var biometricAvailable = DeviceBiometricAuth.IsAvailable();
+
+        ServiceRequestHost.Children.Add(ServiceHint(
+            biometricAvailable
+                ? $"الحالة: {(biometricLockEnabled ? "مفعّل" : "غير مفعّل")}. " +
+                  "عند التفعيل سيطلب ZYNORA تحققاً بيومترياً قبل فتح الجلسة المحفوظة."
+                : "لا توجد بصمة/وجه مسجلة أو مدعومة على هذا الجهاز."));
+
+        var biometricLock = ServiceSelectorButton(
+            biometricLockEnabled
+                ? "إلغاء قفل التطبيق بالبصمة/الوجه"
+                : "تفعيل قفل التطبيق بالبصمة/الوجه");
+        biometricLock.IsEnabled = biometricAvailable;
+        biometricLock.Clicked += async (_, _) =>
+        {
+            var verified = await DeviceBiometricAuth.AuthenticateAsync(
+                biometricLockEnabled ? "إلغاء القفل البيومتري" : "تفعيل القفل البيومتري",
+                "تحقق ببصمة الوجه أو الأصبع للمتابعة.");
+
+            if (!verified)
+            {
+                await DisplayAlertAsync(
+                    "الأمان والخصوصية",
+                    "لم يكتمل التحقق البيومتري.",
+                    "حسناً");
+                return;
+            }
+
+            Preferences.Default.Set(BiometricLockKey, !biometricLockEnabled);
+            BuildSecurityPrivacyService();
+        };
+        ServiceRequestHost.Children.Add(biometricLock);
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("مفتاح الحضور WebAuthn"));
+        ServiceRequestHost.Children.Add(ServiceHint(
+            "مفتاح WebAuthn/Passkey يستخدم بصمة أو وجه الجهاز لتأكيد الحضور. " +
+            "بعد التسجيل يبقى المفتاح معلّقاً حتى يعتمد من الموارد البشرية."));
+
+        var webAuthn = ServiceSelectorButton("إدارة مفتاح بصمة/وجه الحضور");
+        webAuthn.Clicked += async (_, _) =>
+            await BuildBiometricKeyServiceAsync();
+        ServiceRequestHost.Children.Add(webAuthn);
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("حماية الجلسة والبيانات"));
+        ServiceRequestHost.Children.Add(ServiceHint(
+            "جلسة الموبايل محفوظة في SecureStorage، ولقطة البيانات Offline مشفرة، " +
+            "وتُمسح عند تسجيل الخروج. تغيير كلمة المرور يبطل الجلسات القديمة عبر SecurityStamp."));
+
+        var password = ServiceSelectorButton("تغيير كلمة المرور");
+        password.Clicked += (_, _) => BuildChangePasswordService();
+        ServiceRequestHost.Children.Add(password);
+    }
+
+    private void BuildChangePasswordService()
+    {
+        OpenServiceRequest(
+            "تغيير كلمة المرور",
+            "إدارة كلمة مرور حساب ZYNORA من داخل التطبيق.");
+
+        ServiceRequestHost.Children.Add(ServiceHint(
+            "لن يتم فتح متصفح خارجي. نموذج التغيير Native، " +
+            "وسيتم تفعيل الحفظ بعد ربط خدمة تغيير كلمة المرور الآمنة بالموبايل."));
+
+        var currentValue = ServiceEntry("كلمة المرور الحالية");
+        currentValue.IsPassword = true;
+        currentValue.ReturnType = ReturnType.Next;
+
+        var newValue = ServiceEntry("كلمة المرور الجديدة");
+        newValue.IsPassword = true;
+        newValue.ReturnType = ReturnType.Next;
+
+        var confirmation = ServiceEntry("تأكيد كلمة المرور الجديدة");
+        confirmation.IsPassword = true;
+        confirmation.ReturnType = ReturnType.Done;
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("كلمة المرور الحالية"));
+        ServiceRequestHost.Children.Add(currentValue);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("كلمة المرور الجديدة"));
+        ServiceRequestHost.Children.Add(newValue);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("تأكيد كلمة المرور"));
+        ServiceRequestHost.Children.Add(confirmation);
+
+        var save = ServicePrimaryButton("حفظ كلمة المرور الجديدة");
+        save.IsEnabled = false;
+        ServiceRequestHost.Children.Add(save);
+        var status = ServiceStatus();
+        status.Text = "الحفظ غير مفعّل في هذا الـBuild حتى يكتمل الربط الآمن مع خدمة الحساب.";
+        ServiceRequestHost.Children.Add(status);
+    }
+
+    private async Task BuildBiometricKeyServiceAsync()
+    {
+        OpenServiceRequest(
+            "مفتاح بصمة/وجه الحضور",
+            "إدارة حالة مفاتيح WebAuthn الخاصة بحسابك من داخل ZYNORA.");
+
+        var status = ServiceStatus();
+        status.Text = "جاري تحميل حالة المفاتيح...";
+        ServiceRequestHost.Children.Add(status);
+
+        var deviceLabel = new Entry
+        {
+            Text = $"{DeviceInfo.Current.Manufacturer} {DeviceInfo.Current.Model}".Trim(),
+            Placeholder = "اسم الجهاز",
+            TextColor = Color.FromArgb("#E6F0FA"),
+            PlaceholderColor = Color.FromArgb("#70879B"),
+            BackgroundColor = Color.FromArgb("#06101D"),
+            HeightRequest = 48
+        };
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("اسم الجهاز"));
+        ServiceRequestHost.Children.Add(deviceLabel);
+
+        var register = ServicePrimaryButton("تسجيل مفتاح بصمة/وجه جديد");
+        register.Clicked += async (_, _) =>
+        {
+            if (!Online())
+            {
+                status.Text = "اتصل بالإنترنت لتسجيل المفتاح.";
+                return;
+            }
+
+            register.IsEnabled = false;
+            status.Text = "جاري تجهيز طلب التسجيل الآمن...";
+            try
+            {
+                var begin = await _api.BeginBiometricRegistrationAsync();
+                if (string.IsNullOrWhiteSpace(begin.Key) ||
+                    begin.Options.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+                    throw new MobileApiException("استجابة تسجيل المفتاح غير صالحة.");
+
+                status.Text = "استخدم بصمة الوجه أو الأصبع لإكمال إنشاء المفتاح...";
+                var registrationJson = await AndroidPasskeyRegistration.CreateAsync(
+                    begin.Options.GetRawText());
+
+                status.Text = "جاري التحقق من المفتاح وحفظه...";
+                var result = await _api.CompleteBiometricRegistrationAsync(
+                    begin.Key,
+                    registrationJson,
+                    deviceLabel.Text);
+
+                await BuildBiometricKeyServiceAsync();
+                await DisplayAlertAsync(
+                    "مفتاح بصمة/وجه الحضور",
+                    result.Message,
+                    "حسناً");
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                CloseServiceRequest();
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                status.Text = ex.Message;
+            }
+            finally
+            {
+                register.IsEnabled = true;
+            }
+        };
+        ServiceRequestHost.Children.Add(register);
+
+        var refresh = ServiceSelectorButton("تحديث الحالة");
+        refresh.Clicked += async (_, _) => await BuildBiometricKeyServiceAsync();
+        ServiceRequestHost.Children.Add(refresh);
+
+        if (!Online())
+        {
+            status.Text = "اتصل بالإنترنت لعرض حالة مفاتيح الحضور.";
+            return;
+        }
+
+        try
+        {
+            var items = await _api.BiometricKeysAsync();
+            status.Text = items.Count == 0
+                ? "لا يوجد مفتاح بصمة/وجه مسجل لهذا الحساب."
+                : $"عدد المفاتيح المسجلة: {items.Count}";
+
+            foreach (var item in items)
+            {
+                var label = string.IsNullOrWhiteSpace(item.DeviceLabel)
+                    ? "مفتاح هذا الجهاز"
+                    : item.DeviceLabel;
+
+                var details = new List<string>
+                {
+                    $"الحالة: {item.StatusText}",
+                    $"تاريخ التسجيل: {item.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm}"
+                };
+
+                if (item.ApprovedAt is { } approved)
+                    details.Add($"تاريخ الاعتماد: {approved.ToLocalTime():yyyy-MM-dd HH:mm}");
+                if (item.LastUsedAt is { } lastUsed)
+                    details.Add($"آخر استخدام: {lastUsed.ToLocalTime():yyyy-MM-dd HH:mm}");
+
+                var content = new VerticalStackLayout { Spacing = 6 };
+                content.Children.Add(new Label
+                {
+                    Text = label,
+                    TextColor = Color.FromArgb("#E6F0FA"),
+                    FontSize = 14,
+                    FontAttributes = FontAttributes.Bold
+                });
+                content.Children.Add(new Label
+                {
+                    Text = string.Join("\n", details),
+                    TextColor = Color.FromArgb("#AFC2D4"),
+                    FontSize = 11.5,
+                    LineHeight = 1.45
+                });
+
+                ServiceRequestHost.Children.Add(new Border
+                {
+                    BackgroundColor = Color.FromArgb("#0D1B2A"),
+                    Stroke = Color.FromArgb("#294158"),
+                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
+                    {
+                        CornerRadius = new CornerRadius(14)
+                    },
+                    Padding = new Thickness(13),
+                    Content = content
+                });
+            }
+
+            ServiceRequestHost.Children.Add(ServiceHint(
+                "تسجيل مفتاح جديد أو استبداله يحتاج عملية WebAuthn آمنة؛ " +
+                "هذه الشاشة تعرض الحالة داخل التطبيق ولا تفتح المتصفح تلقائياً."));
+        }
+        catch (MobileSessionExpiredException ex)
+        {
+            CloseServiceRequest();
+            ShowLogin();
+            Error(ex.Message);
+        }
+        catch (MobileApiException ex)
+        {
+            status.Text = ex.Message;
+        }
+        catch
+        {
+            status.Text = "تعذر تحميل حالة مفاتيح الحضور حالياً.";
+        }
+    }
+
+    private async Task OpenEmployeeSecurityPageAsync(string relativePath, string title)
+    {
+        if (!Online())
+        {
+            await DisplayAlertAsync(
+                title,
+                "هذه العملية تحتاج اتصالاً بالإنترنت.",
+                "حسناً");
+            return;
+        }
+
+        try
+        {
+            var url = new Uri(new Uri(AppSettings.BaseUrl), relativePath);
+            await Launcher.Default.OpenAsync(url);
+        }
+        catch
+        {
+            await DisplayAlertAsync(
+                title,
+                "تعذر فتح صفحة الأمان حالياً.",
+                "حسناً");
+        }
+    }
+
     private async Task BuildMissingPunchServiceAsync()
     {
         OpenServiceRequest(
@@ -551,9 +1082,8 @@ public partial class MainPage : ContentPage
             {
                 preview.Text = ex.Message;
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"[ZYNORA-MISSING-PUNCH] {ex.GetType().FullName}: {ex}");
                 preview.Text = "تعذر تحميل بصمات اليوم.";
             }
         }
@@ -2021,8 +2551,9 @@ public partial class MainPage : ContentPage
 
             _requestCatalog = catalog.Items ?? new();
 
-            MissingPunchRequestCard.IsVisible =
-                catalog.Eligible && catalog.CanSubmitMissingPunch;
+            // Request creation lives under the dedicated "طلب جديد" sheet.
+            // "طلباتي" is tracking/history only and must not show the legacy correction form.
+            MissingPunchRequestCard.IsVisible = false;
 
             RequestTypePicker.ItemsSource = _requestCatalog;
             RequestTypePicker.IsEnabled =
