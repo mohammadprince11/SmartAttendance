@@ -34,6 +34,7 @@ public class IndexModel : PageModel
     }
 
     public string Tab { get; private set; } = "home";
+    public int? RequestId { get; private set; }
     public EmployeePortalEmployee Employee { get; private set; } = EmployeePortalEmployee.Empty;
     public EmployeePortalCompensation Compensation { get; private set; } = new();
     public List<EmployeePortalAnnouncement> Announcements { get; private set; } = new();
@@ -42,6 +43,7 @@ public class IndexModel : PageModel
     public List<EmployeePortalAttendance> Attendance { get; private set; } = new();
     public List<EmployeePortalTeamMember> Team { get; private set; } = new();
     public List<EmployeePortalFeedback> FeedbackItems { get; private set; } = new();
+    public EmployeePortalFullProfile FullProfile { get; private set; } = new();
 
     /// <summary>طلبات البصمة المفقودة التي قدّمها هذا الموظف (تصل لصفحة الإدارة).</summary>
     public List<MissingPunchRequestStore.Request> MyMissingPunches { get; private set; } = new();
@@ -96,10 +98,20 @@ public class IndexModel : PageModel
     public string CompensationNote => Compensation.HasData ? "بيانات التعويضات مدخلة في النظام." : "لا توجد بيانات تعويضات مدخلة لهذا الموظف حالياً.";
     public string EmployeeInsight => MissingCheckoutCount > 0 ? "يوجد سجلات حضور تحتاج مراجعة" : OpenPollsCount > 0 ? "يوجد استبيان بانتظار مشاركتك" : "لا توجد إجراءات عاجلة حالياً";
 
-    public async Task<IActionResult> OnGetAsync(string? tab, string? punch, int? pminm, int? prem)
+    public async Task<IActionResult> OnGetAsync(string? tab, string? punch, int? pminm, int? prem, int? requestId)
     {
+        RequestId = requestId is > 0 ? requestId : null;
         Tab = NormalizeTab(tab);
         await LoadAsync();
+
+        if (RequestId.HasValue)
+        {
+            if (Requests.Any(request => request.Id == RequestId.Value))
+                Tab = "requests";
+            else
+                RequestId = null;
+        }
+
         var punchMessage = punch switch
         {
             "in" => "سُجّلت بصمة الحضور عبر الإنترنت — تدخل الحضور عند «تحديث الحضور».",
@@ -132,6 +144,87 @@ public class IndexModel : PageModel
             eligible = eligibility.IsEligible,
             message = eligibility.Message,
             missingFields = eligibility.MissingFields
+        });
+    }
+
+    /// <summary>
+    /// معاينة أثر طلب الإجازة قبل الإرسال. الحساب لا يُعاد في الواجهة؛ بل يمر من
+    /// CompanyLeavePolicyStore نفسه حتى تُحترم الوردية والعطل والوحدة وسياسة الشركة.
+    /// </summary>
+    public async Task<IActionResult> OnGetRequestImpactAsync(
+        string? reqType,
+        string? from,
+        string? to,
+        string? fromTime,
+        string? toTime,
+        string? reason,
+        bool hasAttachment = false)
+    {
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        var employeeId = await ResolveEmployeeIdAsync();
+        if (employeeId <= 0)
+            return new JsonResult(new { available = false, message = "تعذّر تحديد الموظف." });
+
+        if (string.IsNullOrWhiteSpace(reqType) || !DateOnly.TryParse(from, out var fromDate))
+            return new JsonResult(new { available = false });
+        if (!DateOnly.TryParse(to, out var toDate)) toDate = fromDate;
+        if (toDate < fromDate)
+            return new JsonResult(new { available = false, valid = false, message = "تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية." });
+
+        await RequestTypeStore.EnsureAsync(_dbContext);
+        var type = (await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true))
+            .FirstOrDefault(item => string.Equals(item.Name, reqType.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (type is null)
+            return new JsonResult(new { available = false, valid = false, message = "نوع الطلب غير متاح أو غير مفعّل." });
+
+        TimeSpan? startTime = TimeSpan.TryParse(fromTime, out var parsedStart) ? parsedStart : null;
+        TimeSpan? endTime = TimeSpan.TryParse(toTime, out var parsedEnd) ? parsedEnd : null;
+        if (type.NeedsTime && startTime.HasValue && endTime.HasValue && endTime.Value <= startTime.Value)
+            toDate = fromDate.AddDays(1);
+
+        var companyId = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            "SELECT ISNULL(CompanyId,0) FROM Employees WHERE Id=@EmployeeId AND ISNULL(IsDeleted,0)=0;",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
+        var policy = companyId > 0
+            ? (await CompanyLeavePolicyStore.ListForCompanyAsync(_dbContext, companyId, onlyActive: true))
+                .FirstOrDefault(item => item.RequestTypeId == type.Id)
+            : null;
+
+        if (policy?.RequiresBalance != true)
+            return new JsonResult(new
+            {
+                available = true,
+                requiresBalance = false,
+                valid = true,
+                message = string.Empty
+            });
+
+        var validation = await CompanyLeavePolicyStore.ValidateRequestAsync(
+            _dbContext,
+            employeeId,
+            currentRequestId: 0,
+            requestTypeId: type.Id,
+            requestTypeName: type.Name ?? reqType,
+            fromDate,
+            toDate,
+            startTime,
+            endTime,
+            reason,
+            hasAttachment);
+
+        return new JsonResult(new
+        {
+            available = true,
+            requiresBalance = true,
+            valid = validation.Ok,
+            message = validation.Message,
+            entitlement = validation.Entitlement,
+            reserved = validation.Reserved,
+            currentRemaining = validation.Entitlement - validation.Reserved,
+            requested = validation.Requested,
+            remainingAfter = validation.RemainingAfter,
+            unit = validation.Unit
         });
     }
 
@@ -438,7 +531,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         string? reason,
         IFormFile? attachment)
     {
-        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, "LeaveRequest")) return Forbid();
         var employeeId = await ResolveEmployeeIdAsync();
         if (employeeId <= 0)
         {
@@ -468,24 +560,41 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             return RedirectToPage(new { tab = "requests" });
         }
 
-        // ضوابط النوع من المتجر الداينمك.
+        // ضوابط النوع من المتجر الداينمك. EffectCode هو الهوية الثابتة للتنفيذ والصلاحيات؛
+        // اسم العرض قابل للتغيير من الإدارة ويُستخدم فقط كـ fallback للصفوف القديمة.
         var typeDef = (await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: true))
             .FirstOrDefault(x => x.Name == typeLabel);
+        if (typeDef is null)
+        {
+            StatusMessage = "نوع الطلب غير متاح أو غير مفعّل.";
+            return RedirectToPage(new { tab = "requests" });
+        }
+
+        var actionCode = SelfServiceAccessPolicy.ActionForEffectCode(RequestTypeEffectCatalog.EffectiveCode(typeDef))
+            ?? SelfServiceAccessPolicy.ActionForRequestType(typeDef.Name);
+        if (actionCode is null ||
+            !await SelfServiceAccessPolicy.IsAllowedAsync(_dbContext, HttpContext, actionCode))
+            return Forbid();
+
         if (typeDef is { NeedsTime: true } &&
             (string.IsNullOrWhiteSpace(fromTime) || string.IsNullOrWhiteSpace(toTime)))
         {
             StatusMessage = "يرجى تحديد وقت البداية والنهاية.";
             return RedirectToPage(new { tab = "requests" });
         }
-        if (typeDef is { AttachmentRequired: true } && attachment is not { Length: > 0 })
+        // متطلبات المرفق والسبب تُحسم حصراً داخل CompanyLeavePolicyStore أدناه.
+        // هذا يحترم AttachmentRequiredOverride على مستوى الشركة ولا يخلق حارسين متعارضين.
+        TimeSpan? startTs = TimeSpan.TryParse(fromTime, out var stTs) ? stTs : null;
+        TimeSpan? endTs = TimeSpan.TryParse(toTime, out var etTs) ? etTs : null;
+
+        // تقاطع منتصف الليل يُحسم قبل بوابة البصمات حتى يشمل الحارس الخادمي اليوم التالي.
+        if (typeDef is { NeedsTime: true } && startTs.HasValue && endTs.HasValue && etTs <= stTs)
         {
-            StatusMessage = $"المرفق إلزامي لهذا النوع{(string.IsNullOrWhiteSpace(typeDef.AttachmentLabel) ? "" : $" ({typeDef.AttachmentLabel})")}.";
-            return RedirectToPage(new { tab = "requests" });
+            to = from.Value.AddDays(1);
         }
 
         // شرط حازم وجازم: يُمنع منعاً باتّاً تقديم أي طلب يحمل وقتاً إذا كان أحد أيامه
-        // يحمل «بصمة ناقصة» (نسيان بصمة) — يُحسب حياً من البصمات الخام (دخول بلا خروج)
-        // لا من جدول اليوميات المشتق، فيمسك حتى يوم اليوم الجاري الذي لم يُحلَّل بعد.
+        // يحمل «بصمة ناقصة» (نسيان بصمة) — ويشمل Cross Midnight بعد توسيع المدى أعلاه.
         if (typeDef is { NeedsTime: true })
         {
             var incompleteDay = await FindIncompletePunchDayAsync(
@@ -499,14 +608,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             }
         }
 
-        // تقاطع منتصف الليل للأنواع الزمنية (أوفرتايم/مغادرة متأخرة): النهاية في اليوم التالي.
-        if (typeDef is { NeedsTime: true } &&
-            TimeSpan.TryParse(fromTime, out var stTs) && TimeSpan.TryParse(toTime, out var etTs) &&
-            etTs <= stTs)
-        {
-            to = from.Value.AddDays(1);
-        }
-
         var days = (decimal)((to.Value.Date - from.Value.Date).Days + 1);
 
         if (typeDef?.AllowedDays is int maxDays && days > maxDays)
@@ -518,8 +619,6 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         // نفس محرك سياسة الشركة هو بوابة الحقيقة لكل أنواع الإجازات والمغادرات.
         // لا نستخدم LeaveBalanceCalculator القديم هنا لأنه لا يعرف الرصيد المشترك،
         // الساعات، التراكم، الحد السالب، مدة الاستحقاق أو المرفقات الخاصة بالشركة.
-        TimeSpan? startTs = TimeSpan.TryParse(fromTime, out var st) ? st : null;
-        TimeSpan? endTs = TimeSpan.TryParse(toTime, out var et) ? et : null;
         var policyValidation = await CompanyLeavePolicyStore.ValidateRequestAsync(
             _dbContext,
             employeeId,
@@ -703,10 +802,10 @@ ORDER BY AttendanceDate, CheckIn, CheckOut;
                 CheckOut = HrmsDatabase.GetDateTime(reader, "CheckOut")
             });
 
-        return rows
+        var byDate = rows
             .Where(row => row.Date.HasValue)
             .GroupBy(row => row.Date!.Value)
-            .Select(group =>
+            .ToDictionary(group => group.Key, group =>
             {
                 var times = new List<DateTime>();
                 foreach (var row in group)
@@ -715,10 +814,19 @@ ORDER BY AttendanceDate, CheckIn, CheckOut;
                     if (row.CheckOut.HasValue && row.CheckOut != row.CheckIn) times.Add(row.CheckOut.Value);
                 }
 
-                return new PunchDaySummary(group.Key, PunchTypingEngine.Derive(times.Distinct()));
-            })
-            .OrderBy(day => day.Date)
-            .ToList();
+                return (IReadOnlyList<PunchTypingEngine.TypedPunch>)PunchTypingEngine.Derive(times.Distinct());
+            });
+
+        var result = new List<PunchDaySummary>();
+        for (var date = from; date <= to; date = date.AddDays(1))
+        {
+            result.Add(new PunchDaySummary(
+                date,
+                byDate.TryGetValue(date, out var punches)
+                    ? punches
+                    : Array.Empty<PunchTypingEngine.TypedPunch>()));
+        }
+        return result;
     }
 
     /// <summary>
@@ -747,18 +855,52 @@ ORDER BY AttendanceDate, CheckIn, CheckOut;
         var summaries = await LoadPunchDaySummariesAsync(employeeId, f, t);
         var incomplete = summaries.FirstOrDefault(day => day.IsIncomplete);
         var day = incomplete?.Date.ToString("yyyy-MM-dd");
-        var punches = summaries.Select(summary => new
+        var punches = new List<object>();
+        foreach (var summary in summaries)
         {
-            date = summary.Date.ToString("yyyy-MM-dd"),
-            checkIns = summary.Punches
-                .Where(punch => punch.Type == "In")
-                .Select(punch => punch.At.ToString("HH:mm"))
-                .ToArray(),
-            checkOuts = summary.Punches
-                .Where(punch => punch.Type == "Out")
-                .Select(punch => punch.At.ToString("HH:mm"))
-                .ToArray()
-        }).ToArray();
+            var ordered = summary.Punches.OrderBy(punch => punch.At).ToArray();
+            var workday = await CompanyLeavePolicyStore.GetWorkdaySnapshotAsync(
+                _dbContext, employeeId, summary.Date);
+            var firstIn = ordered.FirstOrDefault(punch => punch.Type == "In");
+            var lastOut = ordered.LastOrDefault(punch => punch.Type == "Out");
+            decimal actualAttendanceMinutes = 0m;
+            for (var index = 0; index + 1 < ordered.Length; index += 2)
+            {
+                var duration = ordered[index + 1].At - ordered[index].At;
+                if (duration > TimeSpan.Zero)
+                    actualAttendanceMinutes += (decimal)duration.TotalMinutes;
+            }
+
+            punches.Add(new
+            {
+                date = summary.Date.ToString("yyyy-MM-dd"),
+                punchCount = ordered.Length,
+                firstIn = firstIn?.At.ToString("HH:mm"),
+                lastOut = lastOut?.At.ToString("HH:mm"),
+                shiftName = workday.ShiftName,
+                scheduledStart = workday.ScheduledStart,
+                scheduledEnd = workday.ScheduledEnd,
+                scheduledHours = workday.ScheduledHours,
+                dayKind = workday.DayKind,
+                isWorkingDay = workday.IsWorking,
+                actualAttendanceMinutes = Math.Round(actualAttendanceMinutes, 0, MidpointRounding.AwayFromZero),
+                missingPunch = summary.IsIncomplete,
+                punches = ordered.Select((punch, index) => new
+                {
+                    index = index + 1,
+                    at = punch.At.ToString("HH:mm"),
+                    type = punch.Type
+                }).ToArray(),
+                checkIns = ordered
+                    .Where(punch => punch.Type == "In")
+                    .Select(punch => punch.At.ToString("HH:mm"))
+                    .ToArray(),
+                checkOuts = ordered
+                    .Where(punch => punch.Type == "Out")
+                    .Select(punch => punch.At.ToString("HH:mm"))
+                    .ToArray()
+            });
+        }
 
         return new JsonResult(new
         {
@@ -990,10 +1132,14 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
             };
         }
 
+        // Tabs are switched client-side without a round-trip, so the full profile
+        // must be present even when the initial tab is Home.
+        FullProfile = await LoadFullProfileAsync(employeeId);
+
         Compensation = await LoadCompensationAsync(employeeId);
         Announcements = await LoadAnnouncementsAsync(Employee);
         Polls = await LoadPollsAsync(Employee);
-        Requests = await LoadRequestsAsync(employeeId);
+        Requests = await LoadRequestsAsync(employeeId, RequestId);
         // افتراضياً يُعرض الشهر الحالي (null = لم يُختَر بعد؛ "" = «أحدث السجلات» يدوياً).
         AttMonth ??= DateTime.Today.ToString("yyyy-MM");
         Attendance = await LoadAttendanceAsync(employeeId);
@@ -1403,6 +1549,244 @@ WHERE e.Id = @EmployeeId;
         return list.FirstOrDefault();
     }
 
+    private async Task<EmployeePortalFullProfile> LoadFullProfileAsync(int employeeId)
+    {
+        var profile = new EmployeePortalFullProfile();
+
+        var basics = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 1
+    ISNULL(FirstNameEn,'') AS FirstNameEn,
+    ISNULL(SecondNameEn,'') AS SecondNameEn,
+    ISNULL(ThirdNameEn,'') AS ThirdNameEn,
+    ISNULL(LastNameEn,'') AS LastNameEn,
+    ISNULL(PassportNo,'') AS PassportNo,
+    ISNULL(Gender,'') AS Gender,
+    ISNULL(MaritalStatus,'') AS MaritalStatus,
+    ISNULL(Country,'') AS Country,
+    ISNULL(Nationality,'') AS Nationality,
+    ISNULL(Religion,'') AS Religion,
+    ISNULL(MotherCountry,'') AS MotherCountry,
+    ISNULL(MotherCity,'') AS MotherCity,
+    ISNULL(PersonalEmail,'') AS PersonalEmail,
+    ISNULL(PhoneExtension,'') AS PhoneExtension,
+    JoiningDate,
+    ISNULL(WorkType,'') AS WorkType,
+    ISNULL(JobGrade,'') AS JobGrade,
+    ISNULL(ContractType,'') AS ContractType,
+    ContractEndDate,
+    ISNULL(EmploymentStatus,'') AS EmploymentStatus
+FROM Employees
+WHERE Id=@EmployeeId AND ISNULL(IsDeleted,0)=0;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalFullProfile
+            {
+                FirstNameEn = HrmsDatabase.GetString(reader, "FirstNameEn"),
+                SecondNameEn = HrmsDatabase.GetString(reader, "SecondNameEn"),
+                ThirdNameEn = HrmsDatabase.GetString(reader, "ThirdNameEn"),
+                LastNameEn = HrmsDatabase.GetString(reader, "LastNameEn"),
+                PassportNo = HrmsDatabase.GetString(reader, "PassportNo"),
+                Gender = HrmsDatabase.GetString(reader, "Gender"),
+                MaritalStatus = HrmsDatabase.GetString(reader, "MaritalStatus"),
+                Country = HrmsDatabase.GetString(reader, "Country"),
+                Nationality = HrmsDatabase.GetString(reader, "Nationality"),
+                Religion = HrmsDatabase.GetString(reader, "Religion"),
+                MotherCountry = HrmsDatabase.GetString(reader, "MotherCountry"),
+                MotherCity = HrmsDatabase.GetString(reader, "MotherCity"),
+                PersonalEmail = HrmsDatabase.GetString(reader, "PersonalEmail"),
+                PhoneExtension = HrmsDatabase.GetString(reader, "PhoneExtension"),
+                JoiningDate = HrmsDatabase.GetDateTime(reader, "JoiningDate"),
+                WorkType = HrmsDatabase.GetString(reader, "WorkType"),
+                JobGrade = HrmsDatabase.GetString(reader, "JobGrade"),
+                ContractType = HrmsDatabase.GetString(reader, "ContractType"),
+                ContractEndDate = HrmsDatabase.GetDateTime(reader, "ContractEndDate"),
+                EmploymentStatus = HrmsDatabase.GetString(reader, "EmploymentStatus")
+            });
+
+        profile = basics.FirstOrDefault() ?? profile;
+
+        profile.IdentityDocuments = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT DocumentType, ISNULL(DocumentNumber,'') AS DocumentNumber,
+       ISNULL(NationalNumber,'') AS NationalNumber,
+       ISNULL(FamilyNumber,'') AS FamilyNumber,
+       IssueDate, ExpiryDate,
+       ISNULL(IssuingAuthority,'') AS IssuingAuthority,
+       ISNULL(PlaceOfIssue,'') AS PlaceOfIssue,
+       ISNULL(VerificationStatus,'') AS VerificationStatus
+FROM EmployeeIdentityDocuments
+WHERE EmployeeId=@EmployeeId AND IsCurrent=1
+ORDER BY Id;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalIdentityDocument
+            {
+                DocumentType = HrmsDatabase.GetString(reader, "DocumentType"),
+                DocumentNumber = HrmsDatabase.GetString(reader, "DocumentNumber"),
+                NationalNumber = HrmsDatabase.GetString(reader, "NationalNumber"),
+                FamilyNumber = HrmsDatabase.GetString(reader, "FamilyNumber"),
+                IssueDate = HrmsDatabase.GetDateTime(reader, "IssueDate"),
+                ExpiryDate = HrmsDatabase.GetDateTime(reader, "ExpiryDate"),
+                IssuingAuthority = HrmsDatabase.GetString(reader, "IssuingAuthority"),
+                PlaceOfIssue = HrmsDatabase.GetString(reader, "PlaceOfIssue"),
+                VerificationStatus = HrmsDatabase.GetString(reader, "VerificationStatus")
+            });
+
+        profile.Documents = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT Id,DocumentType,FileName,StoredPath,ExpiryDate,
+       ISNULL(Notes,'') AS Notes,UploadedAt
+FROM EmployeeDocuments
+WHERE EmployeeId=@EmployeeId
+ORDER BY UploadedAt DESC,Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalDocument
+            {
+                Id = HrmsDatabase.GetInt(reader, "Id"),
+                DocumentType = HrmsDatabase.GetString(reader, "DocumentType"),
+                FileName = HrmsDatabase.GetString(reader, "FileName"),
+                StoredPath = HrmsDatabase.GetString(reader, "StoredPath"),
+                ExpiryDate = HrmsDatabase.GetDateTime(reader, "ExpiryDate"),
+                Notes = HrmsDatabase.GetString(reader, "Notes"),
+                UploadedAt = HrmsDatabase.GetDateTime(reader, "UploadedAt")
+            });
+
+        var financialRows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 1
+    ISNULL(Currency,'') AS Currency,
+    ISNULL(SalaryScale,'') AS SalaryScale,
+    ISNULL(BasicSalary,0) AS BasicSalary,
+    ISNULL(DailySalary,0) AS DailySalary,
+    ISNULL(HourlyRate,0) AS HourlyRate,
+    ISNULL(SocialSecurityType,'') AS SocialSecurityType,
+    ISNULL(SocialSecurityNo,'') AS SocialSecurityNo,
+    SocialSecurityJoinDate,
+    ISNULL(TaxFile,'') AS TaxFile,
+    ISNULL(TaxNo,'') AS TaxNo,
+    ISNULL(PaymentMethod,'') AS PaymentMethod,
+    ISNULL(BankName,'') AS BankName,
+    ISNULL(BankBranch,'') AS BankBranch,
+    ISNULL(UnitNo,'') AS UnitNo,
+    ISNULL(Iban,'') AS Iban,
+    ISNULL(CardNo,'') AS CardNo
+FROM EmployeeFinancialInfos
+WHERE EmployeeId=@EmployeeId AND ISNULL(IsDeleted,0)=0
+ORDER BY ISNULL(UpdatedAt,CreatedAt) DESC, Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalFinancialProfile
+            {
+                Currency = HrmsDatabase.GetString(reader, "Currency"),
+                SalaryScale = HrmsDatabase.GetString(reader, "SalaryScale"),
+                BasicSalary = GetDecimal(reader, "BasicSalary"),
+                DailySalary = GetDecimal(reader, "DailySalary"),
+                HourlyRate = GetDecimal(reader, "HourlyRate"),
+                SocialSecurityType = HrmsDatabase.GetString(reader, "SocialSecurityType"),
+                SocialSecurityNo = HrmsDatabase.GetString(reader, "SocialSecurityNo"),
+                SocialSecurityJoinDate = HrmsDatabase.GetDateTime(reader, "SocialSecurityJoinDate"),
+                TaxFile = HrmsDatabase.GetString(reader, "TaxFile"),
+                TaxNo = HrmsDatabase.GetString(reader, "TaxNo"),
+                PaymentMethod = HrmsDatabase.GetString(reader, "PaymentMethod"),
+                BankName = HrmsDatabase.GetString(reader, "BankName"),
+                BankBranch = HrmsDatabase.GetString(reader, "BankBranch"),
+                UnitNo = HrmsDatabase.GetString(reader, "UnitNo"),
+                Iban = HrmsDatabase.GetString(reader, "Iban"),
+                CardNo = HrmsDatabase.GetString(reader, "CardNo")
+            });
+        profile.Financial = financialRows.FirstOrDefault() ?? new();
+
+        var contractRows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 1 ISNULL(ContractNo,'') AS ContractNo,
+       ISNULL(ContractType,'') AS ContractType,
+       FromDate,ToDate,IsCurrent,ISNULL(Note,'') AS Note
+FROM EmployeeContracts
+WHERE EmployeeId=@EmployeeId AND ISNULL(IsDeleted,0)=0
+ORDER BY IsCurrent DESC, FromDate DESC, Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalContractProfile
+            {
+                ContractNo = HrmsDatabase.GetString(reader, "ContractNo"),
+                ContractType = HrmsDatabase.GetString(reader, "ContractType"),
+                FromDate = HrmsDatabase.GetDateTime(reader, "FromDate"),
+                ToDate = HrmsDatabase.GetDateTime(reader, "ToDate"),
+                IsCurrent = HrmsDatabase.GetBool(reader, "IsCurrent"),
+                Note = HrmsDatabase.GetString(reader, "Note")
+            });
+        profile.Contract = contractRows.FirstOrDefault() ?? new();
+
+        profile.Dependents = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT Relation,Name,ISNULL(NameOther,'') AS NameOther,BirthDate,
+       ISNULL(Gender,'') AS Gender,ISNULL(Nationality,'') AS Nationality,
+       IsEmergencyContact,IsDependent,ISNULL(MobilePhone,'') AS MobilePhone,
+       ISNULL(Note,'') AS Note
+FROM EmployeeDependents
+WHERE EmployeeId=@EmployeeId AND ISNULL(IsDeleted,0)=0
+ORDER BY Relation,Id;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalDependent
+            {
+                Relation = HrmsDatabase.GetInt(reader, "Relation"),
+                Name = HrmsDatabase.GetString(reader, "Name"),
+                NameOther = HrmsDatabase.GetString(reader, "NameOther"),
+                BirthDate = HrmsDatabase.GetDateTime(reader, "BirthDate"),
+                Gender = HrmsDatabase.GetString(reader, "Gender"),
+                Nationality = HrmsDatabase.GetString(reader, "Nationality"),
+                IsEmergencyContact = HrmsDatabase.GetBool(reader, "IsEmergencyContact"),
+                IsDependent = HrmsDatabase.GetBool(reader, "IsDependent"),
+                MobilePhone = HrmsDatabase.GetString(reader, "MobilePhone"),
+                Note = HrmsDatabase.GetString(reader, "Note")
+            });
+
+        profile.Records = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT RecordType,Title,ISNULL(Subtitle,'') AS Subtitle,
+       ISNULL(Country,'') AS Country,ISNULL(RefNo,'') AS RefNo,
+       FromDate,ToDate,Amount,IsCurrent,
+       ISNULL(Gpa,'') AS Gpa,
+       ISNULL(RefContactName,'') AS RefContactName,
+       ISNULL(RefContactPosition,'') AS RefContactPosition,
+       ISNULL(RefContactPhone,'') AS RefContactPhone,
+       ISNULL(Note,'') AS Note
+FROM EmployeeFileRecords
+WHERE EmployeeId=@EmployeeId AND ISNULL(IsDeleted,0)=0
+ORDER BY RecordType,FromDate DESC,Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new EmployeePortalProfileRecord
+            {
+                RecordType = HrmsDatabase.GetInt(reader, "RecordType"),
+                Title = HrmsDatabase.GetString(reader, "Title"),
+                Subtitle = HrmsDatabase.GetString(reader, "Subtitle"),
+                Country = HrmsDatabase.GetString(reader, "Country"),
+                RefNo = HrmsDatabase.GetString(reader, "RefNo"),
+                FromDate = HrmsDatabase.GetDateTime(reader, "FromDate"),
+                ToDate = HrmsDatabase.GetDateTime(reader, "ToDate"),
+                Amount = GetDecimal(reader, "Amount"),
+                IsCurrent = HrmsDatabase.GetBool(reader, "IsCurrent"),
+                Gpa = HrmsDatabase.GetString(reader, "Gpa"),
+                RefContactName = HrmsDatabase.GetString(reader, "RefContactName"),
+                RefContactPosition = HrmsDatabase.GetString(reader, "RefContactPosition"),
+                RefContactPhone = HrmsDatabase.GetString(reader, "RefContactPhone"),
+                Note = HrmsDatabase.GetString(reader, "Note")
+            });
+
+        return profile;
+    }
+
     private async Task<EmployeePortalCompensation> LoadCompensationAsync(int employeeId)
     {
         var list = await HrmsDatabase.QueryAsync(
@@ -1538,13 +1922,14 @@ ORDER BY DisplayOrder, Id;
             });
     }
 
-    private async Task<List<EmployeePortalRequest>> LoadRequestsAsync(int employeeId)
+    private async Task<List<EmployeePortalRequest>> LoadRequestsAsync(int employeeId, int? requestId = null)
     {
-        return await HrmsDatabase.QueryAsync(
+        var requests = await HrmsDatabase.QueryAsync(
             _dbContext,
             """
 SELECT TOP 15
     r.Id,
+    r.RequestTypeId,
     r.RequestType,
     r.CreatedAt,
     r.FromDate,
@@ -1554,7 +1939,9 @@ SELECT TOP 15
     punches.ActualCheckIn,
     punches.ActualCheckOut,
     ISNULL(r.Reason, '') AS Reason,
-    r.Status
+    r.Status,
+    ISNULL(r.CurrentStep, '') AS CurrentStep,
+    ISNULL(r.ReviewNote, '') AS ReviewNote
 FROM SelfServiceRequests r
 OUTER APPLY
 (
@@ -1571,12 +1958,20 @@ OUTER APPLY
       AND ar.AttendanceDate <= CAST(COALESCE(r.ToDate, r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
 ) punches
 WHERE r.EmployeeId = @EmployeeId
-ORDER BY r.CreatedAt DESC, r.Id DESC;
+ORDER BY
+    CASE WHEN @RequestId IS NOT NULL AND r.Id = @RequestId THEN 0 ELSE 1 END,
+    r.CreatedAt DESC,
+    r.Id DESC;
 """,
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@RequestId", requestId is > 0 ? requestId.Value : DBNull.Value);
+            },
             reader => new EmployeePortalRequest
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                RequestTypeId = HrmsDatabase.GetNullableInt(reader, "RequestTypeId"),
                 RequestType = HrmsDatabase.GetString(reader, "RequestType"),
                 CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt"),
                 FromDate = HrmsDatabase.GetDateTime(reader, "FromDate"),
@@ -1586,8 +1981,136 @@ ORDER BY r.CreatedAt DESC, r.Id DESC;
                 ActualCheckIn = HrmsDatabase.GetDateTime(reader, "ActualCheckIn"),
                 ActualCheckOut = HrmsDatabase.GetDateTime(reader, "ActualCheckOut"),
                 Reason = HrmsDatabase.GetString(reader, "Reason"),
-                Status = HrmsDatabase.GetString(reader, "Status")
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                CurrentStep = HrmsDatabase.GetString(reader, "CurrentStep"),
+                ReviewNote = HrmsDatabase.GetString(reader, "ReviewNote")
             });
+
+        var flows = await ApprovalWorkflowEngine.GetFlowsAsync(_dbContext, requests.Select(request => request.Id));
+        foreach (var request in requests)
+            if (flows.TryGetValue(request.Id, out var flow))
+                request.ApprovalFlow = flow;
+
+        await PopulateOvertimeIntelligenceAsync(employeeId, requests);
+        return requests;
+    }
+
+    private async Task PopulateOvertimeIntelligenceAsync(
+        int employeeId, List<EmployeePortalRequest> requests)
+    {
+        if (requests.Count == 0) return;
+
+        await RequestTypeStore.EnsureAsync(_dbContext);
+        var types = await RequestTypeStore.ListTypesAsync(_dbContext, onlyActive: false);
+        var byId = types.ToDictionary(type => type.Id);
+        var byName = types
+            .GroupBy(type => type.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var request in requests)
+        {
+            RequestTypeStore.ReqType? type = null;
+            if (request.RequestTypeId is > 0 && byId.TryGetValue(request.RequestTypeId.Value, out var byIdentity))
+                type = byIdentity;
+            else if (!string.IsNullOrWhiteSpace(request.RequestType))
+                byName.TryGetValue(request.RequestType, out type);
+
+            request.IsOvertime = type is not null
+                ? BulkRequestStore.ResolveEffect(type).Kind == BulkRequestStore.EffectKind.Overtime
+                : ApprovalWorkflowEngine.ResolveRequestTypeKey(request.RequestType) == "Overtime";
+        }
+
+        var overtime = requests.Where(request => request.IsOvertime).ToList();
+        if (overtime.Count == 0) return;
+
+        var allowCrossMidnight = await AttendanceRequestPolicy.GetCrossMidnightAsync(_dbContext);
+        var windows = new Dictionary<int, (DateTime Start, DateTime End)>();
+        foreach (var request in overtime)
+        {
+            if (!request.FromDate.HasValue || !request.StartTime.HasValue || !request.EndTime.HasValue)
+                continue;
+
+            var duration = AttendanceRequestPolicy.Duration(
+                request.StartTime.Value, request.EndTime.Value, allowCrossMidnight);
+            if (duration <= TimeSpan.Zero) continue;
+
+            var start = request.FromDate.Value.Date + request.StartTime.Value;
+            var end = start + duration;
+            windows[request.Id] = (start, end);
+            request.RequestedOvertimeHours = Math.Round((decimal)duration.TotalHours, 2);
+            request.ApprovedOvertimeHours = request.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                ? request.RequestedOvertimeHours
+                : 0m;
+            request.PayrollEligible = request.ApprovedOvertimeHours > 0m;
+        }
+
+        if (windows.Count > 0)
+        {
+            var minDate = DateOnly.FromDateTime(windows.Values.Min(window => window.Start));
+            var maxDate = DateOnly.FromDateTime(windows.Values.Max(window => window.End));
+            var attendance = await LoadPunchDaySummariesAsync(employeeId, minDate, maxDate);
+
+            foreach (var request in overtime)
+            {
+                if (!windows.TryGetValue(request.Id, out var window)) continue;
+                decimal actualMinutes = 0m;
+                foreach (var day in attendance)
+                {
+                    var punches = day.Punches.OrderBy(punch => punch.At).ToArray();
+                    for (var index = 0; index + 1 < punches.Length; index += 2)
+                    {
+                        var pairStart = punches[index].At;
+                        var pairEnd = punches[index + 1].At;
+                        if (pairEnd <= pairStart) continue;
+                        var overlapStart = pairStart > window.Start ? pairStart : window.Start;
+                        var overlapEnd = pairEnd < window.End ? pairEnd : window.End;
+                        if (overlapEnd > overlapStart)
+                            actualMinutes += (decimal)(overlapEnd - overlapStart).TotalMinutes;
+                    }
+                }
+                request.ActualAttendanceOvertimeHours =
+                    Math.Round(actualMinutes / 60m, 2, MidpointRounding.AwayFromZero);
+            }
+        }
+
+        await PayrollTransactionStore.EnsureAsync(_dbContext);
+        var posted = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT Source, Hours, RateFactor, Status, IsLocked
+FROM PayrollTransactions
+WHERE EmployeeId=@EmployeeId
+  AND TxType=N'Overtime'
+  AND Source LIKE N'Approval:%';
+""",
+            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
+            reader => new
+            {
+                Source = HrmsDatabase.GetString(reader, "Source"),
+                Hours = reader["Hours"] is decimal hours ? (decimal?)hours : null,
+                RateFactor = reader["RateFactor"] is decimal factor ? (decimal?)factor : null,
+                Status = HrmsDatabase.GetString(reader, "Status"),
+                IsLocked = HrmsDatabase.GetBool(reader, "IsLocked")
+            });
+
+        var postedByRequest = posted
+            .Select(row => new
+            {
+                Row = row,
+                RequestId = row.Source.StartsWith("Approval:", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(row.Source["Approval:".Length..], out var id) ? id : 0
+            })
+            .Where(item => item.RequestId > 0)
+            .GroupBy(item => item.RequestId)
+            .ToDictionary(group => group.Key, group => group.First().Row);
+
+        foreach (var request in overtime)
+        {
+            if (!postedByRequest.TryGetValue(request.Id, out var tx)) continue;
+            request.PayrollPosted = true;
+            request.PayrollStatus = tx.IsLocked ? "Locked" : tx.Status;
+            request.PayrollRateFactor = tx.RateFactor ?? PayrollTransactionStore.DefaultRateFactor;
+        }
     }
 
     private async Task<List<EmployeePortalAttendance>> LoadAttendanceAsync(int employeeId)
@@ -1769,6 +2292,27 @@ ORDER BY CreatedAt DESC, Id DESC;
         return string.IsNullOrWhiteSpace(status) ? "-" : status;
     }
 
+    public string ApprovalStepText(string status)
+    {
+        if (status.Equals("Current", StringComparison.OrdinalIgnoreCase)) return "المرحلة الحالية";
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase)) return "بانتظار المرحلة";
+        if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase)) return "تمت الموافقة";
+        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)) return "مرفوض";
+        if (status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "معاد للتعديل";
+        if (status.Equals("WaitingRevision", StringComparison.OrdinalIgnoreCase)) return "بانتظار تعديل الموظف";
+        if (status.Equals("Skipped", StringComparison.OrdinalIgnoreCase)) return "تم تجاوزها";
+        return string.IsNullOrWhiteSpace(status) ? "-" : status;
+    }
+
+    public string ApprovalStepClass(string status)
+    {
+        if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase)) return "done";
+        if (status.Equals("Current", StringComparison.OrdinalIgnoreCase)) return "current";
+        if (status.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || status.Equals("Returned", StringComparison.OrdinalIgnoreCase)) return "blocked";
+        if (status.Equals("WaitingRevision", StringComparison.OrdinalIgnoreCase)) return "revision";
+        return "waiting";
+    }
+
     public string FeedbackStatusText(string status)
     {
         if (status.Equals("Open", StringComparison.OrdinalIgnoreCase)) return "مفتوحة";
@@ -1862,6 +2406,142 @@ ORDER BY CreatedAt DESC, Id DESC;
         public string ManagerName { get; init; } = string.Empty;
     }
 
+    public class EmployeePortalFullProfile
+    {
+        public string FirstNameEn { get; set; } = string.Empty;
+        public string SecondNameEn { get; set; } = string.Empty;
+        public string ThirdNameEn { get; set; } = string.Empty;
+        public string LastNameEn { get; set; } = string.Empty;
+        public string PassportNo { get; set; } = string.Empty;
+        public string Gender { get; set; } = string.Empty;
+        public string MaritalStatus { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string Nationality { get; set; } = string.Empty;
+        public string Religion { get; set; } = string.Empty;
+        public string MotherCountry { get; set; } = string.Empty;
+        public string MotherCity { get; set; } = string.Empty;
+        public string PersonalEmail { get; set; } = string.Empty;
+        public string PhoneExtension { get; set; } = string.Empty;
+        public DateTime? JoiningDate { get; set; }
+        public string WorkType { get; set; } = string.Empty;
+        public string JobGrade { get; set; } = string.Empty;
+        public string ContractType { get; set; } = string.Empty;
+        public DateTime? ContractEndDate { get; set; }
+        public string EmploymentStatus { get; set; } = string.Empty;
+        public EmployeePortalFinancialProfile Financial { get; set; } = new();
+        public EmployeePortalContractProfile Contract { get; set; } = new();
+        public List<EmployeePortalIdentityDocument> IdentityDocuments { get; set; } = new();
+        public List<EmployeePortalDocument> Documents { get; set; } = new();
+        public List<EmployeePortalDependent> Dependents { get; set; } = new();
+        public List<EmployeePortalProfileRecord> Records { get; set; } = new();
+
+        public string FullNameEn => string.Join(" ", new[] { FirstNameEn, SecondNameEn, ThirdNameEn, LastNameEn }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    public class EmployeePortalIdentityDocument
+    {
+        public string DocumentType { get; set; } = string.Empty;
+        public string DocumentNumber { get; set; } = string.Empty;
+        public string NationalNumber { get; set; } = string.Empty;
+        public string FamilyNumber { get; set; } = string.Empty;
+        public DateTime? IssueDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+        public string IssuingAuthority { get; set; } = string.Empty;
+        public string PlaceOfIssue { get; set; } = string.Empty;
+        public string VerificationStatus { get; set; } = string.Empty;
+        public string TypeLabel => DocumentType.Equals("NationalId", StringComparison.OrdinalIgnoreCase)
+            ? "البطاقة الوطنية"
+            : DocumentType.Equals("Passport", StringComparison.OrdinalIgnoreCase) ? "جواز السفر" : DocumentType;
+    }
+
+    public class EmployeePortalDocument
+    {
+        public int Id { get; set; }
+        public string DocumentType { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string StoredPath { get; set; } = string.Empty;
+        public DateTime? ExpiryDate { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public DateTime? UploadedAt { get; set; }
+    }
+
+    public class EmployeePortalFinancialProfile
+    {
+        public string Currency { get; set; } = string.Empty;
+        public string SalaryScale { get; set; } = string.Empty;
+        public decimal BasicSalary { get; set; }
+        public decimal DailySalary { get; set; }
+        public decimal HourlyRate { get; set; }
+        public string SocialSecurityType { get; set; } = string.Empty;
+        public string SocialSecurityNo { get; set; } = string.Empty;
+        public DateTime? SocialSecurityJoinDate { get; set; }
+        public string TaxFile { get; set; } = string.Empty;
+        public string TaxNo { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string BankName { get; set; } = string.Empty;
+        public string BankBranch { get; set; } = string.Empty;
+        public string UnitNo { get; set; } = string.Empty;
+        public string Iban { get; set; } = string.Empty;
+        public string CardNo { get; set; } = string.Empty;
+    }
+
+    public class EmployeePortalContractProfile
+    {
+        public string ContractNo { get; set; } = string.Empty;
+        public string ContractType { get; set; } = string.Empty;
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public bool IsCurrent { get; set; }
+        public string Note { get; set; } = string.Empty;
+    }
+
+    public class EmployeePortalDependent
+    {
+        public int Relation { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string NameOther { get; set; } = string.Empty;
+        public DateTime? BirthDate { get; set; }
+        public string Gender { get; set; } = string.Empty;
+        public string Nationality { get; set; } = string.Empty;
+        public bool IsEmergencyContact { get; set; }
+        public bool IsDependent { get; set; }
+        public string MobilePhone { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
+        public string RelationLabel => Relation switch
+        {
+            1 => "الزوج/الزوجة",
+            2 => "ابن",
+            3 => "ابنة",
+            _ => "قريب"
+        };
+    }
+
+    public class EmployeePortalProfileRecord
+    {
+        public int RecordType { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Subtitle { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string RefNo { get; set; } = string.Empty;
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public decimal Amount { get; set; }
+        public bool IsCurrent { get; set; }
+        public string Gpa { get; set; } = string.Empty;
+        public string RefContactName { get; set; } = string.Empty;
+        public string RefContactPosition { get; set; } = string.Empty;
+        public string RefContactPhone { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
+        public string TypeLabel => RecordType switch
+        {
+            1 => "التعليم", 2 => "الخبرة", 3 => "الشهادات", 4 => "الدورات",
+            5 => "الطبي", 6 => "العهد", 7 => "العنوان", 8 => "جهة الطوارئ",
+            9 => "الإقامة", 10 => "المهارات", 11 => "اللغات", 12 => "الملخص المهني",
+            _ => "سجل"
+        };
+    }
+
     public class EmployeePortalCompensation
     {
         public decimal BasicSalary { get; set; }
@@ -1911,6 +2591,7 @@ ORDER BY CreatedAt DESC, Id DESC;
     public class EmployeePortalRequest
     {
         public int Id { get; set; }
+        public int? RequestTypeId { get; set; }
         public string RequestType { get; set; } = string.Empty;
         public DateTime? CreatedAt { get; set; }
         public DateTime? FromDate { get; set; }
@@ -1921,6 +2602,17 @@ ORDER BY CreatedAt DESC, Id DESC;
         public DateTime? ActualCheckOut { get; set; }
         public string Reason { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string CurrentStep { get; set; } = string.Empty;
+        public string ReviewNote { get; set; } = string.Empty;
+        public ApprovalWorkflowEngine.FlowState? ApprovalFlow { get; set; }
+        public bool IsOvertime { get; set; }
+        public decimal RequestedOvertimeHours { get; set; }
+        public decimal ActualAttendanceOvertimeHours { get; set; }
+        public decimal ApprovedOvertimeHours { get; set; }
+        public bool PayrollEligible { get; set; }
+        public bool PayrollPosted { get; set; }
+        public string PayrollStatus { get; set; } = string.Empty;
+        public decimal? PayrollRateFactor { get; set; }
     }
 
     public class EmployeePortalAttendance

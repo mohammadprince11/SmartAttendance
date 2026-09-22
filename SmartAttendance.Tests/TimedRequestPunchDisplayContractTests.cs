@@ -48,14 +48,16 @@ public sealed class TimedRequestPunchDisplayContractTests
 
         Assert.Contains("LoadPunchDaySummariesAsync", model, StringComparison.Ordinal);
         Assert.Contains("PunchTypingEngine.Derive", model, StringComparison.Ordinal);
-        Assert.Contains("checkIns = summary.Punches", model, StringComparison.Ordinal);
-        Assert.Contains("checkOuts = summary.Punches", model, StringComparison.Ordinal);
+        Assert.Contains("var ordered = summary.Punches.OrderBy", model, StringComparison.Ordinal);
+        Assert.Contains("checkIns = ordered", model, StringComparison.Ordinal);
+        Assert.Contains("checkOuts = ordered", model, StringComparison.Ordinal);
         Assert.Contains("aria-live=\"polite\"", page, StringComparison.Ordinal);
         Assert.Contains("اختر تاريخ الطلب حتى تظهر بصمة الدخول أو الخروج أو كلاهما", script, StringComparison.Ordinal);
         Assert.Contains("جاري تحميل البصمات المسجلة", script, StringComparison.Ordinal);
-        Assert.Contains("البصمات المسجلة ضمن تاريخ الطلب", script, StringComparison.Ordinal);
-        Assert.Contains("ins.join", script, StringComparison.Ordinal);
-        Assert.Contains("outs.join", script, StringComparison.Ordinal);
+        Assert.Contains("الحضور المرتبط بالطلب", script, StringComparison.Ordinal);
+        Assert.Contains("const rawPunches = Array.isArray(day.punches)", script, StringComparison.Ordinal);
+        Assert.Contains("rawPunches.forEach", script, StringComparison.Ordinal);
+        Assert.Contains("label.textContent = 'Punch '", script, StringComparison.Ordinal);
         Assert.Contains("cache: 'no-store'", script, StringComparison.Ordinal);
         Assert.Contains("credentials: 'same-origin'", script, StringComparison.Ordinal);
         Assert.Contains("block.hidden = false", script, StringComparison.Ordinal);

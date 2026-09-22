@@ -310,8 +310,10 @@
                           RowSpacing="7"
                           ColumnSpacing="7">
                         <Button Grid.Row="0" Grid.Column="0"
-                                Text="＋&#10;طلب جديد"
-                                Clicked="OnRequestsTab"
+                                Text="طلب جديد"
+                                ImageSource="ic_add.png"
+                                ContentLayout="Top,5"
+                                Clicked="OnRequestFabClicked"
                                 Background="{StaticResource NxPrimaryBrush}"
                                 BorderColor="#42DCE5"
                                 BorderWidth="1"
@@ -321,36 +323,50 @@
                                 CornerRadius="14"
                                 HeightRequest="74" />
                         <Button Grid.Row="0" Grid.Column="1"
-                                Text="☷&#10;طلباتي"
+                                Text="طلباتي"
+                                ImageSource="ic_requests.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnRequestsTab"
                                 Style="{StaticResource NxQuickButton}" />
                         <Button Grid.Row="0" Grid.Column="2"
-                                Text="▣&#10;الحضور"
+                                Text="الحضور"
+                                ImageSource="ic_attendance.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnAttendanceTab"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#8EF2C8" />
                         <Button Grid.Row="0" Grid.Column="3"
-                                Text="◷&#10;بصمة"
+                                Text="بصمة"
+                                ImageSource="ic_fingerprint.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnAttendanceTab"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#FFD27F" />
                         <Button Grid.Row="1" Grid.Column="0"
-                                Text="⌁&#10;الاستبيانات"
+                                Text="الاستبيانات"
+                                ImageSource="ic_survey.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnFeatureComingSoon"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#C9A3FF" />
                         <Button Grid.Row="1" Grid.Column="1"
-                                Text="▢&#10;الشكاوي"
+                                Text="الشكاوي"
+                                ImageSource="ic_complaint.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnFeatureComingSoon"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#FF9FB2" />
                         <Button Grid.Row="1" Grid.Column="2"
-                                Text="◎&#10;ملفي"
+                                Text="ملفي"
+                                ImageSource="ic_profile.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnProfileTab"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#19D3E0" />
                         <Button Grid.Row="1" Grid.Column="3"
-                                Text="◇&#10;التقييم"
+                                Text="التقييم"
+                                ImageSource="ic_evaluation.png"
+                                ContentLayout="Top,5"
                                 Clicked="OnFeatureComingSoon"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#FFC47F" />
@@ -892,7 +908,9 @@
                                Style="{StaticResource ZyBody}" />
                     </VerticalStackLayout>
 
-                    <Border Style="{StaticResource ZyCardStrong}">
+                    <Border x:Name="LegacyRequestCreateCard"
+                            IsVisible="False"
+                            Style="{StaticResource ZyCardStrong}">
                         <VerticalStackLayout Spacing="12">
                             <Grid ColumnDefinitions="*,Auto">
                                 <VerticalStackLayout Spacing="3">
@@ -913,13 +931,20 @@
                             </Grid>
 
                             <Label Text="نوع الطلب" Style="{StaticResource ZyCaption}" />
+                            <Button x:Name="SelectedRequestTypeButton"
+                                    Text="اختر نوع الطلب"
+                                    ImageSource="ic_requests.png"
+                                    ContentLayout="Right,8"
+                                    Clicked="OnOpenRequestTypeChooser"
+                                    Style="{StaticResource ZySecondaryButton}"
+                                    HeightRequest="52"
+                                    FontSize="12" />
+                            <Label x:Name="SelectedRequestTypeCategoryLabel"
+                                   Text="اضغط لاختيار القسم ونوع الطلب"
+                                   Style="{StaticResource ZyCaption}" />
                             <Picker x:Name="RequestTypePicker"
-                                    Title="اختر نوع الطلب"
-                                    SelectedIndexChanged="OnRequestTypeChanged"
-                                    BackgroundColor="{StaticResource ZyBgSoft}"
-                                    TextColor="{StaticResource ZyText}"
-                                    TitleColor="{StaticResource ZyMuted}"
-                                    HeightRequest="50" />
+                                    IsVisible="False"
+                                    SelectedIndexChanged="OnRequestTypeChanged" />
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                 <VerticalStackLayout Spacing="5">
@@ -1194,28 +1219,38 @@
             <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="2">
                 <Button x:Name="HomeTabButton"
                         Grid.Column="0"
-                        Text="⌂&#10;الرئيسية"
+                        Text="الرئيسية"
+                        ImageSource="ic_home.png"
+                        ContentLayout="Top,3"
                         Clicked="OnHomeTab"
                         Style="{StaticResource NxBottomButton}"
                         TextColor="#19D3E0" />
                 <Button x:Name="AttendanceTabButton"
                         Grid.Column="1"
-                        Text="▣&#10;الحضور"
+                        Text="الحضور"
+                        ImageSource="ic_attendance.png"
+                        ContentLayout="Top,3"
                         Clicked="OnAttendanceTab"
                         Style="{StaticResource NxBottomButton}" />
                 <Button x:Name="RequestsTabButton"
                         Grid.Column="2"
-                        Text="▱&#10;طلباتي"
+                        Text="طلباتي"
+                        ImageSource="ic_requests.png"
+                        ContentLayout="Top,3"
                         Clicked="OnRequestsTab"
                         Style="{StaticResource NxBottomButton}" />
                 <Button x:Name="CompensationTabButton"
                         Grid.Column="3"
-                        Text="▤&#10;الراتب"
+                        Text="الراتب"
+                        ImageSource="ic_wallet.png"
+                        ContentLayout="Top,3"
                         Clicked="OnCompensationTab"
                         Style="{StaticResource NxBottomButton}" />
                 <Button x:Name="ProfileTabButton"
                         Grid.Column="4"
-                        Text="▦&#10;المزيد"
+                        Text="المزيد"
+                        ImageSource="ic_more.png"
+                        ContentLayout="Top,3"
                         Clicked="OnMoreTab"
                         Style="{StaticResource NxBottomButton}" />
             </Grid>
@@ -1225,7 +1260,7 @@
                 Grid.RowSpan="2"
                 IsVisible="False"
                 Text="+"
-                Clicked="OnRequestsTab"
+                Clicked="OnRequestFabClicked"
                 WidthRequest="56"
                 HeightRequest="56"
                 CornerRadius="28"
@@ -1237,6 +1272,465 @@
                 HorizontalOptions="Start"
                 VerticalOptions="End"
                 Margin="18,0,0,82" />
+
+        <Grid x:Name="RequestSheetOverlay"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              BackgroundColor="#8C020810"
+              ZIndex="44">
+            <BoxView BackgroundColor="Transparent">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCloseRequestSheetTapped" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+
+            <Border VerticalOptions="End"
+                    BackgroundColor="#0A1A2E"
+                    Stroke="#263E55"
+                    StrokeShape="RoundRectangle 22,22,0,0"
+                    Padding="16,10,16,22">
+                <VerticalStackLayout Spacing="12">
+                    <BoxView WidthRequest="42"
+                             HeightRequest="4"
+                             CornerRadius="2"
+                             BackgroundColor="#596F84"
+                             HorizontalOptions="Center" />
+
+                    <Label Text="طلب جديد"
+                           TextColor="#E6F0FA"
+                           FontSize="17"
+                           FontAttributes="Bold" />
+
+                    <Grid RowDefinitions="Auto,Auto,Auto"
+                          ColumnDefinitions="*,*"
+                          RowSpacing="10"
+                          ColumnSpacing="10">
+                        <Button Grid.Row="0"
+                                Grid.Column="0"
+                                Text="إجازة"
+                                ImageSource="ic_leave.png"
+                                ContentLayout="Right,10"
+                                Clicked="OnOpenLeaveRequestSheet"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="58"
+                                FontSize="12.5" />
+                        <Button Grid.Row="0"
+                                Grid.Column="1"
+                                Text="نسيان بصمة"
+                                ImageSource="ic_missingpunch.png"
+                                ContentLayout="Right,10"
+                                Clicked="OnOpenMissingPunchFromSheet"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="58"
+                                FontSize="12.5" />
+                        <Button Grid.Row="1"
+                                Grid.Column="0"
+                                Text="تعديل بياناتي"
+                                ImageSource="ic_datachange.png"
+                                ContentLayout="Right,10"
+                                Clicked="OnOpenDataChangeFromSheet"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="58"
+                                FontSize="12.5" />
+                        <Button Grid.Row="1"
+                                Grid.Column="1"
+                                Text="طلب مالي"
+                                ImageSource="ic_financial.png"
+                                ContentLayout="Right,10"
+                                Clicked="OnOpenFinancialFromSheet"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="58"
+                                FontSize="12.5" />
+                        <Button Grid.Row="2"
+                                Grid.Column="0"
+                                Text="طلب مناوبة"
+                                ImageSource="ic_shift.png"
+                                ContentLayout="Right,10"
+                                Clicked="OnOpenShiftFromSheet"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="58"
+                                FontSize="12.5" />
+                        <Button x:Name="RequestSheetOvertimeButton"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                IsVisible="False"
+                                Text="عمل إضافي"
+                                ImageSource="ic_overtime.png"
+                                ContentLayout="Right,10"
+                                Clicked="OnOpenOvertimeFromRequestSheet"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="58"
+                                FontSize="12.5" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="RequestTypeOverlay"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              BackgroundColor="#B3020810"
+              ZIndex="45">
+            <BoxView BackgroundColor="Transparent">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCloseRequestTypeChooserTapped" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+
+            <Border VerticalOptions="Fill"
+                    Margin="0,72,0,0"
+                    BackgroundColor="#0A1A2E"
+                    Stroke="#263E55"
+                    StrokeShape="RoundRectangle 22,22,0,0"
+                    Padding="0">
+                <Grid RowDefinitions="Auto,Auto,*">
+                    <Grid Padding="18,16,18,12"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10">
+                        <Label Text="طلب إجازة"
+                               TextColor="#E6F0FA"
+                               FontSize="17"
+                               FontAttributes="Bold"
+                               VerticalTextAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                Clicked="OnCloseRequestTypeChooser"
+                                BackgroundColor="#0F2235"
+                                BorderColor="#365069"
+                                BorderWidth="1"
+                                TextColor="#CFE0F0"
+                                FontSize="15"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                CornerRadius="18"
+                                Padding="0" />
+                    </Grid>
+
+                    <Grid Grid.Row="1"
+                          Padding="14,12"
+                          ColumnDefinitions="*,*,*"
+                          ColumnSpacing="6"
+                          BackgroundColor="#081727">
+                        <Button x:Name="LeaveCategoryButton"
+                                Grid.Column="0"
+                                Text="الإجازات"
+                                CommandParameter="الإجازات"
+                                Clicked="OnRequestCategoryClicked"
+                                Style="{StaticResource ZySecondaryButton}"
+                                FontSize="12.5"
+                                HeightRequest="40" />
+                        <Button x:Name="CasualCategoryButton"
+                                Grid.Column="1"
+                                Text="العرضية"
+                                CommandParameter="العرضية"
+                                Clicked="OnRequestCategoryClicked"
+                                Style="{StaticResource ZySecondaryButton}"
+                                FontSize="12.5"
+                                HeightRequest="40" />
+                        <Button x:Name="DepartureCategoryButton"
+                                Grid.Column="2"
+                                Text="المغادرات"
+                                CommandParameter="المغادرات"
+                                Clicked="OnRequestCategoryClicked"
+                                Style="{StaticResource ZySecondaryButton}"
+                                FontSize="12.5"
+                                HeightRequest="40" />
+                    </Grid>
+
+                    <ScrollView Grid.Row="2">
+                        <VerticalStackLayout Padding="18,16,18,40"
+                                             Spacing="14">
+                            <Button x:Name="OvertimeChoiceButton"
+                                    IsVisible="False"
+                                    Text="عمل إضافي"
+                                    Clicked="OnOvertimeRequestChoice" />
+
+                            <Label Text="نوع الطلب"
+                                   TextColor="#CFE0F0"
+                                   FontSize="12.5"
+                                   FontAttributes="Bold" />
+
+                            <Button x:Name="ModalSelectedTypeButton"
+                                    Text="اختر النوع"
+                                    Clicked="OnToggleRequestTypeDropdown"
+                                    BackgroundColor="#06101D"
+                                    BorderColor="#365069"
+                                    BorderWidth="1"
+                                    TextColor="#E6F0FA"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    CornerRadius="12"
+                                    HeightRequest="48"
+                                    Padding="12,8" />
+
+                            <Border x:Name="RequestTypeDropdownPanel"
+                                    IsVisible="False"
+                                    BackgroundColor="#0A1A2E"
+                                    Stroke="#2C6A72"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="6">
+                                <CollectionView x:Name="RequestTypeChoicesList"
+                                                SelectionMode="None"
+                                                HeightRequest="220">
+                                    <CollectionView.EmptyView>
+                                        <Label Text="لا توجد أنواع طلبات ضمن هذا القسم."
+                                               TextColor="#7F95AB"
+                                               FontSize="11"
+                                               HorizontalTextAlignment="Center"
+                                               Margin="0,22" />
+                                    </CollectionView.EmptyView>
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Text="{Binding Name}"
+                                                    CommandParameter="{Binding .}"
+                                                    Clicked="OnRequestTypeChoiceClicked"
+                                                    BackgroundColor="Transparent"
+                                                    TextColor="#E6F0FA"
+                                                    FontSize="13"
+                                                    FontAttributes="Bold"
+                                                    CornerRadius="10"
+                                                    HeightRequest="48"
+                                                    Margin="0,0,0,4" />
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </Border>
+
+                            <Label Text="التاريخ"
+                                   TextColor="#CFE0F0"
+                                   FontSize="12.5"
+                                   FontAttributes="Bold" />
+
+                            <Button x:Name="ModalDateTriggerButton"
+                                    Text="اختر التاريخ"
+                                    ImageSource="ic_calendar_cyan.png"
+                                    ContentLayout="Right,10"
+                                    Clicked="OnOpenModalDateRange"
+                                    BackgroundColor="#06101D"
+                                    BorderColor="#365069"
+                                    BorderWidth="1"
+                                    TextColor="#CFE0F0"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    CornerRadius="12"
+                                    HeightRequest="48" />
+
+                            <Border x:Name="ModalDateRangePanel"
+                                    IsVisible="False"
+                                    BackgroundColor="#071526"
+                                    Stroke="#20384F"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12">
+                                <VerticalStackLayout Spacing="10">
+                                    <Grid ColumnDefinitions="*,*"
+                                          ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="5">
+                                            <Label Text="من تاريخ"
+                                                   TextColor="#9FB3C7"
+                                                   FontSize="11" />
+                                            <DatePicker x:Name="ModalFromDatePicker"
+                                                        DateSelected="OnModalDateChanged"
+                                                        BackgroundColor="#06101D"
+                                                        TextColor="#E6F0FA"
+                                                        Format="yyyy-MM-dd" />
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Spacing="5">
+                                            <Label Text="إلى تاريخ"
+                                                   TextColor="#9FB3C7"
+                                                   FontSize="11" />
+                                            <DatePicker x:Name="ModalToDatePicker"
+                                                        DateSelected="OnModalDateChanged"
+                                                        BackgroundColor="#06101D"
+                                                        TextColor="#E6F0FA"
+                                                        Format="yyyy-MM-dd" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                    <Button Text="تطبيق"
+                                            Clicked="OnApplyModalDateRange"
+                                            Background="{StaticResource NxPrimaryBrush}"
+                                            TextColor="#041018"
+                                            FontAttributes="Bold"
+                                            CornerRadius="12"
+                                            HeightRequest="44" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border BackgroundColor="#102B34"
+                                    Stroke="#27555D"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="12,10">
+                                <Label x:Name="ModalDayCountLabel"
+                                       Text="عدد الأيام: —"
+                                       TextColor="#CFE0F0"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <Label x:Name="ModalCrossNote"
+                                   IsVisible="False"
+                                   Text="⚠ الحركة عبر يومين — تبدأ في التاريخ المحدد وتنتهي في اليوم التالي."
+                                   TextColor="#FFD27F"
+                                   FontSize="11"
+                                   LineBreakMode="WordWrap" />
+
+                            <Border x:Name="ModalPunchBlock"
+                                    IsVisible="False"
+                                    BackgroundColor="#10202E"
+                                    Stroke="#294158"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="12">
+                                <Label x:Name="ModalPunchLabel"
+                                       Text="جاري تحميل بصمات اليوم..."
+                                       TextColor="#CFE0F0"
+                                       FontSize="11" />
+                            </Border>
+
+                            <Grid x:Name="ModalTimeFields"
+                                  IsVisible="False"
+                                  ColumnDefinitions="*,*"
+                                  ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="5">
+                                    <Label Text="من الساعة"
+                                           TextColor="#CFE0F0"
+                                           FontSize="12.5"
+                                           FontAttributes="Bold" />
+                                    <TimePicker x:Name="ModalStartTimePicker"
+                                                PropertyChanged="OnModalTimeChanged"
+                                                BackgroundColor="#06101D"
+                                                TextColor="#E6F0FA"
+                                                Format="HH:mm" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1"
+                                                     Spacing="5">
+                                    <Label Text="إلى الساعة"
+                                           TextColor="#CFE0F0"
+                                           FontSize="12.5"
+                                           FontAttributes="Bold" />
+                                    <TimePicker x:Name="ModalEndTimePicker"
+                                                PropertyChanged="OnModalTimeChanged"
+                                                BackgroundColor="#06101D"
+                                                TextColor="#E6F0FA"
+                                                Format="HH:mm" />
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <Border x:Name="ModalDurationPanel"
+                                    IsVisible="False"
+                                    BackgroundColor="#102B34"
+                                    Stroke="#27555D"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="12">
+                                <Label x:Name="ModalDurationLabel"
+                                       Text="المدة المطلوبة: —"
+                                       TextColor="#CFE0F0"
+                                       FontSize="12.5"
+                                       FontAttributes="Bold" />
+                            </Border>
+
+                            <Label Text="السبب (اختياري)"
+                                   TextColor="#CFE0F0"
+                                   FontSize="12.5"
+                                   FontAttributes="Bold" />
+                            <Editor x:Name="ModalRequestReasonEditor"
+                                    Placeholder="اكتب السبب"
+                                    AutoSize="TextChanges"
+                                    HeightRequest="76"
+                                    BackgroundColor="#06101D"
+                                    TextColor="#E6F0FA"
+                                    PlaceholderColor="#7F95AB" />
+
+                            <Label Text="إرفاق صورة"
+                                   TextColor="#CFE0F0"
+                                   FontSize="12.5"
+                                   FontAttributes="Bold" />
+                            <Button Text="اختيار مرفق"
+                                    Clicked="OnPickModalRequestAttachment"
+                                    Style="{StaticResource ZySecondaryButton}"
+                                    HeightRequest="44"
+                                    FontSize="11" />
+                            <Label x:Name="ModalAttachmentHint"
+                                   Text="المرفق اختياري"
+                                   TextColor="#7F95AB"
+                                   FontSize="10.5" />
+                            <Label x:Name="ModalAttachmentName"
+                                   Text="لم يتم اختيار ملف"
+                                   TextColor="#9FB3C7"
+                                   FontSize="10.5"
+                                   LineBreakMode="TailTruncation" />
+
+                            <Button Text="إرسال الطلب"
+                                    Clicked="OnSubmitModalRequest"
+                                    Background="{StaticResource NxPrimaryBrush}"
+                                    TextColor="#041018"
+                                    FontAttributes="Bold"
+                                    FontSize="15"
+                                    CornerRadius="14"
+                                    HeightRequest="52" />
+
+                            <Label x:Name="ModalRequestStatusLabel"
+                                   TextColor="#9FB3C7"
+                                   FontSize="11"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="ServiceRequestOverlay"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              BackgroundColor="#A6020810"
+              ZIndex="48">
+            <BoxView BackgroundColor="Transparent" />
+
+            <Border VerticalOptions="Fill"
+                    Margin="0,72,0,0"
+                    BackgroundColor="#0A1A2E"
+                    Stroke="#263E55"
+                    StrokeShape="RoundRectangle 22,22,0,0"
+                    Padding="0">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid Padding="18,15,18,12"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10"
+                          BackgroundColor="#0C2035">
+                        <VerticalStackLayout Spacing="2">
+                            <Label x:Name="ServiceRequestTitle"
+                                   Text="طلب"
+                                   TextColor="#E6F0FA"
+                                   FontSize="17"
+                                   FontAttributes="Bold" />
+                            <Label x:Name="ServiceRequestSubtitle"
+                                   Text=""
+                                   TextColor="#8FA6BA"
+                                   FontSize="10.5"
+                                   LineBreakMode="WordWrap" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                Clicked="OnCloseServiceRequest"
+                                BackgroundColor="#0F2235"
+                                BorderColor="#365069"
+                                BorderWidth="1"
+                                TextColor="#CFE0F0"
+                                FontSize="15"
+                                WidthRequest="36"
+                                HeightRequest="36"
+                                CornerRadius="18"
+                                Padding="0" />
+                    </Grid>
+
+                    <ScrollView Grid.Row="1">
+                        <VerticalStackLayout x:Name="ServiceRequestHost"
+                                             Padding="18,16,18,42"
+                                             Spacing="12" />
+                    </ScrollView>
+                </Grid>
+            </Border>
+        </Grid>
 
         <Grid x:Name="MoreOverlay"
               Grid.RowSpan="2"
@@ -1271,28 +1765,36 @@
                           ColumnSpacing="10">
                         <Button Grid.Row="0"
                                 Grid.Column="0"
-                                Text="◎  ملفي الشخصي"
+                                Text="ملفي الشخصي"
+                                ImageSource="ic_profile.png"
+                                ContentLayout="Right,7"
                                 Clicked="OnProfileFromMore"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"
                                 FontSize="11" />
                         <Button Grid.Row="0"
                                 Grid.Column="1"
-                                Text="⌁  الاستبيانات"
+                                Text="الاستبيانات"
+                                ImageSource="ic_survey.png"
+                                ContentLayout="Right,7"
                                 Clicked="OnFeatureComingSoon"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"
                                 FontSize="11" />
                         <Button Grid.Row="1"
                                 Grid.Column="0"
-                                Text="▢  الشكاوي والمقترحات"
+                                Text="الشكاوي والمقترحات"
+                                ImageSource="ic_complaint.png"
+                                ContentLayout="Right,7"
                                 Clicked="OnFeatureComingSoon"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"
                                 FontSize="11" />
                         <Button Grid.Row="1"
                                 Grid.Column="1"
-                                Text="◇  التقييم والانضباط"
+                                Text="التقييم والانضباط"
+                                ImageSource="ic_evaluation.png"
+                                ContentLayout="Right,7"
                                 Clicked="OnFeatureComingSoon"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"

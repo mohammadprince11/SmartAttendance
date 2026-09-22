@@ -113,9 +113,20 @@
                             {
                                 var unitLabel = b.Unit == "Hours" ? "ساعة" : "يوم";
                                 <div class="nxex-balance-item">
-                                    <strong>@b.Remaining.ToString("0.#")</strong>
-                                    <span>@b.RequestTypeName</span>
-                                    <small>من @b.Entitlement.ToString("0.#") @unitLabel</small>
+                                    <div class="nxex-balance-summary">
+                                        <strong>@b.Remaining.ToString("0.#")</strong>
+                                        <span>@b.RequestTypeName</span>
+                                        <small>متاح من @b.Entitlement.ToString("0.#") @unitLabel</small>
+                                    </div>
+                                    <details class="nxex-balance-breakdown">
+                                        <summary>تفاصيل الرصيد</summary>
+                                        <div class="nxex-balance-breakdown-grid">
+                                            <div><span>الاستحقاق</span><strong>@b.Entitlement.ToString("0.#")</strong><small>@unitLabel</small></div>
+                                            <div><span>المعتمد</span><strong>@b.Approved.ToString("0.#")</strong><small>@unitLabel</small></div>
+                                            <div class="pending"><span>قيد الاعتماد</span><strong>@b.PendingReserved.ToString("0.#")</strong><small>@unitLabel</small></div>
+                                            <div class="remaining"><span>المتاح</span><strong>@b.Remaining.ToString("0.#")</strong><small>@unitLabel</small></div>
+                                        </div>
+                                    </details>
                                 </div>
                             }
                         }
@@ -261,6 +272,304 @@
                         <div><span>البريد</span><strong>@Model.DisplayValue(emp.Email)</strong></div>
                     </div>
                 </section>
+            </div>
+
+            @{
+                var fp = Model.FullProfile;
+                var educationExperience = fp.Records.Where(r => r.RecordType is 1 or 2).ToList();
+                var certificatesTraining = fp.Records.Where(r => r.RecordType is 3 or 4).ToList();
+                var skillsLanguages = fp.Records.Where(r => r.RecordType is 10 or 11 or 12).ToList();
+                var otherRecords = fp.Records.Where(r => r.RecordType is 5 or 6 or 7 or 8 or 9).ToList();
+            }
+
+            <div class="nxex-profile-sections">
+                <details class="nxex-profile-section" open>
+                    <summary>
+                        <span class="nxex-profile-section-icon">ID</span>
+                        <span><strong>البيانات الشخصية والهوية</strong><small>الهوية، الجواز، البيانات الديموغرافية</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-fields">
+                            <div><span>الاسم العربي</span><strong>@emp.FullName</strong></div>
+                            <div><span>الاسم الإنجليزي</span><strong>@Model.DisplayValue(fp.FullNameEn)</strong></div>
+                            <div><span>تاريخ الميلاد</span><strong>@Model.DisplayDate(emp.BirthDate)</strong></div>
+                            <div><span>الجنس</span><strong>@Model.DisplayValue(fp.Gender)</strong></div>
+                            <div><span>الحالة الاجتماعية</span><strong>@Model.DisplayValue(fp.MaritalStatus)</strong></div>
+                            <div><span>الجنسية</span><strong>@Model.DisplayValue(fp.Nationality)</strong></div>
+                            <div><span>البلد</span><strong>@Model.DisplayValue(fp.Country)</strong></div>
+                            <div><span>الديانة</span><strong>@Model.DisplayValue(fp.Religion)</strong></div>
+                        </div>
+
+                        @if (fp.IdentityDocuments.Count > 0)
+                        {
+                            <div class="nxex-profile-sublist">
+                                @foreach (var doc in fp.IdentityDocuments)
+                                {
+                                    <article class="nxex-profile-record">
+                                        <header><strong>@doc.TypeLabel</strong><span>@Model.DisplayValue(doc.DocumentNumber)</span></header>
+                                        <div class="nxex-profile-mini-grid">
+                                            <div><span>الرقم الوطني</span><b>@Model.DisplayValue(doc.NationalNumber)</b></div>
+                                            <div><span>الرقم العائلي</span><b>@Model.DisplayValue(doc.FamilyNumber)</b></div>
+                                            <div><span>تاريخ الإصدار</span><b>@Model.DisplayDate(doc.IssueDate)</b></div>
+                                            <div><span>تاريخ الانتهاء</span><b>@Model.DisplayDate(doc.ExpiryDate)</b></div>
+                                            <div><span>جهة الإصدار</span><b>@Model.DisplayValue(doc.IssuingAuthority)</b></div>
+                                            <div><span>مكان الإصدار</span><b>@Model.DisplayValue(doc.PlaceOfIssue)</b></div>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">HR</span>
+                        <span><strong>الوظيفة والعقد</strong><small>التعيين، المباشرة، الدوام والعقد الحالي</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-fields">
+                            <div><span>الرقم الوظيفي</span><strong>@emp.EmployeeNo</strong></div>
+                            <div><span>المنصب</span><strong>@Model.DisplayValue(emp.Position)</strong></div>
+                            <div><span>القسم</span><strong>@Model.DisplayValue(emp.DepartmentName)</strong></div>
+                            <div><span>الفرع</span><strong>@Model.DisplayValue(emp.BranchName)</strong></div>
+                            <div><span>تاريخ التعيين</span><strong>@Model.DisplayDate(emp.HireDate)</strong></div>
+                            <div><span>تاريخ المباشرة</span><strong>@Model.DisplayDate(fp.JoiningDate)</strong></div>
+                            <div><span>نوع الدوام</span><strong>@Model.DisplayValue(fp.WorkType)</strong></div>
+                            <div><span>الدرجة الوظيفية</span><strong>@Model.DisplayValue(fp.JobGrade)</strong></div>
+                            <div><span>حالة التوظيف</span><strong>@Model.DisplayValue(fp.EmploymentStatus)</strong></div>
+                            <div><span>مدة الخدمة</span><strong>@Model.ServicePeriodText</strong></div>
+                        </div>
+                        <article class="nxex-profile-record nxex-profile-record--accent">
+                            <header><strong>العقد الحالي</strong><span>@(fp.Contract.IsCurrent ? "فعال" : "غير فعال")</span></header>
+                            <div class="nxex-profile-mini-grid">
+                                <div><span>رقم العقد</span><b>@Model.DisplayValue(fp.Contract.ContractNo)</b></div>
+                                <div><span>نوع العقد</span><b>@Model.DisplayValue(fp.Contract.ContractType)</b></div>
+                                <div><span>من</span><b>@Model.DisplayDate(fp.Contract.FromDate)</b></div>
+                                <div><span>إلى</span><b>@Model.DisplayDate(fp.Contract.ToDate)</b></div>
+                            </div>
+                        </article>
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">☎</span>
+                        <span><strong>التواصل والعائلة</strong><small>الهاتف، البريد، العنوان وأفراد العائلة</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-fields">
+                            <div><span>الهاتف</span><strong>@Model.DisplayValue(emp.Phone)</strong></div>
+                            <div><span>التحويلة</span><strong>@Model.DisplayValue(fp.PhoneExtension)</strong></div>
+                            <div><span>البريد الوظيفي</span><strong>@Model.DisplayValue(emp.Email)</strong></div>
+                            <div><span>البريد الشخصي</span><strong>@Model.DisplayValue(fp.PersonalEmail)</strong></div>
+                            <div><span>بلد الأم</span><strong>@Model.DisplayValue(fp.MotherCountry)</strong></div>
+                            <div><span>مدينة الأم</span><strong>@Model.DisplayValue(fp.MotherCity)</strong></div>
+                        </div>
+
+                        @if (fp.Dependents.Count > 0)
+                        {
+                            <div class="nxex-profile-subtitle">أفراد العائلة</div>
+                            <div class="nxex-profile-sublist">
+                                @foreach (var member in fp.Dependents)
+                                {
+                                    <article class="nxex-profile-record">
+                                        <header>
+                                            <strong>@member.Name</strong>
+                                            <span>@member.RelationLabel</span>
+                                        </header>
+                                        <div class="nxex-profile-mini-grid">
+                                            <div><span>الاسم الإنجليزي</span><b>@Model.DisplayValue(member.NameOther)</b></div>
+                                            <div><span>تاريخ الميلاد</span><b>@Model.DisplayDate(member.BirthDate)</b></div>
+                                            <div><span>الجنس</span><b>@Model.DisplayValue(member.Gender)</b></div>
+                                            <div><span>الجنسية</span><b>@Model.DisplayValue(member.Nationality)</b></div>
+                                            <div><span>الهاتف</span><b>@Model.DisplayValue(member.MobilePhone)</b></div>
+                                            <div><span>الحالة</span><b>@(member.IsEmergencyContact ? "جهة طوارئ" : member.IsDependent ? "معال" : "مسجل")</b></div>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">₫</span>
+                        <span><strong>المالية والبنك</strong><small>الراتب، البنك، الضمان والضريبة</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-fields nxex-profile-fields--money">
+                            <div><span>الراتب الأساسي</span><strong>@fp.Financial.BasicSalary.ToString("N0") @Model.DisplayValue(fp.Financial.Currency)</strong></div>
+                            <div><span>سلم الراتب</span><strong>@Model.DisplayValue(fp.Financial.SalaryScale)</strong></div>
+                            <div><span>الأجر اليومي</span><strong>@fp.Financial.DailySalary.ToString("N2")</strong></div>
+                            <div><span>أجر الساعة</span><strong>@fp.Financial.HourlyRate.ToString("N2")</strong></div>
+                            <div><span>طريقة الدفع</span><strong>@Model.DisplayValue(fp.Financial.PaymentMethod)</strong></div>
+                            <div><span>المصرف</span><strong>@Model.DisplayValue(fp.Financial.BankName)</strong></div>
+                            <div><span>فرع المصرف</span><strong>@Model.DisplayValue(fp.Financial.BankBranch)</strong></div>
+                            <div><span>IBAN</span><strong class="nxex-mono">@Model.DisplayValue(fp.Financial.Iban)</strong></div>
+                            <div><span>رقم البطاقة</span><strong class="nxex-mono">@Model.DisplayValue(fp.Financial.CardNo)</strong></div>
+                            <div><span>الضمان الاجتماعي</span><strong>@Model.DisplayValue(fp.Financial.SocialSecurityType)</strong></div>
+                            <div><span>رقم الضمان</span><strong>@Model.DisplayValue(fp.Financial.SocialSecurityNo)</strong></div>
+                            <div><span>تاريخ الاشتراك</span><strong>@Model.DisplayDate(fp.Financial.SocialSecurityJoinDate)</strong></div>
+                            <div><span>الملف الضريبي</span><strong>@Model.DisplayValue(fp.Financial.TaxFile)</strong></div>
+                            <div><span>الرقم الضريبي</span><strong>@Model.DisplayValue(fp.Financial.TaxNo)</strong></div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">ED</span>
+                        <span><strong>التعليم والخبرة</strong><small>@educationExperience.Count سجل</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-sublist">
+                            @foreach (var item in educationExperience)
+                            {
+                                <article class="nxex-profile-record">
+                                    <header><strong>@item.Title</strong><span>@item.TypeLabel</span></header>
+                                    <p>@Model.DisplayValue(item.Subtitle)</p>
+                                    <div class="nxex-profile-mini-grid">
+                                        <div><span>من</span><b>@Model.DisplayDate(item.FromDate)</b></div>
+                                        <div><span>إلى</span><b>@Model.DisplayDate(item.ToDate)</b></div>
+                                        <div><span>المرجع</span><b>@Model.DisplayValue(item.RefNo)</b></div>
+                                        <div><span>البلد</span><b>@Model.DisplayValue(item.Country)</b></div>
+                                        @if (!string.IsNullOrWhiteSpace(item.Gpa))
+                                        {
+                                            <div><span>المعدل</span><b>@item.Gpa</b></div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(item.RefContactName))
+                                        {
+                                            <div><span>مرجع التواصل</span><b>@item.RefContactName</b></div>
+                                        }
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">TR</span>
+                        <span><strong>الشهادات والدورات</strong><small>@certificatesTraining.Count سجل</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-sublist">
+                            @foreach (var item in certificatesTraining)
+                            {
+                                <article class="nxex-profile-record">
+                                    <header><strong>@item.Title</strong><span>@item.TypeLabel</span></header>
+                                    <p>@Model.DisplayValue(item.Subtitle)</p>
+                                    <div class="nxex-profile-mini-grid">
+                                        <div><span>من</span><b>@Model.DisplayDate(item.FromDate)</b></div>
+                                        <div><span>إلى</span><b>@Model.DisplayDate(item.ToDate)</b></div>
+                                        <div><span>المرجع</span><b>@Model.DisplayValue(item.RefNo)</b></div>
+                                        <div><span>ملاحظة</span><b>@Model.DisplayValue(item.Note)</b></div>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">SK</span>
+                        <span><strong>المهارات واللغات والملخص</strong><small>@skillsLanguages.Count سجل</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-sublist">
+                            @foreach (var item in skillsLanguages)
+                            {
+                                <article class="nxex-profile-record">
+                                    <header><strong>@item.Title</strong><span>@item.TypeLabel</span></header>
+                                    <p>@Model.DisplayValue(item.Subtitle)</p>
+                                    @if (!string.IsNullOrWhiteSpace(item.Note))
+                                    {
+                                        <div class="nxex-profile-note">@item.Note</div>
+                                    }
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">＋</span>
+                        <span><strong>العنوان والعهد والطوارئ</strong><small>@otherRecords.Count سجل</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        <div class="nxex-profile-sublist">
+                            @foreach (var item in otherRecords)
+                            {
+                                <article class="nxex-profile-record">
+                                    <header><strong>@item.Title</strong><span>@item.TypeLabel</span></header>
+                                    <p>@Model.DisplayValue(item.Subtitle)</p>
+                                    <div class="nxex-profile-mini-grid">
+                                        <div><span>المرجع</span><b>@Model.DisplayValue(item.RefNo)</b></div>
+                                        <div><span>من</span><b>@Model.DisplayDate(item.FromDate)</b></div>
+                                        @if (item.Amount > 0)
+                                        {
+                                            <div><span>القيمة</span><b>@item.Amount.ToString("N0")</b></div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(item.RefContactPhone))
+                                        {
+                                            <div><span>الهاتف</span><b>@item.RefContactPhone</b></div>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(item.Note))
+                                    {
+                                        <div class="nxex-profile-note">@item.Note</div>
+                                    }
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </details>
+
+                <details class="nxex-profile-section">
+                    <summary>
+                        <span class="nxex-profile-section-icon">DOC</span>
+                        <span><strong>المستندات والمرفقات</strong><small>@fp.Documents.Count ملف</small></span>
+                        <b>⌄</b>
+                    </summary>
+                    <div class="nxex-profile-section-body">
+                        @if (fp.Documents.Count == 0)
+                        {
+                            <div class="nxex-empty nxex-profile-empty">لا توجد مرفقات فعلية محفوظة لهذا الموظف حالياً.</div>
+                        }
+                        else
+                        {
+                            <div class="nxex-profile-sublist">
+                                @foreach (var doc in fp.Documents)
+                                {
+                                    <article class="nxex-profile-record">
+                                        <header><strong>@doc.FileName</strong><span>@Model.DisplayValue(doc.DocumentType)</span></header>
+                                        <div class="nxex-profile-mini-grid">
+                                            <div><span>تاريخ الرفع</span><b>@Model.DisplayDate(doc.UploadedAt)</b></div>
+                                            <div><span>تاريخ الانتهاء</span><b>@Model.DisplayDate(doc.ExpiryDate)</b></div>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(doc.Notes))
+                                        {
+                                            <div class="nxex-profile-note">@doc.Notes</div>
+                                        }
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </div>
+                </details>
             </div>
         </section>
 
@@ -547,49 +856,19 @@
                 <section class="nxex-card nxex-request-create">
                     <header class="nxex-card-head">
                         <div>
-                            <h2>إنشاء طلب خدمة ذاتية</h2>
-                            <p>أرسل طلبك مباشرة للموارد البشرية، ويظهر في لوحة الإدارة للمتابعة والاعتماد.</p>
+                            <h2>إنشاء طلب جديد</h2>
+                            <p>استخدم المسار الموحّد لاختيار نوع الطلب وسياسة الشركة والموافقة المناسبة تلقائياً.</p>
                         </div>
-                        <span class="nxex-chip live">DB Sync</span>
+                        <span class="nxex-chip live">Dynamic</span>
                     </header>
 
-                    <div class="nxex-request-type-grid" data-request-type-grid>
-                        <button type="button" class="active" data-request-type="إجازة">🌴<span>طلب إجازة</span></button>
-                        <button type="button" data-request-type="نسيان بصمة">☝️<span>نسيان بصمة</span></button>
-                        <button type="button" data-request-type="خروج شخصي">🚶<span>خروج شخصي</span></button>
-                        <button type="button" data-request-type="خروج عمل">💼<span>خروج عمل</span></button>
-                        <button type="button" data-request-type="أوفر تايم">⏱️<span>أوفر تايم</span></button>
+                    <div class="nxex-request-preview">
+                        <span>المسار الموحّد</span>
+                        <strong>طلبات الإجازة والمغادرة والأوفرتايم والخدمات الذاتية</strong>
+                        <small>أنواع الطلبات والصلاحيات والرصيد تُقرأ من إعدادات النظام الحالية.</small>
                     </div>
 
-                    <form method="post" asp-page-handler="CreateRequest" enctype="multipart/form-data" class="nxex-form nxex-request-form" data-request-form data-request-submit>
-                        <input type="hidden" name="returnTab" value="requests" />
-                        <input type="hidden" asp-for="RequestInput.RequestType" value="إجازة" data-request-type-input />
-
-                        <div class="nxex-request-preview">
-                            <span>نوع الطلب الحالي</span>
-                            <strong data-request-type-title>طلب إجازة</strong>
-                            <small data-request-type-help>اختر تاريخ البداية والنهاية وسبب الإجازة.</small>
-                        </div>
-
-                        <div class="nxex-form-row">
-                            <div>
-                                <label>من تاريخ *</label>
-                                <input asp-for="RequestInput.FromDate" type="date" required data-request-required-label="تاريخ البداية" />
-                            </div>
-                            <div>
-                                <label>إلى تاريخ</label>
-                                <input asp-for="RequestInput.ToDate" type="date" />
-                            </div>
-                        </div>
-
-                        <label>السبب / الملاحظات *</label>
-                        <textarea asp-for="RequestInput.Reason" placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
-
-                        <label>مرفق الطلب (اختياري، وقد يشترطه قالب الموافقة)</label>
-                        <input type="file" name="requestAttachment" accept=".pdf,.jpg,.jpeg,.png,.webp" />
-
-                        <button type="submit">إرسال الطلب للموارد البشرية</button>
-                    </form>
+                    <button type="button" class="nxex-leave-submit" data-open-reqsheet>طلب جديد</button>
                 </section>
 
                 @if (Model.MyMissingPunches.Any())
@@ -691,7 +970,7 @@
                     }
                     @foreach (var row in Model.Requests)
                     {
-                        <article class="@Model.StatusClass(row.Status)">
+                        <article id="employee-request-@row.Id" data-request-id="@row.Id" class="@Model.StatusClass(row.Status)">
                             <div class="nxex-request-icon">@Model.RequestIcon(row.RequestType)</div>
                             <div>
                                 <div class="nxex-request-row-head">
@@ -716,6 +995,82 @@
                                         <small>لا توجد بصمة مسجلة ضمن تاريخ الطلب.</small>
                                     }
                                 }
+                                @if (row.IsOvertime)
+                                {
+                                    <details class="nxex-overtime-intelligence">
+                                        <summary>تفاصيل الأوفر تايم</summary>
+                                        <div class="nxex-overtime-grid">
+                                            <div><span>Requested OT</span><strong>@row.RequestedOvertimeHours.ToString("0.##") س</strong></div>
+                                            <div><span>Actual Attendance OT</span><strong>@row.ActualAttendanceOvertimeHours.ToString("0.##") س</strong></div>
+                                            <div><span>Approved OT</span><strong>@row.ApprovedOvertimeHours.ToString("0.##") س</strong></div>
+                                            <div class="@(row.PayrollEligible ? "ok" : "muted")"><span>Payroll Eligible</span><strong>@(row.PayrollEligible ? "نعم" : "لا")</strong></div>
+                                            <div class="@(row.PayrollPosted ? "ok" : "pending")"><span>Payroll</span><strong>@(row.PayrollPosted ? "Posted" : "Not Posted")</strong></div>
+                                        </div>
+                                        @if (row.PayrollPosted)
+                                        {
+                                            <small class="nxex-overtime-note">تم إنشاء حركة Payroll لهذا الطلب@(row.PayrollRateFactor.HasValue ? " · المعامل " + row.PayrollRateFactor.Value.ToString("0.##") + "×" : "")@(string.IsNullOrWhiteSpace(row.PayrollStatus) ? "" : " · " + row.PayrollStatus)</small>
+                                        }
+                                        else if (row.PayrollEligible)
+                                        {
+                                            <small class="nxex-overtime-note pending">الطلب معتمد ومؤهل للرواتب، لكن لم تُنشأ حركة Payroll مرتبطة به بعد.</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="nxex-overtime-note">لن يُرحّل للرواتب ما لم يصبح الطلب معتمداً نهائياً.</small>
+                                        }
+                                    </details>
+                                }
+
+                                @if (row.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) && row.ApprovalFlow?.CurrentSteps.Count > 0)
+                                {
+                                    <small class="nxex-request-current">بانتظار: @string.Join(" + ", row.ApprovalFlow.CurrentSteps.Select(step => step.DisplayName))</small>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(row.CurrentStep) && !row.CurrentStep.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <small class="nxex-request-current">المرحلة الحالية: @row.CurrentStep</small>
+                                }
+
+                                <details class="nxex-approval-details" open="@(Model.RequestId == row.Id ? "open" : null)">
+                                    <summary>مسار الطلب</summary>
+                                    <div class="nxex-approval-flow">
+                                        <div class="nxex-approval-step done">
+                                            <span class="nxex-approval-dot"></span>
+                                            <div><strong>تم إنشاء الطلب</strong><small>@(row.CreatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</small></div>
+                                        </div>
+                                        @if (row.ApprovalFlow is not null && row.ApprovalFlow.Steps.Count > 0)
+                                        {
+                                            @foreach (var step in row.ApprovalFlow.Steps)
+                                            {
+                                                <div class="nxex-approval-step @Model.ApprovalStepClass(step.Status)">
+                                                    <span class="nxex-approval-dot"></span>
+                                                    <div>
+                                                        <strong>@step.DisplayName</strong>
+                                                        <small>@Model.ApprovalStepText(step.Status)@(step.ActionAt.HasValue ? " · " + step.ActionAt.Value.ToString("yyyy-MM-dd HH:mm") : "")</small>
+                                                        @if (!string.IsNullOrWhiteSpace(step.Note))
+                                                        {
+                                                            <small class="nxex-approval-note">@step.Note</small>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="nxex-approval-step waiting legacy">
+                                                <span class="nxex-approval-dot"></span>
+                                                <div>
+                                                    <strong>@Model.StatusText(row.Status)</strong>
+                                                    <small>تفاصيل مسار الموافقة غير محفوظة لهذا الطلب القديم.</small>
+                                                    @if (!string.IsNullOrWhiteSpace(row.ReviewNote))
+                                                    {
+                                                        <small class="nxex-approval-note">@row.ReviewNote</small>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </details>
+
                                 @if (row.Status.Equals("Returned", StringComparison.OrdinalIgnoreCase))
                                 {
                                     <form method="post" asp-page-handler="ResubmitReturned" class="nxex-form nxex-return-form" data-request-submit>
@@ -924,9 +1279,12 @@
 
     @* ===== شاشة طلب الإجازة المنبثقة (منفصلة عن الاستوديو القديم) ===== *@
     @{
+        CompanyLeavePolicyStore.Policy? PolicyFor(RequestTypeStore.ReqType type) =>
+            Model.LeavePolicies.FirstOrDefault(p => p.RequestTypeId == type.Id);
+
         CompanyLeavePolicyStore.BalanceSnapshot? BalanceFor(RequestTypeStore.ReqType type)
         {
-            var policy = Model.LeavePolicies.FirstOrDefault(p => p.RequestTypeId == type.Id);
+            var policy = PolicyFor(type);
             if (policy is null || !policy.RequiresBalance) return null;
             var sourceId = policy.BalanceSourceRequestTypeId ?? policy.RequestTypeId;
             return Model.LeaveBalances.FirstOrDefault(b => b.SourceRequestTypeId == sourceId);
@@ -994,16 +1352,36 @@
                                     var disabled = TypeDisabled(t);
                                     var isSel = defaultType != null && t.Name == defaultType.Name;
                                     var bal = BalanceSmall(t);
+                                    var balance = BalanceFor(t);
+                                    var policy = PolicyFor(t);
+                                    var attachRequired = policy?.AttachmentRequiredOverride ?? t.AttachmentRequired;
                                     var optLabel = t.Name + (string.IsNullOrEmpty(bal) ? "" : " — " + bal);
                                     <li class="nxex-csel-opt" role="option" data-value="@t.Name" data-label="@optLabel"
                                         data-needs-time="@t.NeedsTime.ToString().ToLower()"
-                                        data-attach-req="@t.AttachmentRequired.ToString().ToLower()"
+                                        data-balance-text="@bal"
+                                        data-balance-unit="@(balance?.Unit ?? (policy?.RequiresBalance == true ? policy.BalanceUnit : ""))"
+                                        data-allowed-days="@(t.AllowedDays?.ToString() ?? "")"
+                                        data-max-per-request="@(policy?.MaxPerRequestAmount?.ToString() ?? "")"
+                                        data-min-notice-days="@(policy?.MinimumNoticeDays ?? 0)"
+                                        data-eligibility-days="@(policy?.EligibilityDays ?? 0)"
+                                        data-reason-required="@((policy?.ReasonRequired ?? false).ToString().ToLower())"
+                                        data-allow-retroactive="@((policy?.AllowRetroactive ?? true).ToString().ToLower())"
+                                        data-attach-req="@attachRequired.ToString().ToLower()"
                                         data-attach-label="@(t.AttachmentLabel ?? "")"
                                         aria-selected="@(isSel ? "true" : "false")"
                                         data-disabled="@(disabled ? "true" : "false")">@optLabel</li>
                                 }
                             </ul>
                         </div>
+                    </div>
+
+                    <div class="nxex-type-summary" data-type-summary hidden>
+                        <div class="nxex-type-summary-head">
+                            <strong data-type-summary-name>—</strong>
+                            <span data-type-summary-balance hidden></span>
+                        </div>
+                        <div class="nxex-type-summary-meta" data-type-summary-meta></div>
+                        <div class="nxex-type-summary-rules" data-type-summary-rules hidden></div>
                     </div>
 
                     <div class="nxex-field">
@@ -1052,13 +1430,26 @@
                         }
                     </div>
 
-                    <div class="nxex-field">
-                        <label>السبب (اختياري)</label>
+                    <div class="nxex-field" data-reason-field hidden>
+                        <label>السبب <span aria-hidden="true">*</span></label>
                         <textarea name="reason" rows="2" placeholder="اكتب السبب"></textarea>
                     </div>
-                    <div class="nxex-field">
+                    <div class="nxex-field" data-attachment-field hidden>
                         <label>إرفاق صورة <span data-attach-star hidden>*</span> <span data-attach-hint class="zyu-8932c827a2eb"></span></label>
                         <input type="file" name="attachment" accept="image/*,.pdf" />
+                    </div>
+
+                    <div class="nxex-request-impact" data-request-impact hidden aria-live="polite">
+                        <div class="nxex-request-impact-head">
+                            <strong>تأثير الطلب المتوقع</strong>
+                            <span data-impact-state>محسوب حسب سياسة الشركة</span>
+                        </div>
+                        <div class="nxex-request-impact-grid" data-impact-grid>
+                            <div><span>الرصيد الحالي</span><strong data-impact-current>—</strong></div>
+                            <div><span>سيتم خصمه</span><strong data-impact-requested>—</strong></div>
+                            <div><span>بعد الاعتماد</span><strong data-impact-after>—</strong></div>
+                        </div>
+                        <small data-impact-note></small>
                     </div>
 
                     <button type="submit" class="nxex-leave-submit">إرسال الطلب</button>
@@ -1152,4 +1543,16 @@
 
 @section Scripts {
     <script src="~/js/zynora-employee-experience.js" asp-append-version="true"></script>
+    @if (Model.RequestId is int deepRequestId)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var target = document.getElementById("employee-request-@deepRequestId");
+                if (!target) return;
+                target.setAttribute("tabindex", "-1");
+                target.scrollIntoView({ block: "center", behavior: "auto" });
+                target.focus({ preventScroll: true });
+            });
+        </script>
+    }
 }

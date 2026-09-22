@@ -84,4 +84,16 @@
         if (dateEl.value !== lastDate) { lastDate = dateEl.value; loadDay(dateEl.value); }
     });
     timeEl.addEventListener('change', render);
+
+    // عند القدوم من بطاقة نقص البصمة في طلب زمني، افتح نفس اليوم مباشرةً.
+    const presetDate = new URLSearchParams(location.search).get('date');
+    if (presetDate && /^\d{4}-\d{2}-\d{2}$/.test(presetDate)) {
+        dateEl.value = presetDate;
+        const display = form.querySelector('[data-date-display]');
+        if (display) {
+            display.textContent = presetDate;
+            display.classList.remove('is-placeholder');
+        }
+        dateEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 })();

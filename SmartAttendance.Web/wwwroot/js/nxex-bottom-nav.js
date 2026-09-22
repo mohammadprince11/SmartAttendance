@@ -433,6 +433,160 @@
     }));
 
     // تمييز نوع الإجازة المختار
+    function renderTypeSummary(form, opt) {
+      const box = form.querySelector('[data-type-summary]');
+      if (!box || !opt) return;
+      const name = box.querySelector('[data-type-summary-name]');
+      const balance = box.querySelector('[data-type-summary-balance]');
+      const meta = box.querySelector('[data-type-summary-meta]');
+      const rules = box.querySelector('[data-type-summary-rules]');
+      if (name) name.textContent = opt.getAttribute('data-value') || 'نوع الطلب';
+      const balanceText = opt.getAttribute('data-balance-text') || '';
+      if (balance) { balance.textContent = balanceText; balance.hidden = !balanceText; }
+      if (meta) {
+        meta.replaceChildren();
+        const unit = opt.getAttribute('data-balance-unit') || '';
+        const allowed = opt.getAttribute('data-allowed-days') || '';
+        const maxPerRequest = opt.getAttribute('data-max-per-request') || '';
+        const chips = [];
+        if (unit) chips.push('الوحدة: ' + (unit === 'Hours' ? 'Hours' : 'Days'));
+        if (allowed) chips.push('Allowed Days: ' + allowed);
+        if (maxPerRequest) chips.push('Max Per Request: ' + maxPerRequest + (unit ? ' ' + unit : ''));
+        chips.push(opt.getAttribute('data-attach-req') === 'true' ? 'المرفق: إلزامي' : 'المرفق: غير مطلوب');
+        chips.forEach((text) => { const span = document.createElement('span'); span.textContent = text; meta.appendChild(span); });
+      }
+      if (rules) {
+        rules.replaceChildren();
+        const notices = [];
+        const noticeDays = Number(opt.getAttribute('data-min-notice-days') || 0);
+        const eligibilityDays = Number(opt.getAttribute('data-eligibility-days') || 0);
+        if (noticeDays > 0) notices.push('إشعار مسبق: ' + noticeDays + ' يوم');
+        if (eligibilityDays > 0) notices.push('مدة خدمة مطلوبة: ' + eligibilityDays + ' يوم');
+        if (opt.getAttribute('data-reason-required') === 'true') notices.push('السبب إلزامي');
+        if (opt.getAttribute('data-allow-retroactive') === 'false') notices.push('لا يسمح بأثر رجعي');
+        notices.forEach((text) => { const span = document.createElement('span'); span.textContent = text; rules.appendChild(span); });
+        rules.hidden = notices.length === 0;
+      }
+      box.hidden = false;
+    }
+
+    function formatImpactValue(value, unit) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return '—';
+      const rounded = Math.round(number * 100) / 100;
+      const label = unit === 'Hours' ? 'ساعة' : 'يوم';
+      return rounded.toLocaleString('ar-IQ', { maximumFractionDigits: 2 }) + ' ' + label;
+    }
+
+    function hideRequestImpact(form) {
+      const box = form && form.querySelector('[data-request-impact]');
+      if (!box) return;
+      box.hidden = true;
+      box.classList.remove('is-invalid', 'is-loading');
+      if (form._impactTimer) clearTimeout(form._impactTimer);
+      form._impactSeq = (form._impactSeq || 0) + 1;
+    }
+
+    async function loadRequestImpact(form) {
+      if (!form) return;
+      const box = form.querySelector('[data-request-impact]');
+      if (!box) return;
+      const select = form.querySelector('[data-leave-select]');
+      const opt = select && select.querySelector('.nxex-csel-opt[aria-selected="true"]');
+      const type = opt && opt.getAttribute('data-value');
+      const from = form.querySelector('[data-dp-from]')?.value || '';
+      const to = form.querySelector('[data-dp-to]')?.value || from;
+      const needsTime = !!opt && opt.getAttribute('data-needs-time') === 'true';
+      const fromTime = form.querySelector('input[name="fromTime"]')?.value || '';
+      const toTime = form.querySelector('input[name="toTime"]')?.value || '';
+      if (!type || !from || (needsTime && (!fromTime || !toTime))) {
+        hideRequestImpact(form);
+        return;
+      }
+
+      const seq = (form._impactSeq = (form._impactSeq || 0) + 1);
+      box.hidden = false;
+      box.classList.add('is-loading');
+      box.classList.remove('is-invalid');
+      const state = box.querySelector('[data-impact-state]');
+      if (state) state.textContent = 'جاري حساب الأثر…';
+
+      const endpoint = new URL(location.pathname, location.origin);
+      endpoint.searchParams.set('handler', 'RequestImpact');
+      endpoint.searchParams.set('reqType', type);
+      endpoint.searchParams.set('from', from);
+      endpoint.searchParams.set('to', to);
+      if (fromTime) endpoint.searchParams.set('fromTime', fromTime);
+      if (toTime) endpoint.searchParams.set('toTime', toTime);
+      const reason = form.querySelector('textarea[name="reason"]')?.value || '';
+      if (reason) endpoint.searchParams.set('reason', reason);
+      const attachment = form.querySelector('input[type="file"][name="attachment"]');
+      endpoint.searchParams.set('hasAttachment', attachment?.files?.length ? 'true' : 'false');
+
+      try {
+        const response = await fetch(endpoint, {
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'fetch', 'Accept': 'application/json' }
+        });
+        if (!response.ok) throw new Error('impact-http-' + response.status);
+        const data = await response.json();
+        if (seq !== form._impactSeq) return;
+        if (!data || data.available !== true || data.requiresBalance !== true) {
+          hideRequestImpact(form);
+          return;
+        }
+
+        box.hidden = false;
+        box.classList.remove('is-loading');
+        box.classList.toggle('is-invalid', data.valid === false);
+        const unit = data.unit || 'Days';
+        const hasNumbers = [data.entitlement, data.reserved, data.requested, data.remainingAfter]
+          .some((value) => Number(value || 0) !== 0);
+        const current = box.querySelector('[data-impact-current]');
+        const requested = box.querySelector('[data-impact-requested]');
+        const after = box.querySelector('[data-impact-after]');
+        const note = box.querySelector('[data-impact-note]');
+        const grid = box.querySelector('[data-impact-grid]');
+
+        if (data.valid === false && !hasNumbers) {
+          if (current) current.textContent = '—';
+          if (requested) requested.textContent = '—';
+          if (after) after.textContent = '—';
+          if (grid) grid.classList.add('is-muted');
+        } else {
+          if (current) current.textContent = formatImpactValue(data.currentRemaining, unit);
+          if (requested) requested.textContent = formatImpactValue(data.requested, unit);
+          if (after) after.textContent = formatImpactValue(data.remainingAfter, unit);
+          if (grid) grid.classList.remove('is-muted');
+        }
+
+        if (state) state.textContent = data.valid === false ? 'يحتاج مراجعة' : 'محسوب حسب سياسة الشركة';
+        if (note) {
+          if (data.valid === false) note.textContent = data.message || 'هذا الطلب لا يطابق السياسة الحالية.';
+          else {
+            const reserved = Number(data.reserved || 0);
+            note.textContent = reserved > 0
+              ? 'المحجوز حالياً: ' + formatImpactValue(reserved, unit) + ' — الخصم النهائي يتم بعد الاعتماد.'
+              : 'الخصم النهائي يتم بعد الاعتماد ويُحسب من أيام/ساعات العمل الفعلية.';
+          }
+        }
+      } catch (error) {
+        if (seq !== form._impactSeq) return;
+        box.classList.remove('is-loading');
+        box.classList.add('is-invalid');
+        if (state) state.textContent = 'تعذّر الحساب';
+        const note = box.querySelector('[data-impact-note]');
+        if (note) note.textContent = 'تعذّر حساب أثر الطلب الآن. أعد اختيار التاريخ أو النوع وحاول مرة أخرى.';
+      }
+    }
+
+    function queueRequestImpact(form) {
+      if (!form) return;
+      if (form._impactTimer) clearTimeout(form._impactTimer);
+      form._impactTimer = setTimeout(() => loadRequestImpact(form), 180);
+    }
+
     // تطبيق ضوابط النوع المختار: تمييزه + إظهار حقول الوقت + نجمة المرفق حسب المتجر.
     // تُستدعى بـ<select> النوع (أو أي عنصر داخل نموذجه). تقرأ ضوابط الخيار المختار
     // (وقت/مرفق) من data-* على <option> وتظهر/تخفي الحقول تبعاً له.
@@ -450,16 +604,29 @@
       // الأنواع الزمنية (أوفرتايم/مغادرة): تُقاس بالوقت لا بعدد الأيام.
       const daycount = form.querySelector('[data-daycount]');
       if (daycount) daycount.hidden = needsTime;
+      const attachmentRequired = !!opt && opt.getAttribute('data-attach-req') === 'true';
+      const attachmentField = form.querySelector('[data-attachment-field]');
+      const attachmentInput = attachmentField && attachmentField.querySelector('input[type="file"][name="attachment"]');
+      if (attachmentField) attachmentField.hidden = !attachmentRequired;
+      if (attachmentInput) attachmentInput.required = attachmentRequired;
       const star = form.querySelector('[data-attach-star]');
-      if (star) star.hidden = !opt || opt.getAttribute('data-attach-req') !== 'true';
+      if (star) star.hidden = !attachmentRequired;
       const hint = form.querySelector('[data-attach-hint]');
       if (hint) {
-        const req = !!opt && opt.getAttribute('data-attach-req') === 'true';
         const lbl = opt && opt.getAttribute('data-attach-label');
-        hint.textContent = (req && lbl) ? '(' + lbl + ')' : '';
+        hint.textContent = (attachmentRequired && lbl) ? '(' + lbl + ')' : '';
       }
+
+      const reasonRequired = !!opt && opt.getAttribute('data-reason-required') === 'true';
+      const reasonField = form.querySelector('[data-reason-field]');
+      const reasonInput = reasonField && reasonField.querySelector('textarea[name="reason"]');
+      if (reasonField) reasonField.hidden = !reasonRequired;
+      if (reasonInput) reasonInput.required = reasonRequired;
+
+      renderTypeSummary(form, opt);
       checkCross(form);
       checkPunchGate(form);
+      queueRequestImpact(form);
       syncRequestFormState(form, false);
     }
 
@@ -524,32 +691,108 @@
         block.classList.toggle('is-blocked', !!(data && data.blocked));
 
         const title = document.createElement('strong');
-        title.textContent = 'البصمات المسجلة ضمن تاريخ الطلب';
+        title.textContent = 'الحضور المرتبط بالطلب';
         block.appendChild(title);
+
+        const requestedStart = form.querySelector('input[name="fromTime"]')?.value || '';
+        const requestedEnd = form.querySelector('input[name="toTime"]')?.value || '';
+        if (requestedStart && requestedEnd) {
+          const [sh, sm] = requestedStart.split(':').map(Number);
+          const [eh, em] = requestedEnd.split(':').map(Number);
+          let requestedMinutes = (eh * 60 + em) - (sh * 60 + sm);
+          if (requestedMinutes <= 0) requestedMinutes += 24 * 60;
+          const requestContext = document.createElement('div');
+          requestContext.className = 'nxex-request-time-context';
+          const durationText = requestedMinutes >= 60
+            ? Math.floor(requestedMinutes / 60) + 'س ' + (requestedMinutes % 60 ? requestedMinutes % 60 + 'د' : '')
+            : requestedMinutes + 'د';
+          [
+            ['بداية الطلب', requestedStart],
+            ['نهاية الطلب', requestedEnd],
+            ['المدة المطلوبة', durationText.trim()]
+          ].forEach(([label, value]) => {
+            const item = document.createElement('span');
+            const name = document.createElement('small');
+            const val = document.createElement('b');
+            name.textContent = label;
+            val.textContent = value;
+            item.append(name, val);
+            requestContext.appendChild(item);
+          });
+          block.appendChild(requestContext);
+        }
 
         const days = data && Array.isArray(data.punches) ? data.punches : [];
         if (days.length === 0) {
           const empty = document.createElement('span');
           empty.className = 'nxex-punch-empty';
-          empty.textContent = 'لا توجد بصمات مسجلة في التاريخ المحدد.';
+          empty.textContent = 'لا توجد بيانات حضور في التاريخ المحدد.';
           block.appendChild(empty);
         } else {
           days.forEach((day) => {
             const row = document.createElement('div');
             row.className = 'nxex-punch-day';
 
+            const head = document.createElement('div');
+            head.className = 'nxex-punch-day-head';
             const date = document.createElement('b');
             date.textContent = day.date || '';
-            row.appendChild(date);
+            const count = document.createElement('span');
+            count.textContent = 'عدد البصمات: ' + Number(day.punchCount || 0);
+            head.append(date, count);
+            row.appendChild(head);
 
-            const ins = Array.isArray(day.checkIns) ? day.checkIns : [];
-            const outs = Array.isArray(day.checkOuts) ? day.checkOuts : [];
-            const values = document.createElement('span');
-            values.textContent = [
-              ins.length ? 'دخول: ' + ins.join('، ') : '',
-              outs.length ? 'خروج: ' + outs.join('، ') : ''
-            ].filter(Boolean).join(' • ') || 'لا توجد بصمات';
-            row.appendChild(values);
+            const facts = document.createElement('div');
+            facts.className = 'nxex-punch-facts';
+            const fact = (label, value) => {
+              const span = document.createElement('span');
+              span.textContent = label + ': ' + value;
+              facts.appendChild(span);
+            };
+            const dayKindLabel = day.dayKind === 'Holiday' ? 'عطلة رسمية'
+              : day.dayKind === 'Weekend' ? 'عطلة أسبوعية'
+              : day.dayKind === 'Rest' ? 'راحة' : 'يوم عمل';
+            const scheduled = Number(day.scheduledHours || 0);
+            const actualMinutes = Number(day.actualAttendanceMinutes || 0);
+            const actualText = actualMinutes >= 60
+              ? Math.floor(actualMinutes / 60) + 'س ' + (actualMinutes % 60 ? actualMinutes % 60 + 'د' : '')
+              : actualMinutes + 'د';
+            const shiftWindow = day.scheduledStart && day.scheduledEnd
+              ? day.scheduledStart + ' - ' + day.scheduledEnd
+              : (day.isWorkingDay ? 'وردية مرنة / بلا وقت ثابت' : dayKindLabel);
+            fact('المناوبة', day.shiftName || '—');
+            fact('الجدول', shiftWindow);
+            fact('ساعات الدوام', day.isWorkingDay ? scheduled.toFixed(2).replace(/\.00$/, '') + ' ساعة' : dayKindLabel);
+            fact('First In', day.firstIn || '—');
+            fact('Last Out', day.lastOut || '—');
+            fact('الحضور الفعلي', actualMinutes > 0 ? actualText.trim() : '—');
+            fact('حالة البصمة', day.missingPunch ? 'نقص بصمة' : 'مكتملة');
+            row.classList.toggle('has-missing-punch', !!day.missingPunch);
+            row.appendChild(facts);
+
+            const sequence = document.createElement('div');
+            sequence.className = 'nxex-punch-sequence';
+            const rawPunches = Array.isArray(day.punches) ? day.punches : [];
+            if (rawPunches.length === 0) {
+              const empty = document.createElement('span');
+              empty.className = 'nxex-punch-empty';
+              empty.textContent = 'لا توجد بصمات مسجلة.';
+              sequence.appendChild(empty);
+            } else {
+              rawPunches.forEach((punch, idx) => {
+                const item = document.createElement('span');
+                item.className = 'nxex-punch-seq-item';
+                const label = document.createElement('b');
+                label.textContent = 'Punch ' + (punch.index || idx + 1);
+                const at = document.createElement('em');
+                at.textContent = punch.at || '—';
+                const type = document.createElement('small');
+                type.textContent = punch.type === 'Out' ? 'خروج' : 'دخول';
+                item.append(label, at, type);
+                sequence.appendChild(item);
+              });
+            }
+            row.appendChild(sequence);
             block.appendChild(row);
           });
         }
@@ -559,6 +802,13 @@
           warning.className = 'nxex-punch-warning';
           warning.textContent = data.message || 'تعذّر تقديم الطلب: يوجد نسيان بصمة في التاريخ المحدد.';
           block.appendChild(warning);
+          if (data.day) {
+            const correction = document.createElement('a');
+            correction.className = 'nxex-punch-correction';
+            correction.href = '/EmployeePortal/MissingPunch?date=' + encodeURIComponent(data.day);
+            correction.textContent = 'طلب تصحيح بصمة';
+            block.appendChild(correction);
+          }
         }
 
         block.hidden = false;
@@ -643,12 +893,14 @@
     leaveModal.addEventListener('change', (e) => {
       if (e.target.matches('[data-tp-input], [data-dp-from], [data-dp-to]')) {
         const form = e.target.closest('.nxex-leave-form');
-        if (form) { checkCross(form); checkPunchGate(form); }
+        if (form) { checkCross(form); checkPunchGate(form); queueRequestImpact(form); }
       }
     });
     leaveModal.querySelectorAll('.nxex-leave-form').forEach((form) => {
       const select = form.querySelector('[data-leave-select]');
       if (select) applyTypeControls(select);
+      form.addEventListener('input', () => queueRequestImpact(form));
+      form.addEventListener('change', () => queueRequestImpact(form));
     });
 
     // حساب عدد الأيام حياً

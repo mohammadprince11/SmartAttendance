@@ -121,6 +121,11 @@ public sealed class MobileApi
     public Task<List<MissingPunchItem>> MissingPunchesAsync() =>
         SendAsync<List<MissingPunchItem>>(HttpMethod.Get,"api/v1/me/missing-punch");
 
+    public Task<List<DayPunchItem>> DayPunchesAsync(DateTime date) =>
+        SendAsync<List<DayPunchItem>>(
+            HttpMethod.Get,
+            $"api/v1/me/punches?date={Uri.EscapeDataString(date.ToString("yyyy-MM-dd"))}");
+
     public Task<ApiMessage> SubmitMissingPunchAsync(
         DateTime date,TimeSpan time,string? reason) =>
         SendAsync<ApiMessage>(
@@ -130,6 +135,99 @@ public sealed class MobileApi
                 date=date.ToString("yyyy-MM-dd"),
                 time=$"{(int)time.TotalHours:00}:{time.Minutes:00}",
                 reason=string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
+            });
+
+    public Task<List<DataChangeField>> DataChangeFieldsAsync() =>
+        SendAsync<List<DataChangeField>>(HttpMethod.Get, "api/v1/me/data-change/fields");
+
+    public Task<ApiMessage> SubmitDataChangeAsync(
+        IEnumerable<DataChangeSubmissionField> fields,
+        string? reason) =>
+        SendAsync<ApiMessage>(
+            HttpMethod.Post,
+            "api/v1/me/data-change",
+            new
+            {
+                fields = fields.Select(field => new
+                {
+                    key = field.Key,
+                    newValue = field.NewValue
+                }).ToArray(),
+                reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
+            });
+
+    public async Task<ApiMessage> SubmitDataChangeMultipartAsync(
+        IEnumerable<DataChangeSubmissionField> fields,
+        string? reason,
+        FileResult? photo)
+    {
+        using var content = new MultipartFormDataContent();
+        var fieldsJson = JsonSerializer.Serialize(
+            fields.Select(field => new
+            {
+                key = field.Key,
+                newValue = field.NewValue
+            }).ToArray(),
+            Json);
+
+        content.Add(new StringContent(fieldsJson), "FieldsJson");
+
+        if (!string.IsNullOrWhiteSpace(reason))
+            content.Add(new StringContent(reason.Trim()), "Reason");
+
+        if (photo is not null)
+        {
+            var stream = await photo.OpenReadAsync();
+            var fileContent = new StreamContent(stream);
+            content.Add(fileContent, "Photo", photo.FileName);
+        }
+
+        return await SendContentAsync<ApiMessage>(
+            HttpMethod.Post,
+            "api/v1/me/data-change/multipart",
+            content);
+    }
+
+    public Task<FinancialCatalogResponse> FinancialCatalogAsync() =>
+        SendAsync<FinancialCatalogResponse>(HttpMethod.Get, "api/v1/me/financial/catalog");
+
+    public Task<ApiMessage> SubmitFinancialAsync(
+        string kind,
+        decimal amount,
+        int installmentCount,
+        int startYear,
+        int startMonth,
+        string? reason) =>
+        SendAsync<ApiMessage>(
+            HttpMethod.Post,
+            "api/v1/me/financial",
+            new
+            {
+                kind,
+                amount,
+                installmentCount,
+                startYear,
+                startMonth,
+                reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
+            });
+
+    public Task<ShiftCatalogResponse> ShiftCatalogAsync() =>
+        SendAsync<ShiftCatalogResponse>(HttpMethod.Get, "api/v1/me/shift/catalog");
+
+    public Task<ApiMessage> SubmitShiftAsync(
+        int shiftTypeId,
+        DateTime fromDate,
+        DateTime toDate,
+        string? reason) =>
+        SendAsync<ApiMessage>(
+            HttpMethod.Post,
+            "api/v1/me/shift",
+            new
+            {
+                shiftTypeId,
+                fromDate = fromDate.ToString("yyyy-MM-dd"),
+                toDate = toDate.ToString("yyyy-MM-dd"),
+                reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
             });
 
     private async Task<T> SendContentAsync<T>(
@@ -201,7 +299,7 @@ public sealed class MobileApi
         {
             HttpStatusCode.Unauthorized => "بيانات الدخول غير صحيحة أو انتهت الجلسة.",
             HttpStatusCode.Forbidden => "لا تملك صلاحية تنفيذ هذه العملية.",
-            _ => "تعذر الاتصال بخدمة ZYNORA حالياً."
+            _ => $"تعذر الاتصال بخدمة ZYNORA حالياً. (HTTP {(int)response.StatusCode})"
         };
     }
 }
@@ -273,6 +371,54 @@ public sealed class MobileAnnouncement
             " · ",
             new[] { Category, PublishDate }
                 .Where(value => !string.IsNullOrWhiteSpace(value)));
+}
+
+public sealed class DataChangeOption
+{
+    [JsonPropertyName("value")] public string Value { get; set; } = "";
+    [JsonPropertyName("label")] public string Label { get; set; } = "";
+}
+
+public sealed class DataChangeField
+{
+    [JsonPropertyName("key")] public string Key { get; set; } = "";
+    [JsonPropertyName("label")] public string Label { get; set; } = "";
+    [JsonPropertyName("currentValue")] public string? CurrentValue { get; set; }
+    [JsonPropertyName("kind")] public string Kind { get; set; } = "text";
+    [JsonPropertyName("options")] public List<DataChangeOption> Options { get; set; } = new();
+}
+
+public sealed class DataChangeSubmissionField
+{
+    public string Key { get; set; } = "";
+    public string? NewValue { get; set; }
+}
+
+public sealed class FinancialCatalogResponse
+{
+    [JsonPropertyName("eligible")] public bool Eligible { get; set; }
+    [JsonPropertyName("message")] public string? Message { get; set; }
+    [JsonPropertyName("items")] public List<FinancialCatalogItem> Items { get; set; } = new();
+}
+
+public sealed class FinancialCatalogItem
+{
+    [JsonPropertyName("key")] public string Key { get; set; } = "";
+    [JsonPropertyName("label")] public string Label { get; set; } = "";
+    [JsonPropertyName("hint")] public string Hint { get; set; } = "";
+}
+
+public sealed class ShiftCatalogResponse
+{
+    [JsonPropertyName("eligible")] public bool Eligible { get; set; }
+    [JsonPropertyName("message")] public string? Message { get; set; }
+    [JsonPropertyName("items")] public List<ShiftCatalogItem> Items { get; set; } = new();
+}
+
+public sealed class ShiftCatalogItem
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
 }
 
 public sealed class RequestCatalogResponse
@@ -350,6 +496,13 @@ public sealed class MobileRequest
         Status.Equals("Pending",StringComparison.OrdinalIgnoreCase) ||
         Status.Equals("Returned",StringComparison.OrdinalIgnoreCase) ||
         Status.Equals("Draft",StringComparison.OrdinalIgnoreCase);
+}
+
+public sealed class DayPunchItem
+{
+    [JsonPropertyName("at")] public string At { get; set; } = "";
+    [JsonPropertyName("type")] public string Type { get; set; } = "";
+    [JsonPropertyName("typeText")] public string TypeText { get; set; } = "";
 }
 
 public sealed class MissingPunchItem

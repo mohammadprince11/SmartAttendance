@@ -210,6 +210,12 @@
         var __zyRememberedSession = Context.User.HasClaim(
             SmartAttendance.Web.Infrastructure.Security.PortalSessionPolicy.RememberMeClaimType,
             bool.TrueString);
+        var __zySessionIssuedMs = 0L;
+        var __zySessionIssuedRaw = Context.User.FindFirst("SessionIssuedUtc")?.Value;
+        if (DateTimeOffset.TryParse(__zySessionIssuedRaw, out var __zyIssuedAt))
+        {
+            __zySessionIssuedMs = __zyIssuedAt.ToUnixTimeMilliseconds();
+        }
     }
     @if (!embed)
     {
@@ -320,6 +326,7 @@
         <script>
         (function () {
             var idleMin = @__zyIdleMin, leaveSec = @__zyLeaveSec;
+            var sessionIssuedMs = @__zySessionIssuedMs;
             function out() {
                 try { localStorage.removeItem("zyHiddenAt"); } catch (e) { }
                 window.location.href = "/Account/Logout";
@@ -330,6 +337,11 @@
                 function gone() {
                     try {
                         var t = +localStorage.getItem("zyHiddenAt") || 0;
+                        // لا نحاسب جلسة جديدة على توقيت مخزّن من جلسة قديمة.
+                        if (t && sessionIssuedMs > 0 && t < sessionIssuedMs) {
+                            localStorage.removeItem("zyHiddenAt");
+                            t = 0;
+                        }
                         if (t && (Date.now() - t) / 1000 > leaveSec) { out(); return true; }
                         localStorage.removeItem("zyHiddenAt");
                     } catch (e) { }

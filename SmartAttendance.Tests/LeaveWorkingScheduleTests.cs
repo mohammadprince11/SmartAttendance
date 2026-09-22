@@ -28,6 +28,7 @@ public sealed class LeaveWorkingScheduleTests
         var source = File.ReadAllText(Path.Combine(
             root, "SmartAttendance.Web", "Infrastructure", "Hrms", "CompanyLeavePolicyStore.cs"));
 
+        Assert.Contains("EmployeeShiftTypeStore.EnsureAsync(db)", source);
         Assert.Contains("ShiftTypeStore.ListInScopeAsync", source);
         Assert.Contains("ShiftOverrideStore.MapAsync", source);
         Assert.Contains("RosterStore.MapAsync", source);

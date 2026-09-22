@@ -401,7 +401,8 @@
 .so-preview-image{
     position:absolute;
     top:50%;
-    left:50%;
+    inset-inline-start:50%;
+    direction:ltr;
     display:block;
     inline-size:auto;
     block-size:auto;
@@ -416,7 +417,7 @@
     position:absolute;
     z-index:4;
     top:var(--sp-2);
-    left:50%;
+    inset-inline-start:50%;
     transform:translateX(-50%);
     display:flex;
     align-items:center;
@@ -462,8 +463,7 @@
         block-size:calc(100vh - var(--sp-2))
     }
     .so-preview-toolbar{
-        left:var(--sp-1);
-        right:var(--sp-1);
+        inset-inline:var(--sp-1);
         transform:none;
         max-inline-size:none;
         justify-content:flex-start

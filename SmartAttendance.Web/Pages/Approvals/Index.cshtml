@@ -62,8 +62,9 @@
 
     var panelOpen = Model.HasActiveFilters;
 
-    // أول طلب قابل للفتح (يُفتح افتراضياً في لوحة التفاصيل)
-    var firstSel = Model.Requests.FirstOrDefault();
+    // طلب الـ deep-link له الأولوية، وإلا يُفتح أول طلب متاح.
+    var firstSel = Model.Requests.FirstOrDefault(x => x.Id == Model.RequestId)
+                   ?? Model.Requests.FirstOrDefault();
 }
 <link rel="stylesheet" href="~/css/pages/index-aa8aeae67e.css" asp-append-version="true" />
 

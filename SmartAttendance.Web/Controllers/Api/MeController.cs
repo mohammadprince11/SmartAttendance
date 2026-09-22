@@ -199,6 +199,9 @@ ORDER BY UpdatedAt DESC, Id DESC;
             category = b.CategoryName,
             unit = b.Unit,
             entitled = b.Entitlement,
+            approved = b.Approved,
+            pendingReserved = b.PendingReserved,
+            reserved = b.Reserved,
             used = b.Reserved,
             remaining = b.Remaining
         }));
@@ -548,13 +551,38 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         return result.Ok ? Ok(new { message=result.Message }) : BadRequest(new { message=result.Message });
     }
 
-    /// <summary>الحقول القابلة لطلب تعديلها + قيمتها الحالية (لبناء نموذج «تعديل بياناتي»).</summary>
+    /// <summary>الحقول القابلة لطلب تعديلها + قيمتها الحالية وخيارات القوائم (لبناء نموذج «تعديل بياناتي»).</summary>
     [HttpGet("data-change/fields")]
     public async Task<IActionResult> DataChangeFields()
     {
         if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "UpdateMyData"))
+            return Forbid();
+
         var fields = await DataChangeRequestStore.ListEditableAsync(_db, EmployeeId);
-        return Ok(fields.Select(f => new { key = f.Key, label = f.Label, currentValue = f.OldValue }));
+        var result = new List<object>();
+
+        foreach (var field in fields)
+        {
+            var options = field.Kind == "select"
+                ? await DataChangeRequestStore.OptionsAsync(_db, field.OptionsKey)
+                : new List<DataChangeRequestStore.Option>();
+
+            result.Add(new
+            {
+                key = field.Key,
+                label = field.Label,
+                currentValue = field.OldValue,
+                kind = field.Kind,
+                options = options.Select(option => new
+                {
+                    value = option.Value,
+                    label = option.Label
+                }).ToArray()
+            });
+        }
+
+        return Ok(result);
     }
 
     public sealed record DataChangeItem(string Key, string? NewValue);
@@ -565,6 +593,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
     public async Task<IActionResult> SubmitDataChange([FromBody] DataChangeBody body)
     {
         if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "UpdateMyData"))
+            return Forbid();
         if (body?.Fields is not { Count: > 0 })
             return BadRequest(new { message = "اختر حقلاً واحداً على الأقل لتعديله." });
 
@@ -616,6 +646,298 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
         var start=await ApprovalWorkflowEngine.StartAsync(_db, requestId, DataChangeRequestStore.RequestTypeLabel, EmployeeId);
         if(!start.Ok) return BadRequest(new { message=start.Message, requestId });
         return Ok(new { message = $"تم إرسال طلب تعديل البيانات ({savedCount} حقل) وهو قيد المراجعة.", requestId });
+    }
+
+    /// <summary>نسخة Multipart للموبايل: تعديل حقول + صورة شخصية ضمن نفس طلب الموافقة.</summary>
+    [HttpPost("data-change/multipart")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> SubmitDataChangeMultipart(
+        [FromForm] string? FieldsJson,
+        [FromForm] string? Reason,
+        [FromForm] IFormFile? Photo,
+        [FromServices] IWebHostEnvironment environment)
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "UpdateMyData"))
+            return Forbid();
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+        if (!eligibility.IsEligible)
+            return BadRequest(new { message = eligibility.Message });
+
+        List<DataChangeItem> items;
+        try
+        {
+            items = string.IsNullOrWhiteSpace(FieldsJson)
+                ? new List<DataChangeItem>()
+                : System.Text.Json.JsonSerializer.Deserialize<List<DataChangeItem>>(
+                    FieldsJson,
+                    new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))
+                  ?? new List<DataChangeItem>();
+        }
+        catch
+        {
+            return BadRequest(new { message = "بيانات التعديل غير صالحة." });
+        }
+
+        var editable = await DataChangeRequestStore.ListEditableAsync(_db, EmployeeId);
+        var currentByKey = editable.ToDictionary(field => field.Key, StringComparer.OrdinalIgnoreCase);
+        var proposed = new List<DataChangeRequestStore.ProposedField>();
+
+        foreach (var item in items)
+        {
+            if (!currentByKey.TryGetValue(item.Key ?? "", out var def) ||
+                string.Equals(def.Kind, "photo", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var newValue = item.NewValue?.Trim();
+            if (string.IsNullOrWhiteSpace(newValue))
+                continue;
+
+            if (string.Equals(def.Kind, "select", StringComparison.OrdinalIgnoreCase))
+            {
+                var options = await DataChangeRequestStore.OptionsAsync(_db, def.OptionsKey);
+                if (!options.Any(option =>
+                        string.Equals(option.Value, newValue, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+            }
+
+            proposed.Add(new DataChangeRequestStore.ProposedField
+            {
+                Key = def.Key,
+                OldValue = def.OldValue,
+                NewValue = newValue
+            });
+        }
+
+        if (Photo is { Length: > 0 })
+        {
+            var extension = Path.GetExtension(Photo.FileName);
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg", ".jpeg", ".png", ".webp"
+            };
+
+            if (string.IsNullOrWhiteSpace(extension) || !allowed.Contains(extension))
+                return BadRequest(new { message = "صيغة الصورة غير مدعومة (JPG/PNG/WEBP)." });
+            if (Photo.Length > 5 * 1024 * 1024)
+                return BadRequest(new { message = "حجم الصورة أكبر من 5MB." });
+            if (!await UploadSignatureValidator.IsValidImageAsync(Photo))
+                return BadRequest(new { message = "محتوى الملف ليس صورة صالحة." });
+
+            var directory = Path.Combine(
+                environment.WebRootPath,
+                "uploads",
+                "employee-photos");
+            Directory.CreateDirectory(directory);
+
+            var storedName =
+                $"emp_{EmployeeId}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{extension.ToLowerInvariant()}";
+            var physicalPath = Path.Combine(directory, storedName);
+            await using (var stream = System.IO.File.Create(physicalPath))
+                await Photo.CopyToAsync(stream, HttpContext.RequestAborted);
+
+            currentByKey.TryGetValue("PhotoPath", out var photoDef);
+            proposed.Add(new DataChangeRequestStore.ProposedField
+            {
+                Key = "PhotoPath",
+                OldValue = photoDef?.OldValue,
+                NewValue = $"/uploads/employee-photos/{storedName}"
+            });
+        }
+
+        if (proposed.Count == 0)
+            return BadRequest(new { message = "لم تُدخِل أي قيمة جديدة لتعديلها." });
+
+        var normalizedReason = string.IsNullOrWhiteSpace(Reason)
+            ? "طلب تعديل بيانات من تطبيق الموبايل"
+            : Reason.Trim();
+
+        var requestId = await HrmsDatabase.ScalarAsync<int>(
+            _db,
+            """
+INSERT INTO SelfServiceRequests (EmployeeId, RequestType, CreatedAt, Reason, Status, RequestSource)
+VALUES (@Emp, @Type, SYSUTCDATETIME(), @Reason, 'Pending', N'SelfService');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Emp", EmployeeId);
+                HrmsDatabase.AddParameter(command, "@Type", DataChangeRequestStore.RequestTypeLabel);
+                HrmsDatabase.AddParameter(command, "@Reason", normalizedReason);
+            });
+
+        if (requestId <= 0)
+            return BadRequest(new { message = "تعذّر إنشاء الطلب." });
+
+        var savedCount = await DataChangeRequestStore.SaveFieldsAsync(_db, requestId, proposed);
+        if (savedCount == 0)
+        {
+            await HrmsDatabase.ExecuteAsync(
+                _db,
+                "DELETE FROM SelfServiceRequests WHERE Id=@r",
+                command => HrmsDatabase.AddParameter(command, "@r", requestId));
+            return BadRequest(new { message = "لم تُدخِل أي قيمة مختلفة عن الحالية." });
+        }
+
+        var start = await ApprovalWorkflowEngine.StartAsync(
+            _db,
+            requestId,
+            DataChangeRequestStore.RequestTypeLabel,
+            EmployeeId);
+
+        return start.Ok
+            ? Ok(new
+            {
+                message = $"تم إرسال طلب تعديل البيانات ({savedCount} حقل) وهو قيد المراجعة.",
+                requestId
+            })
+            : BadRequest(new { message = start.Message, requestId });
+    }
+
+    public sealed record FinancialRequestBody(
+        string Kind,
+        decimal Amount,
+        int InstallmentCount,
+        int StartYear,
+        int StartMonth,
+        string? Reason);
+
+    /// <summary>كتالوج الطلبات المالية المتاحة للموظف نفسه.</summary>
+    [HttpGet("financial/catalog")]
+    public async Task<IActionResult> FinancialCatalog()
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest"))
+            return Forbid();
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+
+        return Ok(new
+        {
+            eligible = eligibility.IsEligible,
+            message = eligibility.IsEligible ? (string?)null : eligibility.Message,
+            items = FinancialRequestStore.Catalog
+                .Where(kind => kind.Key != FinancialRequestStore.Raise)
+                .Select(kind => new
+                {
+                    key = kind.Key,
+                    label = kind.Label,
+                    hint = kind.Hint
+                })
+                .ToArray()
+        });
+    }
+
+    /// <summary>تقديم طلب مالي ذاتي (قرض/سلفة/بدل/استرداد).</summary>
+    [HttpPost("financial")]
+    public async Task<IActionResult> SubmitFinancial([FromBody] FinancialRequestBody body)
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "FinancialRequest"))
+            return Forbid();
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+        if (!eligibility.IsEligible)
+            return BadRequest(new { message = eligibility.Message });
+
+        var kind = FinancialRequestStore.KindOf(body.Kind);
+        if (kind is null || kind.Key == FinancialRequestStore.Raise)
+            return BadRequest(new { message = "نوع الطلب المالي غير صالح." });
+        if (body.Amount <= 0)
+            return BadRequest(new { message = "المبلغ مطلوب ويجب أن يكون أكبر من صفر." });
+
+        var today = DateTime.Today;
+        var year = body.StartYear is >= 2000 and <= 2200 ? body.StartYear : today.Year;
+        var month = body.StartMonth is >= 1 and <= 12 ? body.StartMonth : today.Month;
+
+        var detail = new FinancialRequestStore.Detail
+        {
+            Kind = kind.Key,
+            Amount = body.Amount,
+            InstallmentCount = Math.Max(1, body.InstallmentCount),
+            StartYear = year,
+            StartMonth = month,
+            PaymentType = kind.Key == FinancialRequestStore.Reimbursement ? "OutSalary" : "InSalary",
+            Reason = string.IsNullOrWhiteSpace(body.Reason) ? null : body.Reason.Trim()
+        };
+
+        var requestId = await FinancialRequestStore.SubmitAsync(
+            _db,
+            detail,
+            EmployeeId,
+            User.Identity?.Name ?? EmployeeId.ToString(),
+            "SelfService");
+
+        return requestId > 0
+            ? Ok(new
+            {
+                message = $"تم إرسال طلب {FinancialRequestStore.KindLabel(kind.Key)} وهو الآن قيد المراجعة.",
+                requestId
+            })
+            : BadRequest(new { message = "تعذّر إرسال الطلب المالي." });
+    }
+
+    public sealed record ShiftRequestBody(
+        int ShiftTypeId,
+        DateOnly FromDate,
+        DateOnly? ToDate,
+        string? Reason);
+
+    /// <summary>المناوبات المسموح بطلبها من الخدمة الذاتية.</summary>
+    [HttpGet("shift/catalog")]
+    public async Task<IActionResult> ShiftCatalog()
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "ShiftRequest"))
+            return Forbid();
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+
+        var shifts = eligibility.IsEligible
+            ? await ShiftRequestStore.RequestableShiftsAsync(_db)
+            : new List<(int Id, string Name)>();
+
+        return Ok(new
+        {
+            eligible = eligibility.IsEligible,
+            message = eligibility.IsEligible ? (string?)null : eligibility.Message,
+            items = shifts.Select(shift => new { id = shift.Id, name = shift.Name }).ToArray()
+        });
+    }
+
+    /// <summary>تقديم طلب مناوبة ذاتي.</summary>
+    [HttpPost("shift")]
+    public async Task<IActionResult> SubmitShift([FromBody] ShiftRequestBody body)
+    {
+        if (RequireEmployee() is { } bad) return bad;
+        if (!await SelfServiceAccessPolicy.IsAllowedAsync(_db, HttpContext, "ShiftRequest"))
+            return Forbid();
+
+        var eligibility = await EmployeeRequestEligibility.CheckAsync(
+            _db, EmployeeId, HttpContext.RequestAborted);
+        if (!eligibility.IsEligible)
+            return BadRequest(new { message = eligibility.Message });
+        if (body.ShiftTypeId <= 0)
+            return BadRequest(new { message = "اختر المناوبة المطلوبة." });
+
+        var to = body.ToDate ?? body.FromDate;
+        var requestId = await ShiftRequestStore.SubmitAsync(
+            _db,
+            EmployeeId,
+            body.ShiftTypeId,
+            body.FromDate,
+            to,
+            string.IsNullOrWhiteSpace(body.Reason) ? null : body.Reason.Trim(),
+            User.Identity?.Name ?? EmployeeId.ToString());
+
+        return requestId > 0
+            ? Ok(new { message = "تم إرسال طلب المناوبة وهو الآن قيد المراجعة.", requestId })
+            : BadRequest(new { message = "تعذّر إرسال طلب المناوبة — تأكد أن المناوبة متاحة للطلب." });
     }
 
     private static string? ActionForRequestType(RequestTypeStore.ReqType type)

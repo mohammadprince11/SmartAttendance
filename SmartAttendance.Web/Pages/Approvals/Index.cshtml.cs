@@ -36,6 +36,7 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)] public DateOnly? ReqTo { get; set; }
     [BindProperty(SupportsGet = true)] public DateOnly? ActFrom { get; set; }
     [BindProperty(SupportsGet = true)] public DateOnly? ActTo { get; set; }
+    [BindProperty(SupportsGet = true)] public int? RequestId { get; set; }
 
     [BindProperty] public string? Note { get; set; }
     [BindProperty] public List<int> Ids { get; set; } = new();
@@ -237,21 +238,27 @@ OUTER APPLY
       AND ar.AttendanceDate <= CAST(COALESCE(r.ToDate, r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
 ) punches
 WHERE {scopeFilter}
-  AND (@Source = 'All' OR r.RequestSource = @Source)
-  AND (@Status = 'All' OR r.Status = @Status)
-  AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
-  AND (@ReqType IS NULL OR r.RequestType = @ReqType)
-  AND (@DeptId IS NULL OR e.DepartmentId = @DeptId)
-  AND (@BranchId IS NULL OR e.BranchId = @BranchId)
-  AND (@Position IS NULL OR e.Position = @Position)
-  AND (@ReqFrom IS NULL OR CAST(r.CreatedAt AS date) >= @ReqFrom)
-  AND (@ReqTo   IS NULL OR CAST(r.CreatedAt AS date) <= @ReqTo)
-  AND (@ActFrom IS NULL OR CAST(r.UpdatedAt AS date) >= @ActFrom)
-  AND (@ActTo   IS NULL OR CAST(r.UpdatedAt AS date) <= @ActTo)
+  AND (
+      (@RequestId IS NOT NULL AND r.Id = @RequestId)
+      OR
+      (@RequestId IS NULL
+       AND (@Source = 'All' OR r.RequestSource = @Source)
+       AND (@Status = 'All' OR r.Status = @Status)
+       AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
+       AND (@ReqType IS NULL OR r.RequestType = @ReqType)
+       AND (@DeptId IS NULL OR e.DepartmentId = @DeptId)
+       AND (@BranchId IS NULL OR e.BranchId = @BranchId)
+       AND (@Position IS NULL OR e.Position = @Position)
+       AND (@ReqFrom IS NULL OR CAST(r.CreatedAt AS date) >= @ReqFrom)
+       AND (@ReqTo   IS NULL OR CAST(r.CreatedAt AS date) <= @ReqTo)
+       AND (@ActFrom IS NULL OR CAST(r.UpdatedAt AS date) >= @ActFrom)
+       AND (@ActTo   IS NULL OR CAST(r.UpdatedAt AS date) <= @ActTo))
+  )
 ORDER BY r.CreatedAt DESC;
 """,
             command =>
             {
+                HrmsDatabase.AddParameter(command, "@RequestId", RequestId is > 0 ? RequestId.Value : DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Status", Status);
                 HrmsDatabase.AddParameter(command, "@Source", Source);
                 HrmsDatabase.AddParameter(command, "@Search", NullIfEmpty(Search));

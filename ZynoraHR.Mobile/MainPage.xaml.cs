@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text.Json;
+using Microsoft.Maui.Layouts;
 
 namespace ZynoraHR.Mobile;
 
@@ -17,6 +18,9 @@ public partial class MainPage : ContentPage
     private EmployeeProfile? _currentProfile;
     private List<AttendanceDay> _currentAttendance = new();
     private List<LeaveBalance> _currentLeave = new();
+    private List<MobileRequestType> _requestCatalog = new();
+    private MobileRequestType? _overtimeRequestType;
+    private string _requestCategory = "الإجازات";
 
     public MainPage()
     {
@@ -30,6 +34,13 @@ public partial class MainPage : ContentPage
         RequestEndTimePicker.Time = DateTime.Now.AddHours(1).TimeOfDay;
         MissingDatePicker.Date = DateTime.Today;
         MissingTimePicker.Time = DateTime.Now.TimeOfDay;
+
+        ModalFromDatePicker.Date = DateTime.Today;
+        ModalToDatePicker.Date = DateTime.Today;
+        ModalStartTimePicker.Time = DateTime.Now.TimeOfDay;
+        ModalEndTimePicker.Time = DateTime.Now.AddHours(1).TimeOfDay;
+        UpdateModalDateSummary();
+        UpdateModalDuration();
     }
 
     protected override void OnAppearing()
@@ -260,6 +271,1386 @@ public partial class MainPage : ContentPage
             await LoadRequestsAsync();
     }
 
+    private async void OnRequestFabClicked(object? sender, EventArgs e)
+    {
+        MoreOverlay.IsVisible = false;
+        RequestTypeOverlay.IsVisible = false;
+        RequestSheetOvertimeButton.IsVisible = _overtimeRequestType is not null;
+        RequestSheetOverlay.IsVisible = true;
+
+        if (_requestCatalog.Count == 0 && Online())
+            await EnsureRequestCatalogForSheetAsync();
+    }
+
+    private async Task EnsureRequestCatalogForSheetAsync()
+    {
+        if (_requestCatalog.Count > 0 || !Online())
+            return;
+
+        try
+        {
+            var catalog = await _api.RequestTypesAsync();
+            _requestCatalog = catalog.Items ?? new();
+            _overtimeRequestType = _requestCatalog.FirstOrDefault(IsOvertimeRequestType);
+
+            RequestSheetOvertimeButton.IsVisible = _overtimeRequestType is not null;
+            if (_overtimeRequestType is not null)
+                RequestSheetOvertimeButton.Text = _overtimeRequestType.Name;
+        }
+        catch (MobileSessionExpiredException ex)
+        {
+            RequestSheetOverlay.IsVisible = false;
+            ShowLogin();
+            Error(ex.Message);
+        }
+        catch
+        {
+            // Keep the static request sheet available even if the catalog refresh fails.
+        }
+    }
+
+    private void OnCloseRequestSheetTapped(object? sender, TappedEventArgs e) =>
+        RequestSheetOverlay.IsVisible = false;
+
+    private async void OnOpenLeaveRequestSheet(object? sender, EventArgs e)
+    {
+        if (_requestCatalog.Count == 0 && Online())
+            await EnsureRequestCatalogForSheetAsync();
+
+        RequestSheetOverlay.IsVisible = false;
+        ShowRequests();
+        await MainScrollView.ScrollToAsync(SelectedRequestTypeButton, ScrollToPosition.Center, false);
+        OpenRequestTypeChooser("الإجازات");
+    }
+
+    private async void OnOpenMissingPunchFromSheet(object? sender, EventArgs e)
+    {
+        RequestSheetOverlay.IsVisible = false;
+        await BuildMissingPunchServiceAsync();
+    }
+
+    private async void OnOpenDataChangeFromSheet(object? sender, EventArgs e)
+    {
+        RequestSheetOverlay.IsVisible = false;
+        await BuildDataChangeServiceAsync();
+    }
+
+    private async void OnOpenFinancialFromSheet(object? sender, EventArgs e)
+    {
+        RequestSheetOverlay.IsVisible = false;
+        await BuildFinancialServiceAsync();
+    }
+
+    private async void OnOpenShiftFromSheet(object? sender, EventArgs e)
+    {
+        RequestSheetOverlay.IsVisible = false;
+        await BuildShiftServiceAsync();
+    }
+
+    private void OnCloseServiceRequest(object? sender, EventArgs e) =>
+        CloseServiceRequest();
+
+    private void OnCloseServiceRequestTapped(object? sender, TappedEventArgs e) =>
+        CloseServiceRequest();
+
+    private void CloseServiceRequest()
+    {
+        ServiceRequestOverlay.IsVisible = false;
+        ServiceRequestHost.Children.Clear();
+    }
+
+    private void OpenServiceRequest(string title, string subtitle)
+    {
+        MoreOverlay.IsVisible = false;
+        RequestSheetOverlay.IsVisible = false;
+        RequestTypeOverlay.IsVisible = false;
+        ServiceRequestHost.Children.Clear();
+        ServiceRequestTitle.Text = title;
+        ServiceRequestSubtitle.Text = subtitle;
+        ServiceRequestOverlay.IsVisible = true;
+    }
+
+    private static Label ServiceFieldTitle(string text) => new()
+    {
+        Text = text,
+        TextColor = Color.FromArgb("#CFE0F0"),
+        FontSize = 12.5,
+        FontAttributes = FontAttributes.Bold
+    };
+
+    private static Label ServiceHint(string text) => new()
+    {
+        Text = text,
+        TextColor = Color.FromArgb("#8FA6BA"),
+        FontSize = 10.5,
+        LineBreakMode = LineBreakMode.WordWrap
+    };
+
+    private static Label ServiceStatus() => new()
+    {
+        TextColor = Color.FromArgb("#9FB3C7"),
+        FontSize = 11,
+        HorizontalTextAlignment = TextAlignment.Center,
+        LineBreakMode = LineBreakMode.WordWrap
+    };
+
+    private static Entry ServiceEntry(string placeholder, Keyboard? keyboard = null) => new()
+    {
+        Placeholder = placeholder,
+        PlaceholderColor = Color.FromArgb("#6F8498"),
+        TextColor = Color.FromArgb("#E6F0FA"),
+        BackgroundColor = Color.FromArgb("#06101D"),
+        FontSize = 13,
+        HeightRequest = 48,
+        Keyboard = keyboard ?? Keyboard.Default
+    };
+
+    private static Editor ServiceEditor(string placeholder) => new()
+    {
+        Placeholder = placeholder,
+        PlaceholderColor = Color.FromArgb("#6F8498"),
+        TextColor = Color.FromArgb("#E6F0FA"),
+        BackgroundColor = Color.FromArgb("#06101D"),
+        FontSize = 12.5,
+        AutoSize = EditorAutoSizeOption.TextChanges,
+        HeightRequest = 82
+    };
+
+    private static Button ServiceSelectorButton(string text) => new()
+    {
+        Text = text,
+        BackgroundColor = Color.FromArgb("#06101D"),
+        BorderColor = Color.FromArgb("#365069"),
+        BorderWidth = 1,
+        TextColor = Color.FromArgb("#E6F0FA"),
+        FontSize = 13,
+        FontAttributes = FontAttributes.Bold,
+        CornerRadius = 12,
+        HeightRequest = 48,
+        Padding = new Thickness(12, 8)
+    };
+
+    private static Button ServicePrimaryButton(string text) => new()
+    {
+        Text = text,
+        BackgroundColor = Color.FromArgb("#19CFE0"),
+        TextColor = Color.FromArgb("#041018"),
+        FontAttributes = FontAttributes.Bold,
+        FontSize = 14,
+        CornerRadius = 14,
+        HeightRequest = 52
+    };
+
+    private static VerticalStackLayout ServiceOptionsPanel() => new()
+    {
+        IsVisible = false,
+        Spacing = 3,
+        Padding = new Thickness(6),
+        BackgroundColor = Color.FromArgb("#0B2033")
+    };
+
+    private async Task BuildMissingPunchServiceAsync()
+    {
+        OpenServiceRequest(
+            "طلب نسيان بصمة",
+            "حدد التاريخ والوقت؛ ZYNORA يعيد ترتيب بصمات اليوم ويحدد دخول/خروج تلقائياً.");
+
+        var status = ServiceStatus();
+        var datePicker = new DatePicker
+        {
+            Date = DateTime.Today,
+            Format = "yyyy-MM-dd",
+            BackgroundColor = Color.FromArgb("#06101D"),
+            TextColor = Color.FromArgb("#E6F0FA"),
+            HeightRequest = 48
+        };
+        var timePicker = new TimePicker
+        {
+            Time = DateTime.Now.TimeOfDay,
+            Format = "HH:mm",
+            BackgroundColor = Color.FromArgb("#06101D"),
+            TextColor = Color.FromArgb("#E6F0FA"),
+            HeightRequest = 48
+        };
+        var preview = new Label
+        {
+            TextColor = Color.FromArgb("#CFE0F0"),
+            FontSize = 11.5,
+            LineBreakMode = LineBreakMode.WordWrap,
+            BackgroundColor = Color.FromArgb("#10202E"),
+            Padding = new Thickness(12)
+        };
+        var reason = ServiceEditor("سبب غياب البصمة (نسيان، عطل جهاز...)");
+        var submit = ServicePrimaryButton("إرسال طلب البصمة");
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("تاريخ البصمة *"));
+        ServiceRequestHost.Children.Add(datePicker);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("وقت البصمة المفقودة *"));
+        ServiceRequestHost.Children.Add(timePicker);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("بصمات هذا اليوم بعد الإضافة"));
+        ServiceRequestHost.Children.Add(preview);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("السبب"));
+        ServiceRequestHost.Children.Add(reason);
+        ServiceRequestHost.Children.Add(submit);
+        ServiceRequestHost.Children.Add(status);
+
+        async Task RefreshPreviewAsync()
+        {
+            if (!Online())
+            {
+                preview.Text = "اتصل بالإنترنت لعرض بصمات اليوم.";
+                return;
+            }
+
+            try
+            {
+                var selectedDate = datePicker.Date ?? DateTime.Today;
+                var proposed = timePicker.Time ?? DateTime.Now.TimeOfDay;
+                var punches = await _api.DayPunchesAsync(selectedDate);
+
+                var points = new List<(TimeSpan Time, bool Proposed)>();
+                foreach (var punch in punches)
+                {
+                    if (TimeSpan.TryParse(punch.At, out var parsed))
+                        points.Add((parsed, false));
+                }
+
+                points.Add((proposed, true));
+                points = points.OrderBy(point => point.Time).ToList();
+
+                var lines = new List<string>();
+                var total = TimeSpan.Zero;
+                for (var i = 0; i < points.Count; i++)
+                {
+                    var type = i % 2 == 0 ? "دخول" : "خروج";
+                    var marker = points[i].Proposed ? "  ← البصمة المقترحة" : "";
+                    lines.Add($"{i + 1}. {points[i].Time.ToString(@"hh\:mm")} · {type}{marker}");
+
+                    if (i % 2 == 1)
+                        total += points[i].Time - points[i - 1].Time;
+                }
+
+                var completeness = points.Count % 2 == 0
+                    ? "تسلسل البصمات مكتمل بعد الإضافة."
+                    : "يبقى تسلسل البصمات غير مكتمل بعد الإضافة.";
+
+                preview.Text =
+                    string.Join(Environment.NewLine, lines) +
+                    Environment.NewLine +
+                    $"ساعات العمل الناتجة: {(int)total.TotalHours:00}:{total.Minutes:00}" +
+                    Environment.NewLine +
+                    completeness;
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                CloseServiceRequest();
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (MobileApiException ex)
+            {
+                preview.Text = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ZYNORA-MISSING-PUNCH] {ex.GetType().FullName}: {ex}");
+                preview.Text = "تعذر تحميل بصمات اليوم.";
+            }
+        }
+
+        datePicker.DateSelected += async (_, _) => await RefreshPreviewAsync();
+        timePicker.PropertyChanged += async (_, args) =>
+        {
+            if (args.PropertyName == TimePicker.TimeProperty.PropertyName)
+                await RefreshPreviewAsync();
+        };
+
+        submit.Clicked += async (_, _) =>
+        {
+            if (!Online())
+            {
+                status.Text = "لا يمكن إرسال الطلب بدون إنترنت.";
+                return;
+            }
+
+            submit.IsEnabled = false;
+            status.Text = "جاري إرسال الطلب...";
+            try
+            {
+                var result = await _api.SubmitMissingPunchAsync(
+                    datePicker.Date ?? DateTime.Today,
+                    timePicker.Time ?? DateTime.Now.TimeOfDay,
+                    reason.Text);
+                status.Text = result.Message;
+                reason.Text = "";
+                await RefreshPreviewAsync();
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                CloseServiceRequest();
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (MobileApiException ex)
+            {
+                status.Text = ex.Message;
+            }
+            catch
+            {
+                status.Text = "تعذر إرسال طلب البصمة حالياً.";
+            }
+            finally
+            {
+                submit.IsEnabled = true;
+            }
+        };
+
+        await RefreshPreviewAsync();
+    }
+
+    private async Task BuildDataChangeServiceAsync()
+    {
+        OpenServiceRequest(
+            "طلب تعديل بياناتي",
+            "اطلب تعديل بياناتك الشخصية أو صورتك؛ لا يُطبّق أي تغيير إلا بعد الاعتماد.");
+
+        var status = ServiceStatus();
+        status.Text = "جاري تحميل الحقول المتاحة...";
+        ServiceRequestHost.Children.Add(status);
+
+        if (!Online())
+        {
+            status.Text = "اتصل بالإنترنت لفتح نموذج تعديل البيانات.";
+            return;
+        }
+
+        List<DataChangeField> fields;
+        try
+        {
+            fields = await _api.DataChangeFieldsAsync();
+        }
+        catch (MobileSessionExpiredException ex)
+        {
+            CloseServiceRequest();
+            ShowLogin();
+            Error(ex.Message);
+            return;
+        }
+        catch (MobileApiException ex)
+        {
+            status.Text = ex.Message;
+            return;
+        }
+        catch
+        {
+            status.Text = "تعذر تحميل الحقول القابلة للتعديل.";
+            return;
+        }
+
+        ServiceRequestHost.Children.Clear();
+        status = ServiceStatus();
+
+        if (fields.Count == 0)
+        {
+            status.Text = "لا توجد حقول متاحة للتعديل حالياً.";
+            ServiceRequestHost.Children.Add(status);
+            return;
+        }
+
+        var textEntries = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        var selectedValues = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        FileResult? selectedPhoto = null;
+
+        var photoButton = ServiceSelectorButton("تغيير الصورة الشخصية");
+        var photoName = ServiceHint("JPG / PNG / WEBP · حتى 5MB · لا تغيير");
+        photoButton.Clicked += async (_, _) =>
+        {
+            try
+            {
+                var picked = await FilePicker.Default.PickAsync(new PickOptions
+                {
+                    PickerTitle = "اختر الصورة الشخصية",
+                    FileTypes = FilePickerFileType.Images
+                });
+
+                if (picked is null)
+                    return;
+
+                selectedPhoto = picked;
+                photoName.Text = picked.FileName;
+            }
+            catch
+            {
+                status.Text = "تعذر فتح منتقي الصور.";
+            }
+        };
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("الصورة الشخصية"));
+        ServiceRequestHost.Children.Add(photoButton);
+        ServiceRequestHost.Children.Add(photoName);
+        ServiceRequestHost.Children.Add(ServiceHint("اترك أي حقل فارغاً إذا لم ترغب بتعديله."));
+
+        foreach (var field in fields.Where(field =>
+                     !string.Equals(field.Kind, "photo", StringComparison.OrdinalIgnoreCase)))
+        {
+            var currentDisplay = field.CurrentValue;
+            if (string.Equals(field.Kind, "select", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(field.CurrentValue))
+            {
+                currentDisplay = field.Options.FirstOrDefault(option =>
+                    string.Equals(
+                        option.Value,
+                        field.CurrentValue,
+                        StringComparison.OrdinalIgnoreCase))?.Label
+                    ?? field.CurrentValue;
+            }
+
+            ServiceRequestHost.Children.Add(
+                ServiceFieldTitle(
+                    $"{field.Label}  (الحالي: {(string.IsNullOrWhiteSpace(currentDisplay) ? "—" : currentDisplay)})"));
+
+            if (string.Equals(field.Kind, "select", StringComparison.OrdinalIgnoreCase))
+            {
+                selectedValues[field.Key] = null;
+                var trigger = ServiceSelectorButton("— لا تغيير —");
+                var optionsPanel = ServiceOptionsPanel();
+
+                var noChange = ServiceSelectorButton("— لا تغيير —");
+                noChange.FontSize = 12;
+                noChange.HeightRequest = 42;
+                noChange.Clicked += (_, _) =>
+                {
+                    selectedValues[field.Key] = null;
+                    trigger.Text = "— لا تغيير —";
+                    optionsPanel.IsVisible = false;
+                };
+                optionsPanel.Children.Add(noChange);
+
+                foreach (var optionItem in field.Options)
+                {
+                    var item = optionItem;
+                    var optionButton = ServiceSelectorButton(item.Label);
+                    optionButton.FontSize = 12;
+                    optionButton.HeightRequest = 42;
+                    optionButton.Clicked += (_, _) =>
+                    {
+                        selectedValues[field.Key] = item.Value;
+                        trigger.Text = item.Label;
+                        optionsPanel.IsVisible = false;
+                    };
+                    optionsPanel.Children.Add(optionButton);
+                }
+
+                trigger.Clicked += (_, _) =>
+                    optionsPanel.IsVisible = !optionsPanel.IsVisible;
+
+                ServiceRequestHost.Children.Add(trigger);
+                ServiceRequestHost.Children.Add(optionsPanel);
+                continue;
+            }
+
+            if (string.Equals(field.Kind, "date", StringComparison.OrdinalIgnoreCase))
+            {
+                selectedValues[field.Key] = null;
+                var trigger = ServiceSelectorButton("اختر التاريخ الجديد");
+                var datePicker = new DatePicker
+                {
+                    Date = DateTime.Today,
+                    Format = "yyyy-MM-dd",
+                    BackgroundColor = Color.FromArgb("#06101D"),
+                    TextColor = Color.FromArgb("#E6F0FA"),
+                    HeightRequest = 48
+                };
+                datePicker.DateSelected += (_, _) =>
+                {
+                    var selected = datePicker.Date ?? DateTime.Today;
+                    selectedValues[field.Key] = selected.ToString("yyyy-MM-dd");
+                    trigger.Text = selected.ToString("yyyy-MM-dd");
+                };
+
+                ServiceRequestHost.Children.Add(trigger);
+                ServiceRequestHost.Children.Add(datePicker);
+                trigger.Clicked += (_, _) => datePicker.Focus();
+                continue;
+            }
+
+            var keyboard =
+                string.Equals(field.Kind, "email", StringComparison.OrdinalIgnoreCase)
+                    ? Keyboard.Email
+                    : string.Equals(field.Kind, "tel", StringComparison.OrdinalIgnoreCase)
+                        ? Keyboard.Telephone
+                        : Keyboard.Default;
+
+            var entry = ServiceEntry("القيمة الجديدة", keyboard);
+            textEntries[field.Key] = entry;
+            ServiceRequestHost.Children.Add(entry);
+        }
+
+        var reason = ServiceEditor("سبب التعديل (اختياري)");
+        var submit = ServicePrimaryButton("إرسال طلب التعديل");
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("سبب التعديل"));
+        ServiceRequestHost.Children.Add(reason);
+        ServiceRequestHost.Children.Add(submit);
+        ServiceRequestHost.Children.Add(status);
+
+        submit.Clicked += async (_, _) =>
+        {
+            var proposed = new List<DataChangeSubmissionField>();
+
+            foreach (var (key, entry) in textEntries)
+            {
+                var value = entry.Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(value))
+                    proposed.Add(new DataChangeSubmissionField
+                    {
+                        Key = key,
+                        NewValue = value
+                    });
+            }
+
+            foreach (var (key, value) in selectedValues)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    proposed.Add(new DataChangeSubmissionField
+                    {
+                        Key = key,
+                        NewValue = value
+                    });
+            }
+
+            if (proposed.Count == 0 && selectedPhoto is null)
+            {
+                status.Text = "أدخل قيمة جديدة أو اختر صورة لتعديلها.";
+                return;
+            }
+
+            submit.IsEnabled = false;
+            status.Text = "جاري إرسال طلب التعديل...";
+            try
+            {
+                var result = await _api.SubmitDataChangeMultipartAsync(
+                    proposed,
+                    reason.Text,
+                    selectedPhoto);
+                status.Text = result.Message;
+
+                foreach (var entry in textEntries.Values)
+                    entry.Text = "";
+                foreach (var key in selectedValues.Keys.ToList())
+                    selectedValues[key] = null;
+
+                selectedPhoto = null;
+                photoName.Text = "JPG / PNG / WEBP · حتى 5MB · لا تغيير";
+                reason.Text = "";
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                CloseServiceRequest();
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (MobileApiException ex)
+            {
+                status.Text = ex.Message;
+            }
+            catch
+            {
+                status.Text = "تعذر إرسال طلب تعديل البيانات حالياً.";
+            }
+            finally
+            {
+                submit.IsEnabled = true;
+            }
+        };
+    }
+
+    private async Task BuildShiftServiceAsync()
+    {
+        OpenServiceRequest(
+            "طلب مناوبة",
+            "اختر مناوبة متاحة ومدى الأيام؛ يطبّق التغيير بعد اعتماد الطلب.");
+
+        var status = ServiceStatus();
+        status.Text = "جاري تحميل المناوبات المتاحة...";
+        ServiceRequestHost.Children.Add(status);
+
+        if (!Online())
+        {
+            status.Text = "اتصل بالإنترنت لفتح طلب المناوبة.";
+            return;
+        }
+
+        ShiftCatalogResponse catalog;
+        try
+        {
+            catalog = await _api.ShiftCatalogAsync();
+        }
+        catch (MobileSessionExpiredException ex)
+        {
+            CloseServiceRequest();
+            ShowLogin();
+            Error(ex.Message);
+            return;
+        }
+        catch (MobileApiException ex)
+        {
+            status.Text = ex.Message;
+            return;
+        }
+        catch
+        {
+            status.Text = "تعذر تحميل المناوبات المتاحة.";
+            return;
+        }
+
+        ServiceRequestHost.Children.Clear();
+        status = ServiceStatus();
+
+        if (!catalog.Eligible)
+        {
+            status.Text = catalog.Message ?? "طلب المناوبة غير متاح لهذا الحساب.";
+            ServiceRequestHost.Children.Add(status);
+            return;
+        }
+
+        if (catalog.Items.Count == 0)
+        {
+            status.Text = "لا توجد مناوبات متاحة للطلب حالياً.";
+            ServiceRequestHost.Children.Add(status);
+            return;
+        }
+
+        var selectedShift = catalog.Items[0];
+        var shiftTrigger = ServiceSelectorButton(selectedShift.Name);
+        var shiftOptions = ServiceOptionsPanel();
+
+        foreach (var shiftItem in catalog.Items)
+        {
+            var item = shiftItem;
+            var option = ServiceSelectorButton(item.Name);
+            option.FontSize = 12;
+            option.HeightRequest = 44;
+            option.Clicked += (_, _) =>
+            {
+                selectedShift = item;
+                shiftTrigger.Text = item.Name;
+                shiftOptions.IsVisible = false;
+            };
+            shiftOptions.Children.Add(option);
+        }
+
+        shiftTrigger.Clicked += (_, _) =>
+            shiftOptions.IsVisible = !shiftOptions.IsVisible;
+
+        var fromDate = new DatePicker
+        {
+            Date = DateTime.Today,
+            Format = "yyyy-MM-dd",
+            BackgroundColor = Color.FromArgb("#06101D"),
+            TextColor = Color.FromArgb("#E6F0FA"),
+            HeightRequest = 48
+        };
+        var toDate = new DatePicker
+        {
+            Date = DateTime.Today,
+            Format = "yyyy-MM-dd",
+            BackgroundColor = Color.FromArgb("#06101D"),
+            TextColor = Color.FromArgb("#E6F0FA"),
+            HeightRequest = 48
+        };
+        fromDate.DateSelected += (_, _) =>
+        {
+            var from = fromDate.Date ?? DateTime.Today;
+            var to = toDate.Date ?? from;
+            if (to < from)
+                toDate.Date = from;
+        };
+
+        var reason = ServiceEditor("السبب (اختياري)");
+        var submit = ServicePrimaryButton("إرسال الطلب");
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("المناوبة المطلوبة"));
+        ServiceRequestHost.Children.Add(shiftTrigger);
+        ServiceRequestHost.Children.Add(shiftOptions);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("من تاريخ"));
+        ServiceRequestHost.Children.Add(fromDate);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("إلى تاريخ"));
+        ServiceRequestHost.Children.Add(toDate);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("السبب"));
+        ServiceRequestHost.Children.Add(reason);
+        ServiceRequestHost.Children.Add(submit);
+        ServiceRequestHost.Children.Add(status);
+
+        submit.Clicked += async (_, _) =>
+        {
+            var from = fromDate.Date ?? DateTime.Today;
+            var to = toDate.Date ?? from;
+            if (to < from)
+            {
+                status.Text = "تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.";
+                return;
+            }
+
+            submit.IsEnabled = false;
+            status.Text = "جاري إرسال طلب المناوبة...";
+            try
+            {
+                var result = await _api.SubmitShiftAsync(
+                    selectedShift.Id,
+                    from,
+                    to,
+                    reason.Text);
+                status.Text = result.Message;
+                reason.Text = "";
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                CloseServiceRequest();
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (MobileApiException ex)
+            {
+                status.Text = ex.Message;
+            }
+            catch
+            {
+                status.Text = "تعذر إرسال طلب المناوبة حالياً.";
+            }
+            finally
+            {
+                submit.IsEnabled = true;
+            }
+        };
+    }
+
+    private async Task BuildFinancialServiceAsync()
+    {
+        OpenServiceRequest(
+            "طلب مالي",
+            "قرض · سُلفة · بدل · استرداد — يُفعّل الأثر المالي فقط بعد اكتمال الموافقات.");
+
+        var status = ServiceStatus();
+        status.Text = "جاري تحميل أنواع الطلبات المالية...";
+        ServiceRequestHost.Children.Add(status);
+
+        if (!Online())
+        {
+            status.Text = "اتصل بالإنترنت لفتح الطلب المالي.";
+            return;
+        }
+
+        FinancialCatalogResponse catalog;
+        try
+        {
+            catalog = await _api.FinancialCatalogAsync();
+        }
+        catch (MobileSessionExpiredException ex)
+        {
+            CloseServiceRequest();
+            ShowLogin();
+            Error(ex.Message);
+            return;
+        }
+        catch (MobileApiException ex)
+        {
+            status.Text = ex.Message;
+            return;
+        }
+        catch (Exception ex)
+        {
+            status.Text = $"تعذر تحميل أنواع الطلبات المالية. {ex.GetType().Name}: {ex.Message}";
+            return;
+        }
+
+        ServiceRequestHost.Children.Clear();
+        status = ServiceStatus();
+
+        if (!catalog.Eligible)
+        {
+            status.Text = catalog.Message ?? "الطلب المالي غير متاح لهذا الحساب.";
+            ServiceRequestHost.Children.Add(status);
+            return;
+        }
+
+        if (catalog.Items.Count == 0)
+        {
+            status.Text = "لا توجد أنواع طلبات مالية متاحة.";
+            ServiceRequestHost.Children.Add(status);
+            return;
+        }
+
+        var selectedKind = catalog.Items[0];
+        var kindTrigger = ServiceSelectorButton(selectedKind.Label);
+        var kindOptions = ServiceOptionsPanel();
+
+        var amount = ServiceEntry("المبلغ", Keyboard.Numeric);
+        var installments = ServiceEntry("1", Keyboard.Numeric);
+        installments.Text = "1";
+        var installmentsBlock = new VerticalStackLayout { Spacing = 6 };
+        installmentsBlock.Children.Add(ServiceFieldTitle("الأقساط"));
+        installmentsBlock.Children.Add(installments);
+
+        var selectedMonth = DateTime.Today.Month;
+        var monthTrigger = ServiceSelectorButton(selectedMonth.ToString("00"));
+        var monthOptions = new FlexLayout
+        {
+            IsVisible = false,
+            Direction = FlexDirection.Row,
+            Wrap = FlexWrap.Wrap,
+            JustifyContent = FlexJustify.SpaceBetween,
+            AlignItems = FlexAlignItems.Center,
+            BackgroundColor = Color.FromArgb("#0B2033"),
+            Padding = new Thickness(6)
+        };
+
+        var year = ServiceEntry("السنة", Keyboard.Numeric);
+        year.Text = DateTime.Today.Year.ToString(CultureInfo.InvariantCulture);
+        var preview = ServiceHint("");
+        var reason = ServiceEntry("سبب الطلب (اختياري)");
+        var submit = ServicePrimaryButton("إرسال للموافقة");
+
+        void UpdateFinancialUi()
+        {
+            var installmentBased =
+                selectedKind.Key.Equals("Loan", StringComparison.OrdinalIgnoreCase) ||
+                selectedKind.Key.Equals("Advance", StringComparison.OrdinalIgnoreCase);
+            installmentsBlock.IsVisible = installmentBased;
+
+            if (installmentBased &&
+                TryParseDecimal(amount.Text, out var parsedAmount) &&
+                int.TryParse(installments.Text, out var count) &&
+                count > 0)
+            {
+                var monthly = Math.Round(parsedAmount / count, 2);
+                preview.Text = $"القسط الشهري التقريبي: {monthly:N2} × {count} قسط";
+            }
+            else
+            {
+                preview.Text = "";
+            }
+        }
+
+        foreach (var item in catalog.Items)
+        {
+            var option = ServiceSelectorButton(item.Label);
+            option.FontSize = 12;
+            option.HeightRequest = 44;
+            option.Clicked += (_, _) =>
+            {
+                selectedKind = item;
+                kindTrigger.Text = item.Label;
+                kindOptions.IsVisible = false;
+                UpdateFinancialUi();
+            };
+            kindOptions.Children.Add(option);
+        }
+
+        for (var month = 1; month <= 12; month++)
+        {
+            var m = month;
+            var option = new Button
+            {
+                Text = m.ToString("00"),
+                BackgroundColor = Color.FromArgb("#10263A"),
+                TextColor = Color.FromArgb("#CFE0F0"),
+                CornerRadius = 10,
+                FontSize = 11,
+                WidthRequest = 74,
+                HeightRequest = 42,
+                Margin = new Thickness(2)
+            };
+            option.Clicked += (_, _) =>
+            {
+                selectedMonth = m;
+                monthTrigger.Text = m.ToString("00");
+                monthOptions.IsVisible = false;
+            };
+            monthOptions.Children.Add(option);
+        }
+
+        kindTrigger.Clicked += (_, _) =>
+        {
+            monthOptions.IsVisible = false;
+            kindOptions.IsVisible = !kindOptions.IsVisible;
+        };
+        monthTrigger.Clicked += (_, _) =>
+        {
+            kindOptions.IsVisible = false;
+            monthOptions.IsVisible = !monthOptions.IsVisible;
+        };
+        amount.TextChanged += (_, _) => UpdateFinancialUi();
+        installments.TextChanged += (_, _) => UpdateFinancialUi();
+
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("نوع الطلب"));
+        ServiceRequestHost.Children.Add(kindTrigger);
+        ServiceRequestHost.Children.Add(kindOptions);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("المبلغ"));
+        ServiceRequestHost.Children.Add(amount);
+        ServiceRequestHost.Children.Add(installmentsBlock);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("شهر البدء"));
+        ServiceRequestHost.Children.Add(monthTrigger);
+        ServiceRequestHost.Children.Add(monthOptions);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("السنة"));
+        ServiceRequestHost.Children.Add(year);
+        ServiceRequestHost.Children.Add(preview);
+        ServiceRequestHost.Children.Add(ServiceFieldTitle("السبب"));
+        ServiceRequestHost.Children.Add(reason);
+        ServiceRequestHost.Children.Add(submit);
+        ServiceRequestHost.Children.Add(status);
+        UpdateFinancialUi();
+
+        submit.Clicked += async (_, _) =>
+        {
+            if (!TryParseDecimal(amount.Text, out var parsedAmount) || parsedAmount <= 0)
+            {
+                status.Text = "أدخل مبلغاً صحيحاً أكبر من صفر.";
+                return;
+            }
+
+            var count = 1;
+            var installmentBased =
+                selectedKind.Key.Equals("Loan", StringComparison.OrdinalIgnoreCase) ||
+                selectedKind.Key.Equals("Advance", StringComparison.OrdinalIgnoreCase);
+            if (installmentBased &&
+                (!int.TryParse(installments.Text, out count) || count < 1))
+            {
+                status.Text = "عدد الأقساط يجب أن يكون 1 أو أكثر.";
+                return;
+            }
+
+            if (!int.TryParse(year.Text, out var selectedYear))
+            {
+                status.Text = "أدخل سنة صحيحة.";
+                return;
+            }
+
+            submit.IsEnabled = false;
+            status.Text = "جاري إرسال الطلب المالي...";
+            try
+            {
+                var result = await _api.SubmitFinancialAsync(
+                    selectedKind.Key,
+                    parsedAmount,
+                    count,
+                    selectedYear,
+                    selectedMonth,
+                    reason.Text);
+                status.Text = result.Message;
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                CloseServiceRequest();
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (MobileApiException ex)
+            {
+                status.Text = ex.Message;
+            }
+            catch
+            {
+                status.Text = "تعذر إرسال الطلب المالي حالياً.";
+            }
+            finally
+            {
+                submit.IsEnabled = true;
+            }
+        };
+    }
+
+    private static bool TryParseDecimal(string? value, out decimal result) =>
+        decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out result) ||
+        decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
+
+    private async void OnOpenOvertimeFromRequestSheet(object? sender, EventArgs e)
+    {
+        RequestSheetOverlay.IsVisible = false;
+        ShowRequests();
+
+        if (_overtimeRequestType is null)
+            return;
+
+        RequestTypePicker.SelectedItem = _overtimeRequestType;
+        UpdateRequestTypeFields();
+        await MainScrollView.ScrollToAsync(SelectedRequestTypeButton, ScrollToPosition.Center, true);
+    }
+
+    private async void OnOpenRequestTypeChooser(object? sender, EventArgs e)
+    {
+        if (_requestCatalog.Count == 0 && Online() && !_busy)
+            await LoadRequestsAsync();
+
+        OpenRequestTypeChooser();
+    }
+
+    private void OpenRequestTypeChooser(string? category = null)
+    {
+        if (!string.IsNullOrWhiteSpace(category))
+            _requestCategory = category;
+
+        RefreshRequestTypeChooser();
+        MoreOverlay.IsVisible = false;
+        RequestSheetOverlay.IsVisible = false;
+        RequestTypeDropdownPanel.IsVisible = false;
+        ModalDateRangePanel.IsVisible = false;
+        ModalRequestStatusLabel.Text = "";
+        RequestTypeOverlay.IsVisible = true;
+    }
+
+    private void OnRequestCategoryClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button button &&
+            button.CommandParameter is string category &&
+            !string.IsNullOrWhiteSpace(category))
+        {
+            _requestCategory = category;
+            RefreshRequestTypeChooser();
+        }
+    }
+
+    private void OnToggleRequestTypeDropdown(object? sender, EventArgs e) =>
+        RequestTypeDropdownPanel.IsVisible = !RequestTypeDropdownPanel.IsVisible;
+
+    private void OnRequestTypeChoiceClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button button ||
+            button.CommandParameter is not MobileRequestType type)
+            return;
+
+        RequestTypePicker.SelectedItem = type;
+        RequestTypeDropdownPanel.IsVisible = false;
+        UpdateRequestTypeFields();
+        SyncModalRequestTypeFields();
+    }
+
+    private void OnOvertimeRequestChoice(object? sender, EventArgs e)
+    {
+        if (_overtimeRequestType is null)
+            return;
+
+        RequestTypePicker.SelectedItem = _overtimeRequestType;
+        RequestTypeDropdownPanel.IsVisible = false;
+        UpdateRequestTypeFields();
+        SyncModalRequestTypeFields();
+    }
+
+    private void OnCloseRequestTypeChooser(object? sender, EventArgs e) =>
+        RequestTypeOverlay.IsVisible = false;
+
+    private void OnCloseRequestTypeChooserTapped(object? sender, TappedEventArgs e) =>
+        RequestTypeOverlay.IsVisible = false;
+
+    private void RefreshRequestTypeChooser()
+    {
+        var categoryItems = _requestCatalog
+            .Where(x => string.Equals(
+                x.Category?.Trim(),
+                _requestCategory,
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        RequestTypeChoicesList.ItemsSource = categoryItems;
+
+        var selected = RequestTypePicker.SelectedItem as MobileRequestType;
+        if (selected is null || !categoryItems.Any(x => x.Id == selected.Id))
+        {
+            selected = categoryItems.FirstOrDefault();
+            RequestTypePicker.SelectedItem = selected;
+        }
+
+        _overtimeRequestType = _requestCatalog.FirstOrDefault(IsOvertimeRequestType);
+        OvertimeChoiceButton.IsVisible = false;
+        RequestSheetOvertimeButton.IsVisible = _overtimeRequestType is not null;
+        if (_overtimeRequestType is not null)
+            RequestSheetOvertimeButton.Text = _overtimeRequestType.Name;
+
+        RequestTypeDropdownPanel.IsVisible = false;
+        SyncModalRequestTypeFields();
+
+        foreach (var (button, category) in new[]
+                 {
+                     (LeaveCategoryButton, "الإجازات"),
+                     (CasualCategoryButton, "العرضية"),
+                     (DepartureCategoryButton, "المغادرات")
+                 })
+        {
+            var active = string.Equals(
+                category,
+                _requestCategory,
+                StringComparison.OrdinalIgnoreCase);
+
+            button.BackgroundColor = Color.FromArgb(active ? "#142F3A" : "#0B1A2A");
+            button.TextColor = Color.FromArgb(active ? "#19D3E0" : "#9FB3C7");
+            button.BorderColor = Color.FromArgb(active ? "#2F8E98" : "#263E55");
+        }
+    }
+
+    private void SyncModalRequestTypeFields()
+    {
+        if (RequestTypePicker.SelectedItem is not MobileRequestType type)
+        {
+            ModalSelectedTypeButton.Text = "اختر النوع";
+            ModalTimeFields.IsVisible = false;
+            ModalDurationPanel.IsVisible = false;
+            ModalAttachmentHint.Text = "المرفق اختياري";
+            return;
+        }
+
+        ModalSelectedTypeButton.Text = RequestTypeModalLabel(type);
+        ModalTimeFields.IsVisible = type.NeedsTime;
+        ModalDurationPanel.IsVisible = type.NeedsTime;
+
+        var attachmentText = type.AttachmentRequired
+            ? "المرفق إلزامي"
+            : "المرفق اختياري";
+
+        if (!string.IsNullOrWhiteSpace(type.AttachmentLabel))
+            attachmentText += $" · {type.AttachmentLabel}";
+
+        ModalAttachmentHint.Text = attachmentText;
+        ModalRequestReasonEditor.Placeholder = type.ReasonRequired
+            ? "السبب (إلزامي)"
+            : "اكتب السبب";
+
+        UpdateModalDuration();
+    }
+
+    private string RequestTypeModalLabel(MobileRequestType type)
+    {
+        var balance = _currentLeave.FirstOrDefault(x =>
+            string.Equals(x.Type?.Trim(), type.Name?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (balance is not null)
+        {
+            var unit = string.Equals(balance.Unit, "Hours", StringComparison.OrdinalIgnoreCase)
+                ? "ساعة"
+                : "يوم";
+            return $"{type.Name} — المتبقي {balance.Remaining:0.#} {unit}";
+        }
+
+        return type.AllowedDays.HasValue
+            ? $"{type.Name} — حتى {type.AllowedDays} يوم"
+            : type.Name;
+    }
+
+    private static bool IsOvertimeRequestType(MobileRequestType type)
+    {
+        var category = type.Category ?? "";
+        var name = type.Name ?? "";
+        var nameEn = type.NameEn ?? "";
+
+        return category.Contains("أوفر", StringComparison.OrdinalIgnoreCase) ||
+               name.Contains("إضاف", StringComparison.OrdinalIgnoreCase) ||
+               nameEn.Contains("Overtime", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnOpenModalDateRange(object? sender, EventArgs e)
+    {
+        RequestTypeDropdownPanel.IsVisible = false;
+        ModalDateRangePanel.IsVisible = !ModalDateRangePanel.IsVisible;
+    }
+
+    private void OnModalDateChanged(object? sender, DateChangedEventArgs e)
+    {
+        var from = ModalFromDatePicker.Date ?? DateTime.Today;
+        var to = ModalToDatePicker.Date ?? from;
+
+        if (to < from)
+            ModalToDatePicker.Date = from;
+
+        UpdateModalDateSummary();
+    }
+
+    private void OnApplyModalDateRange(object? sender, EventArgs e)
+    {
+        UpdateModalDateSummary();
+        ModalDateRangePanel.IsVisible = false;
+    }
+
+    private void OnModalTimeChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == TimePicker.TimeProperty.PropertyName)
+            UpdateModalDuration();
+    }
+
+    private void UpdateModalDateSummary()
+    {
+        var from = ModalFromDatePicker.Date ?? DateTime.Today;
+        var to = ModalToDatePicker.Date ?? from;
+
+        if (to < from)
+            to = from;
+
+        ModalDateTriggerButton.Text = from.Date == to.Date
+            ? from.ToString("yyyy-MM-dd")
+            : $"{from:yyyy-MM-dd}  ←  {to:yyyy-MM-dd}";
+
+        var days = (to.Date - from.Date).Days + 1;
+        ModalDayCountLabel.Text = $"عدد الأيام: {days}";
+    }
+
+    private void UpdateModalDuration()
+    {
+        if (RequestTypePicker.SelectedItem is not MobileRequestType type ||
+            !type.NeedsTime)
+        {
+            ModalDurationPanel.IsVisible = false;
+            ModalCrossNote.IsVisible = false;
+            ModalPunchBlock.IsVisible = false;
+            return;
+        }
+
+        ModalDurationPanel.IsVisible = true;
+        ModalPunchBlock.IsVisible = true;
+
+        var start = ModalStartTimePicker.Time ?? TimeSpan.Zero;
+        var end = ModalEndTimePicker.Time ?? TimeSpan.Zero;
+        var crossMidnight = end <= start;
+
+        if (crossMidnight)
+            end = end.Add(TimeSpan.FromDays(1));
+
+        var duration = end - start;
+        ModalDurationLabel.Text =
+            $"المدة المطلوبة: {(int)duration.TotalHours:00}:{duration.Minutes:00}";
+        ModalCrossNote.IsVisible = crossMidnight;
+
+        var selectedDate = ModalFromDatePicker.Date ?? DateTime.Today;
+        var attendance = _currentAttendance.FirstOrDefault(x =>
+            DateTime.TryParse(x.Date, out var d) &&
+            d.Date == selectedDate.Date);
+
+        if (attendance is null)
+        {
+            ModalPunchLabel.Text = "لا توجد بصمات مسجلة لهذا اليوم.";
+        }
+        else
+        {
+            ModalPunchLabel.Text =
+                $"أول دخول: {attendance.CheckIn ?? "—"}   •   آخر خروج: {attendance.CheckOut ?? "—"}";
+        }
+    }
+
+    private async void OnPickModalRequestAttachment(object? sender, EventArgs e)
+    {
+        if (_busy) return;
+
+        try
+        {
+            var picked = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "اختر مرفق الطلب"
+            });
+
+            if (picked is null) return;
+
+            _requestAttachment = picked;
+            ModalAttachmentName.Text = picked.FileName;
+            ModalRequestStatusLabel.Text = "";
+        }
+        catch
+        {
+            ModalRequestStatusLabel.Text = "تعذر فتح منتقي الملفات.";
+        }
+    }
+
+    private async void OnSubmitModalRequest(object? sender, EventArgs e)
+    {
+        if (_busy) return;
+
+        if (!Online())
+        {
+            ModalRequestStatusLabel.Text = "لا يمكن إرسال الطلب بدون إنترنت.";
+            return;
+        }
+
+        if (RequestTypePicker.SelectedItem is not MobileRequestType requestType)
+        {
+            ModalRequestStatusLabel.Text = "اختر نوع الطلب.";
+            return;
+        }
+
+        var from = ModalFromDatePicker.Date ?? DateTime.Today;
+        var to = ModalToDatePicker.Date ?? from;
+        if (to < from)
+        {
+            ModalRequestStatusLabel.Text =
+                "تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.";
+            return;
+        }
+
+        TimeSpan? startTime = null;
+        TimeSpan? endTime = null;
+
+        if (requestType.NeedsTime)
+        {
+            startTime = ModalStartTimePicker.Time;
+            endTime = ModalEndTimePicker.Time;
+
+            if (startTime is null || endTime is null)
+            {
+                ModalRequestStatusLabel.Text =
+                    "حدد وقت البداية والنهاية.";
+                return;
+            }
+
+            if (endTime <= startTime && to.Date == from.Date)
+                to = from.AddDays(1);
+        }
+
+        if (requestType.AttachmentRequired &&
+            _requestAttachment is null)
+        {
+            ModalRequestStatusLabel.Text =
+                "هذا النوع يتطلب مرفقاً قبل الإرسال.";
+            return;
+        }
+
+        if (requestType.ReasonRequired &&
+            string.IsNullOrWhiteSpace(ModalRequestReasonEditor.Text))
+        {
+            ModalRequestStatusLabel.Text =
+                "سبب الطلب إلزامي حسب سياسة الشركة.";
+            return;
+        }
+
+        await Busy("جاري إرسال الطلب...", async () =>
+        {
+            try
+            {
+                var result = await _api.SubmitRequestAsync(
+                    requestType,
+                    from,
+                    to,
+                    startTime,
+                    endTime,
+                    ModalRequestReasonEditor.Text,
+                    _requestAttachment);
+
+                ModalRequestStatusLabel.Text = result.Message;
+                ModalRequestReasonEditor.Text = "";
+                ResetRequestAttachment();
+                await LoadRequestsCoreAsync();
+            }
+            catch (MobileSessionExpiredException ex)
+            {
+                ShowLogin();
+                Error(ex.Message);
+            }
+            catch (MobileApiException ex)
+            {
+                ModalRequestStatusLabel.Text = ex.Message;
+            }
+            catch
+            {
+                ModalRequestStatusLabel.Text =
+                    "تعذر إرسال الطلب حالياً.";
+            }
+        });
+    }
+
     private async void OnRefreshRequests(object? sender, EventArgs e)
     {
         if (!_busy)
@@ -477,21 +1868,47 @@ public partial class MainPage : ContentPage
     {
         if (_busy) return;
 
-        if (!Online())
+        var loadedCache = await LoadHomeCacheAsync();
+        if (loadedCache)
         {
-            var loadedCache = await LoadHomeCacheAsync();
             AuthNav.IsVisible = true;
             LoginCard.IsVisible = false;
             ShowActiveSection();
 
-            var message = loadedCache
-                ? "وضع عدم الاتصال — يتم عرض آخر بيانات محفوظة على الجهاز."
-                : "أنت غير متصل بالإنترنت ولا توجد بيانات محفوظة بعد.";
-            SetPunchMessage(message);
+            if (!Online())
+            {
+                SetPunchMessage("وضع عدم الاتصال — يتم عرض آخر بيانات محفوظة على الجهاز.");
+                return;
+            }
+
+            // Show cached data immediately, then refresh silently in the background.
+            _ = RefreshHomeSilentlyAsync();
             return;
         }
 
+        if (!Online())
+        {
+            AuthNav.IsVisible = true;
+            LoginCard.IsVisible = false;
+            ShowActiveSection();
+            SetPunchMessage("أنت غير متصل بالإنترنت ولا توجد بيانات محفوظة بعد.");
+            return;
+        }
+
+        // First successful load only: no cache exists yet, so a blocking loader is appropriate.
         await Busy("جاري تحميل بياناتك...", LoadCoreAsync);
+    }
+
+    private async Task RefreshHomeSilentlyAsync()
+    {
+        try
+        {
+            await LoadCoreAsync();
+        }
+        catch
+        {
+            // LoadCoreAsync already handles API/session failures.
+        }
     }
 
     private async Task LoadCoreAsync()
@@ -602,12 +2019,14 @@ public partial class MainPage : ContentPage
             var currentId =
                 (RequestTypePicker.SelectedItem as MobileRequestType)?.Id;
 
+            _requestCatalog = catalog.Items ?? new();
+
             MissingPunchRequestCard.IsVisible =
                 catalog.Eligible && catalog.CanSubmitMissingPunch;
 
-            RequestTypePicker.ItemsSource = catalog.Items;
+            RequestTypePicker.ItemsSource = _requestCatalog;
             RequestTypePicker.IsEnabled =
-                catalog.Eligible && catalog.Items.Count > 0;
+                catalog.Eligible && _requestCatalog.Count > 0;
 
             if (!catalog.Eligible)
             {
@@ -615,7 +2034,7 @@ public partial class MainPage : ContentPage
                     catalog.Message ?? "لا يمكنك تقديم طلب حالياً.";
                 RequestTypePicker.SelectedIndex = -1;
             }
-            else if (catalog.Items.Count == 0)
+            else if (_requestCatalog.Count == 0)
             {
                 RequestStatusLabel.Text =
                     "لا توجد أنواع طلبات متاحة لهذا الحساب.";
@@ -624,13 +2043,17 @@ public partial class MainPage : ContentPage
             else
             {
                 var selectedIndex = currentId is int id
-                    ? catalog.Items.FindIndex(x => x.Id == id)
+                    ? _requestCatalog.FindIndex(x => x.Id == id)
                     : -1;
 
                 RequestTypePicker.SelectedIndex =
-                    selectedIndex >= 0 ? selectedIndex : 0;
+                    selectedIndex >= 0 ? selectedIndex : -1;
+
+                if (selectedIndex < 0)
+                    RequestStatusLabel.Text = "";
             }
 
+            RefreshRequestTypeChooser();
             UpdateRequestTypeFields();
         }
         catch (MobileSessionExpiredException ex)
@@ -865,10 +2288,18 @@ public partial class MainPage : ContentPage
     {
         if (RequestTypePicker.SelectedItem is not MobileRequestType type)
         {
+            SelectedRequestTypeButton.Text = "اختر نوع الطلب";
+            SelectedRequestTypeCategoryLabel.Text = "اضغط لاختيار القسم ونوع الطلب";
             RequestTimeFields.IsVisible = false;
             RequestAttachmentFields.IsVisible = false;
             return;
         }
+
+        SelectedRequestTypeButton.Text = type.Name;
+        SelectedRequestTypeCategoryLabel.Text =
+            string.IsNullOrWhiteSpace(type.Category)
+                ? "نوع الطلب المحدد"
+                : type.Category;
 
         RequestTimeFields.IsVisible = type.NeedsTime;
         RequestAttachmentFields.IsVisible = true;
@@ -890,6 +2321,7 @@ public partial class MainPage : ContentPage
     {
         _requestAttachment = null;
         RequestAttachmentName.Text = "لم يتم اختيار ملف";
+        ModalAttachmentName.Text = "لم يتم اختيار ملف";
     }
 
     private async Task Busy(string text, Func<Task> action)
@@ -915,6 +2347,8 @@ public partial class MainPage : ContentPage
         AuthNav.IsVisible = false;
         RequestFab.IsVisible = false;
         MoreOverlay.IsVisible = false;
+        RequestSheetOverlay.IsVisible = false;
+        RequestTypeOverlay.IsVisible = false;
         HomePanel.IsVisible = false;
         AttendancePanel.IsVisible = false;
         RequestsPanel.IsVisible = false;

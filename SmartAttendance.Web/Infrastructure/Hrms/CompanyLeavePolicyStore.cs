@@ -44,9 +44,19 @@ public static class CompanyLeavePolicyStore
         string RequestTypeName,
         string CategoryName,
         decimal Entitlement,
+        decimal Approved,
+        decimal PendingReserved,
         decimal Reserved,
         decimal Remaining,
         string Unit);
+
+    public sealed record WorkdaySnapshot(
+        bool IsWorking,
+        decimal ScheduledHours,
+        string ShiftName = "",
+        string? ScheduledStart = null,
+        string? ScheduledEnd = null,
+        string DayKind = "Work");
 
     private sealed record StoredPolicy(int RequestTypeId, bool RequiresBalance, decimal? EntitlementAmount,
         bool AllowNegative, int? BalanceSourceRequestTypeId, decimal HoursPerDayOverride, string BalanceUnit,
@@ -55,8 +65,12 @@ public static class CompanyLeavePolicyStore
         int? CarryForwardExpiryMonths, string AccrualMethod, bool ProrateOnHire, bool AllowRetroactive,
         bool ReasonRequired, bool? AttachmentRequiredOverride);
 
-    private sealed record UsageRow(int Id, int? RequestTypeId, string RequestType, DateOnly FromDate,
+    private sealed record UsageRow(int Id, int? RequestTypeId, string RequestType, string Status, DateOnly FromDate,
         DateOnly ToDate, TimeSpan? StartTime, TimeSpan? EndTime);
+    private sealed record UsageBreakdown(decimal Approved, decimal PendingReserved)
+    {
+        public decimal Total => Approved + PendingReserved;
+    }
     private sealed record EmployeeFacts(int CompanyId, DateOnly? HireDate, string? WorkType);
 
     public static async Task<List<Policy>> ListForCompanyAsync(ApplicationDbContext db, int companyId, bool onlyActive = true)
@@ -281,14 +295,17 @@ VALUES
             entitlement += await CalculateCarryForwardAsync(
                 db, employeeId, facts, sourcePolicy, sourceId, policies, types, asOf);
 
-            var reserved = await SumUsageForSourceAsync(
+            var usageBreakdown = await SumUsageBreakdownForSourceAsync(
                 db, employeeId, facts.CompanyId, sourceId, usage, policies, types);
+            var reserved = usageBreakdown.Total;
 
             result.Add(new BalanceSnapshot(
                 sourceId,
                 sourcePolicy.RequestTypeName,
                 sourcePolicy.CategoryName,
                 entitlement,
+                usageBreakdown.Approved,
+                usageBreakdown.PendingReserved,
                 reserved,
                 entitlement - reserved,
                 sourcePolicy.BalanceUnit));
@@ -298,6 +315,25 @@ VALUES
             .OrderBy(snapshot => snapshot.CategoryName)
             .ThenBy(snapshot => snapshot.RequestTypeName)
             .ToList();
+    }
+
+    public static async Task<WorkdaySnapshot> GetWorkdaySnapshotAsync(
+        ApplicationDbContext db,
+        int employeeId,
+        DateOnly date)
+    {
+        var facts = await LoadEmployeeFactsAsync(db, employeeId);
+        if (facts.CompanyId <= 0) return new(false, 0m);
+
+        var scheduled = await ResolveScheduledLeaveDayAsync(
+            db, employeeId, facts.CompanyId, date, hoursOverride: 0m);
+        return new(
+            scheduled.IsWorking,
+            scheduled.Hours,
+            scheduled.ShiftName,
+            scheduled.StartTime,
+            scheduled.EndTime,
+            scheduled.DayKind);
     }
 
     private static List<RequestSlice> ExpandAcrossYears(IReadOnlyList<RequestSlice> requests)
@@ -376,28 +412,36 @@ FROM CompanyLeavePolicies WHERE CompanyId=@CompanyId;
     {
         var from=new DateOnly(year,1,1); var to=new DateOnly(year,12,31);
         return await HrmsDatabase.QueryAsync(db,"""
-SELECT Id,RequestTypeId,ISNULL(RequestType,N'') RequestType,COALESCE(FromDate,RequestDate,CAST(CreatedAt AS date)) FromDate,
+SELECT Id,RequestTypeId,ISNULL(RequestType,N'') RequestType,Status,COALESCE(FromDate,RequestDate,CAST(CreatedAt AS date)) FromDate,
  COALESCE(ToDate,FromDate,RequestDate,CAST(CreatedAt AS date)) ToDate,StartTime,EndTime
 FROM SelfServiceRequests WHERE EmployeeId=@EmployeeId AND Id<>@CurrentRequestId AND Status IN(N'Pending',N'Approved')
  AND COALESCE(FromDate,RequestDate,CAST(CreatedAt AS date))<=@ToDate AND COALESCE(ToDate,FromDate,RequestDate,CAST(CreatedAt AS date))>=@FromDate;
 """,c=>{HrmsDatabase.AddParameter(c,"@EmployeeId",employeeId);HrmsDatabase.AddParameter(c,"@CurrentRequestId",currentRequestId);HrmsDatabase.AddParameter(c,"@FromDate",from);HrmsDatabase.AddParameter(c,"@ToDate",to);},
-            r=>new UsageRow(HrmsDatabase.GetInt(r,"Id"),HrmsDatabase.GetNullableInt(r,"RequestTypeId"),HrmsDatabase.GetString(r,"RequestType"),HrmsDatabase.GetDateOnly(r,"FromDate")??from,HrmsDatabase.GetDateOnly(r,"ToDate")??from,HrmsDatabase.GetTimeSpan(r,"StartTime"),HrmsDatabase.GetTimeSpan(r,"EndTime")));
+            r=>new UsageRow(HrmsDatabase.GetInt(r,"Id"),HrmsDatabase.GetNullableInt(r,"RequestTypeId"),HrmsDatabase.GetString(r,"RequestType"),HrmsDatabase.GetString(r,"Status"),HrmsDatabase.GetDateOnly(r,"FromDate")??from,HrmsDatabase.GetDateOnly(r,"ToDate")??from,HrmsDatabase.GetTimeSpan(r,"StartTime"),HrmsDatabase.GetTimeSpan(r,"EndTime")));
     }
 
-    private static async Task<decimal> SumUsageForSourceAsync(ApplicationDbContext db,int employeeId,int companyId,int sourceId,IReadOnlyList<UsageRow> usage,IReadOnlyDictionary<int,Policy> policies,IReadOnlyList<RequestTypeStore.ReqType> types)
+    private static async Task<UsageBreakdown> SumUsageBreakdownForSourceAsync(ApplicationDbContext db,int employeeId,int companyId,int sourceId,IReadOnlyList<UsageRow> usage,IReadOnlyDictionary<int,Policy> policies,IReadOnlyList<RequestTypeStore.ReqType> types)
     {
         var byId=types.ToDictionary(x=>x.Id); var byName=types.GroupBy(x=>x.Name,StringComparer.OrdinalIgnoreCase).ToDictionary(g=>g.Key,g=>g.First(),StringComparer.OrdinalIgnoreCase);
-        var sourceUnit=policies.TryGetValue(sourceId,out var source)?source.BalanceUnit:"Days"; decimal total=0m;
+        var sourceUnit=policies.TryGetValue(sourceId,out var source)?source.BalanceUnit:"Days";
+        decimal approved=0m; decimal pendingReserved=0m;
         foreach(var row in usage)
         {
             RequestTypeStore.ReqType? rowType=null;
             if(row.RequestTypeId is >0 && byId.TryGetValue(row.RequestTypeId.Value,out var found)) rowType=found; else byName.TryGetValue(row.RequestType,out rowType);
             if(rowType is null||!policies.TryGetValue(rowType.Id,out var rowPolicy)||!rowPolicy.RequiresBalance) continue;
             if((rowPolicy.BalanceSourceRequestTypeId??rowPolicy.RequestTypeId)!=sourceId) continue;
-            total+=await CalculateDebitAsync(db,employeeId,companyId,row.FromDate,row.ToDate,row.StartTime,row.EndTime,sourceUnit,rowPolicy.HoursPerDayOverride);
+            var debit=await CalculateDebitAsync(db,employeeId,companyId,row.FromDate,row.ToDate,row.StartTime,row.EndTime,sourceUnit,rowPolicy.HoursPerDayOverride);
+            if(row.Status.Equals("Approved",StringComparison.OrdinalIgnoreCase)) approved+=debit;
+            else if(row.Status.Equals("Pending",StringComparison.OrdinalIgnoreCase)) pendingReserved+=debit;
         }
-        return Math.Round(total,4,MidpointRounding.AwayFromZero);
+        return new UsageBreakdown(
+            Math.Round(approved,4,MidpointRounding.AwayFromZero),
+            Math.Round(pendingReserved,4,MidpointRounding.AwayFromZero));
     }
+
+    private static async Task<decimal> SumUsageForSourceAsync(ApplicationDbContext db,int employeeId,int companyId,int sourceId,IReadOnlyList<UsageRow> usage,IReadOnlyDictionary<int,Policy> policies,IReadOnlyList<RequestTypeStore.ReqType> types) =>
+        (await SumUsageBreakdownForSourceAsync(db,employeeId,companyId,sourceId,usage,policies,types)).Total;
 
     public static bool IsPartTimeWorkType(string? workType) =>
         string.Equals(workType?.Trim(), "دوام جزئي", StringComparison.OrdinalIgnoreCase)
@@ -439,7 +483,13 @@ FROM SelfServiceRequests WHERE EmployeeId=@EmployeeId AND Id<>@CurrentRequestId 
         var carry=Math.Max(0m,priorEntitlement-priorUsed); if(sourcePolicy.CarryForwardMaxAmount is { } cap)carry=Math.Min(carry,cap); return carry;
     }
 
-    private sealed record ScheduledLeaveDay(bool IsWorking, decimal Hours);
+    private sealed record ScheduledLeaveDay(
+        bool IsWorking,
+        decimal Hours,
+        string ShiftName = "",
+        string? StartTime = null,
+        string? EndTime = null,
+        string DayKind = "Work");
 
     public static bool IsChargeableLeaveDay(string? dayKind, bool isHoliday = false) =>
         !isHoliday && !string.IsNullOrWhiteSpace(dayKind) && DayAttendanceStore.IsWorkingKind(dayKind);
@@ -483,6 +533,11 @@ FROM SelfServiceRequests WHERE EmployeeId=@EmployeeId AND Id<>@CurrentRequestId 
     {
         var result=new Dictionary<DateOnly,ScheduledLeaveDay>();
         if(toDate<fromDate)return result;
+
+        // This table is created lazily by EmployeeShiftTypeStore. Leave-balance
+        // calculations can run before the shift-assignment admin page is ever opened,
+        // so ensure the schema exists before reading it directly.
+        await EmployeeShiftTypeStore.EnsureAsync(db);
 
         var scope=Security.CompanyScope.ForCompanies(new[]{companyId});
         var shifts=(await ShiftTypeStore.ListInScopeAsync(db,scope)).ToDictionary(shift=>shift.Id);
@@ -563,7 +618,7 @@ WHERE (IsRecurring=1)
         {
             if(holidays.Contains(date))
             {
-                result[date]=new ScheduledLeaveDay(false,0m);
+                result[date]=new ScheduledLeaveDay(false,0m,DayKind:"Holiday");
                 continue;
             }
 
@@ -577,7 +632,16 @@ WHERE (IsRecurring=1)
                     : 0m;
                 if(persistedWorking&&persistedHours<=0m)
                     persistedHours=await ResolveDailyHoursAsync(db,employeeId,companyId,date,hoursOverride);
-                result[date]=new ScheduledLeaveDay(persistedWorking,persistedHours);
+                ShiftTypeStore.ShiftType? persistedShift=null;
+                if(persisted.ShiftId is int persistedId) shifts.TryGetValue(persistedId,out persistedShift);
+                var persistedDay=persistedShift?.Days.FirstOrDefault(day=>day.DayIndex==DayAttendanceStore.ToDayIndex(date));
+                result[date]=new ScheduledLeaveDay(
+                    persistedWorking,
+                    persistedHours,
+                    persistedShift?.Name??string.Empty,
+                    persistedShift?.IsFlexible==true?null:persistedDay?.StartTime,
+                    persistedShift?.IsFlexible==true?null:persistedDay?.EndTime,
+                    persisted.Status=="Holiday"?"Holiday":persisted.DayKind);
                 continue;
             }
 
@@ -602,7 +666,13 @@ WHERE (IsRecurring=1)
                 : 0m;
             if(isWorking&&hours<=0m)
                 hours=await ResolveDailyHoursAsync(db,employeeId,companyId,date,hoursOverride);
-            result[date]=new ScheduledLeaveDay(isWorking,hours);
+            result[date]=new ScheduledLeaveDay(
+                isWorking,
+                hours,
+                shift?.Name??string.Empty,
+                shift?.IsFlexible==true?null:shiftDay?.StartTime,
+                shift?.IsFlexible==true?null:shiftDay?.EndTime,
+                dayKind);
         }
 
         return result;

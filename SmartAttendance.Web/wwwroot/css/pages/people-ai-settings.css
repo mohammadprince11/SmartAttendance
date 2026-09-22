@@ -95,7 +95,7 @@
 }
 .pai-field-identity{display:grid;gap:var(--sp-1);align-content:center}
 .pai-field-identity code{
-    direction:ltr;text-align:left;color:var(--color-text-secondary);
+    direction:ltr;text-align:start;color:var(--color-text-secondary);
     font-size:var(--fs-tiny);overflow-wrap:anywhere
 }
 .pai-field-actions{display:flex;gap:var(--sp-1);align-items:center}

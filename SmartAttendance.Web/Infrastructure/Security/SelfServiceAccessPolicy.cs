@@ -19,6 +19,22 @@ public static class SelfServiceAccessPolicy
             dbContext, systemUserId, AccessRoleStore.TypeSelfService, actionCode);
     }
 
+    public static string? ActionForEffectCode(string? effectCode)
+    {
+        var value = effectCode?.Trim() ?? string.Empty;
+        if (value.Length == 0) return null;
+
+        return value switch
+        {
+            "LeaveAnnual" or "LeaveSick" or "LeaveUnpaid" or "LeaveOther" or
+            "BusinessTrip" or "WorkFromHome" => "LeaveRequest",
+            "ExitPermission" => "ExitPermission",
+            "Overtime" => "OvertimeRequest",
+            "ShiftChange" => "ShiftRequest",
+            _ => null
+        };
+    }
+
     public static string? ActionForRequestType(string? requestType)
     {
         var value = requestType?.Trim() ?? string.Empty;

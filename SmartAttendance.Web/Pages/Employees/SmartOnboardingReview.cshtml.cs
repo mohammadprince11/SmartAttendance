@@ -479,6 +479,31 @@ public sealed class SmartOnboardingReviewModel : PageModel
         return RedirectToSelf();
     }
 
+    public async Task<IActionResult> OnPostReopenReviewAsync()
+    {
+        var context = await GetAuthorizedContextAsync(requireReviewer: true);
+        if (context is null)
+        {
+            return Forbid();
+        }
+
+        if (context.Value.Session.Status != "Ready" ||
+            context.Value.Session.CreatedEmployeeId.HasValue)
+        {
+            TempData["SmartOnboardingReviewError"] =
+                "لا يمكن إعادة فتح المراجعة لهذه الجلسة.";
+            return RedirectToSelf();
+        }
+
+        await PeopleAiReviewStore.ReopenForReviewAsync(
+            _db,
+            SessionId);
+
+        TempData["SmartOnboardingReviewStatus"] =
+            "تمت إعادة فتح المراجعة ويمكن تعديل الحقول واعتمادها مجدداً.";
+        return RedirectToSelf();
+    }
+
     public async Task<IActionResult> OnPostMarkReadyAsync()
     {
         var context = await GetAuthorizedContextAsync(requireReviewer: true);

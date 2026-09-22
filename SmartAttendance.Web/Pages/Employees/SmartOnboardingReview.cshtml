@@ -870,6 +870,20 @@
                     <span class="zy-badge zy-badge--info">Human Confirmed</span>
                 </div>
 
+                @if (Model.CanReview)
+                {
+                    <form method="post"
+                          asp-page-handler="ReopenReview"
+                          data-preserve-scroll
+                          class="sor-reopen-review">
+                        <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="SessionId" value="@Model.SessionId" />
+                        <button type="submit" class="zy-btn">
+                            إعادة فتح المراجعة
+                        </button>
+                    </form>
+                }
+
                 @if (!Model.CanCreateEmployee)
                 {
                     <div class="sor-alert sor-alert--danger">
