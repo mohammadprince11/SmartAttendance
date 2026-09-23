@@ -36,7 +36,7 @@ public sealed class MobileRequestApiContractTests
         Assert.Contains("location.Accuracy", page, StringComparison.Ordinal);
         Assert.DoesNotContain("android.permission.CAMERA", manifest, StringComparison.Ordinal);
         Assert.DoesNotContain("android.permission.POST_NOTIFICATIONS", manifest, StringComparison.Ordinal);
-        Assert.DoesNotContain("android.permission.USE_BIOMETRIC", manifest, StringComparison.Ordinal);
+        Assert.Contains("android.permission.USE_BIOMETRIC", manifest, StringComparison.Ordinal);
     }
 
     private static string Read(string project, string relativePath)
