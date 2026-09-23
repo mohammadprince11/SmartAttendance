@@ -3030,9 +3030,10 @@ BEGIN
             SELECT 1 FROM sys.indexes
             WHERE object_id=OBJECT_ID('EmployeeEndOfService')
               AND name='UX_EmployeeEndOfService_PayrollTransactionId')
-        CREATE UNIQUE INDEX UX_EmployeeEndOfService_PayrollTransactionId
-            ON EmployeeEndOfService(PayrollTransactionId)
-            WHERE PayrollTransactionId IS NOT NULL;
+        EXEC sp_executesql N'
+            CREATE UNIQUE INDEX UX_EmployeeEndOfService_PayrollTransactionId
+                ON EmployeeEndOfService(PayrollTransactionId)
+                WHERE PayrollTransactionId IS NOT NULL;';
 END;
 """),
 

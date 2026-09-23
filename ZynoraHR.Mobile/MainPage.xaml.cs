@@ -179,11 +179,39 @@ public partial class MainPage : ContentPage
                     return;
                 }
 
+                string? bioToken = null;
+                var biometricKeys = await _api.BiometricKeysAsync();
+                if (biometricKeys.Any(key =>
+                        string.Equals(
+                            key.Status,
+                            "Active",
+                            StringComparison.OrdinalIgnoreCase)))
+                {
+                    SetPunchMessage("أكد هويتك ببصمة الوجه أو الأصبع...");
+                    var begin = await _api.BeginBiometricPunchAsync();
+                    if (string.IsNullOrWhiteSpace(begin.Key) ||
+                        begin.Options.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+                    {
+                        throw new MobileApiException(
+                            "استجابة التأكيد البيولوجي غير صالحة.");
+                    }
+
+                    var assertionJson =
+                        await AndroidPasskeyAuthentication.GetAsync(
+                            begin.Options.GetRawText());
+
+                    bioToken =
+                        await _api.CompleteBiometricPunchAsync(
+                            begin.Key,
+                            assertionJson);
+                }
+
                 var result =
                     await _api.PunchAsync(
                         type,
                         location.Latitude,
-                        location.Longitude);
+                        location.Longitude,
+                        bioToken);
 
                 SetPunchMessage(result.Message);
                 await LoadCoreAsync();

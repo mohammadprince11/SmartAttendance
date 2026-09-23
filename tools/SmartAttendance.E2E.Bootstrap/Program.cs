@@ -26,6 +26,15 @@ if (string.IsNullOrWhiteSpace(
         DisposableCredential(databaseName));
 }
 
+if (string.IsNullOrWhiteSpace(
+        Environment.GetEnvironmentVariable(
+            "ZYNORA_BOOTSTRAP_EMPLOYEE_PASSWORD")))
+{
+    Environment.SetEnvironmentVariable(
+        "ZYNORA_BOOTSTRAP_EMPLOYEE_PASSWORD",
+        DisposableEmployeeCredential(databaseName));
+}
+
 var masterConnection = Environment.GetEnvironmentVariable("SMARTATTENDANCE_SQL_TEST_MASTER");
 if (string.IsNullOrWhiteSpace(masterConnection) && OperatingSystem.IsWindows())
     masterConnection = @"Server=(localdb)\MSSQLLocalDB;Database=master;Integrated Security=true;TrustServerCertificate=true";
@@ -37,6 +46,14 @@ static string DisposableCredential(string value)
     var bytes = SHA256.HashData(
         Encoding.UTF8.GetBytes(
             "ZYNORA-E2E-DISPOSABLE:" + value));
+    return "E2E-" + Convert.ToHexString(bytes)[..24] + "-Aa1!";
+}
+
+static string DisposableEmployeeCredential(string value)
+{
+    var bytes = SHA256.HashData(
+        Encoding.UTF8.GetBytes(
+            "ZYNORA-E2E-EMPLOYEE-DISPOSABLE:" + value));
     return "E2E-" + Convert.ToHexString(bytes)[..24] + "-Aa1!";
 }
 
@@ -137,15 +154,27 @@ db.AddRange(companyA, companyB, branchA, branchB, departmentA, departmentB);
 await db.SaveChangesAsync();
 var employeeA = new Employee
 {
-    EmployeeNo = "E2E-001", FullName = "Synthetic Employee A",
-    CompanyId = companyA.Id, BranchId = branchA.Id, DepartmentId = departmentA.Id,
-    HireDate = new DateOnly(2026, 1, 1), IsActive = true
+    EmployeeNo = "E2E-001",
+    FullName = "Synthetic Employee A",
+    FirstName = "Synthetic",
+    LastName = "Employee A",
+    CompanyId = companyA.Id,
+    BranchId = branchA.Id,
+    DepartmentId = departmentA.Id,
+    HireDate = new DateOnly(2026, 1, 1),
+    IsActive = true
 };
 var employeeB = new Employee
 {
-    EmployeeNo = "E2E-002", FullName = "Synthetic Employee B",
-    CompanyId = companyB.Id, BranchId = branchB.Id, DepartmentId = departmentB.Id,
-    HireDate = new DateOnly(2026, 1, 1), IsActive = true
+    EmployeeNo = "E2E-002",
+    FullName = "Synthetic Employee B",
+    FirstName = "Synthetic",
+    LastName = "Employee B",
+    CompanyId = companyB.Id,
+    BranchId = branchB.Id,
+    DepartmentId = departmentB.Id,
+    HireDate = new DateOnly(2026, 1, 1),
+    IsActive = true
 };
 db.AddRange(employeeA, employeeB);
 await db.SaveChangesAsync();

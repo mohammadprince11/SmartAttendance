@@ -105,4 +105,28 @@ public class LoginRateLimitPolicyTests
         Assert.True(LoginRateLimitPolicy.PermitLimit <= 20);
         Assert.InRange(LoginRateLimitPolicy.WindowMinutes, 1, 15);
     }
+
+    [Theory]
+    [InlineData(null, 10)]
+    [InlineData(0, 10)]
+    [InlineData(-1, 10)]
+    [InlineData(250, 250)]
+    public void PermitLimit_CanBeOverriddenPerEnvironment(
+        int? configured,
+        int expected) =>
+        Assert.Equal(
+            expected,
+            LoginRateLimitPolicy.ResolvePermitLimit(configured));
+
+    [Theory]
+    [InlineData(null, 5)]
+    [InlineData(0, 5)]
+    [InlineData(-1, 5)]
+    [InlineData(1, 1)]
+    public void Window_CanBeOverriddenPerEnvironment(
+        int? configured,
+        int expected) =>
+        Assert.Equal(
+            expected,
+            LoginRateLimitPolicy.ResolveWindowMinutes(configured));
 }

@@ -55,7 +55,12 @@ public class WebAuthnController : ControllerBase
     /// </summary>
     private Fido2 CreateFido2()
     {
-        if (User.Identity?.AuthenticationType == ApiTokenAuthHandler.SchemeName)
+        if (User.Identities.Any(identity =>
+                identity.IsAuthenticated &&
+                string.Equals(
+                    identity.AuthenticationType,
+                    ApiTokenAuthHandler.SchemeName,
+                    StringComparison.Ordinal)))
         {
             var rpId = _configuration["WebAuthn:MobileRpId"]?.Trim();
             var mobileOrigins = _configuration

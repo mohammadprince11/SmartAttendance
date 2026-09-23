@@ -50,14 +50,16 @@ public sealed class CvIntelligenceParserTests
         Assert.Equal(new DateOnly(2022, 1, 1), experience[0].FromDate);
 
         var education = Assert.Single(
-            result.Records.Where(x => x.RecordType == "Education"));
+            result.Records,
+            x => x.RecordType == "Education");
         Assert.Equal("University of Baghdad", education.Title);
         Assert.Equal(
             "Bachelor of Business Administration",
             education.Subtitle);
 
         var certificate = Assert.Single(
-            result.Records.Where(x => x.RecordType == "Certificate"));
+            result.Records,
+            x => x.RecordType == "Certificate");
         Assert.Contains("SHRM", certificate.Title);
     }
 
@@ -162,7 +164,8 @@ public sealed class CvIntelligenceParserTests
         Assert.Contains("Managed payroll", experience[0].Note);
 
         var education = Assert.Single(
-            result.Records.Where(x => x.RecordType == "Education"));
+            result.Records,
+            x => x.RecordType == "Education");
         Assert.Equal("EXAMPLE UNIVERSITY COLLEGE", education.Title);
         Assert.Equal("BACHELOR'S", education.Subtitle);
         Assert.Equal(new DateOnly(2018, 9, 1), education.FromDate);

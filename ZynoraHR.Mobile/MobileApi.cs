@@ -99,11 +99,44 @@ public sealed class MobileApi
             HttpMethod.Get,
             "api/v1/me/compensation");
 
-    public Task<ApiMessage> PunchAsync(string type,double lat,double lng) =>
+    public Task<WebAuthnRegistrationOptions> BeginBiometricPunchAsync() =>
+        SendAsync<WebAuthnRegistrationOptions>(
+            HttpMethod.Post,
+            "api/v1/webauthn/punch/options");
+
+    public async Task<string> CompleteBiometricPunchAsync(
+        string key,
+        string assertionResponseJson)
+    {
+        using var document = JsonDocument.Parse(assertionResponseJson);
+        var assertion = document.RootElement.Clone();
+
+        var response = await SendAsync<WebAuthnProofResponse>(
+            HttpMethod.Post,
+            "api/v1/webauthn/punch/verify",
+            new { key, assertion });
+
+        if (string.IsNullOrWhiteSpace(response.Token))
+            throw new MobileApiException("لم يرجع الخادم إثباتاً بيولوجياً صالحاً.");
+
+        return response.Token;
+    }
+
+    public Task<ApiMessage> PunchAsync(
+        string type,
+        double lat,
+        double lng,
+        string? bioToken = null) =>
         SendAsync<ApiMessage>(
             HttpMethod.Post,
             "api/v1/me/online-punch",
-            new { punchType=type=="Out" ? "Out" : "In", latitude=lat, longitude=lng });
+            new
+            {
+                punchType = type == "Out" ? "Out" : "In",
+                latitude = lat,
+                longitude = lng,
+                bioToken
+            });
 
     public Task<List<MobileRequest>> RequestsAsync() =>
         SendAsync<List<MobileRequest>>(HttpMethod.Get,"api/v1/me/requests");
@@ -419,6 +452,11 @@ public sealed class WebAuthnRegistrationOptions
 {
     [JsonPropertyName("key")] public string Key { get; set; } = "";
     [JsonPropertyName("options")] public JsonElement Options { get; set; }
+}
+
+public sealed class WebAuthnProofResponse
+{
+    [JsonPropertyName("token")] public string Token { get; set; } = "";
 }
 
 public sealed class DataChangeOption

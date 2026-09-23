@@ -394,6 +394,13 @@ builder.Services.AddControllers();
 // حدّ معدّل محاولات الدخول — يخنق رشّ كلمات المرور الذي لا يلمس قفل الحساب
 // (القفل لكل حساب؛ الرشّ يجرّب كلمة واحدة على ألف حساب). المحدِّد **عام** بمُقسِّم
 // يعفي كل ما ليس مسار دخول، فلا يُخنق استعمال مشروع.
+var loginRateLimitPermitLimit = LoginRateLimitPolicy.ResolvePermitLimit(
+    builder.Configuration.GetValue<int?>(
+        LoginRateLimitPolicy.PermitLimitConfigurationKey));
+var loginRateLimitWindowMinutes = LoginRateLimitPolicy.ResolveWindowMinutes(
+    builder.Configuration.GetValue<int?>(
+        LoginRateLimitPolicy.WindowMinutesConfigurationKey));
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -412,8 +419,8 @@ builder.Services.AddRateLimiter(options =>
                 LoginRateLimitPolicy.PartitionKey(context.Connection.RemoteIpAddress?.ToString()),
                 _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = LoginRateLimitPolicy.PermitLimit,
-                    Window = TimeSpan.FromMinutes(LoginRateLimitPolicy.WindowMinutes),
+                    PermitLimit = loginRateLimitPermitLimit,
+                    Window = TimeSpan.FromMinutes(loginRateLimitWindowMinutes),
                     QueueLimit = 0
                 });
         });
@@ -718,6 +725,7 @@ app.MapGet("/.well-known/assetlinks.json", (IConfiguration configuration) =>
         {
             relation = new[]
             {
+                "delegate_permission/common.handle_all_urls",
                 "delegate_permission/common.get_login_creds"
             },
             target = new

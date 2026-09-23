@@ -142,8 +142,30 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
 
         await Page.Locator("select[name='Finalize.BranchId']")
             .SelectOptionAsync(new SelectOptionValue { Label = "E2E Branch A" });
-        await Page.Locator("select[name='Finalize.DepartmentId']")
+        await Page.Locator("#sor-department")
             .SelectOptionAsync(new SelectOptionValue { Label = "E2E Department A" });
+
+        var finalizeNationalId = await Page.Locator(
+            "input[name='Finalize.NationalId']").InputValueAsync();
+        var finalizeBranchId = await Page.Locator(
+            "select[name='Finalize.BranchId']").InputValueAsync();
+        var finalizeDepartmentId = await Page.Locator(
+            "#sor-department").InputValueAsync();
+        var finalizeFullName = await Page.Locator(
+            "input[name='Finalize.FullName']").InputValueAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(finalizeNationalId, Is.EqualTo("199276728473"));
+            Assert.That(finalizeFullName, Is.Not.Empty);
+            Assert.That(int.TryParse(finalizeBranchId, out var branchId) && branchId > 0, Is.True);
+            Assert.That(int.TryParse(finalizeDepartmentId, out var departmentId) && departmentId > 0, Is.True);
+        });
+
+        var uniqueNationalId = $"9900{sessionId:00000000}";
+        await Page.Locator("input[name='Finalize.NationalId']")
+            .FillAsync(uniqueNationalId);
+
         await Page.Locator(
                 "input[type='checkbox'][name='Finalize.IsCitizen']")
             .CheckAsync();
@@ -170,11 +192,12 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
             WHERE EmployeeId = @EmployeeId
               AND CompanyId = @CompanyId
               AND DocumentType = 'NationalId'
-              AND NationalNumber = '199276728473'
+              AND NationalNumber = @NationalNumber
               AND FamilyNumber = '1010E1876147874699';
             """,
             ("@EmployeeId", employeeId),
-            ("@CompanyId", companyId)), Is.EqualTo(1));
+            ("@CompanyId", companyId),
+            ("@NationalNumber", uniqueNationalId)), Is.EqualTo(1));
 
         Assert.That(await ScalarIntAsync(
             """
@@ -424,13 +447,18 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
                 {
                     Label = "E2E Branch A"
                 });
-        await Page.Locator(
-                "select[name='Finalize.DepartmentId']")
+        await Page.Locator("#sor-department")
             .SelectOptionAsync(
                 new SelectOptionValue
                 {
                     Label = "E2E Department A"
                 });
+
+        var nationalId = Page.Locator(
+            "input[name='Finalize.NationalId']");
+        await nationalId.FillAsync(
+            $"9900{sessionId:00000000}");
+
         await Page.Locator(
                 "input[type='checkbox'][name='Finalize.IsCitizen']")
             .CheckAsync();
@@ -756,6 +784,7 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
     {
         const string userName = "e2e-peopleai-hr";
         await SeedHrLoginAsync(userName);
+        await ResetHrPermissionOverridesAsync(userName);
         await LoginAsAsync(userName);
 
         await Page.GotoAsync($"{BaseUrl}/Employees/SmartOnboarding");
@@ -901,6 +930,25 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
             """,
             ("@Username", userName));
 
+    private static Task ResetHrPermissionOverridesAsync(
+        string userName) =>
+        ExecuteAsync(
+            """
+            UPDATE sup
+            SET IsDeleted = 1
+            FROM dbo.SystemUserPermissions sup
+            JOIN dbo.SystemUsers su
+              ON su.Id = sup.SystemUserId
+            JOIN dbo.Permissions p
+              ON p.Id = sup.PermissionId
+            WHERE su.UserName = @Username
+              AND p.Code IN
+                  ('People.AI.ProcessDocuments',
+                   'People.VerifyOriginalDocument')
+              AND sup.IsDeleted = 0;
+            """,
+            ("@Username", userName));
+
     private static Task GrantPermissionAsync(
         string userName,
         string permissionCode) =>
@@ -959,7 +1007,7 @@ public sealed class PeopleAiSmartOnboardingTests : PageTest
 
         await Page.Locator("select[name='Finalize.BranchId']")
             .SelectOptionAsync(new SelectOptionValue { Label = "E2E Branch A" });
-        await Page.Locator("select[name='Finalize.DepartmentId']")
+        await Page.Locator("#sor-department")
             .SelectOptionAsync(new SelectOptionValue { Label = "E2E Department A" });
 
         var citizen = Page.Locator(

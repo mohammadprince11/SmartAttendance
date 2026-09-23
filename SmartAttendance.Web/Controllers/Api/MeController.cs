@@ -310,7 +310,11 @@ ORDER BY UpdatedAt DESC, Id DESC;
         }));
     }
 
-    public sealed record OnlinePunchRequest(string PunchType, double? Latitude = null, double? Longitude = null);
+    public sealed record OnlinePunchRequest(
+        string PunchType,
+        double? Latitude = null,
+        double? Longitude = null,
+        string? BioToken = null);
 
     /// <summary>بصمة ذاتية (دخول/خروج) بوقت الخادم الحالي.</summary>
     [HttpPost("online-punch")]
@@ -319,7 +323,16 @@ ORDER BY UpdatedAt DESC, Id DESC;
         if (RequireEmployee() is { } bad) return bad;
         var type = body?.PunchType == "Out" ? "Out" : "In";
         var now = DateTime.Now;
-        var result = await OnlinePunchStore.RecordAsync(_db, EmployeeId, type, now, null, body?.Latitude, body?.Longitude);
+        var biometricVerified = WebAuthnProofStore.Consume(body?.BioToken, EmployeeId);
+        var result = await OnlinePunchStore.RecordAsync(
+            _db,
+            EmployeeId,
+            type,
+            now,
+            null,
+            body?.Latitude,
+            body?.Longitude,
+            biometricVerified);
         return result.Status switch
         {
             OnlinePunchStore.PunchStatus.OutsideGeofence =>
@@ -328,6 +341,12 @@ ORDER BY UpdatedAt DESC, Id DESC;
                 Ok(new { message = $"سُجّلت بصمة {(type == "Out" ? "الانصراف" : "الحضور")}.", at = now.ToString("yyyy-MM-dd HH:mm"), punchType = type }),
             OnlinePunchStore.PunchStatus.TooSoonForCheckout =>
                 BadRequest(new { message = $"لا يمكن تسجيل الانصراف قبل مرور {OnlinePunchStore.FormatDuration(result.MinCheckoutHours)} من تسجيل الحضور — تبقّى {OnlinePunchStore.FormatDuration(result.HoursRemaining)}." }),
+            OnlinePunchStore.PunchStatus.BiometricRequired =>
+                BadRequest(new
+                {
+                    code = "BIOMETRIC_REQUIRED",
+                    message = "يلزم تأكيد بصمة الوجه أو الأصبع قبل تسجيل الحضور."
+                }),
             _ =>
                 BadRequest(new { message = "تم تجاهل البصمة: سُجّلت بصمة مماثلة خلال أقل من دقيقة." })
         };

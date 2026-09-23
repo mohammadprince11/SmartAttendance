@@ -22,6 +22,17 @@ public static class LoginRateLimitPolicy
     /// <summary>طول النافذة بالدقائق.</summary>
     public const int WindowMinutes = 5;
 
+    public const string PermitLimitConfigurationKey =
+        "Security:LoginRateLimit:PermitLimit";
+    public const string WindowMinutesConfigurationKey =
+        "Security:LoginRateLimit:WindowMinutes";
+
+    public static int ResolvePermitLimit(int? configured) =>
+        configured is > 0 ? configured.Value : PermitLimit;
+
+    public static int ResolveWindowMinutes(int? configured) =>
+        configured is > 0 ? configured.Value : WindowMinutes;
+
     /// <summary>
     /// هل يخضع هذا المسار للحدّ؟ مسارات الدخول وحدها — والحدُّ العام على كل النظام
     /// يخنق الاستعمال المشروع (شاشة الحضور تُحدَّث كثيراً) بلا مكسب أمنيّ.
