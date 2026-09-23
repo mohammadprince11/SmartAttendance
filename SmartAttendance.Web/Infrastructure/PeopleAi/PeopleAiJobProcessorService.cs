@@ -563,40 +563,28 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                         line.Score)));
 
             await SaveCvField(
-                "FullName",
-                cv.FullName);
-            await SaveCvField(
                 "Phone",
                 cvContact.Phone);
             await SaveCvField(
                 "PersonalEmail",
                 cvContact.Email);
             await SaveCvField(
-                "Address",
-                cv.Address);
-            await SaveCvField(
-                "Nationality",
-                cv.Nationality);
-            await SaveCvField(
-                "ProfessionalSummary",
-                cv.ProfessionalSummary);
-            await SaveCvField(
                 "Skills",
                 cv.Skills.Count == 0
                     ? null
                     : string.Join("; ", cv.Skills));
-            await SaveCvField(
-                "Languages",
-                cv.Languages.Count == 0
-                    ? null
-                    : string.Join("; ", cv.Languages));
+
+            var cvRecords = cv.Records
+                .Where(record =>
+                    record.RecordType is "Experience" or "Education")
+                .ToList();
 
             await PeopleAiStructuredRecordStore.ReplaceForRunAsync(
                 db,
                 input.SessionId,
                 input.DocumentId,
                 runId,
-                cv.Records);
+                cvRecords);
         }
 
         var nationalId = IraqiNationalIdParser.Parse(

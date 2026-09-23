@@ -116,9 +116,21 @@
         };
     }
 
+    var cvVisibleFieldKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Phone",
+        "PersonalEmail",
+        "Skills"
+    };
+
     var semanticFields = Model.Fields
         .Where(x => !x.FieldKey.StartsWith("OCR.", StringComparison.OrdinalIgnoreCase)
                  && !x.FieldKey.StartsWith("MRZ.Check.", StringComparison.OrdinalIgnoreCase))
+        .Where(x =>
+            !DocumentTypeFor(x).Equals(
+                PeopleAiDocumentTypes.Cv,
+                StringComparison.OrdinalIgnoreCase) ||
+            cvVisibleFieldKeys.Contains(x.FieldKey))
         .Where(x => FieldPolicy(x) is not null)
         .GroupBy(
             x => $"{DocumentTypeFor(x)}\u001f{x.FieldKey}",
@@ -144,6 +156,7 @@
 
     var reviewStructuredRecords = Model.StructuredRecords
         .Where(x => x.ReviewStatus == "Pending")
+        .Where(x => x.RecordType is "Experience" or "Education")
         .ToList();
 
     DateOnly? EffectiveDocumentExpiry(
@@ -274,128 +287,6 @@
             <div><span>مشاكل مفتوحة</span><strong>@openIssues.Count</strong></div>
             <div><span>المراجع</span><strong>@(Model.CanReview ? "مسموح" : "عرض فقط")</strong></div>
         </section>
-
-        @if (documentsToReview.Count > 0)
-        {
-        <section class="sor-card">
-            <div class="sor-section-head">
-                <div>
-                    <h2>المستندات والتحقق من الأصل</h2>
-                    <p>الحالة هنا مستقلة عن نجاح OCR. وجود الملف، استخراج البيانات، ومطابقة الأصل ثلاث حالات منفصلة.</p>
-                </div>
-                <span class="zy-badge zy-badge--info">@documentsToReview.Count بحاجة مراجعة</span>
-            </div>
-
-            <div class="sor-doc-review-list">
-                @foreach (var document in documentsToReview)
-                {
-                    var type = document.DetectedDocumentType
-                        ?? document.DeclaredDocumentType
-                        ?? PeopleAiDocumentTypes.Unknown;
-                    var policies = Model.DocumentPolicies
-                        .Where(x => x.IsActive &&
-                                    x.DocumentType.Equals(type, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    var requireExpiry = policies.Any(x => x.RequireExpiryDate);
-                    var requireOriginal = policies.Any(x => x.RequireOriginalVerification);
-
-                    <article class="sor-doc-review">
-                        <div class="sor-doc-review-head">
-                            <div>
-                                <strong>@document.OriginalFileName</strong>
-                                <small>
-                                    المعلن: @(document.DeclaredDocumentType ?? "Unknown")
-                                    · المكتشف: @(document.DetectedDocumentType ?? "غير محدد")
-                                    @if (document.ClassificationConfidence.HasValue)
-                                    {
-                                        <text> · @($"{document.ClassificationConfidence.Value:P0}")</text>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(document.DetectionMethod))
-                                    {
-                                        <text> · @document.DetectionMethod</text>
-                                    }
-                                    · @document.ProcessingStatus
-                                </small>
-                            </div>
-                            <div class="sor-field-badges">
-                                @if (Model.CanPreview(document))
-                                {
-                                    <button type="button"
-                                            class="zy-btn sor-preview-button"
-                                            data-review-preview-open
-                                            data-preview-name="@document.OriginalFileName"
-                                            data-preview-url="@Url.Page(
-                                                "./SmartOnboarding",
-                                                "Preview",
-                                                new
-                                                {
-                                                    companyId = Model.CompanyId,
-                                                    sessionId = Model.SessionId,
-                                                    documentId = document.Id
-                                                })">
-                                        معاينة المستند
-                                    </button>
-                                }
-                                @if (requireExpiry)
-                                {
-                                    <span>Expiry مطلوب</span>
-                                }
-                                @if (requireOriginal)
-                                {
-                                    <span>Original مطلوب</span>
-                                }
-                                <span>@document.OriginalVerificationStatus</span>
-                            </div>
-                        </div>
-
-                        <div class="sor-doc-review-actions">
-                            @if (Model.CanReview)
-                            {
-                                <form method="post" asp-page-handler="UpdateDocumentMeta" class="sor-doc-meta-form">
-                                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
-                                    <input type="hidden" name="SessionId" value="@Model.SessionId" />
-                                    <input type="hidden" name="documentId" value="@document.Id" />
-                                    <label>
-                                        <span>تاريخ الانتهاء المُراجع</span>
-                                        <input type="date"
-                                               name="expiryDate"
-                                               value="@(document.ReviewedExpiryDate?.ToString("yyyy-MM-dd"))" />
-                                    </label>
-                                    <button type="submit" class="zy-btn">حفظ التاريخ</button>
-                                </form>
-                            }
-                            else
-                            {
-                                <div class="sor-doc-readonly">
-                                    <span>تاريخ الانتهاء المُراجع</span>
-                                    <strong>@(document.ReviewedExpiryDate?.ToString("yyyy-MM-dd") ?? "—")</strong>
-                                </div>
-                            }
-
-                            @if (Model.CanVerifyOriginal)
-                            {
-                                <form method="post" asp-page-handler="VerifyOriginal" class="sor-original-actions">
-                                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
-                                    <input type="hidden" name="SessionId" value="@Model.SessionId" />
-                                    <input type="hidden" name="documentId" value="@document.Id" />
-                                    <button type="submit" name="action" value="Seen" class="zy-btn">تم الاطلاع</button>
-                                    <button type="submit" name="action" value="Verified" class="zy-btn zy-btn--primary">تم التحقق من الأصل</button>
-                                    <button type="submit" name="action" value="Rejected" class="zy-btn">رفض الأصل</button>
-                                </form>
-                            }
-                        </div>
-
-                        @if (document.OriginalVerifiedAt.HasValue)
-                        {
-                            <small class="sor-doc-audit">
-                                آخر تحقق: @document.OriginalVerifiedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                            </small>
-                        }
-                    </article>
-                }
-            </div>
-        </section>
-        }
 
         @if (reviewedDocuments.Count > 0)
         {
@@ -583,8 +474,7 @@
                                 SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.HighConfidenceThreshold &&
                             !string.IsNullOrWhiteSpace(EffectiveValue(x)) &&
                             FieldPolicy(x)?.AllowBulkApprove == true) ||
-                        Model.StructuredRecords.Any(x =>
-                            x.ReviewStatus == "Pending" &&
+                        reviewStructuredRecords.Any(x =>
                             x.ProviderConfidence >=
                                 SmartAttendance.Web.Infrastructure.Hrms.PeopleAiStructuredRecordStore.HighConfidenceThreshold)))
                     {
@@ -668,7 +558,7 @@
             <section class="sor-card sor-cv-records">
                 <div class="sor-section-head">
                     <div>
-                        <h2>CV Intelligence — الخبرة والتعليم والشهادات</h2>
+                        <h2>CV Intelligence — الخبرة والتعليم</h2>
                         <p>كل سجل مستخرج يبقى Staging إلى أن تعتمده أو تعدله. لا يُكتب إلى ملف الموظف قبل Finalize.</p>
                     </div>
                     <span class="zy-badge zy-badge--info">
@@ -685,7 +575,6 @@
                         {
                             "Experience" => "خبرة عملية",
                             "Education" => "مؤهل علمي",
-                            "Certificate" => "شهادة / اعتماد",
                             _ => record.RecordType
                         };
                         var confidence = record.ProviderConfidence.HasValue
@@ -891,9 +780,20 @@
                     </div>
                 }
 
-                <form method="post" asp-page-handler="Finalize" class="sor-final-form">
+                <form method="post" asp-page-handler="Finalize" enctype="multipart/form-data" class="sor-final-form">
                     <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
                     <input type="hidden" name="SessionId" value="@Model.SessionId" />
+
+                    <div class="sor-form-section">
+                        <h3>صورة الموظف</h3>
+                        <label class="sor-span-2">
+                            <span>صورة الموظف</span>
+                            <input asp-for="EmployeePhoto"
+                                   type="file"
+                                   accept="image/png,image/jpeg,image/webp" />
+                            <small>PNG / JPG / WEBP · الحد الأقصى 5MB</small>
+                        </label>
+                    </div>
 
                     <div class="sor-form-section">
                         <h3>البيانات الأساسية</h3>
@@ -912,11 +812,11 @@
                                 <span asp-validation-for="Finalize.EmployeeNo" class="sor-validation"></span>
                             }
                         </label>
-                        <label class="sor-span-2">
-                            <span>الاسم المعروض *</span>
-                            <input asp-for="Finalize.FullName" />
-                            <span asp-validation-for="Finalize.FullName" class="sor-validation"></span>
+                        <label>
+                            <span>الشركة</span>
+                            <input value="@Model.CompanyName" readonly aria-readonly="true" />
                         </label>
+                        <input type="hidden" asp-for="Finalize.FullName" />
                         <label>
                             <span>تاريخ الميلاد</span>
                             <input asp-for="Finalize.BirthDate" type="date" />
@@ -950,26 +850,54 @@
                                 <option value="Unspecified">غير محدد</option>
                             </select>
                         </label>
-                        <label class="sor-check">
-                            <input asp-for="Finalize.IsCitizen" />
-                            <span>موظف مواطن</span>
+                        <label>
+                            <span>مواطن</span>
+                            <select asp-for="Finalize.IsCitizen">
+                                <option value="true">مواطن</option>
+                                <option value="false">غير مواطن (وافد)</option>
+                            </select>
                         </label>
                     </div>
 
-                    <div class="sor-form-section">
-                        <h3>الاسم العربي</h3>
-                        <label><span>الأول</span><input asp-for="Finalize.FirstName" /></label>
-                        <label><span>الثاني</span><input asp-for="Finalize.SecondName" /></label>
-                        <label><span>الثالث</span><input asp-for="Finalize.ThirdName" /></label>
-                        <label><span>اللقب</span><input asp-for="Finalize.LastName" /></label>
-                    </div>
-
-                    <div class="sor-form-section">
-                        <h3>English Name</h3>
-                        <label><span>First</span><input asp-for="Finalize.FirstNameEn" /></label>
-                        <label><span>Second</span><input asp-for="Finalize.SecondNameEn" /></label>
-                        <label><span>Third</span><input asp-for="Finalize.ThirdNameEn" /></label>
-                        <label><span>Last</span><input asp-for="Finalize.LastNameEn" /></label>
+                    <div class="sor-form-section sor-name-languages">
+                        <h3>اسم الموظف حسب لغات بيانات الشركة</h3>
+                        <span asp-validation-for="EmployeeNameTranslations" class="sor-validation sor-span-2"></span>
+                        @for (var index = 0; index < Model.EmployeeNameTranslations.Count; index++)
+                        {
+                            var language = Model.EmployeeNameTranslations[index];
+                            <fieldset class="sor-language-card sor-span-2"
+                                      dir="@language.Direction"
+                                      lang="@language.CultureCode">
+                                <legend>
+                                    <strong>@language.NativeName</strong>
+                                    <small>@language.CultureCode · @(language.IsDefault ? "اللغة الأساسية" : "لغة إضافية")</small>
+                                </legend>
+                                <input type="hidden" asp-for="EmployeeNameTranslations[index].CompanyId" />
+                                <input type="hidden" asp-for="EmployeeNameTranslations[index].CultureCode" />
+                                <input type="hidden" asp-for="EmployeeNameTranslations[index].NativeName" />
+                                <input type="hidden" asp-for="EmployeeNameTranslations[index].Direction" />
+                                <input type="hidden" asp-for="EmployeeNameTranslations[index].IsDefault" />
+                                <input type="hidden" asp-for="EmployeeNameTranslations[index].IsRequired" />
+                                <div class="sor-language-grid">
+                                    <label>
+                                        <span>الاسم الأول @(language.IsRequired ? "*" : "")</span>
+                                        <input asp-for="EmployeeNameTranslations[index].FirstName" dir="@language.Direction" />
+                                    </label>
+                                    <label>
+                                        <span>الاسم الثاني</span>
+                                        <input asp-for="EmployeeNameTranslations[index].SecondName" dir="@language.Direction" />
+                                    </label>
+                                    <label>
+                                        <span>الاسم الثالث</span>
+                                        <input asp-for="EmployeeNameTranslations[index].ThirdName" dir="@language.Direction" />
+                                    </label>
+                                    <label>
+                                        <span>اللقب @(language.IsRequired ? "*" : "")</span>
+                                        <input asp-for="EmployeeNameTranslations[index].LastName" dir="@language.Direction" />
+                                    </label>
+                                </div>
+                            </fieldset>
+                        }
                     </div>
 
                     <div class="sor-form-section">
@@ -1094,7 +1022,7 @@
                             <span asp-validation-for="Finalize.DepartmentId" class="sor-validation"></span>
                         </label>
                         <label>
-                            <span>المسمى الوظيفي</span>
+                            <span>المنصب</span>
                             <select asp-for="Finalize.PositionId">
                                 <option value="">—</option>
                                 @foreach (var position in Model.Positions)
@@ -1143,12 +1071,27 @@
                                 }
                             </select>
                         </label>
+                        @if (Model.CanEditCompensation)
+                        {
+                            <label>
+                                <span>الراتب الأساسي</span>
+                                <input asp-for="BasicSalary"
+                                       type="text"
+                                       inputmode="decimal"
+                                       dir="ltr"
+                                       autocomplete="off"
+                                       data-zynora-salary-format
+                                       data-zynora-salary-raw="@(Model.BasicSalary?.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
+                                       placeholder="0" />
+                                <span asp-validation-for="BasicSalary" class="sor-validation"></span>
+                            </label>
+                        }
                         <label>
-                            <span>حالة الموظف</span>
-                            <select asp-for="Finalize.IsActive">
-                                <option value="true">نشط</option>
-                                <option value="false">غير نشط</option>
-                            </select>
+                            <span>توقيع الموظف</span>
+                            <input asp-for="EmployeeSignature"
+                                   type="file"
+                                   accept="image/png,image/jpeg,image/webp" />
+                            <small>PNG / JPG / WEBP · الحد الأقصى 2MB</small>
                         </label>
                     </div>
 
@@ -1173,6 +1116,60 @@
                             <span asp-validation-for="Finalize.PersonalEmail" class="sor-validation"></span>
                         </label>
                     </div>
+
+                    @if (Model.ProfileDynamicSections.Any(section => section.Fields.Count > 0))
+                    {
+                        <div class="sor-form-section sor-dynamic-profile">
+                            <h3>حقول ملف الموظف</h3>
+                            @foreach (var profileSection in Model.ProfileDynamicSections.Where(section => section.Fields.Count > 0))
+                            {
+                                <h4 class="sor-span-2">@profileSection.Label</h4>
+                                @foreach (var field in profileSection.Fields)
+                                {
+                                    var inputId = $"OnboardingProfileCustomValues_{field.FieldKey}";
+                                    var requiredAttribute = field.IsRequired ? "required" : null;
+                                    <label class="@(field.IsTextArea ? "sor-span-2" : "")">
+                                        <span>@field.FieldLabel @(field.IsRequired ? "*" : "")</span>
+                                        @if (field.IsTextArea)
+                                        {
+                                            <textarea id="@inputId"
+                                                      name="ProfileCustomValues[@field.FieldKey]"
+                                                      required="@requiredAttribute"
+                                                      rows="3">@field.FieldValue</textarea>
+                                        }
+                                        else if (field.IsSelect)
+                                        {
+                                            <select id="@inputId"
+                                                    name="ProfileCustomValues[@field.FieldKey]"
+                                                    required="@requiredAttribute">
+                                                <option value="">اختر</option>
+                                                @foreach (var option in field.Options)
+                                                {
+                                                    <option value="@option" selected="@(option == field.FieldValue ? "selected" : null)">@option</option>
+                                                }
+                                            </select>
+                                        }
+                                        else if (field.IsCheckbox)
+                                        {
+                                            <input id="@inputId"
+                                                   name="ProfileCustomValues[@field.FieldKey]"
+                                                   type="checkbox"
+                                                   value="true"
+                                                   checked="@(field.IsCheckedValue ? "checked" : null)" />
+                                        }
+                                        else
+                                        {
+                                            <input id="@inputId"
+                                                   name="ProfileCustomValues[@field.FieldKey]"
+                                                   type="@field.InputType"
+                                                   value="@field.FieldValue"
+                                                   required="@requiredAttribute" />
+                                        }
+                                    </label>
+                                }
+                            }
+                        </div>
+                    }
 
                     <div class="sor-final-warning">
                         <strong>لن ينشئ ZYNORA الموظف تلقائياً.</strong>
@@ -1238,4 +1235,48 @@
 
 @section Scripts {
     <script src="~/js/smart-onboarding-review.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-salary-input.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const fields = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.FieldSettings.Values.Select(s => new
+                {
+                    k = s.Key,
+                    v = s.IsVisible,
+                    r = Model.RequiredFieldKeys.Contains(s.Key),
+                    l = s.CustomLabel,
+                    o = s.DisplayOrder
+                })));
+            const skipEmployeeNoRequired = @(Model.CodeSchemaActive ? "true" : "false");
+
+            fields.forEach(f => {
+                const input =
+                    document.querySelector('[name="Finalize.' + f.k + '"]') ||
+                    document.querySelector('[name="' + f.k + '"]');
+                if (!input || input.type === "hidden") return;
+
+                const box = input.closest("label") || input.parentElement;
+                if (!box) return;
+                const label = box.querySelector("span");
+
+                if (!f.v) {
+                    box.style.setProperty("display", "none", "important");
+                    input.removeAttribute("required");
+                    return;
+                }
+
+                if (f.l && label) label.textContent = f.l;
+                if (f.r && !(f.k === "EmployeeNo" && skipEmployeeNoRequired)) {
+                    input.setAttribute("required", "required");
+                    if (label && !label.querySelector(".nx-req-star")) {
+                        const star = document.createElement("span");
+                        star.className = "nx-req-star";
+                        star.textContent = " *";
+                        star.style.cssText = "color:#f87171;font-weight:900";
+                        label.appendChild(star);
+                    }
+                }
+            });
+        })();
+    </script>
 }

@@ -69,6 +69,10 @@ public class CreateModel : PageModel
     public bool CanUseSmartOnboarding { get; set; }
 
     [BindProperty]
+    [System.ComponentModel.DataAnnotations.StringLength(150)]
+    public string? FamilyNumber { get; set; }
+
+    [BindProperty]
     public IFormFile? EmployeePhoto { get; set; }
 
     [BindProperty]
@@ -214,6 +218,12 @@ public class CreateModel : PageModel
         RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
         await LoadEmployeeNameLanguagesAsync(preservePostedValues: true);
 
+        // كل موظف جديد يبدأ فعالاً. الحالة لا تُؤخذ من POST ولا تُعرض في شاشة الإنشاء.
+        Employee.IsActive = true;
+        Employee.EmploymentStatus = "Active";
+        ModelState.Remove("Employee.IsActive");
+        ModelState.Remove("Employee.EmploymentStatus");
+
         // رمز الموظف: إن تُرك فارغاً والمخطط مفعّل → توليد ذرّي (زيادة التسلسل بنفس العبارة).
         var postSchema = await EmployeeCodeSchema.GetAsync(_dbContext);
         CodeSchemaActive = postSchema?.IsActive == true;
@@ -231,6 +241,22 @@ public class CreateModel : PageModel
 
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
+
+        if (RequiredFieldKeys.Contains("FamilyNumber") &&
+            string.IsNullOrWhiteSpace(FamilyNumber))
+        {
+            ModelState.AddModelError(
+                nameof(FamilyNumber),
+                "حقل «الرقم العائلي» مطلوب.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(FamilyNumber) &&
+            string.IsNullOrWhiteSpace(Employee.NationalId))
+        {
+            ModelState.AddModelError(
+                nameof(FamilyNumber),
+                "يجب إدخال الرقم الوطني قبل حفظ الرقم العائلي.");
+        }
 
         if (BasicSalary is < 0)
         {
@@ -307,15 +333,23 @@ public class CreateModel : PageModel
         if (employeeId > 0)
         {
             await SaveEmployeeNameTranslationsAsync(employeeId);
+            var familyNumberSaved =
+                await PeopleIdentityBootstrap.SetFamilyNumberAsync(
+                    _dbContext,
+                    employeeId,
+                    FamilyNumber);
             await SaveBasicSalaryAsync(employeeId);
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, employeeId, Request.Form);
             var photoResult = await SaveEmployeePhotoAsync(employeeId);
             var signatureResult = await SaveEmployeeSignatureAsync(employeeId);
             var documentResult = await SaveInitialDocumentsAsync(employeeId);
             var loginResult = await CreateEmployeeLoginAsync(employeeId, loginUsername);
+            var familyResult = familyNumberSaved
+                ? string.Empty
+                : "تعذر ربط الرقم العائلي بسجل البطاقة الوطنية.";
             var extraResult = string.Join(
                 " ",
-                new[] { photoResult, signatureResult, documentResult, loginResult }
+                new[] { familyResult, photoResult, signatureResult, documentResult, loginResult }
                     .Where(x => !string.IsNullOrWhiteSpace(x)));
 
             if (!string.IsNullOrWhiteSpace(extraResult))

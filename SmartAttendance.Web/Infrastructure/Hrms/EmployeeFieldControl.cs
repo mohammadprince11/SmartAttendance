@@ -26,7 +26,8 @@ public static class EmployeeFieldControl
         new("SecondNameEn",   "Second Name",                 "البيانات الأساسية"),
         new("ThirdNameEn",    "Third Name",                  "البيانات الأساسية"),
         new("LastNameEn",     "Last Name",                   "البيانات الأساسية"),
-        new("NationalId",     "رقم الهوية",                  "البيانات الأساسية"),
+        new("NationalId",     "الرقم الوطني / البطاقة",       "البيانات الأساسية"),
+        new("FamilyNumber",   "الرقم العائلي",                "البيانات الأساسية"),
         new("BirthDate",      "تاريخ الميلاد",               "البيانات الأساسية"),
 
         // الديموغرافيا
@@ -34,6 +35,7 @@ public static class EmployeeFieldControl
         new("MaritalStatus",  "الحالة الاجتماعية",           "الديموغرافيا"),
         new("Country",        "البلد",                       "الديموغرافيا"),
         new("Nationality",    "الجنسية",                     "الديموغرافيا"),
+        new("IsCitizen",      "مواطن",                       "الديموغرافيا"),
         new("Religion",       "الديانة",                     "الديموغرافيا"),
         new("MotherCountry",  "بلد الأم",                    "الديموغرافيا"),
         new("MotherCity",     "مدينة الأم",                  "الديموغرافيا"),
@@ -46,10 +48,13 @@ public static class EmployeeFieldControl
         new("BranchId",       "موقع العمل (الفرع)",           "التنظيم والتوظيف", Locked: true, DefaultRequired: true),
         new("DepartmentId",   "القسم",                       "التنظيم والتوظيف", Locked: true, DefaultRequired: true),
         new("PositionId",     "المنصب",                      "التنظيم والتوظيف"),
+        new("DirectManagerId","المدير المباشر",              "التنظيم والتوظيف"),
         new("HireDate",       "تاريخ التعيين (العقد)",        "التنظيم والتوظيف", Locked: true, DefaultRequired: true),
         new("JoiningDate",    "تاريخ المباشرة الفعلية",       "التنظيم والتوظيف"),
         new("WorkType",       "نوع الدوام",                  "التنظيم والتوظيف"),
         new("JobGrade",       "الدرجة الوظيفية",             "التنظيم والتوظيف"),
+        new("EmploymentStatus","حالة التوظيف",                "التنظيم والتوظيف"),
+        new("IsActive",       "حالة الموظف",                 "التنظيم والتوظيف"),
 
         // التواصل
         new("Phone",          "رقم الهاتف",                  "التواصل"),

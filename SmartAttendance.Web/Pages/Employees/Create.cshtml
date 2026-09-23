@@ -167,9 +167,15 @@
                 </div>
 
                 <div class="nxr-field">
-                    <label asp-for="Employee.NationalId">رقم الهوية</label>
-                    <input asp-for="Employee.NationalId" placeholder="أدخل رقم الهوية" />
+                    <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
+                    <input asp-for="Employee.NationalId" placeholder="أدخل الرقم الوطني" />
                     <span asp-validation-for="Employee.NationalId" class="text-danger"></span>
+                </div>
+
+                <div class="nxr-field">
+                    <label asp-for="FamilyNumber">الرقم العائلي</label>
+                    <input asp-for="FamilyNumber" autocomplete="off" />
+                    <span asp-validation-for="FamilyNumber" class="text-danger"></span>
                 </div>
 
                 <div class="nxr-field">
@@ -448,21 +454,6 @@
                 </div>
 
                 <div class="nxr-field">
-                    <label asp-for="Employee.EmploymentStatus">حالة التوظيف</label>
-                    <input asp-for="Employee.EmploymentStatus"
-                           placeholder="Active" />
-                </div>
-
-                <div class="nxr-field">
-                    <label asp-for="Employee.IsActive">حالة الموظف</label>
-                    <select asp-for="Employee.IsActive"
-                            class="nxr-native-select">
-                        <option value="true">نشط</option>
-                        <option value="false">غير نشط</option>
-                    </select>
-                </div>
-
-                <div class="nxr-field">
                     <label asp-for="EmployeeSignature">توقيع الموظف</label>
                     <input asp-for="EmployeeSignature"
                            type="file"
@@ -474,10 +465,12 @@
                     <div class="nxr-field">
                         <label asp-for="BasicSalary">الراتب الأساسي</label>
                         <input asp-for="BasicSalary"
-                               type="number"
-                               min="0"
-                               step="0.001"
+                               type="text"
                                inputmode="decimal"
+                               dir="ltr"
+                               autocomplete="off"
+                               data-zynora-salary-format
+                               data-zynora-salary-raw="@(Model.BasicSalary?.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
                                placeholder="0" />
                         <span asp-validation-for="BasicSalary" class="text-danger"></span>
                     </div>
@@ -695,6 +688,7 @@
 @section Scripts {
     <script src="~/js/zynora-employee-mother-location.js"
             asp-append-version="true"></script>
+    <script src="~/js/zynora-salary-input.js" asp-append-version="true"></script>
     <!-- ZYNORA_CREATE_ORGANIZATION_FILTER_START -->
     <script>
         (() => {
@@ -880,7 +874,8 @@
             var items = [];
 
             fields.forEach(function (f) {
-                var input = document.querySelector('[name="Employee.' + f.k + '"]');
+                var input = document.querySelector('[name="Employee.' + f.k + '"]') ||
+                    document.querySelector('[name="' + f.k + '"]');
                 if (!input || input.type === "hidden") return;
                 var box = input.closest(".nxr-field") || input.parentElement;
                 var label = (input.id && document.querySelector('label[for="' + input.id + '"]')) || box.querySelector("label");

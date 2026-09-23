@@ -263,13 +263,12 @@
 }
 
 .nxr-native-select {
-    appearance: auto !important;
-    -webkit-appearance: auto !important;
     max-height: 42px !important;
 }
 
-.nxr-edit-field span {
-    color: #f87171;
+.nxr-edit-field > span[data-valmsg-for],
+.nxr-edit-field > .text-danger {
+    color: #ff8e9d;
     font-size: 11px;
     font-weight: 800;
 }

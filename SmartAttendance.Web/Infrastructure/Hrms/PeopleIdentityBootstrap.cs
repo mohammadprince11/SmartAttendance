@@ -49,6 +49,132 @@ WHERE ISNULL(IsDeleted, 0) = 0
         }
     }
 
+    public static async Task<bool> EnsureEmployeeIdentityRowsAsync(
+        ApplicationDbContext db,
+        int employeeId)
+    {
+        if (employeeId <= 0)
+        {
+            return false;
+        }
+
+        await PeopleAiSchema.VerifyAsync(db);
+
+        var employees = await HrmsDatabase.QueryAsync(
+            db,
+            """
+SELECT TOP 1 Id, ISNULL(CompanyId, 0) AS CompanyId,
+       ISNULL(NationalId, '') AS NationalId,
+       ISNULL(PassportNo, '') AS PassportNo
+FROM dbo.Employees
+WHERE Id = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId),
+            reader => new LegacyIdentityRow(
+                HrmsDatabase.GetInt(reader, "Id"),
+                HrmsDatabase.GetInt(reader, "CompanyId"),
+                HrmsDatabase.GetString(reader, "NationalId"),
+                HrmsDatabase.GetString(reader, "PassportNo")));
+
+        var employee = employees.FirstOrDefault();
+        if (employee is null || employee.CompanyId <= 0)
+        {
+            return false;
+        }
+
+        await EnsureDocumentAsync(
+            db,
+            employee,
+            PeopleAiDocumentTypes.NationalId,
+            employee.NationalId);
+        await EnsureDocumentAsync(
+            db,
+            employee,
+            PeopleAiDocumentTypes.Passport,
+            employee.PassportNo);
+
+        return true;
+    }
+
+    public static async Task<bool> SetFamilyNumberAsync(
+        ApplicationDbContext db,
+        int employeeId,
+        string? familyNumber,
+        long preferredIdentityDocumentId = 0)
+    {
+        var normalized = string.IsNullOrWhiteSpace(familyNumber)
+            ? null
+            : familyNumber.Trim();
+
+        await EnsureEmployeeIdentityRowsAsync(db, employeeId);
+
+        var identityId = await HrmsDatabase.ScalarAsync<long>(
+            db,
+            """
+SELECT TOP 1 Id
+FROM dbo.EmployeeIdentityDocuments
+WHERE EmployeeId = @EmployeeId
+  AND DocumentType = N'NationalId'
+  AND IsCurrent = 1
+ORDER BY
+    CASE WHEN Id = @PreferredId THEN 0 ELSE 1 END,
+    CASE
+        WHEN NULLIF(LTRIM(RTRIM(FamilyNumber)), '') IS NOT NULL THEN 0
+        ELSE 1
+    END,
+    CASE WHEN SourceOnboardingDocumentId IS NOT NULL THEN 0 ELSE 1 END,
+    Id DESC;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@PreferredId",
+                    preferredIdentityDocumentId);
+            });
+
+        if (identityId <= 0)
+        {
+            return normalized is null;
+        }
+
+        await HrmsDatabase.ExecuteAsync(
+            db,
+            """
+UPDATE dbo.EmployeeIdentityDocuments
+SET FamilyNumber = @FamilyNumber,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE Id = @IdentityId
+  AND EmployeeId = @EmployeeId
+  AND DocumentType = N'NationalId';
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@FamilyNumber",
+                    (object?)normalized ?? DBNull.Value);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@IdentityId",
+                    identityId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+            });
+
+        return true;
+    }
+
     private static async Task EnsureDocumentAsync(
         ApplicationDbContext db,
         LegacyIdentityRow employee,

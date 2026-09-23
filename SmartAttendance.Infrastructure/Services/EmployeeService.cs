@@ -748,6 +748,7 @@ public class EmployeeService : IEmployeeService
             {
                 Id = x.Id,
                 CompanyId = x.CompanyId,
+                DepartmentId = x.DepartmentId,
                 Name = x.Name,
                 IsActive = x.IsActive
             })
@@ -779,12 +780,12 @@ public class EmployeeService : IEmployeeService
                 .CurrentTransaction?.GetDbTransaction();
             command.CommandText = includeInactive
                 ? """
-                  SELECT Id, CompanyId, ArabicName, IsActive
+                  SELECT Id, CompanyId, ArabicName, IsActive, DepartmentId
                   FROM dbo.HrJobPositions
                   ORDER BY ArabicName;
                   """
                 : """
-                  SELECT Id, CompanyId, ArabicName, IsActive
+                  SELECT Id, CompanyId, ArabicName, IsActive, DepartmentId
                   FROM dbo.HrJobPositions
                   WHERE IsActive = 1
                   ORDER BY ArabicName;
@@ -802,7 +803,10 @@ public class EmployeeService : IEmployeeService
                         ? string.Empty
                         : reader.GetString(2),
                     IsActive = !reader.IsDBNull(3) &&
-                               reader.GetBoolean(3)
+                               reader.GetBoolean(3),
+                    DepartmentId = reader.IsDBNull(4)
+                        ? null
+                        : reader.GetInt32(4)
                 });
             }
         }
@@ -858,6 +862,8 @@ public class EmployeeService : IEmployeeService
         public int CompanyId { get; set; }
 
         public string Name { get; set; } = string.Empty;
+
+        public int? DepartmentId { get; set; }
 
         public bool IsActive { get; set; }
     }

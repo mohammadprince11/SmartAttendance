@@ -513,37 +513,76 @@
                         }
                     </article>
 
+                    @{
+                        var summaryExperience = Model.RecordsOf(EmployeeRecordType.Experience)
+                            .Where(record => !record.IsDeleted)
+                            .OrderByDescending(record => record.IsCurrent)
+                            .ThenByDescending(record => record.ToDate)
+                            .ThenByDescending(record => record.FromDate)
+                            .FirstOrDefault();
+                        var summaryEducation = Model.RecordsOf(EmployeeRecordType.Education)
+                            .Where(record => !record.IsDeleted)
+                            .OrderByDescending(record => record.ToDate)
+                            .ThenByDescending(record => record.FromDate)
+                            .FirstOrDefault();
+
+                        string SummaryRecordText(SmartAttendance.Domain.Entities.EmployeeFileRecord? record)
+                        {
+                            if (record is null)
+                            {
+                                return "غير مسجل";
+                            }
+
+                            var parts = new[] { record.Subtitle, record.Title }
+                                .Where(value => !string.IsNullOrWhiteSpace(value))
+                                .Select(value => value!.Trim())
+                                .Distinct(StringComparer.OrdinalIgnoreCase)
+                                .ToArray();
+
+                            return parts.Length == 0
+                                ? "غير مسجل"
+                                : string.Join(" — ", parts);
+                        }
+                    }
                     <article class="z360-profile-summary">
                         <div class="z360-profile-ai-head">
                             <div>
-                                <span>Smart Employee Summary</span>
-                                <strong>ملخص الموظف الذكي</strong>
+                                <strong>ملخص الموظف</strong>
+                                <span>أهم البيانات المهنية المسجلة</span>
                             </div>
-                            <small>مبني على البيانات المسجلة فقط</small>
                         </div>
-                        <p>@profileAi.SmartSummary</p>
+
+                        <div class="z360-smart-summary-grid">
+                            <div>
+                                <span>المنصب</span>
+                                <strong>@(string.IsNullOrWhiteSpace(Model.Employee?.Position) ? "غير محدد" : Model.Employee.Position)</strong>
+                            </div>
+                            <div>
+                                <span>تاريخ المباشرة</span>
+                                <strong>@(Model.Employee?.HireDate?.ToString("yyyy-MM-dd") ?? "غير محدد")</strong>
+                            </div>
+                            <div>
+                                <span>آخر خبرة</span>
+                                <strong>@SummaryRecordText(summaryExperience)</strong>
+                            </div>
+                            <div>
+                                <span>المؤهل</span>
+                                <strong>@SummaryRecordText(summaryEducation)</strong>
+                            </div>
+                        </div>
 
                         @if (profileAi.Skills.Count > 0)
                         {
                             <div class="z360-profile-facts">
-                                <strong>المهارات</strong>
+                                <strong>أبرز المهارات</strong>
                                 <div>
-                                    @foreach (var skill in profileAi.Skills)
+                                    @foreach (var skill in profileAi.Skills.Take(6))
                                     {
                                         <span>@skill</span>
                                     }
-                                </div>
-                            </div>
-                        }
-
-                        @if (profileAi.Languages.Count > 0)
-                        {
-                            <div class="z360-profile-facts">
-                                <strong>اللغات</strong>
-                                <div>
-                                    @foreach (var language in profileAi.Languages)
+                                    @if (profileAi.Skills.Count > 6)
                                     {
-                                        <span>@language</span>
+                                        <span>+@(profileAi.Skills.Count - 6)</span>
                                     }
                                 </div>
                             </div>

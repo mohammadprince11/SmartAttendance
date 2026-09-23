@@ -13,7 +13,8 @@
 <link rel="stylesheet" href="~/css/zynora-employee-photo-upload.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-employee-edit-clean-layout.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-employee-profile-dynamic-fields.css" asp-append-version="true" />
-<link rel="stylesheet" href="~/css/zynora-employee-edit-profile-theme-preview.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-create-language-cards-v1.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-employee-edit-create-parity.css" asp-append-version="true" />
 
 
 <div class="nxr-edit-final-page zynora-profile-theme-v2" dir="rtl">
@@ -65,30 +66,16 @@
                 </label>
                 <div class="nxr-edit-photo-info">
                     <strong>صورة الموظف</strong>
-                    <span>اختر صورة PNG أو JPG أو WEBP.</span>
                     <small>Max 5MB</small>
                 </div>
 
-                @* منسدلة بسيطة بدل مربّع اختيار بتسمية طويلة: «فعال داخل النظام»
-                   كان يلتفّ ثلاثة أسطر داخل صندوقٍ عرضه 106px وسط حقولٍ بسطرٍ
-                   واحد. والحالة قيمةٌ من اثنتين، فالمنسدلة تعبّر عنها أوضح
-                   وتُقرأ بلا تأويل. `bool` يربط من `true`/`false` كما بحقول
-                   «مواطن» و«احتساب الراتب» بنفس المودل. *@
-                <div class="nxr-edit-status-near-photo">
-                    <label asp-for="Employee.IsActive">حالة الموظف</label>
-                    <select asp-for="Employee.IsActive">
-                        <option value="true">نشط</option>
-                        <option value="false">غير نشط</option>
-                    </select>
-                </div>
+                <label class="nxr-edit-active-check">
+                    <input asp-for="Employee.IsActive" type="checkbox" />
+                    <span>فعال</span>
+                </label>
             </div>
 
             <div class="nxr-edit-final-grid">
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.EmployeeNo">كود الموظف</label>
-                    <input asp-for="Employee.EmployeeNo" />
-                    <span asp-validation-for="Employee.EmployeeNo"></span>
-                </div>
                 @* اسم الموظف الكامل يتولّد تلقائياً من الاسم الرباعي — لا يُدخل مرتين *@
                 <input type="hidden" asp-for="Employee.FullName" />
                 <div class="nxr-edit-language-list" id="employeeNameTranslations">
@@ -125,6 +112,14 @@
                     <span asp-validation-for="EmployeeNameTranslations" class="text-danger"></span>
                 </div>
                 <div class="nxr-edit-field">
+                    <label asp-for="Employee.EmployeeNo">كود الموظف</label>
+                    <input asp-for="Employee.EmployeeNo"
+                           readonly="@(Model.EmployeeNoLockedByPayroll ? "readonly" : null)"
+                           aria-readonly="@(Model.EmployeeNoLockedByPayroll ? "true" : "false")"
+                           title="@(Model.EmployeeNoLockedByPayroll ? "مقفل بعد دخول الموظف في دورة راتب" : null)" />
+                    <span asp-validation-for="Employee.EmployeeNo"></span>
+                </div>
+                <div class="nxr-edit-field">
                     <label asp-for="Employee.NationalId">الرقم الوطني / البطاقة</label>
                     <input asp-for="Employee.NationalId" />
                     <span asp-validation-for="Employee.NationalId"></span>
@@ -147,12 +142,6 @@
                 </div>
                 <!-- SP20_EDIT_PARITY_FIELDS -->
                 <div class="nxr-edit-field">
-                    <label>الشركة</label>
-                    <input value="@Model.CurrentCompanyName"
-                           readonly
-                           aria-readonly="true" />
-                </div>
-                <div class="nxr-edit-field">
                     <label asp-for="Employee.BranchId">موقع العمل</label>
                     <select asp-for="Employee.BranchId" class="nxr-native-select" id="Employee_BranchId">
                         <option value="">اختر موقع العمل</option>
@@ -164,7 +153,7 @@
                     <label asp-for="Employee.DepartmentId">القسم</label>
                     <select asp-for="Employee.DepartmentId" class="nxr-native-select" id="Employee_DepartmentId">
                         <option value="">اختر القسم</option>
-                        @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name)) { <option value="@department.Id" data-company-id="@department.CompanyId" selected="@(department.Id == Model.Employee.DepartmentId ? "selected" : null)">@department.Name</option> }
+                        @foreach (var department in Model.Departments.OrderBy(x => x.CompanyName).ThenBy(x => x.Name)) { <option value="@department.Id" data-company-id="@department.CompanyId" data-branch-id="@department.BranchId" selected="@(department.Id == Model.Employee.DepartmentId ? "selected" : null)">@department.Name</option> }
                     </select>
                     <span asp-validation-for="Employee.DepartmentId"></span>
                 </div>
@@ -172,7 +161,7 @@
                     <label asp-for="Employee.PositionId">المنصب</label>
                     <select asp-for="Employee.PositionId" class="nxr-native-select" id="Employee_PositionId">
                         <option value="">اختر المنصب</option>
-                        @foreach (var position in Model.PositionOptions.OrderBy(x => x.Name)) { <option value="@position.Id" data-company-id="@position.CompanyId" selected="@(position.Id == Model.Employee.PositionId ? "selected" : null)">@position.Name</option> }
+                        @foreach (var position in Model.PositionOptions.OrderBy(x => x.Name)) { <option value="@position.Id" data-company-id="@position.CompanyId" data-department-id="@position.DepartmentId" selected="@(position.Id == Model.Employee.PositionId ? "selected" : null)">@position.Name</option> }
                     </select>
                     <span asp-validation-for="Employee.PositionId"></span>
                 </div>
@@ -372,21 +361,17 @@
                         @foreach (var grade in Model.GradeOptions) { <option value="@grade">@grade</option> }
                     </select>
                 </div>
-                <div class="nxr-edit-field">
-                    <label asp-for="Employee.EmploymentStatus">حالة التوظيف</label>
-                    <input asp-for="Employee.EmploymentStatus"
-                           placeholder="Active" />
-                </div>
-
                 @if (Model.CanEditCompensation)
                 {
                     <div class="nxr-edit-field">
                         <label asp-for="BasicSalary">الراتب الأساسي</label>
                         <input asp-for="BasicSalary"
-                               type="number"
-                               min="0"
-                               step="0.001"
+                               type="text"
                                inputmode="decimal"
+                               dir="ltr"
+                               autocomplete="off"
+                               data-zynora-salary-format
+                               data-zynora-salary-raw="@(Model.BasicSalary?.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
                                placeholder="0" />
                         <span asp-validation-for="BasicSalary"></span>
                     </div>
@@ -481,6 +466,7 @@
     <script src="~/js/zynora-employee-mother-location.js"
             asp-append-version="true"></script>
     <script src="~/js/zynora-employee-photo-upload.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-salary-input.js" asp-append-version="true"></script>
 
     <script>
         (() => {
@@ -566,25 +552,89 @@
             const department = document.getElementById("Employee_DepartmentId");
             const position = document.getElementById("Employee_PositionId");
             if (!workLocation || !department || !position) return;
-            function refreshSelect(select) { if (window.ZynoraSelect && typeof window.ZynoraSelect.refresh === "function") { window.ZynoraSelect.refresh(select); } select.dispatchEvent(new Event("change", { bubbles: true })); }
-            function filterByCompany(select, companyId) {
+            function refreshSelect(select) {
+                if (window.ZynoraSelect && typeof window.ZynoraSelect.refresh === "function") {
+                    window.ZynoraSelect.refresh(select);
+                }
+            }
+
+            function filterDepartments() {
+                const selectedBranch = workLocation.options[workLocation.selectedIndex];
+                const companyId = selectedBranch?.dataset.companyId || "";
+                const branchId = workLocation.value || "";
                 let currentIsValid = false;
-                Array.from(select.options).forEach(option => {
-                    if (!option.value) { option.hidden = false; option.disabled = false; return; }
-                    const belongsToCompany = companyId && option.dataset.companyId === companyId;
-                    option.hidden = !belongsToCompany; option.disabled = !belongsToCompany;
-                    if (belongsToCompany && option.value === select.value) { currentIsValid = true; }
+
+                Array.from(department.options).forEach(option => {
+                    if (!option.value) {
+                        option.hidden = false;
+                        option.disabled = false;
+                        return;
+                    }
+
+                    const sameCompany = companyId && option.dataset.companyId === companyId;
+                    const optionBranchId = option.dataset.branchId || "";
+                    const sameBranch = !optionBranchId || optionBranchId === "0" || optionBranchId === branchId;
+                    const visible = Boolean(sameCompany && sameBranch);
+
+                    option.hidden = !visible;
+                    option.disabled = !visible;
+
+                    if (visible && option.value === department.value) {
+                        currentIsValid = true;
+                    }
                 });
-                if (!currentIsValid) { select.value = ""; }
-                refreshSelect(select);
+
+                if (!currentIsValid) {
+                    department.value = "";
+                }
+
+                refreshSelect(department);
             }
+
+            function filterPositions() {
+                const selectedBranch = workLocation.options[workLocation.selectedIndex];
+                const companyId = selectedBranch?.dataset.companyId || "";
+                const departmentId = department.value || "";
+                let currentIsValid = false;
+
+                Array.from(position.options).forEach(option => {
+                    if (!option.value) {
+                        option.hidden = false;
+                        option.disabled = false;
+                        return;
+                    }
+
+                    const sameCompany = companyId && option.dataset.companyId === companyId;
+                    const optionDepartmentId = option.dataset.departmentId || "";
+                    const sameDepartment = !optionDepartmentId || optionDepartmentId === departmentId;
+                    const visible = Boolean(sameCompany && sameDepartment);
+
+                    option.hidden = !visible;
+                    option.disabled = !visible;
+
+                    if (visible && option.value === position.value) {
+                        currentIsValid = true;
+                    }
+                });
+
+                if (!currentIsValid) {
+                    position.value = "";
+                }
+
+                refreshSelect(position);
+            }
+
             function filterOrganization() {
-                const selectedOption = workLocation.options[workLocation.selectedIndex];
-                const companyId = selectedOption?.dataset.companyId || "";
-                filterByCompany(department, companyId);
-                filterByCompany(position, companyId);
+                filterDepartments();
+                filterPositions();
             }
-            workLocation.addEventListener("change", filterOrganization);
+
+            workLocation.addEventListener("change", function () {
+                filterDepartments();
+                filterPositions();
+            });
+
+            department.addEventListener("change", filterPositions);
             filterOrganization();
             window.ZynoraEditFilterOrganization = filterOrganization;
         })();
@@ -638,7 +688,8 @@
             var items = [];
 
             fields.forEach(function (f) {
-                var input = document.querySelector('[name="Employee.' + f.k + '"]');
+                var input = document.querySelector('[name="Employee.' + f.k + '"]') ||
+                    document.querySelector('[name="' + f.k + '"]');
                 if (!input || input.type === "hidden") return;
                 var box = input.closest(".nxr-field") || input.parentElement;
                 var label = (input.id && document.querySelector('label[for="' + input.id + '"]')) || box.querySelector("label");
@@ -677,14 +728,17 @@
                 parent.removeChild(anchor);
             });
 
-            // تبقى أسماء الموظف بجميع اللغات مباشرة بعد الكود حتى لو غيّر
-            // استوديو الحقول ترتيب الحقول القياسية الأخرى.
-            var localizedNames = document.getElementById("employeeNameTranslations");
+            // كود الموظف يبقى ضمن مجموعة الهوية مباشرة قبل الرقم الوطني،
+            // حتى لو غيّر Field Studio ترتيب الحقول القياسية.
             var employeeNo = document.querySelector('[name="Employee.EmployeeNo"]');
-            var employeeNoBox = employeeNo && (employeeNo.closest(".nxr-edit-field") || employeeNo.parentElement);
-            if (localizedNames && employeeNoBox && employeeNoBox.parentElement === localizedNames.parentElement) {
-                employeeNoBox.insertAdjacentElement("afterend", localizedNames);
+            var nationalId = document.querySelector('[name="Employee.NationalId"]');
+            var employeeNoBox = employeeNo && employeeNo.closest(".nxr-edit-field");
+            var nationalIdBox = nationalId && nationalId.closest(".nxr-edit-field");
+            if (employeeNoBox && nationalIdBox &&
+                employeeNoBox.parentElement === nationalIdBox.parentElement) {
+                nationalIdBox.parentElement.insertBefore(employeeNoBox, nationalIdBox);
             }
+
         })();
     </script>
     <partial name="_ValidationScriptsPartial" />

@@ -406,7 +406,8 @@ JOIN dbo.OnboardingStructuredRecords sr
   ON sr.ExtractionRunId = lr.Id
 WHERE lr.rn = 1
   AND sr.SessionId = @SessionId
-  AND sr.ReviewStatus = N'Pending';
+  AND sr.ReviewStatus = N'Pending'
+  AND sr.RecordType IN (N'Education', N'Experience');
 """,
             command =>
                 HrmsDatabase.AddParameter(
@@ -589,6 +590,7 @@ SET ReviewStatus = N'Accepted',
 FROM dbo.OnboardingStructuredRecords sr
 WHERE sr.SessionId = @SessionId
   AND sr.ReviewStatus = N'Pending'
+  AND sr.RecordType IN (N'Education', N'Experience')
   AND sr.ProviderConfidence >= @Threshold
   AND EXISTS
   (
@@ -667,7 +669,6 @@ SELECT
     CASE sr.RecordType
         WHEN N'Education' THEN 1
         WHEN N'Experience' THEN 2
-        WHEN N'Certificate' THEN 3
     END,
     COALESCE(sr.ReviewedTitle, sr.Title),
     COALESCE(sr.ReviewedSubtitle, sr.Subtitle),
@@ -689,135 +690,7 @@ WHERE lr.rn = 1
   AND sr.SessionId = @SessionId
   AND sr.ReviewStatus IN (N'Accepted', N'Modified')
   AND sr.RecordType IN
-      (N'Education', N'Experience', N'Certificate');
-
-;WITH LatestRuns AS
-(
-    SELECT
-        r.Id,
-        r.OnboardingDocumentId,
-        ROW_NUMBER() OVER
-        (
-            PARTITION BY r.OnboardingDocumentId
-            ORDER BY r.Id DESC
-        ) AS rn
-    FROM dbo.DocumentExtractionRuns r
-    JOIN dbo.OnboardingDocuments d
-      ON d.Id = r.OnboardingDocumentId
-    WHERE d.SessionId = @SessionId
-),
-AddressCandidate AS
-(
-    SELECT TOP (1)
-        COALESCE(
-            NULLIF(LTRIM(RTRIM(f.ReviewedValue)), N''),
-            NULLIF(LTRIM(RTRIM(f.NormalizedValue)), N''),
-            NULLIF(LTRIM(RTRIM(f.RawValue)), N'')
-        ) AS AddressValue
-    FROM LatestRuns lr
-    JOIN dbo.DocumentExtractedFields f
-      ON f.ExtractionRunId = lr.Id
-    WHERE lr.rn = 1
-      AND f.FieldKey = N'Address'
-      AND f.ReviewStatus IN (N'Accepted', N'Modified')
-    ORDER BY
-        CASE f.ReviewStatus
-            WHEN N'Modified' THEN 0
-            ELSE 1
-        END,
-        f.ProviderConfidence DESC,
-        f.Id DESC
-)
-INSERT INTO dbo.EmployeeFileRecords
-(
-    EmployeeId,
-    RecordType,
-    Title,
-    Subtitle,
-    IsCurrent,
-    IsReturned,
-    EmployeeAcknowledged,
-    CreatedAt,
-    CreatedBy,
-    IsDeleted
-)
-SELECT
-    @EmployeeId,
-    7,
-    N'Primary Address',
-    ac.AddressValue,
-    1,
-    0,
-    0,
-    SYSUTCDATETIME(),
-    @CreatedBy,
-    0
-FROM AddressCandidate ac
-WHERE ac.AddressValue IS NOT NULL;
-
-;WITH LatestRuns AS
-(
-    SELECT
-        r.Id,
-        r.OnboardingDocumentId,
-        ROW_NUMBER() OVER
-        (
-            PARTITION BY r.OnboardingDocumentId
-            ORDER BY r.Id DESC
-        ) AS rn
-    FROM dbo.DocumentExtractionRuns r
-    JOIN dbo.OnboardingDocuments d
-      ON d.Id = r.OnboardingDocumentId
-    WHERE d.SessionId = @SessionId
-),
-ProfessionalSummaryCandidate AS
-(
-    SELECT TOP (1)
-        COALESCE(
-            NULLIF(LTRIM(RTRIM(f.ReviewedValue)), N''),
-            NULLIF(LTRIM(RTRIM(f.NormalizedValue)), N''),
-            NULLIF(LTRIM(RTRIM(f.RawValue)), N'')
-        ) AS SummaryValue
-    FROM LatestRuns lr
-    JOIN dbo.DocumentExtractedFields f
-      ON f.ExtractionRunId = lr.Id
-    WHERE lr.rn = 1
-      AND f.FieldKey = N'ProfessionalSummary'
-      AND f.ReviewStatus IN (N'Accepted', N'Modified')
-    ORDER BY
-        CASE f.ReviewStatus
-            WHEN N'Modified' THEN 0
-            ELSE 1
-        END,
-        f.ProviderConfidence DESC,
-        f.Id DESC
-)
-INSERT INTO dbo.EmployeeFileRecords
-(
-    EmployeeId,
-    RecordType,
-    Title,
-    Note,
-    IsCurrent,
-    IsReturned,
-    EmployeeAcknowledged,
-    CreatedAt,
-    CreatedBy,
-    IsDeleted
-)
-SELECT
-    @EmployeeId,
-    12,
-    N'Professional Summary',
-    psc.SummaryValue,
-    1,
-    0,
-    0,
-    SYSUTCDATETIME(),
-    @CreatedBy,
-    0
-FROM ProfessionalSummaryCandidate psc
-WHERE psc.SummaryValue IS NOT NULL;
+      (N'Education', N'Experience');
 
 ;WITH LatestRuns AS
 (
@@ -847,7 +720,7 @@ AcceptedLists AS
     JOIN dbo.DocumentExtractedFields f
       ON f.ExtractionRunId = lr.Id
     WHERE lr.rn = 1
-      AND f.FieldKey IN (N'Skills', N'Languages')
+      AND f.FieldKey = N'Skills'
       AND f.ReviewStatus IN (N'Accepted', N'Modified')
 ),
 Tokens AS
@@ -873,10 +746,7 @@ INSERT INTO dbo.EmployeeFileRecords
 )
 SELECT
     @EmployeeId,
-    CASE t.FieldKey
-        WHEN N'Skills' THEN 10
-        WHEN N'Languages' THEN 11
-    END,
+    10,
     t.Token,
     1,
     0,
@@ -903,7 +773,7 @@ FROM Tokens t;
             });
 
     private static bool IsSupportedType(string value) =>
-        value is "Education" or "Experience" or "Certificate";
+        value is "Education" or "Experience";
 
     private static string? Limit(
         string? value,

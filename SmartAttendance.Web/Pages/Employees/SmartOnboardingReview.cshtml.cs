@@ -26,6 +26,13 @@ public sealed class SmartOnboardingReviewModel : PageModel
     private readonly ICompanyDataLocalizationService _dataLocalization;
     private readonly IOnboardingProtectedAssetService _protectedAssets;
     private readonly IProtectedFileService _protectedFiles;
+    private readonly IWebHostEnvironment _environment;
+
+    private static readonly HashSet<string> AllowedEmployeePhotoExtensions =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp"
+        };
 
     public SmartOnboardingReviewModel(
         ApplicationDbContext db,
@@ -34,7 +41,8 @@ public sealed class SmartOnboardingReviewModel : PageModel
         IEmployeeService employeeService,
         ICompanyDataLocalizationService dataLocalization,
         IOnboardingProtectedAssetService protectedAssets,
-        IProtectedFileService protectedFiles)
+        IProtectedFileService protectedFiles,
+        IWebHostEnvironment environment)
     {
         _db = db;
         _sessionAccess = sessionAccess;
@@ -43,6 +51,7 @@ public sealed class SmartOnboardingReviewModel : PageModel
         _dataLocalization = dataLocalization;
         _protectedAssets = protectedAssets;
         _protectedFiles = protectedFiles;
+        _environment = environment;
     }
 
     public sealed class FinalizeEmployeeInput
@@ -124,6 +133,8 @@ public sealed class SmartOnboardingReviewModel : PageModel
 
         public int? PositionId { get; set; }
 
+        public string? Position { get; set; }
+
         public DateOnly? JoiningDate { get; set; }
 
         [StringLength(50)]
@@ -131,6 +142,9 @@ public sealed class SmartOnboardingReviewModel : PageModel
 
         [StringLength(100)]
         public string? JobGrade { get; set; }
+
+        [StringLength(100)]
+        public string? EmploymentStatus { get; set; } = "Active";
 
         public int? DirectManagerId { get; set; }
 
@@ -187,6 +201,18 @@ public sealed class SmartOnboardingReviewModel : PageModel
     [BindProperty]
     public FinalizeEmployeeInput Finalize { get; set; } = new();
 
+    [BindProperty]
+    public List<EmployeeNameTranslationInput> EmployeeNameTranslations { get; set; } = [];
+
+    [BindProperty]
+    public decimal? BasicSalary { get; set; }
+
+    [BindProperty]
+    public IFormFile? EmployeePhoto { get; set; }
+
+    [BindProperty]
+    public IFormFile? EmployeeSignature { get; set; }
+
     public EmployeeOnboardingStore.SessionRow? Session { get; private set; }
     public List<EmployeeOnboardingStore.DocumentRow> Documents { get; private set; } = [];
     public List<PeopleAiReviewStore.ReviewField> Fields { get; private set; } = [];
@@ -204,6 +230,12 @@ public sealed class SmartOnboardingReviewModel : PageModel
     public List<string> GradeOptions { get; private set; } = [];
     public List<string> SponsorOptions { get; private set; } = [];
     public List<ManagerOption> ManagerOptions { get; private set; } = [];
+    public string CompanyName { get; private set; } = string.Empty;
+    public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; private set; } = [];
+    public Dictionary<string, EmployeeFieldControl.FieldSetting> FieldSettings { get; private set; } =
+        new(StringComparer.Ordinal);
+    public HashSet<string> RequiredFieldKeys { get; private set; } =
+        new(StringComparer.Ordinal);
 
     public bool CanPreview(
         EmployeeOnboardingStore.DocumentRow document) =>
@@ -214,6 +246,7 @@ public sealed class SmartOnboardingReviewModel : PageModel
     public bool CanReview { get; private set; }
     public bool CanVerifyOriginal { get; private set; }
     public bool CanCreateEmployee { get; private set; }
+    public bool CanEditCompensation { get; private set; }
     public bool CanMarkReady { get; private set; }
     public bool CodeSchemaActive { get; private set; }
     public string? CodeSchemaPreview { get; private set; }
@@ -589,7 +622,10 @@ public sealed class SmartOnboardingReviewModel : PageModel
             ModelState.Remove("Finalize.DepartmentId");
         }
 
+        CanEditCompensation =
+            await CanEditCompensationAsync(context.Value.Access);
         await LoadEmployeeCodeSchemaAsync();
+        await LoadEmployeeFieldControlsAsync();
 
         if (CodeSchemaActive)
         {
@@ -600,7 +636,36 @@ public sealed class SmartOnboardingReviewModel : PageModel
             ModelState.Remove("Finalize.EmployeeNo");
         }
 
+        await ValidateAndMapFinalizeNamesAsync();
+        Finalize.Position = await ResolvePositionNameAsync(Finalize.PositionId);
+        ModelState.Remove("Finalize.Position");
         NormalizeFinalizeInput();
+
+        // Smart Onboarding هو أيضاً إنشاء موظف جديد، لذلك يبدأ فعالاً دائماً.
+        Finalize.IsActive = true;
+        Finalize.EmploymentStatus = "Active";
+        ModelState.Remove("Finalize.IsActive");
+        ModelState.Remove("Finalize.EmploymentStatus");
+
+        EmployeeFieldControl.ValidateRequired(
+            Finalize,
+            RequiredFieldKeys,
+            ModelState,
+            "Finalize");
+
+        if (BasicSalary is < 0)
+        {
+            ModelState.AddModelError(
+                nameof(BasicSalary),
+                "الراتب الأساسي لا يمكن أن يكون سالباً.");
+        }
+
+        if (BasicSalary.HasValue && !CanEditCompensation)
+        {
+            ModelState.AddModelError(
+                nameof(BasicSalary),
+                "لا تملك صلاحية إدخال أو تعديل الراتب الأساسي.");
+        }
 
         if (!ValidateFinalizeInput())
         {
@@ -784,6 +849,11 @@ WHERE Id = @EmployeeId
 
             await SaveEmployeeNameTranslationsAsync(
                 employeeId.Value);
+            await SaveBasicSalaryAsync(employeeId.Value);
+            await EmployeeProfileDynamicFields.SaveAsync(
+                _db,
+                employeeId.Value,
+                Request.Form);
 
             await PeopleAiStructuredRecordStore.PromoteAcceptedAsync(
                 _db,
@@ -844,8 +914,35 @@ WHERE Id = @EmployeeId
                     promoted.OriginalStorageKey);
             }
 
+            string photoResult;
+            string signatureResult;
+            try
+            {
+                photoResult = await SaveEmployeePhotoAsync(employeeId.Value);
+            }
+            catch
+            {
+                photoResult = "تعذر حفظ صورة الموظف.";
+            }
+
+            try
+            {
+                signatureResult = await SaveEmployeeSignatureAsync(employeeId.Value);
+            }
+            catch
+            {
+                signatureResult = "تعذر حفظ توقيع الموظف.";
+            }
+
+            var mediaResult = string.Join(
+                " ",
+                new[] { photoResult, signatureResult }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+
             TempData["StatusMessage"] =
-                "تم إنشاء الموظف وربط المستندات من Smart Onboarding بنجاح.";
+                string.IsNullOrWhiteSpace(mediaResult)
+                    ? "تم إنشاء الموظف وربط المستندات من Smart Onboarding بنجاح."
+                    : "تم إنشاء الموظف وربط المستندات من Smart Onboarding بنجاح. " + mediaResult;
 
             return RedirectToPage(
                 "/Employees/Profile",
@@ -879,6 +976,13 @@ WHERE Id = @EmployeeId
         }
 
         Session = context.Value.Session;
+        CompanyName = await _db.Companies
+            .AsNoTracking()
+            .Where(x => x.Id == CompanyId && !x.IsDeleted)
+            .Select(x => x.Name)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted) ??
+            $"Company #{CompanyId}";
+
         CanReview = IsReviewerAllowed(
             context.Value.Access,
             context.Value.Settings);
@@ -886,8 +990,15 @@ WHERE Id = @EmployeeId
             await CanVerifyOriginalAsync(context.Value.Access);
         CanCreateEmployee =
             await CanCreateEmployeeAsync(context.Value.Access);
+        CanEditCompensation =
+            await CanEditCompensationAsync(context.Value.Access);
 
         await LoadEmployeeCodeSchemaAsync();
+        await LoadEmployeeFieldControlsAsync();
+        ProfileDynamicSections =
+            await EmployeeProfileDynamicFields.LoadSectionsAsync(
+                _db,
+                0);
 
         Documents = await EmployeeOnboardingStore
             .ListDocumentsAsync(_db, SessionId);
@@ -1001,6 +1112,148 @@ WHERE Id = @EmployeeId
         {
             InitializeFinalizeDefaults();
         }
+
+        await LoadEmployeeNameTranslationsAsync(
+            preservePostedValues: !initializeFinalize);
+    }
+
+    private async Task LoadEmployeeFieldControlsAsync()
+    {
+        FieldSettings = await EmployeeFieldControl.GetSettingsAsync(_db);
+        RequiredFieldKeys = EmployeeFieldControl.RequiredKeys(FieldSettings);
+    }
+
+    private async Task SaveBasicSalaryAsync(int employeeId)
+    {
+        if (!BasicSalary.HasValue ||
+            !CanEditCompensation ||
+            employeeId <= 0)
+        {
+            return;
+        }
+
+        await EmployeeFinancialInfoSchema.EnsureAsync(_db);
+        await HrmsDatabase.ExecuteAsync(
+            _db,
+            """
+UPDATE dbo.EmployeeFinancialInfos
+SET BasicSalary = @BasicSalary,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE EmployeeId = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0;
+
+IF @@ROWCOUNT = 0
+BEGIN
+    INSERT INTO dbo.EmployeeFinancialInfos
+        (EmployeeId, BasicSalary, CreatedAt, IsDeleted)
+    VALUES
+        (@EmployeeId, @BasicSalary, SYSUTCDATETIME(), 0);
+END;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+                HrmsDatabase.AddParameter(command, "@BasicSalary", BasicSalary.Value);
+            });
+    }
+
+    private async Task<string> SaveEmployeeSignatureAsync(int employeeId)
+    {
+        if (EmployeeSignature == null || EmployeeSignature.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(EmployeeSignature.FileName);
+        if (string.IsNullOrWhiteSpace(extension) ||
+            !AllowedEmployeePhotoExtensions.Contains(extension))
+        {
+            return "صيغة التوقيع غير مدعومة.";
+        }
+
+        if (EmployeeSignature.Length > 2 * 1024 * 1024)
+        {
+            return "حجم التوقيع أكبر من 2MB.";
+        }
+
+        if (!await UploadSignatureValidator.IsValidImageAsync(EmployeeSignature))
+        {
+            return "محتوى ملف التوقيع ليس صورة صالحة.";
+        }
+
+        var stored = await _protectedFiles.SaveAsync(
+            EmployeeSignature,
+            employeeId,
+            "signature",
+            HttpContext.RequestAborted);
+
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return "تعذر حفظ توقيع الموظف.";
+        }
+
+        await _db.Employees
+            .Where(x => x.Id == employeeId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    x => x.SignaturePath,
+                    stored),
+                HttpContext.RequestAborted);
+
+        return "تم حفظ توقيع الموظف.";
+    }
+
+    private async Task<string> SaveEmployeePhotoAsync(int employeeId)
+    {
+        if (EmployeePhoto == null || EmployeePhoto.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(EmployeePhoto.FileName);
+        if (string.IsNullOrWhiteSpace(extension) ||
+            !AllowedEmployeePhotoExtensions.Contains(extension))
+        {
+            return "صيغة صورة الموظف غير مدعومة.";
+        }
+
+        if (EmployeePhoto.Length > 5 * 1024 * 1024)
+        {
+            return "حجم صورة الموظف أكبر من 5MB.";
+        }
+
+        if (!await UploadSignatureValidator.IsValidImageAsync(EmployeePhoto))
+        {
+            return "محتوى ملف صورة الموظف ليس صورة صالحة.";
+        }
+
+        var uploadRoot = Path.Combine(
+            _environment.WebRootPath,
+            "uploads",
+            "employee-photos");
+        Directory.CreateDirectory(uploadRoot);
+
+        var storedName =
+            $"employee_{employeeId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
+        var physicalPath = Path.Combine(uploadRoot, storedName);
+        var relativePath = $"/uploads/employee-photos/{storedName}";
+
+        await using (var stream = System.IO.File.Create(physicalPath))
+        {
+            await EmployeePhoto.CopyToAsync(
+                stream,
+                HttpContext.RequestAborted);
+        }
+
+        await _db.Employees
+            .Where(x => x.Id == employeeId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    x => x.PhotoPath,
+                    relativePath),
+                HttpContext.RequestAborted);
+
+        return "تم حفظ صورة الموظف.";
     }
 
     private async Task LoadEmployeeCodeSchemaAsync()
@@ -1115,6 +1368,26 @@ WHERE Id = @EmployeeId
                 HttpContext.RequestAborted);
     }
 
+    private async Task<bool> CanEditCompensationAsync(
+        PeopleAiAccessContext access)
+    {
+        if (access.IsAdmin)
+        {
+            return true;
+        }
+
+        if (access.SystemUserId is not > 0)
+        {
+            return false;
+        }
+
+        return await _permissionAuthorization.HasGlobalPermissionAsync(
+            access.SystemUserId.Value,
+            PeoplePermissionCodes.EditCompensation,
+            compatibilityAllowed: false,
+            HttpContext.RequestAborted);
+    }
+
     private async Task RefreshCrossDocumentIssuesAsync(
         bool persistIssues)
     {
@@ -1167,6 +1440,22 @@ WHERE Id = @EmployeeId
                     x.Value!,
                     x.Field.ProviderConfidence,
                     x.Field.ReviewStatus))
+                .ToList();
+
+            values = values
+                .GroupBy(value => new
+                {
+                    DocumentType = value.DocumentType.Trim().ToUpperInvariant(),
+                    NormalizedValue = NormalizeCrossDocumentValue(
+                        fieldKey,
+                        value.Value)
+                })
+                .Select(group => group
+                    .OrderByDescending(value =>
+                        value.ReviewStatus is "Accepted" or "Modified")
+                    .ThenByDescending(value => value.Confidence ?? 0m)
+                    .ThenByDescending(value => value.DocumentId)
+                    .First())
                 .ToList();
 
             if (values.Count < 2)
@@ -1724,6 +2013,7 @@ WHERE Id = @EmployeeId
             PersonalEmail = Get("PersonalEmail"),
             WorkType = Get("WorkType"),
             JobGrade = Get("JobGrade"),
+            EmploymentStatus = Get("EmploymentStatus") ?? "Active",
             PassportNo =
                 passportNumber ??
                 (passportDocIds.Count > 0
@@ -1747,42 +2037,191 @@ WHERE Id = @EmployeeId
         }
     }
 
-    private async Task SaveEmployeeNameTranslationsAsync(
-        int employeeId)
+    private async Task LoadEmployeeNameTranslationsAsync(
+        bool preservePostedValues)
     {
+        if (CompanyId <= 0)
+        {
+            EmployeeNameTranslations = [];
+            return;
+        }
+
+        var posted = preservePostedValues
+            ? EmployeeNameTranslations.ToDictionary(
+                item => item.CultureCode,
+                StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, EmployeeNameTranslationInput>(
+                StringComparer.OrdinalIgnoreCase);
+
         var languages = await _dataLocalization.GetLanguagesAsync(
             CompanyId,
             HttpContext.RequestAborted);
 
+        EmployeeNameTranslations = languages.Select(language =>
+        {
+            posted.TryGetValue(language.CultureCode, out var submitted);
+
+            var isArabic = language.CultureCode.StartsWith(
+                "ar",
+                StringComparison.OrdinalIgnoreCase);
+            var isEnglish = language.CultureCode.StartsWith(
+                "en",
+                StringComparison.OrdinalIgnoreCase);
+
+            return new EmployeeNameTranslationInput
+            {
+                CompanyId = CompanyId,
+                CultureCode = language.CultureCode,
+                NativeName = language.NativeName,
+                Direction = language.Direction,
+                IsDefault = language.IsDefault,
+                IsRequired = language.IsRequired,
+                FirstName = submitted?.FirstName ??
+                    (isArabic ? Finalize.FirstName :
+                        isEnglish ? Finalize.FirstNameEn :
+                        language.IsDefault ? Finalize.FirstName : null),
+                SecondName = submitted?.SecondName ??
+                    (isArabic ? Finalize.SecondName :
+                        isEnglish ? Finalize.SecondNameEn :
+                        language.IsDefault ? Finalize.SecondName : null),
+                ThirdName = submitted?.ThirdName ??
+                    (isArabic ? Finalize.ThirdName :
+                        isEnglish ? Finalize.ThirdNameEn :
+                        language.IsDefault ? Finalize.ThirdName : null),
+                LastName = submitted?.LastName ??
+                    (isArabic ? Finalize.LastName :
+                        isEnglish ? Finalize.LastNameEn :
+                        language.IsDefault ? Finalize.LastName : null)
+            };
+        }).ToList();
+    }
+
+    private async Task ValidateAndMapFinalizeNamesAsync()
+    {
+        ModelState.Remove("Finalize.FullName");
+
+        if (EmployeeNameTranslations.Count == 0)
+        {
+            return;
+        }
+
+        var values = EmployeeNameTranslations.SelectMany(item => new[]
+        {
+            new LocalizedFieldValue(
+                item.CultureCode,
+                "FirstName",
+                item.FirstName),
+            new LocalizedFieldValue(
+                item.CultureCode,
+                "LastName",
+                item.LastName)
+        }).ToList();
+
+        var errors = await _dataLocalization.ValidateRequiredValuesAsync(
+            CompanyId,
+            new[] { "FirstName", "LastName" },
+            values,
+            HttpContext.RequestAborted);
+
+        foreach (var error in errors)
+        {
+            ModelState.AddModelError(
+                nameof(EmployeeNameTranslations),
+                error);
+        }
+
+        var primary = EmployeeNameTranslations
+            .FirstOrDefault(item => item.IsDefault) ??
+            EmployeeNameTranslations.FirstOrDefault();
+
+        if (primary is not null)
+        {
+            Finalize.FirstName = Clean(primary.FirstName);
+            Finalize.SecondName = Clean(primary.SecondName);
+            Finalize.ThirdName = Clean(primary.ThirdName);
+            Finalize.LastName = Clean(primary.LastName);
+            Finalize.FullName = ComposeName(primary);
+        }
+
+        var english = EmployeeNameTranslations.FirstOrDefault(item =>
+            item.CultureCode.StartsWith(
+                "en",
+                StringComparison.OrdinalIgnoreCase));
+
+        if (english is not null)
+        {
+            Finalize.FirstNameEn = Clean(english.FirstName);
+            Finalize.SecondNameEn = Clean(english.SecondName);
+            Finalize.ThirdNameEn = Clean(english.ThirdName);
+            Finalize.LastNameEn = Clean(english.LastName);
+        }
+    }
+
+    private static string ComposeName(
+        EmployeeNameTranslationInput item) =>
+        string.Join(
+            ' ',
+            new[] {
+                item.FirstName,
+                item.SecondName,
+                item.ThirdName,
+                item.LastName
+            }
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim()));
+
+    private async Task SaveEmployeeNameTranslationsAsync(
+        int employeeId)
+    {
         var values = new List<LocalizedFieldValue>();
 
-        foreach (var language in languages)
+        if (EmployeeNameTranslations.Count > 0)
         {
-            if (language.CultureCode.StartsWith(
-                    "ar",
-                    StringComparison.OrdinalIgnoreCase))
+            foreach (var translation in EmployeeNameTranslations)
             {
                 AddLocalizedNameValues(
                     values,
-                    language.CultureCode,
-                    Finalize.FirstName,
-                    Finalize.SecondName,
-                    Finalize.ThirdName,
-                    Finalize.LastName);
-                continue;
+                    translation.CultureCode,
+                    translation.FirstName,
+                    translation.SecondName,
+                    translation.ThirdName,
+                    translation.LastName);
             }
+        }
+        else
+        {
+            var languages = await _dataLocalization.GetLanguagesAsync(
+                CompanyId,
+                HttpContext.RequestAborted);
 
-            if (language.CultureCode.StartsWith(
-                    "en",
-                    StringComparison.OrdinalIgnoreCase))
+            foreach (var language in languages)
             {
-                AddLocalizedNameValues(
-                    values,
-                    language.CultureCode,
-                    Finalize.FirstNameEn,
-                    Finalize.SecondNameEn,
-                    Finalize.ThirdNameEn,
-                    Finalize.LastNameEn);
+                if (language.CultureCode.StartsWith(
+                        "ar",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    AddLocalizedNameValues(
+                        values,
+                        language.CultureCode,
+                        Finalize.FirstName,
+                        Finalize.SecondName,
+                        Finalize.ThirdName,
+                        Finalize.LastName);
+                    continue;
+                }
+
+                if (language.CultureCode.StartsWith(
+                        "en",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    AddLocalizedNameValues(
+                        values,
+                        language.CultureCode,
+                        Finalize.FirstNameEn,
+                        Finalize.SecondNameEn,
+                        Finalize.ThirdNameEn,
+                        Finalize.LastNameEn);
+                }
             }
         }
 
@@ -1876,10 +2315,12 @@ WHERE Id = @EmployeeId
             JoiningDate = Finalize.JoiningDate,
             WorkType = Clean(Finalize.WorkType),
             JobGrade = Clean(Finalize.JobGrade),
+            EmploymentStatus = "Active",
             BranchId = Finalize.BranchId,
             DepartmentId = Finalize.DepartmentId,
             PositionId = Finalize.PositionId,
-            IsActive = Finalize.IsActive
+            Position = Clean(Finalize.Position),
+            IsActive = true
         };
 
     private bool ValidateFinalizeInput()
@@ -1932,6 +2373,23 @@ WHERE Id = @EmployeeId
         return ModelState.IsValid;
     }
 
+    private async Task<string?> ResolvePositionNameAsync(int? positionId)
+    {
+        if (positionId is not > 0)
+        {
+            return null;
+        }
+
+        var positions = await _employeeService.GetPositionsForDropdownAsync();
+        return positions
+            .Where(position =>
+                position.Id == positionId.Value &&
+                position.CompanyId == CompanyId &&
+                position.IsActive)
+            .Select(position => position.Name)
+            .FirstOrDefault();
+    }
+
     private void NormalizeFinalizeInput()
     {
         Finalize.EmployeeNo =
@@ -1950,6 +2408,8 @@ WHERE Id = @EmployeeId
         Finalize.Nationality =
             ZynoraEmployeeLookups.NormalizePrimaryNationality(
                 Finalize.Nationality);
+        Finalize.EmploymentStatus =
+            Clean(Finalize.EmploymentStatus) ?? "Active";
     }
 
     private IActionResult RedirectToSelf() =>
