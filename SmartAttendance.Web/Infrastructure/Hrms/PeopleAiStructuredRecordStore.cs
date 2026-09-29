@@ -720,7 +720,7 @@ AcceptedLists AS
     JOIN dbo.DocumentExtractedFields f
       ON f.ExtractionRunId = lr.Id
     WHERE lr.rn = 1
-      AND f.FieldKey = N'Skills'
+      AND f.FieldKey IN (N'Skills', N'Languages')
       AND f.ReviewStatus IN (N'Accepted', N'Modified')
 ),
 Tokens AS
@@ -746,7 +746,10 @@ INSERT INTO dbo.EmployeeFileRecords
 )
 SELECT
     @EmployeeId,
-    10,
+    CASE t.FieldKey
+        WHEN N'Skills' THEN 10
+        WHEN N'Languages' THEN 11
+    END,
     t.Token,
     1,
     0,

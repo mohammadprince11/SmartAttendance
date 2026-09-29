@@ -32,11 +32,11 @@ public class CreateModel : PageModel
 
         if (!created)
         {
-            ErrorMessage = "Holiday could not be created.";
+            ErrorMessage = "تعذر إنشاء العطلة.";
             return Page();
         }
 
-        TempData["SuccessMessage"] = "Holiday created successfully.";
+        TempData["SuccessMessage"] = "تم إنشاء العطلة بنجاح.";
 
         return RedirectToPage("./Index");
     }

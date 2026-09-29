@@ -26,6 +26,7 @@ public static class RequestTypeStore
         public int Id { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
+        public string? CategoryNameEn { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? NameEn { get; set; }
         public int? AllowedDays { get; set; }        // عدد الأيام المسموح (null = بلا حد)
@@ -168,7 +169,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         if (onlyActive) where.Add("t.IsActive=1");
         var clause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
         return HrmsDatabase.QueryAsync(db,
-            $@"SELECT t.*, c.Name AS CategoryName FROM RequestTypes t
+            $@"SELECT t.*, c.Name AS CategoryName, c.NameEn AS CategoryNameEn FROM RequestTypes t
                JOIN RequestCategories c ON c.Id=t.CategoryId {clause}
                ORDER BY t.CategoryId, t.DisplayOrder, t.Id",
             cmd => { if (categoryId.HasValue) HrmsDatabase.AddParameter(cmd, "@cat", categoryId.Value); },
@@ -178,7 +179,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
     public static async Task<ReqType?> GetTypeAsync(ApplicationDbContext db, int id)
     {
         var list = await HrmsDatabase.QueryAsync(db,
-            "SELECT t.*, c.Name AS CategoryName FROM RequestTypes t JOIN RequestCategories c ON c.Id=t.CategoryId WHERE t.Id=@id",
+            "SELECT t.*, c.Name AS CategoryName, c.NameEn AS CategoryNameEn FROM RequestTypes t JOIN RequestCategories c ON c.Id=t.CategoryId WHERE t.Id=@id",
             cmd => HrmsDatabase.AddParameter(cmd, "@id", id), Map);
         return list.FirstOrDefault();
     }
@@ -188,6 +189,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         Id = HrmsDatabase.GetInt(r, "Id"),
         CategoryId = HrmsDatabase.GetInt(r, "CategoryId"),
         CategoryName = HrmsDatabase.GetString(r, "CategoryName"),
+        CategoryNameEn = HrmsDatabase.GetString(r, "CategoryNameEn"),
         Name = HrmsDatabase.GetString(r, "Name"),
         NameEn = HrmsDatabase.GetString(r, "NameEn"),
         AllowedDays = HrmsDatabase.GetNullableInt(r, "AllowedDays"),

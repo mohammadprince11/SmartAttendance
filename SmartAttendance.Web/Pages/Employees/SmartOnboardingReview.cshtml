@@ -25,6 +25,15 @@
             ?? PeopleAiDocumentTypes.Unknown;
     }
 
+    bool CanPreviewDocument(
+        SmartAttendance.Web.Infrastructure.Hrms.EmployeeOnboardingStore.DocumentRow document) =>
+        SmartAttendance.Web.Infrastructure.PeopleAi.DocumentProcessingContract
+            .Resolve(
+                System.IO.Path.GetExtension(document.OriginalFileName),
+                document.DeclaredDocumentType)
+            .Format
+            .CanPreview;
+
     PeopleAiFieldPolicy? FieldPolicy(
         SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
     {
@@ -287,6 +296,67 @@
             <div><span>مشاكل مفتوحة</span><strong>@openIssues.Count</strong></div>
             <div><span>المراجع</span><strong>@(Model.CanReview ? "مسموح" : "عرض فقط")</strong></div>
         </section>
+
+        @if (Model.Documents.Count > 0)
+        {
+            <section class="sor-card">
+                <div class="sor-section-head">
+                    <div>
+                        <h2>المستندات</h2>
+                        <p>تبقى جميع المستندات مرئية أثناء المراجعة وبعد اعتمادها، مع معاينة محمية بدون كشف مسار التخزين.</p>
+                    </div>
+                    <span class="zy-badge zy-badge--info">@Model.Documents.Count مستند</span>
+                </div>
+
+                <div class="sor-document-list">
+                    @foreach (var document in Model.Documents)
+                    {
+                        <article>
+                            <div>
+                                <strong>@document.OriginalFileName</strong>
+                                <small>Document #@document.Id</small>
+                            </div>
+                            <div>
+                                <span>
+                                    المعلن: @(document.DeclaredDocumentType ?? "Unknown")
+                                    · المكتشف: @(document.DetectedDocumentType ?? "غير محدد")
+                                </span>
+                                <small>
+                                    المعالجة: @StatusLabel(document.ProcessingStatus)
+                                    · التحقق: @(string.IsNullOrWhiteSpace(document.OriginalVerificationStatus)
+                                        ? "غير مطلوب"
+                                        : document.OriginalVerificationStatus)
+                                </small>
+                            </div>
+                            <div class="sor-document-actions">
+                                @if (CanPreviewDocument(document))
+                                {
+                                    <button type="button"
+                                            class="zy-btn sor-preview-button"
+                                            data-review-preview-open
+                                            data-preview-name="@document.OriginalFileName"
+                                            data-preview-url="@Url.Page(
+                                                "./SmartOnboarding",
+                                                "Preview",
+                                                new
+                                                {
+                                                    companyId = Model.CompanyId,
+                                                    sessionId = Model.SessionId,
+                                                    documentId = document.Id
+                                                })">
+                                        معاينة
+                                    </button>
+                                }
+                                else
+                                {
+                                    <small>لا يدعم المعاينة</small>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
 
         @if (reviewedDocuments.Count > 0)
         {

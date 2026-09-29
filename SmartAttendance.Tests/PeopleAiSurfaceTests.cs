@@ -322,7 +322,7 @@ public sealed class PeopleAiSurfaceTests
             "EmployeeProfileIntelligence.cs"));
 
         Assert.Contains("Profile Completeness", profile);
-        Assert.Contains("Smart Employee Summary", profile);
+        Assert.Contains("z360-profile-summary", profile);
         Assert.Contains("EmployeeRecordType.Skill", profile);
         Assert.Contains("EmployeeRecordType.Language", profile);
         Assert.Contains("BuildProfileIntelligence", profileModel);

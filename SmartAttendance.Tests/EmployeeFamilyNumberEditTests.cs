@@ -23,6 +23,13 @@ public sealed class EmployeeFamilyNumberEditTests
             "Employees",
             "Edit.cshtml.cs"));
 
+        var identityBootstrap = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Web",
+            "Infrastructure",
+            "Hrms",
+            "PeopleIdentityBootstrap.cs"));
+
         Assert.Contains(
             "asp-for=\"FamilyNumber\"",
             page,
@@ -40,12 +47,16 @@ public sealed class EmployeeFamilyNumberEditTests
             model,
             StringComparison.Ordinal);
         Assert.Contains(
-            "dbo.EmployeeIdentityDocuments",
+            "PeopleIdentityBootstrap.SetFamilyNumberAsync",
             model,
             StringComparison.Ordinal);
         Assert.Contains(
+            "dbo.EmployeeIdentityDocuments",
+            identityBootstrap,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "SET FamilyNumber = @FamilyNumber",
-            model,
+            identityBootstrap,
             StringComparison.Ordinal);
     }
 

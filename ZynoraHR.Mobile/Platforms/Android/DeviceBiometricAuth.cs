@@ -52,7 +52,7 @@ public static class DeviceBiometricAuth
                 var prompt = new Android.Hardware.Biometrics.BiometricPrompt.Builder(activity)
                     .SetTitle(title)
                     .SetSubtitle(subtitle)
-                    .SetNegativeButton("إلغاء", executor, negative)
+                    .SetNegativeButton(UiLocalization.T("إلغاء"), executor, negative)
                     .Build();
 
                 prompt.Authenticate(

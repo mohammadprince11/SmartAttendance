@@ -3109,6 +3109,25 @@ BEGIN
                 WHERE OriginalRunId IS NOT NULL AND RunType=N''Reversal'';';
 END;
 """),
+
+        new(
+            "20260925-01-app-login-two-factor",
+            """
+IF OBJECT_ID('AppLoginTwoFactor', 'U') IS NULL
+BEGIN
+    CREATE TABLE AppLoginTwoFactor (
+        LoginUserId int NOT NULL PRIMARY KEY,
+        IsEnabled bit NOT NULL CONSTRAINT DF_AppLoginTwoFactor_IsEnabled DEFAULT(0),
+        ActiveSecretProtected nvarchar(max) NULL,
+        PendingSecretProtected nvarchar(max) NULL,
+        RecoveryCodeHashesJson nvarchar(max) NULL,
+        EnabledAtUtc datetime2 NULL,
+        UpdatedAtUtc datetime2 NOT NULL CONSTRAINT DF_AppLoginTwoFactor_UpdatedAtUtc DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_AppLoginTwoFactor_AppLoginUsers
+            FOREIGN KEY (LoginUserId) REFERENCES AppLoginUsers(Id) ON DELETE CASCADE
+    );
+END;
+"""),
     };
 
     /// <summary>

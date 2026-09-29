@@ -541,6 +541,30 @@ ORDER BY h.RequestId,h.ActionAt,h.Id;
         };
     }
 
+    /// <summary>
+    /// يفحص صلاحية البتّ بالطلب بنفس قواعد التنفيذ الفعلية، بما فيها
+    /// المدير المباشر/الدور/المستخدم/اللجان/التفويض/التصعيد.
+    /// يفيد واجهات API في عدم عرض صندوق موافقات أوسع من صلاحية المستخدم.
+    /// </summary>
+    public static async Task<bool> CanActAsync(
+        ApplicationDbContext dbContext,
+        int requestId,
+        string userName,
+        IEnumerable<string> roles,
+        int? actorEmployeeId)
+    {
+        var flow = await GetFlowAsync(dbContext, requestId);
+        if (flow is null) return false;
+
+        return await FindAuthorizedCurrentAsync(
+            dbContext,
+            flow,
+            requestId,
+            userName,
+            roles,
+            actorEmployeeId) is not null;
+    }
+
     private sealed record StepAuthorization(bool Allowed, string? DelegatedFrom = null);
     private sealed record AuthorizedStep(StepState Step,StepAuthorization Authorization);
 

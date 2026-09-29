@@ -6,6 +6,7 @@ public partial class App : Application
 {
 	public App()
 	{
+		UiLocalization.ConfigureCulture();
 		InitializeComponent();
 	}
 

@@ -198,8 +198,26 @@
 }
 .sor-reviewed-list span{overflow-wrap:anywhere}
 .sor-reviewed-list small{color:var(--color-text-secondary)}
+
+.sor-document-list{display:grid;gap:var(--sp-2)}
+.sor-document-list>article{
+    display:grid;
+    grid-template-columns:minmax(180px,.42fr) minmax(0,1.4fr) auto;
+    gap:var(--sp-3);align-items:center;
+    padding:var(--sp-3);
+    border:1px solid var(--color-border);
+    border-radius:var(--radius);
+    background:var(--color-background)
+}
+.sor-document-list>article>div{display:grid;gap:4px;min-width:0}
+.sor-document-list strong,.sor-document-list span{overflow-wrap:anywhere}
+.sor-document-list small{color:var(--color-text-secondary)}
+.sor-document-actions{justify-items:end}
+
 @media(max-width:700px){
-    .sor-reviewed-list>div{grid-template-columns:1fr}
+    .sor-reviewed-list>div,
+    .sor-document-list>article{grid-template-columns:1fr}
+    .sor-document-actions{justify-items:start}
 }
 
 /* Final Preview controls: keep native selects visually identical to text inputs. */

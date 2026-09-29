@@ -30,7 +30,9 @@
                                    FlowDirection="LeftToRight"
                                    LineBreakMode="TailTruncation" />
                         </VerticalStackLayout>
-                        <HorizontalStackLayout Grid.Column="1"
+                        <HorizontalStackLayout x:Name="AuthenticatedHeaderActions"
+                                               Grid.Column="1"
+                                               IsVisible="False"
                                                Spacing="6"
                                                VerticalOptions="Center">
                             <Border WidthRequest="36"
@@ -141,6 +143,28 @@
                             </Border>
                         </VerticalStackLayout>
 
+                        <VerticalStackLayout x:Name="TwoFactorLoginPanel"
+                                             IsVisible="False"
+                                             Spacing="8">
+                            <Label Text="المصادقة الثنائية"
+                                   Style="{StaticResource ZyCaption}" />
+                            <Border BackgroundColor="{StaticResource ZyBgSoft}"
+                                    Stroke="{StaticResource ZyAccentBright}"
+                                    StrokeShape="RoundRectangle 15"
+                                    Padding="14,2">
+                                <Entry x:Name="TwoFactorCodeEntry"
+                                       Placeholder="رمز Authenticator أو Recovery Code"
+                                       FlowDirection="LeftToRight"
+                                       BackgroundColor="Transparent"
+                                       TextColor="{StaticResource ZyText}"
+                                       PlaceholderColor="{StaticResource ZyMuted2}"
+                                       HeightRequest="50"
+                                       MaxLength="20" />
+                            </Border>
+                            <Label Text="أدخل رمز Authenticator المكوّن من 6 أرقام، أو أحد رموز الاسترداد."
+                                   Style="{StaticResource ZyCaption}" />
+                        </VerticalStackLayout>
+
                         <Label x:Name="ErrorLabel"
                                IsVisible="False"
                                TextColor="{StaticResource ZyDanger}"
@@ -150,6 +174,12 @@
                                 Text="دخول إلى ZYNORA"
                                 Clicked="OnLoginClicked"
                                 Style="{StaticResource ZyPrimaryButton}" />
+
+                        <Button x:Name="BiometricRetryButton"
+                                IsVisible="False"
+                                Text="فتح بالبصمة / الوجه"
+                                Clicked="OnBiometricRetryClicked"
+                                Style="{StaticResource ZySecondaryButton}" />
 
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                             <Label Text="●"
@@ -204,13 +234,19 @@
                                             Stroke="#2B6A70"
                                             StrokeShape="RoundRectangle 13"
                                             Padding="0">
-                                        <Label Text="Z"
-                                               TextColor="#DFFFFF"
-                                               FontSize="13"
-                                               FontAttributes="Bold"
-                                               HorizontalTextAlignment="Center"
-                                               VerticalTextAlignment="Center"
-                                               FlowDirection="LeftToRight" />
+                                        <Grid>
+                                            <Image x:Name="HomePhotoImage"
+                                                   Aspect="AspectFill"
+                                                   IsVisible="False" />
+                                            <Label x:Name="HomePhotoFallbackLabel"
+                                                   Text="Z"
+                                                   TextColor="#DFFFFF"
+                                                   FontSize="13"
+                                                   FontAttributes="Bold"
+                                                   HorizontalTextAlignment="Center"
+                                                   VerticalTextAlignment="Center"
+                                                   FlowDirection="LeftToRight" />
+                                        </Grid>
                                     </Border>
                                     <VerticalStackLayout Grid.Column="1"
                                                          Spacing="1"
@@ -287,7 +323,7 @@
                                                        FontSize="24"
                                                        FontAttributes="Bold"
                                                        HorizontalTextAlignment="Center" />
-                                                <Label Text="{Binding Type}"
+                                                <Label Text="{Binding DisplayType}"
                                                        TextColor="#CFE0F0"
                                                        FontSize="11"
                                                        FontAttributes="Bold"
@@ -347,21 +383,21 @@
                                 Text="بصمة"
                                 ImageSource="ic_fingerprint.png"
                                 ContentLayout="Top,5"
-                                Clicked="OnAttendanceTab"
+                                Clicked="OnFingerprintTab"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#FFD27F" />
                         <Button Grid.Row="1" Grid.Column="0"
                                 Text="الاستبيانات"
                                 ImageSource="ic_survey.png"
                                 ContentLayout="Top,5"
-                                Clicked="OnFeatureComingSoon"
+                                Clicked="OnSurveysTapped"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#C9A3FF" />
                         <Button Grid.Row="1" Grid.Column="1"
                                 Text="الشكاوي"
                                 ImageSource="ic_complaint.png"
                                 ContentLayout="Top,5"
-                                Clicked="OnFeatureComingSoon"
+                                Clicked="OnFeedbackTapped"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#FF9FB2" />
                         <Button Grid.Row="1" Grid.Column="2"
@@ -375,7 +411,7 @@
                                 Text="التقييم"
                                 ImageSource="ic_evaluation.png"
                                 ContentLayout="Top,5"
-                                Clicked="OnFeatureComingSoon"
+                                Clicked="OnDisciplineTapped"
                                 Style="{StaticResource NxQuickButton}"
                                 TextColor="#FFC47F" />
                     </Grid>
@@ -432,7 +468,7 @@
                                                             Stroke="#2A4258"
                                                             StrokeShape="RoundRectangle 99"
                                                             Padding="8,4">
-                                                        <Label Text="{Binding Category}"
+                                                        <Label Text="{Binding DisplayCategory}"
                                                                TextColor="#DCE7F3"
                                                                FontSize="9"
                                                                FontAttributes="Bold" />
@@ -537,14 +573,45 @@
                                      BackgroundColor="{StaticResource ZyStrokeSoft}" />
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                <Button Text="●  تسجيل دخول"
+                                <Button x:Name="AttendanceCheckInButton"
+                                        Text="●  تسجيل دخول"
                                         Clicked="OnCheckIn"
                                         Style="{StaticResource ZySuccessButton}" />
-                                <Button Grid.Column="1"
+                                <Button x:Name="AttendanceCheckOutButton"
+                                        Grid.Column="1"
                                         Text="◼  تسجيل خروج"
                                         Clicked="OnCheckOut"
                                         Style="{StaticResource ZyWarningButton}" />
                             </Grid>
+
+                            <Border BackgroundColor="#071A26"
+                                    Stroke="#235A5A"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 16"
+                                    Padding="12,10">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="10">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="⌖  بصمة الموقع"
+                                               TextColor="{StaticResource ZyText}"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                        <Label x:Name="AttendanceLocationLabel"
+                                               Text="جاري التحقق من حالة الموقع..."
+                                               TextColor="{StaticResource ZyMuted}"
+                                               FontSize="10.5"
+                                               LineBreakMode="WordWrap" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1"
+                                            Text="تحديث الموقع"
+                                            Clicked="OnRefreshLocationTapped"
+                                            Style="{StaticResource ZySecondaryButton}"
+                                            HeightRequest="38"
+                                            FontSize="9.5"
+                                            Padding="10,5"
+                                            VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
 
                             <Label x:Name="AttendancePunchLabel"
                                    Text="سيتم التحقق من دقة الموقع قبل تسجيل الحضور."
@@ -588,14 +655,14 @@
                                                            FontAttributes="Bold"
                                                            FontSize="13"
                                                            FlowDirection="LeftToRight" />
-                                                    <Label Text="{Binding Status}"
+                                                    <Label Text="{Binding DisplayStatus}"
                                                            Style="{StaticResource ZyCaption}" />
                                                 </VerticalStackLayout>
                                                 <Border Grid.Column="1"
                                                         Style="{StaticResource ZyPill}"
                                                         Padding="8,4"
                                                         VerticalOptions="Start">
-                                                    <Label Text="{Binding Status}"
+                                                    <Label Text="{Binding DisplayStatus}"
                                                            TextColor="{StaticResource ZyAccentBright}"
                                                            FontSize="9"
                                                            FontAttributes="Bold" />
@@ -641,7 +708,7 @@
                             StrokeShape="RoundRectangle 26"
                             Padding="20">
                         <VerticalStackLayout Spacing="9">
-                            <Label Text="صافي التعويض"
+                            <Label Text="آخر صافي احتساب"
                                    Style="{StaticResource ZyCaption}" />
                             <Label x:Name="CompensationNetLabel"
                                    Text="—"
@@ -654,6 +721,13 @@
                                    FontSize="10"
                                    FontAttributes="Bold"
                                    FlowDirection="LeftToRight" />
+                            <Label x:Name="CompensationPayrollPeriodLabel"
+                                   Text="—"
+                                   Style="{StaticResource ZyCaption}"
+                                   FlowDirection="LeftToRight" />
+                            <Label x:Name="CompensationPayrollStatusLabel"
+                                   Text=""
+                                   Style="{StaticResource ZyCaption}" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -699,6 +773,123 @@
                             </VerticalStackLayout>
                         </Border>
                     </Grid>
+
+                    <Border Style="{StaticResource ZyCard}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="تفاصيل آخر احتساب Payroll"
+                                   Style="{StaticResource ZySectionTitle}" />
+                            <Grid RowDefinitions="Auto,Auto,Auto"
+                                  ColumnDefinitions="*,*"
+                                  RowSpacing="10"
+                                  ColumnSpacing="10"
+                                  FlowDirection="LeftToRight">
+                                <Border Grid.Row="0"
+                                        Grid.Column="0"
+                                        BackgroundColor="{StaticResource ZyBgSoft}"
+                                        Stroke="{StaticResource ZyStrokeSoft}"
+                                        StrokeShape="RoundRectangle 14"
+                                        Padding="12,10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="الضريبة"
+                                               Style="{StaticResource ZyCaption}"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="RightToLeft" />
+                                        <Label x:Name="CompensationTaxLabel"
+                                               Text="—"
+                                               TextColor="{StaticResource ZyText}"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="0"
+                                        Grid.Column="1"
+                                        BackgroundColor="{StaticResource ZyBgSoft}"
+                                        Stroke="{StaticResource ZyStrokeSoft}"
+                                        StrokeShape="RoundRectangle 14"
+                                        Padding="12,10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="الإجمالي"
+                                               Style="{StaticResource ZyCaption}"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="RightToLeft" />
+                                        <Label x:Name="CompensationGrossLabel"
+                                               Text="—"
+                                               TextColor="{StaticResource ZyText}"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="1"
+                                        Grid.Column="0"
+                                        BackgroundColor="{StaticResource ZyBgSoft}"
+                                        Stroke="{StaticResource ZyStrokeSoft}"
+                                        StrokeShape="RoundRectangle 14"
+                                        Padding="12,10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="أيام العمل"
+                                               Style="{StaticResource ZyCaption}"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="RightToLeft" />
+                                        <Label x:Name="CompensationWorkDaysLabel"
+                                               Text="—"
+                                               TextColor="{StaticResource ZyText}"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="1"
+                                        Grid.Column="1"
+                                        BackgroundColor="{StaticResource ZyBgSoft}"
+                                        Stroke="{StaticResource ZyStrokeSoft}"
+                                        StrokeShape="RoundRectangle 14"
+                                        Padding="12,10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="الضمان / GOSI"
+                                               Style="{StaticResource ZyCaption}"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="RightToLeft" />
+                                        <Label x:Name="CompensationGosiLabel"
+                                               Text="—"
+                                               TextColor="{StaticResource ZyText}"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="2"
+                                        Grid.ColumnSpan="2"
+                                        BackgroundColor="{StaticResource ZyBgSoft}"
+                                        Stroke="{StaticResource ZyStrokeSoft}"
+                                        StrokeShape="RoundRectangle 14"
+                                        Padding="12,10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="أيام الغياب"
+                                               Style="{StaticResource ZyCaption}"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="RightToLeft" />
+                                        <Label x:Name="CompensationAbsentDaysLabel"
+                                               Text="—"
+                                               TextColor="{StaticResource ZyText}"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
 
                     <Border Style="{StaticResource ZyCard}">
                         <VerticalStackLayout Spacing="13">
@@ -772,14 +963,20 @@
                                         BackgroundColor="#123439"
                                         Stroke="#1C5A59"
                                         StrokeShape="RoundRectangle 20"
-                                        Padding="12">
-                                    <Label Text="Z"
-                                           TextColor="{StaticResource ZyAccent}"
-                                           FontSize="24"
-                                           FontAttributes="Bold"
-                                           HorizontalTextAlignment="Center"
-                                           VerticalTextAlignment="Center"
-                                           FlowDirection="LeftToRight" />
+                                        Padding="0">
+                                    <Grid>
+                                        <Image x:Name="ProfilePhotoImage"
+                                               Aspect="AspectFill"
+                                               IsVisible="False" />
+                                        <Label x:Name="ProfilePhotoFallbackLabel"
+                                               Text="Z"
+                                               TextColor="{StaticResource ZyAccent}"
+                                               FontSize="24"
+                                               FontAttributes="Bold"
+                                               HorizontalTextAlignment="Center"
+                                               VerticalTextAlignment="Center"
+                                               FlowDirection="LeftToRight" />
+                                    </Grid>
                                 </Border>
                                 <VerticalStackLayout Grid.Column="1"
                                                      Spacing="3"
@@ -835,6 +1032,106 @@
 
                     <Border Style="{StaticResource ZyCard}">
                         <VerticalStackLayout Spacing="12">
+                            <Label Text="البيانات الشخصية"
+                                   Style="{StaticResource ZySectionTitle}" />
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                                  ColumnDefinitions="Auto,*"
+                                  RowSpacing="9"
+                                  ColumnSpacing="14">
+                                <Label Text="الاسم بالإنكليزية" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileEnglishNameLabel" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" FlowDirection="LeftToRight" />
+                                <Label Grid.Row="1" Text="الهاتف" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfilePhoneLabel" Grid.Row="1" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" FlowDirection="LeftToRight" />
+                                <Label Grid.Row="2" Text="البريد" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileEmailLabel" Grid.Row="2" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" FlowDirection="LeftToRight" />
+                                <Label Grid.Row="3" Text="الرقم الوطني" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileNationalIdLabel" Grid.Row="3" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" FlowDirection="LeftToRight" />
+                                <Label Grid.Row="4" Text="تاريخ الميلاد" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileBirthDateLabel" Grid.Row="4" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" FlowDirection="LeftToRight" />
+                                <Label Grid.Row="5" Text="الجنس / الجنسية" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileGenderNationalityLabel" Grid.Row="5" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource ZyCard}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="البيانات الوظيفية"
+                                   Style="{StaticResource ZySectionTitle}" />
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                  ColumnDefinitions="Auto,*"
+                                  RowSpacing="9"
+                                  ColumnSpacing="14">
+                                <Label Text="تاريخ المباشرة" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileJoiningDateLabel" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" FlowDirection="LeftToRight" />
+                                <Label Grid.Row="1" Text="نوع الدوام" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileWorkTypeLabel" Grid.Row="1" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" />
+                                <Label Grid.Row="2" Text="الدرجة الوظيفية" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileJobGradeLabel" Grid.Row="2" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" />
+                                <Label Grid.Row="3" Text="حالة التوظيف" Style="{StaticResource ZyCaption}" />
+                                <Label x:Name="ProfileEmploymentStatusLabel" Grid.Row="3" Grid.Column="1" Text="—"
+                                       TextColor="{StaticResource ZyText2}" FontSize="12" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource ZyCard}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="وثائقي"
+                                   Style="{StaticResource ZySectionTitle}" />
+                            <VerticalStackLayout x:Name="ProfileIdentityDocumentsContainer"
+                                                 BindableLayout.ItemsSource="{Binding}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BackgroundColor="{StaticResource ZyBgSoft}"
+                                                Stroke="{StaticResource ZyStrokeSoft}"
+                                                StrokeShape="RoundRectangle 15"
+                                                Padding="13"
+                                                Margin="0,0,0,8">
+                                            <Grid RowDefinitions="Auto,Auto,Auto"
+                                                  ColumnDefinitions="*,Auto">
+                                                <Label Text="{Binding DisplayName}"
+                                                       TextColor="{StaticResource ZyText}"
+                                                       FontSize="13"
+                                                       FontAttributes="Bold" />
+                                                <Label Grid.Column="1"
+                                                       Text="{Binding CountryCode}"
+                                                       Style="{StaticResource ZyCaption}"
+                                                       FlowDirection="LeftToRight" />
+                                                <Label Grid.Row="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding PrimaryNumber}"
+                                                       TextColor="{StaticResource ZyAccentBright}"
+                                                       FontSize="12"
+                                                       FontAttributes="Bold"
+                                                       FlowDirection="LeftToRight" />
+                                                <Label Grid.Row="2"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding ExpirySummary}"
+                                                       Style="{StaticResource ZyCaption}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Label x:Name="ProfileIdentityDocumentsEmptyLabel"
+                                   Text="لا توجد وثائق هوية حالية."
+                                   Style="{StaticResource ZyCaption}"
+                                   IsVisible="False" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource ZyCard}">
+                        <VerticalStackLayout Spacing="12">
                             <Label Text="أرصدة الإجازات"
                                    Style="{StaticResource ZySectionTitle}" />
                             <VerticalStackLayout x:Name="ProfileLeaveBalancesContainer"
@@ -849,7 +1146,7 @@
                                             <Grid ColumnDefinitions="*,Auto"
                                                   RowDefinitions="Auto,Auto">
                                                 <VerticalStackLayout Spacing="3">
-                                                    <Label Text="{Binding Type}"
+                                                    <Label Text="{Binding DisplayType}"
                                                            TextColor="{StaticResource ZyText}"
                                                            FontSize="13"
                                                            FontAttributes="Bold" />
@@ -1126,7 +1423,7 @@
                                                 Margin="0,0,0,9">
                                             <VerticalStackLayout Spacing="6">
                                                 <Grid ColumnDefinitions="*,Auto">
-                                                    <Label Text="{Binding Type}"
+                                                    <Label Text="{Binding DisplayType}"
                                                            TextColor="{StaticResource ZyText}"
                                                            FontAttributes="Bold"
                                                            FontSize="14" />
@@ -1185,12 +1482,12 @@
                                                 Margin="0,0,0,9">
                                             <VerticalStackLayout Spacing="5">
                                                 <Grid ColumnDefinitions="*,Auto">
-                                                    <Label Text="{Binding PunchType}"
+                                                    <Label Text="{Binding DisplayPunchType}"
                                                            TextColor="{StaticResource ZyText}"
                                                            FontAttributes="Bold"
                                                            FontSize="13" />
                                                     <Label Grid.Column="1"
-                                                           Text="{Binding Status}"
+                                                           Text="{Binding DisplayStatus}"
                                                            TextColor="{StaticResource ZyAccentBright}"
                                                            FontSize="10" />
                                                 </Grid>
@@ -1294,10 +1591,11 @@
             </BoxView>
 
             <Border VerticalOptions="End"
+                    Margin="0,0,0,104"
                     BackgroundColor="#0A1A2E"
                     Stroke="#263E55"
-                    StrokeShape="RoundRectangle 22,22,0,0"
-                    Padding="16,10,16,22">
+                    StrokeShape="RoundRectangle 22"
+                    Padding="16,10,16,18">
                 <VerticalStackLayout Spacing="12">
                     <BoxView WidthRequest="42"
                              HeightRequest="4"
@@ -1396,7 +1694,8 @@
                     <Grid Padding="18,16,18,12"
                           ColumnDefinitions="*,Auto"
                           ColumnSpacing="10">
-                        <Label Text="طلب إجازة"
+                        <Label x:Name="ModalRequestTitleLabel"
+                               Text="طلب إجازة"
                                TextColor="#E6F0FA"
                                FontSize="17"
                                FontAttributes="Bold"
@@ -1415,7 +1714,8 @@
                                 Padding="0" />
                     </Grid>
 
-                    <Grid Grid.Row="1"
+                    <Grid x:Name="RequestCategoryTabs"
+                          Grid.Row="1"
                           Padding="14,12"
                           ColumnDefinitions="*,*,*"
                           ColumnSpacing="6"
@@ -1490,16 +1790,24 @@
                                     </CollectionView.EmptyView>
                                     <CollectionView.ItemTemplate>
                                         <DataTemplate>
-                                            <Button Text="{Binding Name}"
-                                                    CommandParameter="{Binding .}"
-                                                    Clicked="OnRequestTypeChoiceClicked"
-                                                    BackgroundColor="Transparent"
-                                                    TextColor="#E6F0FA"
-                                                    FontSize="13"
-                                                    FontAttributes="Bold"
-                                                    CornerRadius="10"
-                                                    HeightRequest="48"
-                                                    Margin="0,0,0,4" />
+                                            <Grid RowDefinitions="Auto,1"
+                                                  Margin="0,0,0,2">
+                                                <Button Text="{Binding DisplayTypeName}"
+                                                        CommandParameter="{Binding .}"
+                                                        Clicked="OnRequestTypeChoiceClicked"
+                                                        BackgroundColor="Transparent"
+                                                        TextColor="#E6F0FA"
+                                                        FontSize="13"
+                                                        FontAttributes="Bold"
+                                                        CornerRadius="10"
+                                                        HeightRequest="48"
+                                                        Margin="0" />
+                                                <BoxView Grid.Row="1"
+                                                         HeightRequest="1"
+                                                         Margin="12,0"
+                                                         BackgroundColor="#24465E"
+                                                         HorizontalOptions="Fill" />
+                                            </Grid>
                                         </DataTemplate>
                                     </CollectionView.ItemTemplate>
                                 </CollectionView>
@@ -1768,7 +2076,7 @@
                            FontSize="14"
                            FontAttributes="Bold" />
 
-                    <Grid RowDefinitions="Auto,Auto"
+                    <Grid RowDefinitions="Auto,Auto,Auto"
                           ColumnDefinitions="*,*"
                           RowSpacing="10"
                           ColumnSpacing="10">
@@ -1786,7 +2094,7 @@
                                 Text="الاستبيانات"
                                 ImageSource="ic_survey.png"
                                 ContentLayout="Right,7"
-                                Clicked="OnFeatureComingSoon"
+                                Clicked="OnSurveysTapped"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"
                                 FontSize="11" />
@@ -1795,7 +2103,7 @@
                                 Text="الشكاوي والمقترحات"
                                 ImageSource="ic_complaint.png"
                                 ContentLayout="Right,7"
-                                Clicked="OnFeatureComingSoon"
+                                Clicked="OnFeedbackTapped"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"
                                 FontSize="11" />
@@ -1804,10 +2112,89 @@
                                 Text="التقييم والانضباط"
                                 ImageSource="ic_evaluation.png"
                                 ContentLayout="Right,7"
-                                Clicked="OnFeatureComingSoon"
+                                Clicked="OnDisciplineTapped"
                                 Style="{StaticResource NxQuickButton}"
                                 HeightRequest="56"
                                 FontSize="11" />
+                        <Button Grid.Row="2"
+                                Grid.Column="0"
+                                Text="فريقي"
+                                ImageSource="ic_profile.png"
+                                ContentLayout="Right,7"
+                                Clicked="OnTeamTapped"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="56"
+                                FontSize="11" />
+                        <Button Grid.Row="2"
+                                Grid.Column="1"
+                                Text="الموافقات"
+                                ImageSource="ic_requests.png"
+                                ContentLayout="Right,7"
+                                Clicked="OnApprovalsTapped"
+                                Style="{StaticResource NxQuickButton}"
+                                HeightRequest="56"
+                                FontSize="11" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="LogoutConfirmOverlay"
+              Grid.RowSpan="2"
+              IsVisible="False"
+              BackgroundColor="#B3020810"
+              ZIndex="80">
+            <BoxView BackgroundColor="Transparent">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCancelLogoutTapped" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+
+            <Border HorizontalOptions="Fill"
+                    VerticalOptions="Center"
+                    Margin="26"
+                    BackgroundColor="#0A1A2E"
+                    Stroke="#365069"
+                    StrokeShape="RoundRectangle 24"
+                    Padding="20">
+                <VerticalStackLayout Spacing="16">
+                    <Border WidthRequest="56"
+                            HeightRequest="56"
+                            HorizontalOptions="Center"
+                            BackgroundColor="#241521"
+                            Stroke="#7A3344"
+                            StrokeShape="RoundRectangle 28"
+                            Padding="0">
+                        <Label Text="↪"
+                               HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center"
+                               TextColor="#FFB8C3"
+                               FontSize="28"
+                               FontAttributes="Bold" />
+                    </Border>
+
+                    <Label Text="تسجيل الخروج من الحساب"
+                           HorizontalTextAlignment="Center"
+                           TextColor="#F4F7FB"
+                           FontSize="18"
+                           FontAttributes="Bold" />
+
+                    <Label Text="سيتم إنهاء الجلسة على هذا الجهاز. هل تريد المتابعة؟"
+                           HorizontalTextAlignment="Center"
+                           TextColor="#9FB3C8"
+                           FontSize="13"
+                           LineBreakMode="WordWrap" />
+
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="إلغاء"
+                                Clicked="OnCancelLogoutClicked"
+                                Style="{StaticResource ZySecondaryButton}" />
+                        <Button Grid.Column="1"
+                                Text="تسجيل الخروج من ZYNORA"
+                                Clicked="OnConfirmLogoutClicked"
+                                Style="{StaticResource ZyDangerButton}" />
                     </Grid>
                 </VerticalStackLayout>
             </Border>

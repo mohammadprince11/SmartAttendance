@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Application.Common.Security;
@@ -22,18 +23,25 @@ public sealed class AuthController : ControllerBase
     private readonly ApplicationDbContext _db;
     private readonly ILoginIdentityService _identity;
     private readonly IMemoryCache _cache;
+    private readonly IDataProtector _twoFactorProtector;
 
     public AuthController(
         ApplicationDbContext db,
         ILoginIdentityService identity,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IDataProtectionProvider dataProtection)
     {
         _db = db;
         _identity = identity;
         _cache = cache;
+        _twoFactorProtector = dataProtection.CreateProtector("ZYNORA.Auth.Totp.v1");
     }
 
-    public sealed record LoginRequest(string Username, string Password);
+    public sealed record LoginRequest(
+        string Username,
+        string Password,
+        string? TwoFactorCode = null,
+        string? RecoveryCode = null);
     public sealed record ChangePasswordRequest(
         string CurrentPassword,
         string NewPassword,
@@ -72,6 +80,56 @@ public sealed class AuthController : ControllerBase
         if (SimplePasswordHasher.NeedsRehash(user.PasswordHash))
         {
             await LoginDatabase.UpgradePasswordHashAsync(_db, user, body.Password, ip);
+        }
+
+        var twoFactor = await AppLoginTwoFactorStore.GetAsync(
+            _db,
+            user.Id,
+            HttpContext.RequestAborted);
+
+        if (twoFactor.IsEnabled)
+        {
+            var suppliedFactor =
+                !string.IsNullOrWhiteSpace(body.TwoFactorCode) ||
+                !string.IsNullOrWhiteSpace(body.RecoveryCode);
+            var factorValid = false;
+
+            if (!string.IsNullOrWhiteSpace(twoFactor.ActiveSecretProtected) &&
+                !string.IsNullOrWhiteSpace(body.TwoFactorCode))
+            {
+                try
+                {
+                    var secret = _twoFactorProtector.Unprotect(twoFactor.ActiveSecretProtected);
+                    factorValid = TotpSecurity.ValidateCode(secret, body.TwoFactorCode);
+                }
+                catch
+                {
+                    return StatusCode(500, new { message = "تعذر التحقق من المصادقة الثنائية حالياً." });
+                }
+            }
+
+            if (!factorValid && !string.IsNullOrWhiteSpace(body.RecoveryCode))
+            {
+                factorValid = await AppLoginTwoFactorStore.ConsumeRecoveryCodeAsync(
+                    _db,
+                    user.Id,
+                    body.RecoveryCode,
+                    HttpContext.RequestAborted);
+            }
+
+            if (!factorValid)
+            {
+                if (suppliedFactor)
+                    await LoginDatabase.RecordFailedLoginAsync(_db, user, ip, utcNow);
+
+                return Unauthorized(new
+                {
+                    message = suppliedFactor
+                        ? "رمز المصادقة الثنائية غير صحيح أو منتهي."
+                        : "أدخل رمز المصادقة الثنائية للمتابعة.",
+                    requiresTwoFactor = true
+                });
+            }
         }
 
         var displayName = string.IsNullOrWhiteSpace(user.EmployeeName) ? user.Username : user.EmployeeName;

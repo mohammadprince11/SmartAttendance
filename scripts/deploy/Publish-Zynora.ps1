@@ -561,7 +561,7 @@ foreach ($path in '/health/live', '/health/ready') {
 Write-Host "`nتمّ النشر: $branch @ $head" -ForegroundColor Green
 Write-Host "الرجوع (ملفات): robocopy `"$backupDir`" `"$SitePath`" /MIR"
 if (-not $SkipDbBackup) { Write-Host "الرجوع (قاعدة):  RESTORE DATABASE [$Database] FROM DISK=N'$dbBackup' WITH REPLACE" }
-Write-Warn 'تحقّق بالمتصفّح بجلسة حقيقية:'
-Write-Warn "  • زمن /AttendanceRecords (كان ~2.4s — فهرس AttendanceDate يُفترض أن يُسقطه)"
-Write-Warn '  • تبويبة الحضور بمجموعاتها الثمانية · /Holidays من تحت «إعدادات تسجيل الحضور»'
-Write-Warn '  • دخولٌ جديد — الجلسات القائمة تُطرد مرّة واحدة (مفاتيح Data Protection انتقلت للقاعدة).'
+Write-Host ''
+Write-Host 'فحص ما بعد النشر:' -ForegroundColor Cyan
+Write-Host '  • /health/live و /health/ready تم التحقق منهما أعلاه.'
+Write-Host '  • راجع فقط تحذيرات Production Readiness الفعلية الظاهرة في مرحلة التحقق؛ لا توجد تحذيرات ثابتة قديمة.'
