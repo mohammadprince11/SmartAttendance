@@ -32,6 +32,7 @@ using SmartAttendance.Infrastructure.Seeding;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Theming;
 using SmartAttendance.Web.Infrastructure.Localization;
+using SmartAttendance.Web.Infrastructure.Platform;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -252,8 +253,23 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             if (!PublicPathPolicy.IsStaticAsset(context.HttpContext.Request.Path.Value))
             {
                 var username = context.Principal?.Identity?.Name;
+                var tenantId = TenantContext.GetTenantId(context.Principal);
                 var ticketStamp = context.Principal
                     ?.FindFirst(AccountSecurityStore.SecurityStampClaimType)?.Value;
+
+                // الإيقاف أو انتهاء اللايسنس يسقط الجلسات القائمة أيضاً؛ منع الدخول
+                // وحده لا يكفي لأن تذكرة الكوكي قد تبقى حيّة ساعات بعد قرار المالك.
+                if (!tenantId.HasValue ||
+                    !await PlatformPortalStore.IsTenantAccessAllowedAsync(
+                        context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>(),
+                        tenantId.Value,
+                        DateTime.UtcNow))
+                {
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
+                }
 
                 AccountSecurityState? accountState = null;
 
@@ -263,6 +279,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                         context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>(),
                         context.HttpContext.RequestServices
                             .GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+                        tenantId.Value,
                         username);
                 }
                 catch (Exception ex)
@@ -372,7 +389,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     // مصادقة توكن Bearer لواجهة الموبايل (بجانب الكوكيز) — كنترولرات /api/*
     .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
         SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler>(
-        SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName, null);
+        SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName, null)
+    .AddCookie(PlatformAuthenticationDefaults.Scheme, options =>
+    {
+        options.LoginPath = "/Platform/Login";
+        options.AccessDeniedPath = "/Platform/Login";
+        options.Cookie.Name = "ZYNORA.PlatformOwner";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+        options.Cookie.Path = "/Platform";
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = cookieSecurity == CookieSecurityDecision.AlwaysSecure
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.SameAsRequest;
+        options.ExpireTimeSpan = TimeSpan.FromHours(4);
+        options.SlidingExpiration = false;
+    });
 
 // سياسة تفويض احتياطية: **كل** نقطة تتطلّب مستخدماً مصادقاً ما لم تُعفَ صراحةً
 // بـ[AllowAnonymous]. سببها أن PublicPathPolicy يصنّف /api/ و/push/ و/files/
@@ -386,6 +418,13 @@ builder.Services.AddAuthorization(options =>
             SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName)
         .RequireAuthenticatedUser()
         .Build();
+
+    options.AddPolicy(
+        PlatformAuthenticationDefaults.Policy,
+        policy => policy
+            .AddAuthenticationSchemes(PlatformAuthenticationDefaults.Scheme)
+            .RequireAuthenticatedUser()
+            .RequireClaim(PlatformAuthenticationDefaults.OwnerIdClaim));
 });
 
 // كنترولرات واجهة الموبايل (REST/JSON) — بجانب Razor Pages
@@ -683,6 +722,10 @@ app.Use(async (context, next) =>
 });
 
 app.UseRouting();
+
+// بوابة المالك لا تُفتح من دومينات العملاء. محلياً يُسمح بالـloopback، وفي
+// الإنتاج يجب ضبط PlatformPortal:AllowedHosts على الدومين الإداري المنفصل.
+app.UseMiddleware<PlatformHostMiddleware>();
 
 // قياس الطلبات بعد UseRouting كي يتوفّر قالب المسار المُطابَق، وقبل المصادقة/التحديد
 // كي يلتقط ردود 401/429 أيضاً — فيقيس الطلب كاملاً بلا استثناء (FIX-004).

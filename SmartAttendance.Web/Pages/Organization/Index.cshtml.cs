@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
@@ -205,8 +206,10 @@ public class IndexModel : PageModel
     {
         // إنشاء شركةٍ جديدة = إنشاء حدّ استئجارٍ جديد؛ لا يُسمح به إلا لغير المقيَّد
         // (الأدمن). دورٌ مقيَّد بشركات لا يخلق كياناً خارج نطاقه.
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        if (!scope.IsUnrestricted)
+        var tenantId = TenantContext.GetTenantId(User) ?? 0;
+        var isTenantAdmin = RoleRouteCatalog.IsAdmin(
+            User.FindFirstValue(System.Security.Claims.ClaimTypes.Role));
+        if (!isTenantAdmin || tenantId <= 0)
         {
             return NotFound();
         }
@@ -220,7 +223,8 @@ public class IndexModel : PageModel
         var code = NormalizeCode(CompanyInput.Code, CompanyInput.Name);
 
         var exists = await _dbContext.Companies
-            .AnyAsync(x => x.Code == code || x.Name == CompanyInput.Name.Trim());
+            .AnyAsync(x => x.TenantId == tenantId &&
+                (x.Code == code || x.Name == CompanyInput.Name.Trim()));
 
         if (exists)
         {
@@ -230,6 +234,7 @@ public class IndexModel : PageModel
 
         var company = new Company
         {
+            TenantId = tenantId,
             Name = CompanyInput.Name.Trim(),
             Code = code,
             IsActive = CompanyInput.IsActive

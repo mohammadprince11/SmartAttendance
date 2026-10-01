@@ -11,6 +11,7 @@ public partial class MainPage : ContentPage
     private static string HomeCacheKey =>
         $"{HomeCacheKeyPrefix}.{UiLocalization.CurrentLanguage}";
     private const string BiometricLockKey = "zynora.mobile.biometric_lock.v1";
+    private const string TenantCodePreferenceKey = "zynora.mobile.tenant_code.v1";
     private const string ProfilePhotoCacheFileName = "zynora-profile-photo.bin";
     private static readonly JsonSerializerOptions CacheJson =
         new(JsonSerializerDefaults.Web);
@@ -32,6 +33,7 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
+        TenantCodeEntry.Text = Preferences.Default.Get(TenantCodePreferenceKey, string.Empty);
         FlowDirection = UiLocalization.CurrentFlowDirection;
         UiLocalization.Attach(this);
 
@@ -199,13 +201,15 @@ public partial class MainPage : ContentPage
     {
         if (_busy) return;
 
+        var tenantCode = TenantCodeEntry.Text?.Trim();
         var username = UsernameEntry.Text?.Trim();
         var password = PasswordEntry.Text;
 
-        if (string.IsNullOrWhiteSpace(username) ||
+        if (tenantCode is not { Length: 4 } || !tenantCode.All(char.IsAsciiDigit) ||
+            string.IsNullOrWhiteSpace(username) ||
             string.IsNullOrWhiteSpace(password))
         {
-            Error("أدخل اسم المستخدم وكلمة المرور.");
+            Error("أدخل كود المنظومة من 4 أرقام واسم المستخدم وكلمة المرور.");
             return;
         }
 
@@ -230,6 +234,7 @@ public partial class MainPage : ContentPage
             try
             {
                 var result = await _api.LoginAsync(
+                    tenantCode,
                     username,
                     password,
                     twoFactorCode,
@@ -245,6 +250,7 @@ public partial class MainPage : ContentPage
                 }
 
                 PasswordEntry.Text = "";
+                Preferences.Default.Set(TenantCodePreferenceKey, tenantCode);
                 TwoFactorCodeEntry.Text = "";
                 TwoFactorLoginPanel.IsVisible = false;
                 LoginButton.Text = "دخول إلى ZYNORA";

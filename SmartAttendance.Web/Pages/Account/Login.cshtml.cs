@@ -12,6 +12,8 @@ namespace SmartAttendance.Web.Pages.Account;
 [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 public class LoginModel : PageModel
 {
+    private const string TenantCodeCookieName = "ZYNORA.TenantCode";
+
     private const string GenericLoginError =
         "بيانات الدخول غير صحيحة أو الحساب غير متاح مؤقتاً.";
 
@@ -33,6 +35,9 @@ public class LoginModel : PageModel
     }
 
     [BindProperty]
+    public string TenantCode { get; set; } = string.Empty;
+
+    [BindProperty]
     public string Username { get; set; } = string.Empty;
 
     [BindProperty]
@@ -49,25 +54,39 @@ public class LoginModel : PageModel
     public async Task OnGetAsync()
     {
         ApplyNoStoreHeaders();
+
+        if (Request.Cookies.TryGetValue(TenantCodeCookieName, out var savedTenantCode) &&
+            TenantContext.IsValidCode(savedTenantCode))
+        {
+            TenantCode = savedTenantCode;
+        }
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         ApplyNoStoreHeaders();
 
-        if (string.IsNullOrWhiteSpace(Username) ||
+        if (!TenantContext.IsValidCode(TenantCode?.Trim()) ||
+            string.IsNullOrWhiteSpace(Username) ||
             string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "اسم المستخدم وكلمة المرور مطلوبة.";
+            ErrorMessage = "كود المنظومة واسم المستخدم وكلمة المرور مطلوبة.";
             return Page();
         }
 
+        var tenant = await TenantContext.ResolveAsync(
+            _dbContext,
+            TenantCode,
+            HttpContext.RequestAborted);
         var normalizedUsername = Username.Trim();
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var utcNow = DateTime.UtcNow;
-        var user = await LoginDatabase.GetByUsernameAsync(
-            _dbContext,
-            normalizedUsername);
+        var user = tenant is null
+            ? null
+            : await LoginDatabase.GetByUsernameAsync(
+                _dbContext,
+                tenant.Id,
+                normalizedUsername);
 
         if (user == null)
         {
@@ -147,6 +166,7 @@ public class LoginModel : PageModel
             systemUserId = await _loginIdentityService.EnsureSystemUserAsync(
                 new LoginIdentityRequest
                 {
+                    TenantId = tenant!.Id,
                     EmployeeId = user.EmployeeId,
                     UserName = user.Username,
                     DisplayName = displayName,
@@ -199,6 +219,8 @@ public class LoginModel : PageModel
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Role, user.Role),
             new("DisplayName", displayName),
+            new(TenantContext.TenantIdClaimType, tenant!.Id.ToString()),
+            new(TenantContext.TenantCodeClaimType, tenant.Code),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
             new("SessionIssuedUtc", issuedUtc.ToString("O")),
@@ -228,6 +250,18 @@ public class LoginModel : PageModel
             CookieAuthenticationDefaults.AuthenticationScheme,
             principal,
             authProperties);
+
+        Response.Cookies.Append(
+            TenantCodeCookieName,
+            tenant.Code,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps,
+                Expires = DateTimeOffset.UtcNow.AddYears(1)
+            });
 
         DeleteLegacyIdentityCookies();
 

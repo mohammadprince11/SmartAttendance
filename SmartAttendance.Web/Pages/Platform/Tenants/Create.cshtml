@@ -1,0 +1,86 @@
+@page
+@model SmartAttendance.Web.Pages.Platform.Tenants.CreateModel
+@{
+    Layout = "_PlatformLayout";
+    ViewData["Title"] = "إنشاء منظومة";
+}
+
+<section class="platform-pagehead">
+    <div>
+        <a class="platform-back" asp-page="/Platform/Index">العودة إلى المنظومات</a>
+        <h1>إنشاء منظومة جديدة</h1>
+        <p>سيُولّد النظام كوداً فريداً وينشئ مدير العميل واللايسنس بعملية واحدة.</p>
+    </div>
+</section>
+
+<form method="post" class="platform-form-grid">
+    <div asp-validation-summary="ModelOnly" class="platform-alert platform-alert--danger"></div>
+
+    <section class="platform-card platform-form-section">
+        <header><span>01</span><div><h2>هوية العميل</h2><p>المجموعة أو الجهة المالكة لهذه المنظومة.</p></div></header>
+        <div class="platform-fields platform-fields--2">
+            <label class="platform-field platform-field--wide">
+                <span>اسم العميل أو المجموعة</span>
+                <input asp-for="Input.Name" placeholder="مثال: مجموعة الرافدين" />
+                <span asp-validation-for="Input.Name" class="platform-validation"></span>
+            </label>
+        </div>
+    </section>
+
+    <section class="platform-card platform-form-section">
+        <header><span>02</span><div><h2>مدير المنظومة الأول</h2><p>تُسلّم هذه البيانات لمسؤول العميل ويُطلب منه تغيير كلمة المرور.</p></div></header>
+        <div class="platform-fields platform-fields--2">
+            <label class="platform-field">
+                <span>اسم المستخدم</span>
+                <input asp-for="Input.AdminUsername" autocomplete="off" />
+                <span asp-validation-for="Input.AdminUsername" class="platform-validation"></span>
+            </label>
+            <label class="platform-field">
+                <span>كلمة مرور مؤقتة</span>
+                <input asp-for="Input.AdminPassword" type="password" autocomplete="new-password" />
+                <span asp-validation-for="Input.AdminPassword" class="platform-validation"></span>
+            </label>
+        </div>
+    </section>
+
+    <section class="platform-card platform-form-section">
+        <header><span>03</span><div><h2>اللايسنس والحدود</h2><p>التحكم بالمدة والطاقة الاستيعابية والمودلات المفعّلة.</p></div></header>
+        <div class="platform-fields platform-fields--3">
+            <label class="platform-field"><span>الخطة</span><input asp-for="Input.PlanCode" /></label>
+            <label class="platform-field">
+                <span>الحالة</span>
+                <select asp-for="Input.LicenseStatus">
+                    <option value="Trial">تجريبية</option>
+                    <option value="Active">فعّالة</option>
+                    <option value="Suspended">موقوفة</option>
+                </select>
+            </label>
+            <label class="platform-field"><span>تاريخ البداية</span><input asp-for="Input.StartsAt" type="date" /></label>
+            <label class="platform-field"><span>تاريخ الانتهاء</span><input asp-for="Input.ExpiresAt" type="date" /></label>
+            <label class="platform-field"><span>نهاية فترة السماح</span><input asp-for="Input.GraceEndsAt" type="date" /></label>
+            <label class="platform-field"><span>أقصى عدد شركات</span><input asp-for="Input.MaxCompanies" type="number" /></label>
+            <label class="platform-field"><span>أقصى عدد موظفين</span><input asp-for="Input.MaxEmployees" type="number" /></label>
+            <label class="platform-field"><span>أقصى عدد أجهزة</span><input asp-for="Input.MaxDevices" type="number" /></label>
+        </div>
+
+        <fieldset class="platform-modules">
+            <legend>المودلات المفعّلة</legend>
+            @foreach (var module in Model.Modules)
+            {
+                <label>
+                    <input type="checkbox" name="EnabledModules" value="@module.Key" checked="@(Model.EnabledModules.Contains(module.Key))" />
+                    <span>@module.Value</span>
+                </label>
+            }
+        </fieldset>
+    </section>
+
+    <footer class="platform-form-actions">
+        <a class="platform-button platform-button--ghost" asp-page="/Platform/Index">إلغاء</a>
+        <button class="platform-button platform-button--primary" type="submit">إنشاء المنظومة واللايسنس</button>
+    </footer>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

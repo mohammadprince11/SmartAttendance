@@ -21,6 +21,8 @@ public class IndexModel : PageModel
     private readonly ApplicationDbContext _dbContext;
     private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
 
+    private int CurrentTenantId => TenantContext.GetTenantId(User) ?? 0;
+
     public IndexModel(
         ApplicationDbContext dbContext,
         Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
@@ -816,7 +818,7 @@ VALUES
                 else
                 {
                     // بلا طرد: نُبطل الكاش فقط كي يُرى وسم الإجبار فوراً عند دخولهم.
-                    AccountSecurityStore.InvalidateCache(_cache, username);
+                    AccountSecurityStore.InvalidateCache(_cache, CurrentTenantId, username);
                 }
 
                 applied++;
@@ -849,7 +851,7 @@ VALUES
                     ipAddress);
 
                 // حسابٌ جديد بلا جلسة قائمة؛ إبطال الكاش احتياطاً باسمه (الكود).
-                AccountSecurityStore.InvalidateCache(_cache, code);
+                AccountSecurityStore.InvalidateCache(_cache, CurrentTenantId, code);
 
                 created++;
             }
@@ -989,8 +991,12 @@ WHERE e.IsDeleted = 0
     {
         var count = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
-            "SELECT COUNT(*) FROM AppLoginUsers WHERE Username = @Username;",
-            command => HrmsDatabase.AddParameter(command, "@Username", username));
+            "SELECT COUNT(*) FROM AppLoginUsers WHERE TenantId = @TenantId AND Username = @Username;",
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@TenantId", CurrentTenantId);
+                HrmsDatabase.AddParameter(command, "@Username", username);
+            });
 
         return count > 0;
     }
@@ -1007,16 +1013,17 @@ WHERE e.IsDeleted = 0
             _dbContext,
             """
 INSERT INTO AppLoginUsers
-(EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive,
+(TenantId, EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive,
  PasswordChangedAt, MustChangePassword, CreatedAt)
 VALUES
-(@EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1,
+(@TenantId, @EmployeeId, @Username, @PasswordHash, @PasswordSalt, 'Employee', 1,
  SYSUTCDATETIME(), @MustChange, SYSUTCDATETIME());
 
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
+                HrmsDatabase.AddParameter(command, "@TenantId", CurrentTenantId);
                 HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
                 HrmsDatabase.AddParameter(command, "@Username", code);
                 HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
@@ -1396,6 +1403,7 @@ SET NUMERIC_ROUNDABORT OFF;
             """
 INSERT INTO AppLoginUsers
 (
+    TenantId,
     EmployeeId,
     Username,
     PasswordHash,
@@ -1406,6 +1414,7 @@ INSERT INTO AppLoginUsers
 )
 VALUES
 (
+    @TenantId,
     @EmployeeId,
     @Username,
     @PasswordHash,
@@ -1419,6 +1428,7 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
+                HrmsDatabase.AddParameter(command, "@TenantId", CurrentTenantId);
                 HrmsDatabase.AddParameter(
                     command,
                     "@EmployeeId",

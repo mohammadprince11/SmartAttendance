@@ -24,6 +24,7 @@ public sealed class MobileApi
     }
 
     public async Task<MobileLoginResult> LoginAsync(
+        string tenantCode,
         string username,
         string password,
         string? twoFactorCode = null,
@@ -36,6 +37,7 @@ public sealed class MobileApi
             Content = JsonContent.Create(
                 new
                 {
+                    tenantCode = tenantCode.Trim(),
                     username = username.Trim(),
                     password,
                     twoFactorCode,

@@ -35,6 +35,7 @@ BEGIN
     CREATE TABLE AppLoginUsers
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        TenantId int NOT NULL,
         EmployeeId int NULL,
         Username nvarchar(100) NOT NULL,
         PasswordHash nvarchar(200) NOT NULL,
@@ -52,9 +53,12 @@ BEGIN
         UpdatedAt datetime2 NULL
     );
 
-    CREATE UNIQUE INDEX IX_AppLoginUsers_Username
-        ON AppLoginUsers(Username);
+    CREATE UNIQUE INDEX IX_AppLoginUsers_TenantId_Username
+        ON AppLoginUsers(TenantId, Username);
 END;
+
+IF COL_LENGTH('AppLoginUsers', 'TenantId') IS NULL
+    THROW 51000, 'Tenant login schema is pending. Apply migration AddTenantCodeLogin_20261001 before startup.', 1;
 
 IF COL_LENGTH('AppLoginUsers', 'FailedLoginAttempts') IS NULL
     ALTER TABLE AppLoginUsers
@@ -94,6 +98,7 @@ IF COL_LENGTH('AppLoginUsers', 'MustChangePassword') IS NULL
 INSERT INTO AppLoginUsers
 (
     EmployeeId,
+    TenantId,
     Username,
     PasswordHash,
     PasswordSalt,
@@ -105,6 +110,7 @@ INSERT INTO AppLoginUsers
 VALUES
 (
     NULL,
+    1,
     @Username,
     @PasswordHash,
     @PasswordSalt,
@@ -151,16 +157,17 @@ VALUES
         var employeeId = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
-SELECT TOP 1 Id
-FROM Employees
-WHERE IsDeleted = 0 AND IsActive = 1
+SELECT TOP 1 e.Id
+FROM Employees e
+INNER JOIN Companies c ON c.Id = e.CompanyId
+WHERE e.IsDeleted = 0 AND e.IsActive = 1 AND c.TenantId = 1
 ORDER BY
     CASE
         WHEN EmployeeNo = '11230' THEN 0
         WHEN FullName LIKE N'%محمد علي زيدان%' THEN 1
         ELSE 2
     END,
-    Id;
+    e.Id;
 """);
 
         if (employeeId <= 0)
@@ -173,7 +180,7 @@ ORDER BY
             """
 SELECT COUNT(*)
 FROM AppLoginUsers
-WHERE Username = @Username
+WHERE TenantId = 1 AND Username = @Username
 """,
             command => HrmsDatabase.AddParameter(
                 command,
@@ -201,6 +208,7 @@ WHERE Username = @Username
 INSERT INTO AppLoginUsers
 (
     EmployeeId,
+    TenantId,
     Username,
     PasswordHash,
     PasswordSalt,
@@ -212,6 +220,7 @@ INSERT INTO AppLoginUsers
 VALUES
 (
     @EmployeeId,
+    1,
     @Username,
     @PasswordHash,
     @PasswordSalt,
@@ -261,6 +270,7 @@ UPDATE AppLoginUsers
 SET EmployeeId = @EmployeeId,
     UpdatedAt = SYSUTCDATETIME()
 WHERE Username = @Username
+  AND TenantId = 1
   AND (EmployeeId IS NULL OR EmployeeId = 0);
 """,
                 command =>
@@ -279,13 +289,20 @@ WHERE Username = @Username
 
     public static async Task<LoginUser?> GetByUsernameAsync(
         ApplicationDbContext dbContext,
+        int tenantId,
         string username)
     {
+        if (tenantId <= 0 || string.IsNullOrWhiteSpace(username))
+        {
+            return null;
+        }
+
         var users = await HrmsDatabase.QueryAsync(
             dbContext,
             """
 SELECT TOP 1
     u.Id,
+    u.TenantId,
     ISNULL(u.EmployeeId, 0) AS EmployeeId,
     u.Username,
     u.PasswordHash,
@@ -298,15 +315,17 @@ SELECT TOP 1
     ISNULL(e.FullName, '') AS EmployeeName
 FROM AppLoginUsers u
 LEFT JOIN Employees e ON u.EmployeeId = e.Id
-WHERE u.Username = @Username;
+WHERE u.TenantId = @TenantId AND u.Username = @Username;
 """,
-            command => HrmsDatabase.AddParameter(
-                command,
-                "@Username",
-                username),
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@TenantId", tenantId);
+                HrmsDatabase.AddParameter(command, "@Username", username.Trim());
+            },
             reader => new LoginUser
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                TenantId = HrmsDatabase.GetInt(reader, "TenantId"),
                 EmployeeId =
                     HrmsDatabase.GetInt(reader, "EmployeeId") == 0
                         ? null
@@ -673,6 +692,8 @@ VALUES
     public class LoginUser
     {
         public int Id { get; set; }
+
+        public int TenantId { get; set; }
 
         public int? EmployeeId { get; set; }
 

@@ -3113,7 +3113,8 @@ END;
         new(
             "20260925-01-app-login-two-factor",
             """
-IF OBJECT_ID('AppLoginTwoFactor', 'U') IS NULL
+IF OBJECT_ID('AppLoginUsers', 'U') IS NOT NULL
+   AND OBJECT_ID('AppLoginTwoFactor', 'U') IS NULL
 BEGIN
     CREATE TABLE AppLoginTwoFactor (
         LoginUserId int NOT NULL PRIMARY KEY,
@@ -3127,6 +3128,433 @@ BEGIN
             FOREIGN KEY (LoginUserId) REFERENCES AppLoginUsers(Id) ON DELETE CASCADE
     );
 END;
+"""),
+
+        // فصل العملاء المستقلين: كود منظومة من أربعة أرقام يحدد المستأجر قبل
+        // اسم المستخدم. كل البيانات الحالية تُنسب بأمان إلى المستأجر الافتراضي
+        // 0001، ثم تصبح أسماء الدخول وأكواد الشركات فريدة داخل المستأجر فقط.
+        new(
+            "20261001-01-tenant-code-login",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.Tenants', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.Tenants
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY,
+            Code varchar(4) NOT NULL,
+            Name nvarchar(200) NOT NULL,
+            IsActive bit NOT NULL CONSTRAINT DF_Tenants_IsActive DEFAULT(1),
+            CreatedAt datetime2 NOT NULL,
+            UpdatedAt datetime2 NULL,
+            IsDeleted bit NOT NULL CONSTRAINT DF_Tenants_IsDeleted DEFAULT(0),
+            CONSTRAINT CK_Tenants_Code_FourDigits
+                CHECK (LEN(Code) = 4 AND Code NOT LIKE '%[^0-9]%')
+        );
+        CREATE UNIQUE INDEX IX_Tenants_Code ON dbo.Tenants(Code);
+    END;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Tenants WHERE Code = '0001')
+    BEGIN
+        INSERT INTO dbo.Tenants
+            (Code, Name, IsActive, CreatedAt, UpdatedAt, IsDeleted)
+        VALUES
+            ('0001', N'المنظومة الافتراضية', 1, SYSUTCDATETIME(), NULL, 0);
+    END;
+
+    DECLARE @DefaultTenantId int =
+        (SELECT TOP (1) Id FROM dbo.Tenants WHERE Code = '0001');
+
+    IF OBJECT_ID('dbo.Companies', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.Companies', 'TenantId') IS NULL
+            ALTER TABLE dbo.Companies ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.Companies SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.Companies')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.Companies ALTER COLUMN TenantId int NOT NULL;
+
+        IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Companies') AND name = 'IX_Companies_Code')
+            DROP INDEX IX_Companies_Code ON dbo.Companies;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Companies') AND name = 'IX_Companies_TenantId_Code')
+            CREATE UNIQUE INDEX IX_Companies_TenantId_Code ON dbo.Companies(TenantId, Code);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Companies_Tenants_TenantId')
+            ALTER TABLE dbo.Companies WITH CHECK ADD CONSTRAINT FK_Companies_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    IF OBJECT_ID('dbo.SystemUsers', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.SystemUsers', 'TenantId') IS NULL
+            ALTER TABLE dbo.SystemUsers ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.SystemUsers SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.SystemUsers')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.SystemUsers ALTER COLUMN TenantId int NOT NULL;
+
+        IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.SystemUsers') AND name = 'IX_SystemUsers_UserName')
+            DROP INDEX IX_SystemUsers_UserName ON dbo.SystemUsers;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.SystemUsers') AND name = 'IX_SystemUsers_TenantId_UserName')
+            CREATE UNIQUE INDEX IX_SystemUsers_TenantId_UserName ON dbo.SystemUsers(TenantId, UserName);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_SystemUsers_Tenants_TenantId')
+            ALTER TABLE dbo.SystemUsers WITH CHECK ADD CONSTRAINT FK_SystemUsers_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    IF OBJECT_ID('dbo.AppLoginUsers', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.AppLoginUsers', 'TenantId') IS NULL
+            ALTER TABLE dbo.AppLoginUsers ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.AppLoginUsers SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.AppLoginUsers')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.AppLoginUsers ALTER COLUMN TenantId int NOT NULL;
+
+        IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.AppLoginUsers') AND name = 'IX_AppLoginUsers_Username')
+            DROP INDEX IX_AppLoginUsers_Username ON dbo.AppLoginUsers;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.AppLoginUsers') AND name = 'IX_AppLoginUsers_TenantId_Username')
+            CREATE UNIQUE INDEX IX_AppLoginUsers_TenantId_Username ON dbo.AppLoginUsers(TenantId, Username);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_AppLoginUsers_Tenants_TenantId')
+            ALTER TABLE dbo.AppLoginUsers WITH CHECK ADD CONSTRAINT FK_AppLoginUsers_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    IF OBJECT_ID('dbo.ApiTokens', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.ApiTokens', 'TenantId') IS NULL
+            ALTER TABLE dbo.ApiTokens ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.ApiTokens SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.ApiTokens')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.ApiTokens ALTER COLUMN TenantId int NOT NULL;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_ApiTokens_Tenants_TenantId')
+            ALTER TABLE dbo.ApiTokens WITH CHECK ADD CONSTRAINT FK_ApiTokens_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // بوابة مالك ZYNORA مستقلة عن حسابات العملاء: ملاك المنصة، لايسنس واحد
+        // لكل منظومة، وسجل تدقيق لا يمكن لمدير العميل الوصول إليه.
+        new(
+            "20261001-02-platform-portal-licenses",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.PlatformOwners', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.PlatformOwners
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PlatformOwners PRIMARY KEY,
+            Username nvarchar(100) NOT NULL,
+            NormalizedUsername nvarchar(100) NOT NULL,
+            DisplayName nvarchar(160) NOT NULL,
+            PasswordHash nvarchar(200) NOT NULL,
+            PasswordSalt nvarchar(200) NOT NULL,
+            IsActive bit NOT NULL CONSTRAINT DF_PlatformOwners_IsActive DEFAULT(1),
+            LastLoginAtUtc datetime2 NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_PlatformOwners_CreatedAtUtc DEFAULT(SYSUTCDATETIME()),
+            UpdatedAtUtc datetime2 NULL
+        );
+        CREATE UNIQUE INDEX UX_PlatformOwners_NormalizedUsername
+            ON dbo.PlatformOwners(NormalizedUsername);
+    END;
+
+    IF OBJECT_ID('dbo.TenantLicenses', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.TenantLicenses
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_TenantLicenses PRIMARY KEY,
+            TenantId int NOT NULL,
+            PlanCode nvarchar(60) NOT NULL,
+            Status nvarchar(20) NOT NULL,
+            StartsAtUtc datetime2 NOT NULL,
+            ExpiresAtUtc datetime2 NULL,
+            GraceEndsAtUtc datetime2 NULL,
+            MaxCompanies int NOT NULL,
+            MaxEmployees int NOT NULL,
+            MaxDevices int NOT NULL,
+            EnabledModulesCsv nvarchar(1000) NOT NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_TenantLicenses_CreatedAtUtc DEFAULT(SYSUTCDATETIME()),
+            UpdatedAtUtc datetime2 NULL,
+            Version rowversion NOT NULL,
+            CONSTRAINT FK_TenantLicenses_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+            CONSTRAINT CK_TenantLicenses_Status
+                CHECK (Status IN (N'Trial', N'Active', N'Suspended', N'Expired', N'Cancelled')),
+            CONSTRAINT CK_TenantLicenses_Limits
+                CHECK (MaxCompanies > 0 AND MaxEmployees > 0 AND MaxDevices >= 0),
+            CONSTRAINT CK_TenantLicenses_Dates
+                CHECK ((ExpiresAtUtc IS NULL OR ExpiresAtUtc >= StartsAtUtc)
+                   AND (GraceEndsAtUtc IS NULL OR ExpiresAtUtc IS NOT NULL AND GraceEndsAtUtc >= ExpiresAtUtc))
+        );
+        CREATE UNIQUE INDEX UX_TenantLicenses_TenantId ON dbo.TenantLicenses(TenantId);
+    END;
+
+    IF OBJECT_ID('dbo.PlatformAuditEvents', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.PlatformAuditEvents
+        (
+            Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_PlatformAuditEvents PRIMARY KEY,
+            ActorUsername nvarchar(100) NOT NULL,
+            ActionCode nvarchar(80) NOT NULL,
+            TargetType nvarchar(80) NOT NULL,
+            TargetKey nvarchar(120) NULL,
+            Details nvarchar(1000) NULL,
+            IpAddress nvarchar(80) NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_PlatformAuditEvents_CreatedAtUtc DEFAULT(SYSUTCDATETIME())
+        );
+        CREATE INDEX IX_PlatformAuditEvents_CreatedAtUtc
+            ON dbo.PlatformAuditEvents(CreatedAtUtc DESC);
+    END;
+
+    INSERT INTO dbo.TenantLicenses
+        (TenantId, PlanCode, Status, StartsAtUtc, ExpiresAtUtc, GraceEndsAtUtc,
+         MaxCompanies, MaxEmployees, MaxDevices, EnabledModulesCsv, CreatedAtUtc)
+    SELECT t.Id, N'Legacy', N'Active', t.CreatedAt, NULL, NULL,
+           100, 100000, 10000,
+           N'Attendance,CoreHR,Mobile,Payroll,PeopleAI,Performance,SelfService',
+           SYSUTCDATETIME()
+    FROM dbo.Tenants t
+    WHERE NOT EXISTS
+    (
+        SELECT 1 FROM dbo.TenantLicenses license WHERE license.TenantId = t.Id
+    );
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // حدود اللايسنس تُفرض داخل SQL أيضاً، لا في زر الواجهة وحده. بهذا تمر
+        // صفحات الإنشاء والاستيراد والـAPI والحفظ المباشر من بوابة واحدة ذرّية.
+        // applock بمعاملة الكتابة يمنع عمليتين متزامنتين من اجتياز count ثم تجاوز الحد.
+        new(
+            "20261001-03-license-capacity-guards",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.TenantLicenses', 'U') IS NULL
+        THROW 51040, 'TenantLicenses is missing. Apply the platform license migration first.', 1;
+
+    EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TR_LicenseCapacity_Companies
+ON dbo.Companies
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    DECLARE @lockResult int;
+    EXEC @lockResult = sys.sp_getapplock
+        @Resource = N''ZYNORA.LicenseCapacity'',
+        @LockMode = N''Exclusive'',
+        @LockOwner = N''Transaction'',
+        @LockTimeout = 15000;
+    IF @lockResult < 0 THROW 51040, ''Could not acquire the license capacity lock.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM (SELECT DISTINCT TenantId FROM inserted) affected
+        LEFT JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        WHERE license.TenantId IS NULL
+    )
+        THROW 51040, ''A tenant license is required before creating company data.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM (SELECT DISTINCT TenantId FROM inserted) affected
+        INNER JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        CROSS APPLY
+        (
+            SELECT COUNT_BIG(*) AS UsedCount
+            FROM dbo.Companies company
+            WHERE company.TenantId = affected.TenantId AND company.IsDeleted = 0
+        ) usage
+        WHERE usage.UsedCount > license.MaxCompanies
+    )
+        THROW 51041, ''The licensed company limit has been reached.'', 1;
+END;');
+
+    EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TR_LicenseCapacity_Employees
+ON dbo.Employees
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    DECLARE @lockResult int;
+    EXEC @lockResult = sys.sp_getapplock
+        @Resource = N''ZYNORA.LicenseCapacity'',
+        @LockMode = N''Exclusive'',
+        @LockOwner = N''Transaction'',
+        @LockTimeout = 15000;
+    IF @lockResult < 0 THROW 51040, ''Could not acquire the license capacity lock.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted employee
+            LEFT JOIN dbo.Branches branch ON branch.Id = employee.BranchId
+            INNER JOIN dbo.Companies company
+                ON company.Id = COALESCE(employee.CompanyId, branch.CompanyId)
+        ) affected
+        LEFT JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        WHERE license.TenantId IS NULL
+    )
+        THROW 51040, ''A tenant license is required before creating employee data.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted employee
+            LEFT JOIN dbo.Branches branch ON branch.Id = employee.BranchId
+            INNER JOIN dbo.Companies company
+                ON company.Id = COALESCE(employee.CompanyId, branch.CompanyId)
+        ) affected
+        INNER JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        CROSS APPLY
+        (
+            SELECT COUNT_BIG(*) AS UsedCount
+            FROM dbo.Employees currentEmployee
+            LEFT JOIN dbo.Branches currentBranch ON currentBranch.Id = currentEmployee.BranchId
+            INNER JOIN dbo.Companies currentCompany
+                ON currentCompany.Id = COALESCE(currentEmployee.CompanyId, currentBranch.CompanyId)
+            WHERE currentCompany.TenantId = affected.TenantId
+              AND currentEmployee.IsDeleted = 0
+        ) usage
+        WHERE usage.UsedCount > license.MaxEmployees
+    )
+        THROW 51042, ''The licensed employee limit has been reached.'', 1;
+END;');
+
+    EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TR_LicenseCapacity_Devices
+ON dbo.Devices
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    DECLARE @lockResult int;
+    EXEC @lockResult = sys.sp_getapplock
+        @Resource = N''ZYNORA.LicenseCapacity'',
+        @LockMode = N''Exclusive'',
+        @LockOwner = N''Transaction'',
+        @LockTimeout = 15000;
+    IF @lockResult < 0 THROW 51040, ''Could not acquire the license capacity lock.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted device
+            INNER JOIN dbo.Branches branch ON branch.Id = device.BranchId
+            INNER JOIN dbo.Companies company ON company.Id = branch.CompanyId
+        ) affected
+        LEFT JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        WHERE license.TenantId IS NULL
+    )
+        THROW 51040, ''A tenant license is required before creating device data.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted device
+            INNER JOIN dbo.Branches branch ON branch.Id = device.BranchId
+            INNER JOIN dbo.Companies company ON company.Id = branch.CompanyId
+        ) affected
+        INNER JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        CROSS APPLY
+        (
+            SELECT COUNT_BIG(*) AS UsedCount
+            FROM dbo.Devices currentDevice
+            INNER JOIN dbo.Branches currentBranch ON currentBranch.Id = currentDevice.BranchId
+            INNER JOIN dbo.Companies currentCompany ON currentCompany.Id = currentBranch.CompanyId
+            WHERE currentCompany.TenantId = affected.TenantId
+              AND currentDevice.IsDeleted = 0
+              AND currentBranch.IsDeleted = 0
+        ) usage
+        WHERE usage.UsedCount > license.MaxDevices
+    )
+        THROW 51043, ''The licensed device limit has been reached.'', 1;
+END;');
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
 """),
     };
 

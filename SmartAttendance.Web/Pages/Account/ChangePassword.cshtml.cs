@@ -90,7 +90,8 @@ public class ChangePasswordModel : PageModel
             return Page();
         }
 
-        var user = await LoginDatabase.GetByUsernameAsync(_dbContext, username.Trim());
+        var tenantId = TenantContext.GetTenantId(User) ?? 0;
+        var user = await LoginDatabase.GetByUsernameAsync(_dbContext, tenantId, username.Trim());
         if (user == null)
         {
             ErrorMessage = "تعذّر إيجاد الحساب.";
@@ -162,6 +163,7 @@ WHERE Id = @Id;
         var state = await AccountSecurityStore.GetStateAsync(
             _dbContext,
             _cache,
+            TenantContext.GetTenantId(User) ?? 0,
             username);
 
         return state.Exists && state.MustChangePassword;

@@ -159,6 +159,13 @@
     font-weight: 900;
 }
 
+.login-field__help {
+    color: var(--sa-muted);
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
 .login-password-control {
     position: relative;
 }

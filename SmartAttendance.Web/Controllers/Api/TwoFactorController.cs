@@ -267,7 +267,10 @@ public sealed class TwoFactorController : ControllerBase
         var username = User.Identity?.Name;
         return string.IsNullOrWhiteSpace(username)
             ? null
-            : await LoginDatabase.GetByUsernameAsync(_db, username.Trim());
+            : await LoginDatabase.GetByUsernameAsync(
+                _db,
+                TenantContext.GetTenantId(User) ?? 0,
+                username.Trim());
     }
 
     private static bool ValidCurrentPassword(

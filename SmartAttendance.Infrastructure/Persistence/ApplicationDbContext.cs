@@ -19,6 +19,8 @@ public class ApplicationDbContext : DbContext, IDataProtectionKeyContext
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {

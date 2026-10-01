@@ -47,7 +47,11 @@ public sealed class ApiTokenAuthHandler : AuthenticationHandler<AuthenticationSc
 
         // المرحلة 5: التوكن وحده لا يكفي — الحساب قد عُطّل أو تغيّر دوره/كلمة مروره
         // بعد إصداره. نفحص الحالة الحالية (بكاش 60 ثانية) ونرفض عند أي اختلاف ختم.
-        var account = await AccountSecurityStore.GetStateAsync(_db, _cache, identity.Username);
+        var account = await AccountSecurityStore.GetStateAsync(
+            _db,
+            _cache,
+            identity.TenantId,
+            identity.Username);
         var decision = SessionSecurityValidator.Evaluate(
             identity.SecurityStamp, identity.Role, account);
 
@@ -65,7 +69,9 @@ public sealed class ApiTokenAuthHandler : AuthenticationHandler<AuthenticationSc
             new(ClaimTypes.Role, identity.Role),
             new("DisplayName", identity.DisplayName ?? string.Empty),
             new("EmployeeId", identity.EmployeeId?.ToString() ?? string.Empty),
-            new("SystemUserId", identity.SystemUserId.ToString())
+            new("SystemUserId", identity.SystemUserId.ToString()),
+            new(TenantContext.TenantIdClaimType, identity.TenantId.ToString()),
+            new(TenantContext.TenantCodeClaimType, identity.TenantCode)
         };
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));

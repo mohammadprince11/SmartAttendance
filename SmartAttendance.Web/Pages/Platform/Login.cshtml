@@ -1,0 +1,42 @@
+@page
+@model SmartAttendance.Web.Pages.Platform.LoginModel
+@{
+    Layout = "_PlatformLayout";
+    ViewData["Title"] = "دخول مالك المنصة";
+}
+
+<section class="platform-login">
+    <div class="platform-login__brand">
+        <img src="~/brand/zynora-logo-horizontal-light.svg" alt="ZYNORA" />
+        <span>PLATFORM CONTROL</span>
+        <h1>بوابة مالك ZYNORA</h1>
+        <p>إدارة المنظومات والتراخيص بمعزل كامل عن حسابات الشركات.</p>
+    </div>
+
+    <form method="post" class="platform-card platform-login__form">
+        <input asp-for="ReturnUrl" type="hidden" />
+        <header>
+            <span class="platform-eyebrow">وصول إداري خاص</span>
+            <h2>تسجيل الدخول</h2>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="platform-alert platform-alert--danger">@Model.ErrorMessage</div>
+        }
+
+        <label class="platform-field">
+            <span>اسم المستخدم</span>
+            <input asp-for="Username" autocomplete="username" required />
+        </label>
+
+        <label class="platform-field">
+            <span>كلمة المرور</span>
+            <input asp-for="Password" type="password" autocomplete="current-password" required />
+        </label>
+
+        <button class="platform-button platform-button--primary platform-button--wide" type="submit">
+            دخول لوحة المنصة
+        </button>
+    </form>
+</section>

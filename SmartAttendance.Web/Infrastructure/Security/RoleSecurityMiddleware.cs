@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Platform;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
@@ -27,6 +28,17 @@ public class RoleSecurityMiddleware
         Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         var path = context.Request.Path.Value?.ToLowerInvariant() ?? "/";
+
+        // بوابة مالك المنصة تملك مخطط مصادقة وسياسة تفويض مستقلين تماماً عن
+        // حسابات شركات العملاء. نترك مساراتها تمر إلى AuthorizationMiddleware
+        // الذي يطبّق PlatformOwnerOnly، حتى لا يحاول هذا الحارس قراءة كوكي
+        // العميل الافتراضي أو يحوّل مالك المنصة إلى صفحة /Account/Login.
+        if (path == "/platform" || path.StartsWith("/platform/"))
+        {
+            await _next(context);
+            return;
+        }
+
         var accessClass = PublicPathPolicy.Classify(path);
 
         if (accessClass == PathAccessClass.Public)
@@ -56,6 +68,20 @@ public class RoleSecurityMiddleware
             return;
         }
 
+        // A role grants actions inside a purchased module; it never grants the
+        // module itself. Resolve the module from the server route and fail closed
+        // when the current tenant's license does not include it.
+        var requiredModule = TenantModuleAccess.ResolveModule(path);
+        if (requiredModule is not null)
+        {
+            var tenantId = TenantContext.GetTenantId(context.User) ?? 0;
+            if (!await TenantModuleAccess.IsEnabledAsync(dbContext, tenantId, requiredModule))
+            {
+                context.Response.Redirect("/AccessDenied");
+                return;
+            }
+        }
+
         // إجبار تغيير كلمة المرور: حسابٌ موسومٌ لا يبلغ أيّ صفحةٍ غير صفحة التغيير
         // أو الخروج. القراءة بكاش 60 ثانية (نفس مفتاح OnValidatePrincipal) فلا
         // ضربة قاعدةٍ إضافيّة، والوسم يُبطِل الكاش لحظة رفعه فيُرى فوراً.
@@ -64,6 +90,7 @@ public class RoleSecurityMiddleware
             var securityState = await AccountSecurityStore.GetStateAsync(
                 dbContext,
                 cache,
+                TenantContext.GetTenantId(context.User) ?? 0,
                 username);
 
             if (securityState.Exists && securityState.MustChangePassword)
@@ -340,6 +367,7 @@ public class RoleSecurityMiddleware
             return await loginIdentityService.EnsureSystemUserAsync(
                 new LoginIdentityRequest
                 {
+                    TenantId = TenantContext.GetTenantId(context.User) ?? 0,
                     EmployeeId = employeeId,
                     UserName = username,
                     DisplayName = displayName,

@@ -111,6 +111,24 @@
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="8">
+                            <Label Text="كود المنظومة" Style="{StaticResource ZyCaption}" />
+                            <Border BackgroundColor="{StaticResource ZyBgSoft}"
+                                    Stroke="{StaticResource ZyStrokeSoft}"
+                                    StrokeShape="RoundRectangle 15"
+                                    Padding="14,2">
+                                <Entry x:Name="TenantCodeEntry"
+                                       Placeholder="0001"
+                                       Keyboard="Numeric"
+                                       MaxLength="4"
+                                       FlowDirection="LeftToRight"
+                                       BackgroundColor="Transparent"
+                                       TextColor="{StaticResource ZyText}"
+                                       PlaceholderColor="{StaticResource ZyMuted2}"
+                                       HeightRequest="50" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="8">
                             <Label Text="اسم المستخدم" Style="{StaticResource ZyCaption}" />
                             <Border BackgroundColor="{StaticResource ZyBgSoft}"
                                     Stroke="{StaticResource ZyStrokeSoft}"

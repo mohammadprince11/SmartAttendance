@@ -19,6 +19,8 @@ public sealed class TwoFactorLoginBehaviorTests
     private const string Password = "Test!Pass-2026";
     private const string RecoveryCode = "ABCD-EFGH-JK234";
     private const int SystemUserId = 990001;
+    private const int TenantId = 1;
+    private const string TenantCode = "0001";
 
     private static string ConnectionString =>
         Environment.GetEnvironmentVariable("SMARTATTENDANCE_2FA_TEST_CONNECTION") ??
@@ -47,6 +49,16 @@ public sealed class TwoFactorLoginBehaviorTests
             item => item.Id == "20260925-01-app-login-two-factor");
         await db.Database.ExecuteSqlRawAsync(migration.Sql);
 
+        var tenantMigration = Assert.Single(
+            SqlSchemaMigrator.Migrations,
+            item => item.Id == "20261001-01-tenant-code-login");
+        await db.Database.ExecuteSqlRawAsync(tenantMigration.Sql);
+
+        var platformLicenseMigration = Assert.Single(
+            SqlSchemaMigrator.Migrations,
+            item => item.Id == "20261001-02-platform-portal-licenses");
+        await db.Database.ExecuteSqlRawAsync(platformLicenseMigration.Sql);
+
         await CleanupAsync(db);
         var salt = SimplePasswordHasher.CreateSalt();
         var hash = SimplePasswordHasher.HashPassword(Password, salt);
@@ -54,12 +66,12 @@ public sealed class TwoFactorLoginBehaviorTests
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"""
 INSERT INTO AppLoginUsers
-    (EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive, FailedLoginAttempts, SecurityStamp, CreatedAt)
+    (TenantId, EmployeeId, Username, PasswordHash, PasswordSalt, Role, IsActive, FailedLoginAttempts, SecurityStamp, CreatedAt)
 VALUES
-    (NULL, {Username}, {hash}, {salt}, 'Employee', 1, 0, 'TEST-2FA-STAMP', SYSUTCDATETIME());
+    ({TenantId}, NULL, {Username}, {hash}, {salt}, 'Employee', 1, 0, 'TEST-2FA-STAMP', SYSUTCDATETIME());
 """);
 
-            var user = await LoginDatabase.GetByUsernameAsync(db, Username);
+            var user = await LoginDatabase.GetByUsernameAsync(db, TenantId, Username);
             Assert.NotNull(user);
 
             await AppLoginTwoFactorStore.BeginSetupAsync(
@@ -83,11 +95,12 @@ VALUES
             };
 
             var missing = await controller.Login(
-                new AuthController.LoginRequest(Username, Password));
+                new AuthController.LoginRequest(TenantCode, Username, Password));
             AssertRequiresTwoFactor(missing);
 
             var invalid = await controller.Login(
                 new AuthController.LoginRequest(
+                    TenantCode,
                     Username,
                     Password,
                     RecoveryCode: "WRONG-RECOVERY"));
@@ -95,6 +108,7 @@ VALUES
 
             var valid = await controller.Login(
                 new AuthController.LoginRequest(
+                    TenantCode,
                     Username,
                     Password,
                     RecoveryCode: RecoveryCode));
@@ -106,6 +120,7 @@ VALUES
 
             var reused = await controller.Login(
                 new AuthController.LoginRequest(
+                    TenantCode,
                     Username,
                     Password,
                     RecoveryCode: RecoveryCode));

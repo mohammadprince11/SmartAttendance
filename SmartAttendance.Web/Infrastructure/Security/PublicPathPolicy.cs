@@ -35,6 +35,7 @@ public static class PublicPathPolicy
 
         if (path == "/account/login" ||
             path == "/account/logout" ||
+            path == "/platform/login" ||
             path == "/culture/catalog" ||
             path == "/culture/set" ||
             path == "/accessdenied")

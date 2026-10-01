@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Api;
+using SmartAttendance.Web.Infrastructure.Platform;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Controllers.Api;
@@ -38,6 +39,7 @@ public sealed class AuthController : ControllerBase
     }
 
     public sealed record LoginRequest(
+        string TenantCode,
         string Username,
         string Password,
         string? TwoFactorCode = null,
@@ -51,12 +53,24 @@ public sealed class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest body)
     {
-        if (body is null || string.IsNullOrWhiteSpace(body.Username) || string.IsNullOrWhiteSpace(body.Password))
-            return BadRequest(new { message = "اسم المستخدم وكلمة المرور مطلوبة." });
+        if (body is null ||
+            !TenantContext.IsValidCode(body.TenantCode?.Trim()) ||
+            string.IsNullOrWhiteSpace(body.Username) ||
+            string.IsNullOrWhiteSpace(body.Password))
+            return BadRequest(new { message = "كود المنظومة واسم المستخدم وكلمة المرور مطلوبة." });
 
         var utcNow = DateTime.UtcNow;
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-        var user = await LoginDatabase.GetByUsernameAsync(_db, body.Username.Trim());
+        var tenant = await TenantContext.ResolveAsync(
+            _db,
+            body.TenantCode,
+            HttpContext.RequestAborted);
+        var user = tenant is null
+            ? null
+            : await LoginDatabase.GetByUsernameAsync(
+                _db,
+                tenant.Id,
+                body.Username.Trim());
 
         // رسالة موحّدة عند أي فشل (لا نكشف السبب)
         const string generic = "بيانات الدخول غير صحيحة أو الحساب غير متاح.";
@@ -132,6 +146,14 @@ public sealed class AuthController : ControllerBase
             }
         }
 
+        if (!await TenantModuleAccess.IsEnabledAsync(_db, tenant!.Id, "Mobile"))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "تطبيق الموظف غير مفعّل ضمن لايسنس هذه المنظومة."
+            });
+        }
+
         var displayName = string.IsNullOrWhiteSpace(user.EmployeeName) ? user.Username : user.EmployeeName;
 
         int? systemUserId;
@@ -139,6 +161,7 @@ public sealed class AuthController : ControllerBase
         {
             systemUserId = await _identity.EnsureSystemUserAsync(new LoginIdentityRequest
             {
+                TenantId = tenant!.Id,
                 EmployeeId = user.EmployeeId,
                 UserName = user.Username,
                 DisplayName = displayName,
@@ -164,6 +187,8 @@ public sealed class AuthController : ControllerBase
 
         var token = await ApiTokenStore.IssueAsync(_db, new ApiTokenStore.TokenIdentity
         {
+            TenantId = tenant!.Id,
+            TenantCode = tenant.Code,
             SystemUserId = systemUserId.Value,
             EmployeeId = user.EmployeeId,
             Username = user.Username,
@@ -181,7 +206,8 @@ public sealed class AuthController : ControllerBase
                 username = user.Username,
                 displayName,
                 role = user.Role,
-                employeeId = user.EmployeeId
+                employeeId = user.EmployeeId,
+                tenantCode = tenant.Code
             }
         });
     }
@@ -209,7 +235,10 @@ public sealed class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(username))
             return Unauthorized(new { message = "انتهت الجلسة. سجل الدخول من جديد." });
 
-        var user = await LoginDatabase.GetByUsernameAsync(_db, username.Trim());
+        var user = await LoginDatabase.GetByUsernameAsync(
+            _db,
+            TenantContext.GetTenantId(User) ?? 0,
+            username.Trim());
         if (user is null || !user.IsActive)
             return Unauthorized(new { message = "الحساب غير متاح." });
 

@@ -112,10 +112,15 @@ public class WebAuthnController : ControllerBase
 
         var username = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(username)) return 0;
+        var tenantId = TenantContext.GetTenantId(User) ?? 0;
         return await HrmsDatabase.ScalarAsync<int>(
             _db,
-            "SELECT TOP 1 ISNULL(EmployeeId, 0) FROM AppLoginUsers WHERE Username = @U AND IsActive = 1",
-            c => HrmsDatabase.AddParameter(c, "@U", username));
+            "SELECT TOP 1 ISNULL(EmployeeId, 0) FROM AppLoginUsers WHERE TenantId = @TenantId AND Username = @U AND IsActive = 1",
+            c =>
+            {
+                HrmsDatabase.AddParameter(c, "@TenantId", tenantId);
+                HrmsDatabase.AddParameter(c, "@U", username);
+            });
     }
 
     // ===== التسجيل (من درج إعدادات بوابة الموظف) =====
@@ -251,6 +256,8 @@ public class WebAuthnController : ControllerBase
         public AuthenticatorAssertionRawResponse Assertion { get; set; } = default!;
     }
 
+    private sealed record LoginLocator(int TenantId, string TenantCode, string Username);
+
     /// <summary>
     /// تحقق التأكيد: توقيع صحيح بالمفتاح النشط ⟹ توكن إثبات أحادي الاستهلاك
     /// (دقيقتان) يُرفَق بنموذج البصمة فيقبله الخادم.
@@ -362,18 +369,27 @@ public class WebAuthnController : ControllerBase
         }
 
         // حساب الدخول المرتبط بالموظف (نفضّل حساب دور «موظف»).
-        var username = await HrmsDatabase.ScalarAsync<string>(
+        var locator = (await HrmsDatabase.QueryAsync(
             _db,
             """
-SELECT TOP 1 Username FROM AppLoginUsers
-WHERE EmployeeId = @Emp AND IsActive = 1
-ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
+SELECT TOP 1 u.TenantId, t.Code AS TenantCode, u.Username
+FROM AppLoginUsers u
+INNER JOIN Tenants t ON t.Id = u.TenantId AND t.IsActive = 1 AND t.IsDeleted = 0
+WHERE u.EmployeeId = @Emp AND u.IsActive = 1
+ORDER BY CASE WHEN u.Role = 'Employee' THEN 0 ELSE 1 END, u.Id;
 """,
-            c => HrmsDatabase.AddParameter(c, "@Emp", credential.EmployeeId));
-        if (string.IsNullOrWhiteSpace(username))
+            c => HrmsDatabase.AddParameter(c, "@Emp", credential.EmployeeId),
+            reader => new LoginLocator(
+                HrmsDatabase.GetInt(reader, "TenantId"),
+                HrmsDatabase.GetString(reader, "TenantCode"),
+                HrmsDatabase.GetString(reader, "Username")))).FirstOrDefault();
+        if (locator is null || string.IsNullOrWhiteSpace(locator.Username))
             return BadRequest(new { message = "لا يوجد حساب دخول نشط مرتبط بهذا الموظف." });
 
-        var user = await LoginDatabase.GetByUsernameAsync(_db, username);
+        var user = await LoginDatabase.GetByUsernameAsync(
+            _db,
+            locator.TenantId,
+            locator.Username);
         if (user is null || !user.IsActive)
             return BadRequest(new { message = "الحساب غير متاح." });
         if (user.IsLockedOut(DateTime.UtcNow))
@@ -386,6 +402,7 @@ ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
             systemUserId = await _loginIdentityService.EnsureSystemUserAsync(
                 new SmartAttendance.Application.Common.Security.LoginIdentityRequest
                 {
+                    TenantId = locator.TenantId,
                     EmployeeId = user.EmployeeId,
                     UserName = user.Username,
                     DisplayName = displayName,
@@ -419,6 +436,8 @@ ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
             new("DisplayName", displayName),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
+            new(TenantContext.TenantIdClaimType, locator.TenantId.ToString()),
+            new(TenantContext.TenantCodeClaimType, locator.TenantCode),
             new("SessionIssuedUtc", issuedUtc.ToString("O")),
             new(AccountSecurityStore.SecurityStampClaimType, securityStamp)
         };

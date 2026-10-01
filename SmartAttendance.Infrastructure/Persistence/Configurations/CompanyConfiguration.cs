@@ -41,7 +41,12 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(x => x.TimeZoneId)
             .HasMaxLength(100);
 
-        builder.HasIndex(x => x.Code)
+        builder.HasOne(x => x.Tenant)
+            .WithMany(x => x.Companies)
+            .HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => new { x.TenantId, x.Code })
             .IsUnique();
     }
 }

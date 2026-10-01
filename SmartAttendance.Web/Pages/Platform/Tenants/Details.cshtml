@@ -1,0 +1,84 @@
+@page
+@model SmartAttendance.Web.Pages.Platform.Tenants.DetailsModel
+@{
+    Layout = "_PlatformLayout";
+    ViewData["Title"] = $"منظومة {Model.Tenant.Code}";
+}
+
+<section class="platform-pagehead">
+    <div>
+        <a class="platform-back" asp-page="/Platform/Index">العودة إلى المنظومات</a>
+        <div class="platform-titleline">
+            <span class="platform-code platform-code--large">@Model.Tenant.Code</span>
+            <div><h1>@Model.Tenant.Name</h1><p>أُنشئت في @Model.Tenant.CreatedAt.ToString("yyyy/MM/dd")</p></div>
+        </div>
+    </div>
+    <form method="post" asp-page-handler="SetActive">
+        <input type="hidden" name="id" value="@Model.Tenant.Id" />
+        <input type="hidden" name="active" value="@(!Model.Tenant.IsActive)" />
+        <button class="platform-button @(Model.Tenant.IsActive ? "platform-button--danger" : "platform-button--primary")" type="submit">
+            @(Model.Tenant.IsActive ? "إيقاف المنظومة" : "تفعيل المنظومة")
+        </button>
+    </form>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+    <div class="platform-alert platform-alert--success">@Model.Message</div>
+}
+
+<section class="platform-kpis platform-kpis--3">
+    <article><span>الشركات</span><strong>@Model.Tenant.CompanyCount / @Model.Tenant.MaxCompanies</strong></article>
+    <article><span>الموظفون</span><strong>@Model.Tenant.EmployeeCount / @Model.Tenant.MaxEmployees</strong></article>
+    <article><span>أجهزة البصمة</span><strong>@Model.Tenant.DeviceCount / @Model.Tenant.MaxDevices</strong></article>
+</section>
+
+<form method="post" asp-page-handler="SaveLicense" class="platform-card platform-form-section">
+    <input asp-for="Input.TenantId" type="hidden" />
+    <input asp-for="Input.VersionToken" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="platform-alert platform-alert--danger"></div>
+
+    <header>
+        <span>LIC</span>
+        <div><h2>إدارة اللايسنس</h2><p>أي إيقاف أو انتهاء يمنع الدخول ويسقط الجلسات القائمة.</p></div>
+    </header>
+
+    <div class="platform-fields platform-fields--3">
+        <label class="platform-field"><span>الخطة</span><input asp-for="Input.PlanCode" /></label>
+        <label class="platform-field">
+            <span>حالة اللايسنس</span>
+            <select asp-for="Input.LicenseStatus">
+                <option value="Trial">تجريبية</option>
+                <option value="Active">فعّالة</option>
+                <option value="Suspended">موقوفة</option>
+                <option value="Expired">منتهية</option>
+                <option value="Cancelled">ملغاة</option>
+            </select>
+        </label>
+        <label class="platform-field"><span>تاريخ البداية</span><input asp-for="Input.StartsAt" type="date" /></label>
+        <label class="platform-field"><span>تاريخ الانتهاء</span><input asp-for="Input.ExpiresAt" type="date" /></label>
+        <label class="platform-field"><span>نهاية فترة السماح</span><input asp-for="Input.GraceEndsAt" type="date" /></label>
+        <label class="platform-field"><span>أقصى عدد شركات</span><input asp-for="Input.MaxCompanies" type="number" /></label>
+        <label class="platform-field"><span>أقصى عدد موظفين</span><input asp-for="Input.MaxEmployees" type="number" /></label>
+        <label class="platform-field"><span>أقصى عدد أجهزة</span><input asp-for="Input.MaxDevices" type="number" /></label>
+    </div>
+
+    <fieldset class="platform-modules">
+        <legend>المودلات المفعّلة</legend>
+        @foreach (var module in Model.Modules)
+        {
+            <label>
+                <input type="checkbox" name="EnabledModules" value="@module.Key" checked="@(Model.EnabledModules.Contains(module.Key))" />
+                <span>@module.Value</span>
+            </label>
+        }
+    </fieldset>
+
+    <footer class="platform-form-actions">
+        <button class="platform-button platform-button--primary" type="submit">حفظ تغييرات اللايسنس</button>
+    </footer>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
