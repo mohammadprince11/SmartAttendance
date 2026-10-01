@@ -18,15 +18,15 @@
         </div>
     </header>
 
-    <nav class="zy-settings-jump" aria-label="أقسام الإعدادات">
-        <a href="#company-settings">الشركة</a>
-        <a href="#security-settings">الأمن والصلاحيات</a>
-        <a href="#people-settings">الموارد البشرية</a>
-        <a href="#module-settings">المودلات</a>
-        <a href="#governance-settings">الحوكمة والتكامل</a>
+    <nav class="zy-settings-jump" aria-label="أقسام الإعدادات" role="tablist">
+        <button type="button" id="company-settings-tab" role="tab" aria-controls="company-settings" aria-selected="true" data-settings-tab="company-settings">الشركة</button>
+        <button type="button" id="security-settings-tab" role="tab" aria-controls="security-settings" aria-selected="false" tabindex="-1" data-settings-tab="security-settings">الأمن والصلاحيات</button>
+        <button type="button" id="people-settings-tab" role="tab" aria-controls="people-settings" aria-selected="false" tabindex="-1" data-settings-tab="people-settings">الموارد البشرية</button>
+        <button type="button" id="module-settings-tab" role="tab" aria-controls="module-settings" aria-selected="false" tabindex="-1" data-settings-tab="module-settings">المودلات</button>
+        <button type="button" id="governance-settings-tab" role="tab" aria-controls="governance-settings" aria-selected="false" tabindex="-1" data-settings-tab="governance-settings">الحوكمة والتكامل</button>
     </nav>
 
-    <section class="zy-settings-section" id="company-settings">
+    <section class="zy-settings-section" id="company-settings" role="tabpanel" aria-labelledby="company-settings-tab" data-settings-panel>
         <div class="zy-settings-section__head"><span class="zy-settings-section__mark">01</span><div><h2>تهيئة الشركة</h2><p>الهوية والهيكل والمواقع والسياسات الأساسية.</p></div></div>
         <div class="zy-settings-grid">
             <a asp-page="/Setup/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ش</span><span><b>بيانات الشركة والهيكل</b><small>الشركة، الفروع، الأقسام، العملة، المنطقة الزمنية وسياسات الإغلاق.</small></span><i aria-hidden="true">←</i></a>
@@ -37,7 +37,7 @@
         </div>
     </section>
 
-    <section class="zy-settings-section" id="security-settings">
+    <section class="zy-settings-section" id="security-settings" role="tabpanel" aria-labelledby="security-settings-tab" data-settings-panel hidden>
         <div class="zy-settings-section__head"><span class="zy-settings-section__mark">02</span><div><h2>الأمن والصلاحيات</h2><p>إدارة الهوية ونطاق البيانات والإجراءات الحساسة.</p></div></div>
         <div class="zy-settings-grid">
             <a asp-page="/UserAccess/Index" class="zy-settings-card"><span class="zy-settings-card__icon">م</span><span><b>المستخدمون</b><small>الحسابات، ربط الموظفين، الأدوار وحالة الدخول.</small></span><i aria-hidden="true">←</i></a>
@@ -46,14 +46,14 @@
         </div>
     </section>
 
-    <section class="zy-settings-section" id="people-settings">
+    <section class="zy-settings-section" id="people-settings" role="tabpanel" aria-labelledby="people-settings-tab" data-settings-panel hidden>
         <div class="zy-settings-section__head"><span class="zy-settings-section__mark">03</span><div><h2>إعدادات الموارد البشرية</h2><p>قواعد ملف الموظف والموافقات والتعريفات المشتركة.</p></div></div>
         <div class="zy-settings-grid">
             <a asp-page="/HrSettings/Index" class="zy-settings-card"><span class="zy-settings-card__icon">م</span><span><b>مركز إعدادات الموارد البشرية</b><small>دليل جميع إعدادات الأشخاص والسياسات المرتبطة بها.</small></span><i aria-hidden="true">←</i></a>
         </div>
     </section>
 
-    <section class="zy-settings-section" id="module-settings">
+    <section class="zy-settings-section" id="module-settings" role="tabpanel" aria-labelledby="module-settings-tab" data-settings-panel hidden>
         <div class="zy-settings-section__head"><span class="zy-settings-section__mark">04</span><div><h2>إعدادات المودلات</h2><p>قواعد التشغيل والحساب لكل مودل رئيسي.</p></div></div>
         <div class="zy-settings-grid">
             <a asp-page="/AttendanceSettings/Index" class="zy-settings-card"><span class="zy-settings-card__icon">ح</span><span><b>الحضور والانصراف</b><small>سياسات البصمة، النوافذ الزمنية، المعالجة وإعادة التحليل.</small></span><i aria-hidden="true">←</i></a>
@@ -63,7 +63,7 @@
         </div>
     </section>
 
-    <section class="zy-settings-section" id="governance-settings">
+    <section class="zy-settings-section" id="governance-settings" role="tabpanel" aria-labelledby="governance-settings-tab" data-settings-panel hidden>
         <div class="zy-settings-section__head"><span class="zy-settings-section__mark">05</span><div><h2>الحوكمة والتكامل</h2><p>مراقبة النظام وربطه بالأنظمة الخارجية.</p></div></div>
         <div class="zy-settings-grid">
             <a asp-page="/Integrations/Webhooks" class="zy-settings-card"><span class="zy-settings-card__icon">ت</span><span><b>التكاملات وWebhooks</b><small>نقاط الربط والأحداث ومفاتيح التحقق وحالة الإرسال.</small></span><i aria-hidden="true">←</i></a>
@@ -71,3 +71,7 @@
         </div>
     </section>
 </section>
+
+@section Scripts {
+    <script src="~/js/settings-hub.js" asp-append-version="true" defer></script>
+}

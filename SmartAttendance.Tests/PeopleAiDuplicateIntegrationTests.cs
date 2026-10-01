@@ -74,9 +74,9 @@ public sealed class PeopleAiDuplicateIntegrationTests : IAsyncLifetime
         };
 
         var national = await PeopleIdentityDuplicateStore.FindAsync(
-            _db, scope, _companyA, "NationalId", "itest nat a");
+            _db, scope, [_companyA], _companyA, "NationalId", "itest nat a");
         var passport = await PeopleIdentityDuplicateStore.FindAsync(
-            _db, scope, _companyA, "Passport", "itest-pass-a");
+            _db, scope, [_companyA], _companyA, "Passport", "itest-pass-a");
 
         Assert.True(national.HasDuplicate);
         Assert.True(national.RequiresReview);
@@ -103,7 +103,7 @@ public sealed class PeopleAiDuplicateIntegrationTests : IAsyncLifetime
         };
 
         var result = await PeopleIdentityDuplicateStore.FindAsync(
-            _db, scope, _companyA, "Passport", "itest pass b");
+            _db, scope, [_companyA, _companyB], _companyA, "Passport", "itest pass b");
         Assert.True(result.HasDuplicate);
         var candidate = Assert.Single(result.Candidates);
         Assert.Equal(_employeeB, candidate.EmployeeId);
@@ -125,18 +125,37 @@ public sealed class PeopleAiDuplicateIntegrationTests : IAsyncLifetime
 
         await SavePolicyAsync(PeopleAiDuplicateScope.AuthorizedCompanies);
         var authorizedOnly = await PeopleIdentityDuplicateStore.FindAsync(
-            _db, scope, _companyA, "NationalId", "ITEST-NAT-B");
+            _db, scope, [_companyA, _companyB], _companyA, "NationalId", "ITEST-NAT-B");
         Assert.False(authorizedOnly.HasDuplicate);
 
         await SavePolicyAsync(PeopleAiDuplicateScope.WholeTenant);
         var tenantWide = await PeopleIdentityDuplicateStore.FindAsync(
-            _db, scope, _companyA, "NationalId", "ITEST-NAT-B");
+            _db, scope, [_companyA, _companyB], _companyA, "NationalId", "ITEST-NAT-B");
 
         var redacted = Assert.Single(tenantWide.Candidates);
         Assert.False(redacted.IsVisibleToRequester);
         Assert.Equal(0, redacted.EmployeeId);
         Assert.Equal(0, redacted.CompanyId);
         Assert.Contains("غير مصرح", redacted.DisplayName);
+    }
+
+    [SkippableFact]
+    public async Task UnrestrictedRequester_DoesNotMatchIdentityOutsideTenant()
+    {
+        Skip.IfNot(_dbAvailable, "Disposable E2E SQL is unavailable.");
+        await SavePolicyAsync(PeopleAiDuplicateScope.WholeTenant);
+        await InsertIdentityAsync(
+            _employeeB, _companyB, "Passport", "ITEST-CROSS-TENANT");
+
+        var result = await PeopleIdentityDuplicateStore.FindAsync(
+            _db,
+            PeopleDataScope.Unrestricted(),
+            [_companyA],
+            _companyA,
+            "Passport",
+            "ITEST-CROSS-TENANT");
+
+        Assert.False(result.HasDuplicate);
     }
     private Task SavePolicyAsync(PeopleAiDuplicateScope scope) =>
         PeopleAiSettingsStore.SaveAsync(

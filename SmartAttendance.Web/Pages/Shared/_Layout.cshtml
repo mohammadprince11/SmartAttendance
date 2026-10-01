@@ -792,16 +792,13 @@
 
                 @if (isAdminRole)
                 {
-                    <details class="zynora-nav-group">
-                        <summary data-nav-area="settings" data-sidebar-label="الإعدادات">
-                            <span class="zynora-nav-dot gold"></span>
-                            <span class="zynora-nav-text">الإعدادات</span>
-                            <span class="zynora-chevron"></span>
-                        </summary>
-                        <div class="zynora-nav-group-links" data-ky-title="الإعدادات">
-                            <a asp-page="/Settings/Index" class="zynora-nav-link ky-drawer-title @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active zynora-active" : "")"><span>مركز الإعدادات</span></a>
-                        </div>
-                    </details>
+                    <a asp-page="/Settings/Index"
+                       class="zynora-nav-link zynora-root-link @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active zynora-active" : "")"
+                       data-nav-area="settings"
+                       data-sidebar-label="الإعدادات">
+                        <span class="zynora-nav-dot gold"></span>
+                        <span>الإعدادات</span>
+                    </a>
                 }
                     <!-- ZYNORA_SAFE_MAIN_MENU_END -->
                 </nav>
@@ -1010,6 +1007,8 @@
     <link rel="stylesheet" href="~/css/zynora-direction.css" asp-append-version="true" />
     @* ZYNORA 2026 — طبقة الهوية النهائية، تُحمّل أخيراً لتوحّد القديم والجديد. *@
     <link rel="stylesheet" href="~/css/zynora-refresh-2026.css" asp-append-version="true" />
+    @* العقد النهائي لكل حقول الاختيار والقوائم المنسدلة — يجب أن يبقى آخر CSS للمكونات. *@
+    <link rel="stylesheet" href="~/css/zynora-dropdown-contract.css" asp-append-version="true" />
     <script src="~/js/zynora-unified-pages.js" asp-append-version="true" defer></script>
 
     @* يُسكِت تأثيرات «التمرير-فوق» أثناء السكرول — انظر تعليق السكربت.

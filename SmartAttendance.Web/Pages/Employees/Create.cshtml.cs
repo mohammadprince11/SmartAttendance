@@ -23,6 +23,7 @@ public class CreateModel : PageModel
     private readonly ICompanyDataLocalizationService _dataLocalization;
     private readonly ILocalizationDictionaryService _dictionary;
     private readonly IEffectiveScopeService _effectiveScopeService;
+    private readonly ICompanyScopeProvider _companyScope;
     private readonly IProtectedFileService _protectedFiles;
     private readonly IPermissionAuthorizationService _permissionAuthorization;
 
@@ -45,6 +46,7 @@ public class CreateModel : PageModel
         ICompanyDataLocalizationService dataLocalization,
         ILocalizationDictionaryService dictionary,
         IEffectiveScopeService effectiveScopeService,
+        ICompanyScopeProvider companyScope,
         IProtectedFileService protectedFiles,
         IPermissionAuthorizationService permissionAuthorization)
     {
@@ -54,6 +56,7 @@ public class CreateModel : PageModel
         _dataLocalization = dataLocalization;
         _dictionary = dictionary;
         _effectiveScopeService = effectiveScopeService;
+        _companyScope = companyScope;
         _protectedFiles = protectedFiles;
         _permissionAuthorization = permissionAuthorization;
     }
@@ -549,10 +552,31 @@ ORDER BY e.FullName, e.EmployeeNo;
     private async Task LoadScopedOrganizationAsync()
     {
         _createScope = await ResolveCreateScopeAsync();
+        var companyScope = await _companyScope.GetAsync(HttpContext.RequestAborted);
 
         var branches = (await _employeeService.GetBranchesForDropdownAsync()).ToList();
         var departments = (await _employeeService.GetDepartmentsForDropdownAsync()).ToList();
         var positions = (await _employeeService.GetPositionsForDropdownAsync()).ToList();
+
+        // نطاق إنشاء الموظف يضبط صلاحيات الأشخاص، لكنه يكون غير مقيّد للأدمن.
+        // نطاق الشركة يبقى إلزامياً حتى للأدمن كي لا تتسرّب شركات منظومة أخرى
+        // إلى القوائم ثم ترفضها خدمة لغات الشركة لاحقاً.
+        HashSet<int>? tenantCompanyIds = companyScope.IsUnrestricted
+            ? null
+            : companyScope.AllowedCompanyIds.Where(id => id > 0).ToHashSet();
+
+        if (tenantCompanyIds is not null)
+        {
+            branches = branches
+                .Where(item => tenantCompanyIds.Contains(item.CompanyId))
+                .ToList();
+            departments = departments
+                .Where(item => tenantCompanyIds.Contains(item.CompanyId))
+                .ToList();
+            positions = positions
+                .Where(item => tenantCompanyIds.Contains(item.CompanyId))
+                .ToList();
+        }
 
         HashSet<int>? allowedCompanyIds = null;
         if (!_createScope.IsUnrestricted || _createScope.HasAnyDenial)
@@ -591,6 +615,11 @@ ORDER BY e.FullName, e.EmployeeNo;
         var companies = _dbContext.Companies
             .AsNoTracking()
             .Where(item => item.IsActive && !item.IsDeleted);
+
+        if (tenantCompanyIds is not null)
+        {
+            companies = companies.Where(item => tenantCompanyIds.Contains(item.Id));
+        }
 
         if (allowedCompanyIds is not null)
         {

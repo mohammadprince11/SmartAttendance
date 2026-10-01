@@ -453,7 +453,7 @@ public sealed class DetailsModel : PageModel
             csv.AppendLine(string.Join(',', new[]
             {
                 Csv(item.CreatedAtUtc.ToString("O")), Csv(AuditActionLabel(item.ActionCode)),
-                Csv(item.ActorUsername), Csv(item.Details), Csv(item.IpAddress)
+                Csv(item.ActorUsername), Csv(AuditDetailsLabel(item)), Csv(item.IpAddress)
             }));
         }
 
@@ -538,6 +538,79 @@ public sealed class DetailsModel : PageModel
         "TenantRestored" => "استعادة المنظومة",
         _ => actionCode
     };
+
+    public string AuditDetailsLabel(PlatformPortalStore.AuditEvent audit)
+    {
+        var details = audit.Details?.Trim() ?? string.Empty;
+        if (details.Length == 0) return "لا توجد تفاصيل إضافية.";
+        if (Regex.IsMatch(details, "[\\u0600-\\u06FF]")) return details;
+
+        return audit.ActionCode switch
+        {
+            "TenantCreated" =>
+                $"تم إنشاء المنظومة وحساب المدير الأول. الخطة المسجلة وقت الإنشاء: {PlanLabel(LegacyValue(details, "Plan"))}.",
+            "LicenseUpdated" =>
+                $"تم تحديث الترخيص. الخطة: {PlanLabel(LegacyValue(details, "Plan"))}، الحالة: {LicenseStatusLabel(LegacyValue(details, "Status"))}.",
+            "TenantProfileUpdated" => "تم تحديث بيانات العميل وبيانات الاتصال الخاصة بالمنظومة.",
+            "TenantDomainsUpdated" =>
+                $"تم تحديث نطاقات المنظومة. النطاق الفرعي: {LegacyValue(details, "Subdomain")}، النطاق المخصص: {LegacyValue(details, "CustomDomain")}، حالة التحقق: بانتظار التحقق.",
+            "SubscriptionRenewed" => FormatLegacyRenewal(details),
+            "SubscriptionInvoiceVoided" => FormatLegacyInvoiceVoid(details),
+            "TenantArchived" => $"تمت أرشفة المنظومة وإيقاف الدخول إليها. السبب: {LegacyReason(details)}",
+            "TenantRestored" => $"تمت استعادة المنظومة بحالة موقوفة. السبب: {LegacyReason(details)}",
+            "TenantAdminPasswordReset" => "تمت إعادة تعيين كلمة مرور مدير المنظومة، وإنهاء جلساته النشطة، وإلزامه بتغييرها عند الدخول.",
+            "TenantAdminUnlocked" => "تم فك قفل حساب مدير المنظومة وإنهاء جلساته النشطة.",
+            "TenantAdminActivated" => "تم تفعيل حساب مدير المنظومة وإنهاء جلساته النشطة.",
+            "TenantAdminDeactivated" => "تم تعطيل حساب مدير المنظومة وإنهاء جلساته النشطة.",
+            _ => $"تم تنفيذ الإجراء الإداري. التفاصيل الأصلية: {details}"
+        };
+    }
+
+    private static string PlanLabel(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code == "-") return "غير محددة";
+        if (string.Equals(code, "Custom", StringComparison.OrdinalIgnoreCase)) return "مخصصة";
+        return PlatformPlanCatalog.Find(code)?.Name ?? code;
+    }
+
+    private static string LicenseStatusLabel(string? status) => status switch
+    {
+        "Active" => "فعال",
+        "Trial" => "تجريبي",
+        "Suspended" => "موقوف",
+        _ => string.IsNullOrWhiteSpace(status) ? "غير محددة" : status
+    };
+
+    private static string LegacyValue(string details, string key)
+    {
+        var match = Regex.Match(details, $@"(?:^|[.;]\s*){Regex.Escape(key)}=([^;]+)", RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value.Trim().TrimEnd('.') : "غير محدد";
+    }
+
+    private static string LegacyReason(string details)
+    {
+        var match = Regex.Match(details, @"Reason:\s*(.+?)(?:\s+License dates|$)", RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value.Trim().TrimEnd('.') : "غير محدد";
+    }
+
+    private static string FormatLegacyRenewal(string details)
+    {
+        var match = Regex.Match(
+            details,
+            @"Subscription renewed for\s+(\d+)\s+month\(s\)\.\s*Invoice=([^;]+);\s*Amount=(.+)$",
+            RegexOptions.IgnoreCase);
+        return match.Success
+            ? $"تم تجديد الاشتراك لمدة {match.Groups[1].Value} شهر. رقم الفاتورة: {match.Groups[2].Value.Trim()}، المبلغ: {match.Groups[3].Value.Trim()}."
+            : "تم تجديد الاشتراك وتسجيل الدفعة الخارجية.";
+    }
+
+    private static string FormatLegacyInvoiceVoid(string details)
+    {
+        var match = Regex.Match(details, @"Invoice\s+(.+?)\s+voided\.\s*Reason:\s*(.+?)\s+License dates", RegexOptions.IgnoreCase);
+        return match.Success
+            ? $"تم إلغاء الفاتورة {match.Groups[1].Value.Trim()}. السبب: {match.Groups[2].Value.Trim()}. لم تتغير تواريخ الترخيص تلقائياً."
+            : "تم إلغاء فاتورة الاشتراك، ولم تتغير تواريخ الترخيص تلقائياً.";
+    }
 
     public string PaymentMethodLabel(string paymentMethod) =>
         PaymentMethods.TryGetValue(paymentMethod, out var label) ? label : paymentMethod;

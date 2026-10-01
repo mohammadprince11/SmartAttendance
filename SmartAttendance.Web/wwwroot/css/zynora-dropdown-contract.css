@@ -1,0 +1,259 @@
+/*
+ * ZYNORA dropdown contract
+ *
+ * This is deliberately loaded after page CSS in every application layout.
+ * Pages may still control a field's width and grid placement, but the visible
+ * control, popup and option states come from this file.
+ */
+
+:root {
+    --zy-dd-height: 44px;
+    --zy-dd-radius: 12px;
+    --zy-dd-option-radius: 8px;
+    --zy-dd-field: var(--surface-input, #0b1a2d);
+    --zy-dd-panel: var(--surface-input, #0d1c2e);
+    --zy-dd-option-active: #203247;
+    --zy-dd-border: #36516c;
+    --zy-dd-border-focus: #6d91b2;
+    --zy-dd-text: var(--color-text-primary, #eef3f8);
+    --zy-dd-muted: var(--color-text-secondary, #91a4b7);
+    --zy-dd-shadow: 0 18px 42px rgba(0, 0, 0, .36);
+}
+
+/* The generated select control. Repeating the component class is intentional:
+   older page bundles use !important and high-specificity selectors. */
+html body .nxcs-select.nxcs-select {
+    min-height: var(--zy-dd-height) !important;
+    height: var(--zy-dd-height) !important;
+    max-height: var(--zy-dd-height) !important;
+    direction: inherit !important;
+}
+
+html body .nxcs-select.nxcs-select .nxcs-trigger.nxcs-trigger,
+html body #employee-create-form .nxcs-trigger.nxcs-trigger,
+html body #employee-edit-form .nxcs-trigger.nxcs-trigger,
+html body #positionForm .nxcs-trigger.nxcs-trigger {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: var(--zy-dd-height) !important;
+    height: var(--zy-dd-height) !important;
+    max-height: var(--zy-dd-height) !important;
+    padding: 0 12px !important;
+    gap: 10px !important;
+    border: 1px solid var(--zy-dd-border) !important;
+    border-radius: var(--zy-dd-radius) !important;
+    background: var(--zy-dd-field) !important;
+    background-image: none !important;
+    color: var(--zy-dd-text) !important;
+    box-shadow: none !important;
+    font: inherit !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    text-align: start !important;
+}
+
+html body .nxcs-select.nxcs-select .nxcs-trigger.nxcs-trigger:hover,
+html body .nxcs-select.nxcs-select.is-open .nxcs-trigger.nxcs-trigger,
+html body .nxcs-select.nxcs-select .nxcs-trigger.nxcs-trigger:focus,
+html body .nxcs-select.nxcs-select .nxcs-trigger.nxcs-trigger:focus-visible,
+html body #employee-create-form .nxcs-select.is-open .nxcs-trigger.nxcs-trigger,
+html body #employee-edit-form .nxcs-select.is-open .nxcs-trigger.nxcs-trigger,
+html body #positionForm .nxcs-select.is-open .nxcs-trigger.nxcs-trigger {
+    border-color: var(--zy-dd-border-focus) !important;
+    background: var(--zy-dd-field) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--zy-dd-border-focus) 20%, transparent) !important;
+    outline: 0 !important;
+}
+
+html body .nxcs-select .nxcs-value.nxcs-value,
+html body #employee-create-form .nxcs-value.nxcs-value,
+html body #employee-edit-form .nxcs-value.nxcs-value,
+html body #positionForm .nxcs-value.nxcs-value {
+    color: var(--zy-dd-text) !important;
+    font: inherit !important;
+    font-weight: 800 !important;
+    text-align: start !important;
+}
+
+html body .nxcs-select .nxcs-caret.nxcs-caret,
+html body #employee-create-form .nxcs-caret.nxcs-caret,
+html body #employee-edit-form .nxcs-caret.nxcs-caret,
+html body #positionForm .nxcs-caret.nxcs-caret {
+    width: 15px !important;
+    height: 15px !important;
+    flex: 0 0 15px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--zy-dd-muted) !important;
+}
+
+html body > .nxcs-panel.nxcs-panel,
+html body:has(#employee-create-form) > .nxcs-panel.nxcs-panel,
+html body:has(#employee-edit-form) > .nxcs-panel.nxcs-panel {
+    gap: 0 !important;
+    padding: 6px !important;
+    border: 1px solid var(--zy-dd-border) !important;
+    border-radius: var(--zy-dd-radius) !important;
+    background: var(--zy-dd-panel) !important;
+    background-image: none !important;
+    box-shadow: var(--zy-dd-shadow) !important;
+    color: var(--zy-dd-text) !important;
+}
+
+html body > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option,
+html body:has(#employee-create-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option,
+html body:has(#employee-edit-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option {
+    width: 100% !important;
+    min-height: 38px !important;
+    padding: 8px 10px !important;
+    border: 0 !important;
+    border-radius: var(--zy-dd-option-radius) !important;
+    background: transparent !important;
+    background-image: none !important;
+    color: var(--zy-dd-text) !important;
+    font: inherit !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+    text-align: start !important;
+}
+
+html body > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option:hover,
+html body > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option:focus,
+html body > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option.is-selected,
+html body:has(#employee-create-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option:hover,
+html body:has(#employee-create-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option:focus,
+html body:has(#employee-create-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option.is-selected,
+html body:has(#employee-edit-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option:hover,
+html body:has(#employee-edit-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option:focus,
+html body:has(#employee-edit-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-option.is-selected {
+    background: var(--zy-dd-option-active) !important;
+    background-image: none !important;
+    color: var(--zy-dd-text) !important;
+    outline: 0 !important;
+}
+
+/* Searchable setup variant: same shell and rows, with a search field inside. */
+html body .nx-search-select .nx-search-select__button,
+html body .nxex-csel .nxex-csel-trigger {
+    min-height: var(--zy-dd-height) !important;
+    height: var(--zy-dd-height) !important;
+    padding: 0 12px !important;
+    border: 1px solid var(--zy-dd-border) !important;
+    border-radius: var(--zy-dd-radius) !important;
+    background: var(--zy-dd-field) !important;
+    background-image: none !important;
+    color: var(--zy-dd-text) !important;
+    box-shadow: none !important;
+    font: inherit !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+}
+
+html body .nx-search-select.is-open .nx-search-select__button,
+html body .nx-search-select .nx-search-select__button:hover,
+html body .nx-search-select .nx-search-select__button:focus-visible,
+html body .nxex-csel.open .nxex-csel-trigger,
+html body .nxex-csel .nxex-csel-trigger:hover,
+html body .nxex-csel .nxex-csel-trigger:focus-visible {
+    border-color: var(--zy-dd-border-focus) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--zy-dd-border-focus) 20%, transparent) !important;
+    outline: 0 !important;
+}
+
+html body .nx-search-select .nx-search-select__panel,
+html body .nxex-csel .nxex-csel-list,
+html body .nxr-search-dropdown,
+html body .z360-time-suggestion-list {
+    padding: 6px !important;
+    border: 1px solid var(--zy-dd-border) !important;
+    border-radius: var(--zy-dd-radius) !important;
+    background: var(--zy-dd-panel) !important;
+    background-image: none !important;
+    box-shadow: var(--zy-dd-shadow) !important;
+    color: var(--zy-dd-text) !important;
+}
+
+html body .nx-search-select .nx-search-select__option,
+html body .nxex-csel .nxex-csel-opt {
+    min-height: 38px !important;
+    padding: 8px 10px !important;
+    border: 0 !important;
+    border-radius: var(--zy-dd-option-radius) !important;
+    background: transparent !important;
+    color: var(--zy-dd-text) !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    text-align: start !important;
+}
+
+html body .nx-search-select .nx-search-select__option:hover,
+html body .nx-search-select .nx-search-select__option:focus,
+html body .nx-search-select .nx-search-select__option.is-selected,
+html body .nxex-csel .nxex-csel-opt:hover,
+html body .nxex-csel .nxex-csel-opt:focus,
+html body .nxex-csel .nxex-csel-opt[aria-selected="true"] {
+    background: var(--zy-dd-option-active) !important;
+    color: var(--zy-dd-text) !important;
+    outline: 0 !important;
+}
+
+html body .nx-search-select .nx-search-select__search {
+    min-height: 40px !important;
+    border: 1px solid var(--zy-dd-border) !important;
+    border-radius: 9px !important;
+    background: color-mix(in srgb, var(--zy-dd-field) 88%, black) !important;
+    color: var(--zy-dd-text) !important;
+}
+
+/* Native multi-selects cannot be represented by the single-choice popup. */
+html body select[multiple],
+html body select[size]:not([size="1"]),
+html body select.zynora-native-only {
+    width: 100%;
+    min-height: calc(var(--zy-dd-height) * 2.6);
+    padding: 6px !important;
+    border: 1px solid var(--zy-dd-border) !important;
+    border-radius: var(--zy-dd-radius) !important;
+    background: var(--zy-dd-panel) !important;
+    color: var(--zy-dd-text) !important;
+    font: inherit !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    outline: 0 !important;
+}
+
+html body select[multiple] option,
+html body select[size]:not([size="1"]) option {
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: var(--zy-dd-option-radius);
+}
+
+html body select[multiple] option:checked,
+html body select[size]:not([size="1"]) option:checked {
+    background: var(--zy-dd-option-active) linear-gradient(var(--zy-dd-option-active), var(--zy-dd-option-active));
+    color: var(--zy-dd-text);
+}
+
+/* Light theme keeps the same geometry and interaction contract. */
+html[data-theme="light"] {
+    --zy-dd-field: #ffffff;
+    --zy-dd-panel: #ffffff;
+    --zy-dd-option-active: #e7eef5;
+    --zy-dd-border: #aebfce;
+    --zy-dd-border-focus: #557b9d;
+    --zy-dd-text: #15293b;
+    --zy-dd-muted: #647b8f;
+    --zy-dd-shadow: 0 18px 42px rgba(28, 49, 68, .18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nxcs-caret,
+    .nx-search-select__arrow,
+    .nxex-csel-trigger svg {
+        transition: none !important;
+    }
+}

@@ -150,6 +150,9 @@ public sealed class UnifiedPageDesignContractTests
         Assert.Contains(".zy-login-shell .zynora-content", refresh, StringComparison.Ordinal);
         Assert.Contains("padding: 0 !important", refresh, StringComparison.Ordinal);
         Assert.Contains("min-height: 100dvh !important", refresh, StringComparison.Ordinal);
+        Assert.DoesNotContain("[class*=\"-card\"]", refresh, StringComparison.Ordinal);
+        Assert.Contains("[class$=\"-card\"]", refresh, StringComparison.Ordinal);
+        Assert.Contains("[class*=\"-card \"]", refresh, StringComparison.Ordinal);
 
         foreach (var selector in new[]
                  {
@@ -189,6 +192,20 @@ public sealed class UnifiedPageDesignContractTests
         Assert.Contains("<span>احتساب الرواتب</span>", layout, StringComparison.Ordinal);
         Assert.DoesNotContain("/Payroll/Runs\" class=\"zynora-nav-link ky-drawer-title", layout, StringComparison.Ordinal);
         Assert.Contains("/Payroll/Runs\" class=\"zynora-nav-link @(", layout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsCenter_IsASingleDirectNavigationLink()
+    {
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
+
+        Assert.Contains("asp-page=\"/Settings/Index\"", layout, StringComparison.Ordinal);
+        Assert.Contains("class=\"zynora-nav-link zynora-root-link @(", layout, StringComparison.Ordinal);
+        Assert.Contains("data-nav-area=\"settings\"", layout, StringComparison.Ordinal);
+        Assert.Contains("<span>الإعدادات</span>", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("<summary data-nav-area=\"settings\"", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-ky-title=\"الإعدادات\"", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Settings/Index\" class=\"zynora-nav-link ky-drawer-title", layout, StringComparison.Ordinal);
     }
 
     [Fact]

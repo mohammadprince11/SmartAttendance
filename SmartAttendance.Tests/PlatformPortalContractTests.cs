@@ -126,6 +126,12 @@ public sealed class PlatformPortalContractTests
         var companyConfiguration = Read(root, "SmartAttendance.Infrastructure", "Persistence", "Configurations", "CompanyConfiguration.cs");
         var employeeConfiguration = Read(root, "SmartAttendance.Infrastructure", "Persistence", "Configurations", "EmployeeConfiguration.cs");
         var deviceConfiguration = Read(root, "SmartAttendance.Infrastructure", "Persistence", "Configurations", "DeviceConfiguration.cs");
+        var smartOnboardingReview = Read(
+            root,
+            "SmartAttendance.Web",
+            "Pages",
+            "Employees",
+            "SmartOnboardingReview.cshtml.cs");
 
         Assert.Contains("20261001-03-license-capacity-guards", migration, StringComparison.Ordinal);
         Assert.Contains("TR_LicenseCapacity_Companies", migration, StringComparison.Ordinal);
@@ -138,6 +144,10 @@ public sealed class PlatformPortalContractTests
         Assert.Contains("UseSqlOutputClause(false)", companyConfiguration, StringComparison.Ordinal);
         Assert.Contains("UseSqlOutputClause(false)", employeeConfiguration, StringComparison.Ordinal);
         Assert.Contains("UseSqlOutputClause(false)", deviceConfiguration, StringComparison.Ordinal);
+        Assert.Contains("GetEmployeeLicenseCapacityAsync", smartOnboardingReview, StringComparison.Ordinal);
+        Assert.Contains("SqlException { Number: 51042 }", smartOnboardingReview, StringComparison.Ordinal);
+        Assert.Contains("حد الترخيص مكتمل", smartOnboardingReview, StringComparison.Ordinal);
+        Assert.Contains("return RedirectToSelf();", smartOnboardingReview, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -187,6 +197,9 @@ public sealed class PlatformPortalContractTests
         Assert.Contains("\"Enterprise\"", plans, StringComparison.Ordinal);
         Assert.Contains("ListTenantAuditAsync", store, StringComparison.Ordinal);
         Assert.Contains("سجل التدقيق", details, StringComparison.Ordinal);
+        Assert.Contains("AuditDetailsLabel(audit)", details, StringComparison.Ordinal);
+        Assert.Contains("تم إنشاء المنظومة وحساب المدير الأول", store, StringComparison.Ordinal);
+        Assert.DoesNotContain("Created tenant and initial administrator", store, StringComparison.Ordinal);
         Assert.Contains("اشتراكات تحتاج متابعة", index, StringComparison.Ordinal);
         Assert.Contains("platform-portal.js", layout, StringComparison.Ordinal);
     }

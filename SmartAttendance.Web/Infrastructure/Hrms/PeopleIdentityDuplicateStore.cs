@@ -20,16 +20,24 @@ public static class PeopleIdentityDuplicateStore
     public static async Task<IdentityDuplicateResult> FindAsync(
         ApplicationDbContext db,
         PeopleDataScope requesterScope,
+        IReadOnlyCollection<int> tenantCompanyIds,
         int currentCompanyId,
         string documentType,
         string? documentNumber)
     {
         ArgumentNullException.ThrowIfNull(requesterScope);
+        ArgumentNullException.ThrowIfNull(tenantCompanyIds);
 
         var normalized = IdentityDocumentNormalizer.NormalizeNumber(documentNumber);
         var settings = await PeopleAiSettingsStore.GetAsync(db, currentCompanyId);
+        var companyIds = tenantCompanyIds
+            .Where(id => id > 0)
+            .Distinct()
+            .ToArray();
 
-        if (normalized.Length == 0)
+        if (normalized.Length == 0 ||
+            companyIds.Length == 0 ||
+            !companyIds.Contains(currentCompanyId))
         {
             return new IdentityDuplicateResult(
                 documentType,
@@ -40,9 +48,13 @@ public static class PeopleIdentityDuplicateStore
 
         await PeopleIdentityBootstrap.EnsureLegacyIdentityRowsAsync(db);
 
+        var companyParameters = companyIds
+            .Select((_, index) => $"@TenantCompany{index}")
+            .ToArray();
+
         var rows = await HrmsDatabase.QueryAsync(
             db,
-            """
+            $"""
 SELECT d.EmployeeId, d.CompanyId, e.BranchId, e.DepartmentId,
        ISNULL(e.EmployeeNo, '') AS EmployeeNo,
        ISNULL(e.FullName, '') AS FullName,
@@ -52,6 +64,7 @@ FROM dbo.EmployeeIdentityDocuments d
 JOIN dbo.Employees e ON e.Id = d.EmployeeId
 WHERE d.DocumentType = @DocumentType
   AND d.NormalizedDocumentNumber = @NormalizedNumber
+  AND d.CompanyId IN ({string.Join(", ", companyParameters)})
   AND d.IsCurrent = 1
   AND ISNULL(e.IsDeleted, 0) = 0;
 """,
@@ -59,6 +72,13 @@ WHERE d.DocumentType = @DocumentType
             {
                 HrmsDatabase.AddParameter(command, "@DocumentType", documentType);
                 HrmsDatabase.AddParameter(command, "@NormalizedNumber", normalized);
+                for (var index = 0; index < companyIds.Length; index++)
+                {
+                    HrmsDatabase.AddParameter(
+                        command,
+                        companyParameters[index],
+                        companyIds[index]);
+                }
             },
             reader => new CandidateRow(
                 HrmsDatabase.GetInt(reader, "EmployeeId"),

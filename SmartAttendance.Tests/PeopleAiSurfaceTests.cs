@@ -292,6 +292,9 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("sor-confidence--@confidenceBand", page);
         Assert.Contains("CrossDocumentComparisons", page);
         Assert.Contains("مقارنة البيانات بين المستندات", page);
+        Assert.Contains("التطابق بين القيم: 100%", page);
+        Assert.Contains("ثقة الاستخراج:", page);
+        Assert.Contains("حالة المراجعة:", page);
         Assert.Contains("RefreshCrossDocumentIssuesAsync", model);
         Assert.Contains("UpsertDynamicIssueAsync", store);
         Assert.Contains("CROSS_DOCUMENT_", model);
@@ -531,6 +534,23 @@ public sealed class PeopleAiSurfaceTests
         Assert.Contains("_options.JobTimeoutSeconds + 30", processor);
         Assert.Contains("recoveryInterval", processor);
         Assert.Contains("nextRecoveryAt = utcNow.Add(recoveryInterval)", processor);
+    }
+
+    [Fact]
+    public void SmartOnboarding_DoesNotCreateAnUnserviceableQueue()
+    {
+        var root = FindRoot();
+        var model = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Employees",
+            "SmartOnboarding.cshtml.cs"));
+
+        Assert.Contains("_workerOptions.IsUsable", model);
+        Assert.Contains(
+            "لم يُضف المستند إلى طابور غير قابل للتنفيذ",
+            model);
+        Assert.Contains(
+            "لن يتحرك الطابور حتى تُصحح خدمة People AI",
+            model);
     }
 
     private static string FindRoot()

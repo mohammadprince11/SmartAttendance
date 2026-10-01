@@ -456,7 +456,7 @@
                             <strong>@Model.AuditActionLabel(audit.ActionCode)</strong>
                             <time datetime="@audit.CreatedAtUtc.ToString("O")">@audit.CreatedAtUtc.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</time>
                         </div>
-                        <p>@audit.Details</p>
+                        <p>@Model.AuditDetailsLabel(audit)</p>
                         <small>بواسطة @audit.ActorUsername@(string.IsNullOrWhiteSpace(audit.IpAddress) ? null : $" — {audit.IpAddress}")</small>
                     </div>
                 </li>

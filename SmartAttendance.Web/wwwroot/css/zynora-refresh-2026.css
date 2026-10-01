@@ -416,7 +416,7 @@ html[data-theme="light"] .zynora-nav-link[aria-current="page"] {
 .zy-ui-contract .zy-card,
 .zy-ui-contract .zy-filter-bar,
 .zy-ui-contract .zy-table-wrap,
-.zy-ui-contract :where(.card, .panel, [class*="-card"]):not(.nxcal__panel) {
+.zy-ui-contract :where(.card, .panel, [class$="-card"], [class*="-card "]):not(.nxcal__panel) {
     border: 1px solid var(--zy-border) !important;
     border-radius: 14px !important;
     background: var(--zy-surface) !important;

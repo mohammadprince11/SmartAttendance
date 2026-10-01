@@ -110,20 +110,15 @@ builder.Services.Configure<SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiW
     builder.Configuration.GetSection(
         SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions.SectionName));
 
-var peopleAiWorkerOptions = builder.Configuration
-    .GetSection(SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions.SectionName)
-    .Get<SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions>()
-    ?? new SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions();
-
 builder.Services.AddSingleton<
     SmartAttendance.Web.Infrastructure.PeopleAi.ILocalOcrProcessClient,
     SmartAttendance.Web.Infrastructure.PeopleAi.LocalOcrProcessClient>();
 
-if (peopleAiWorkerOptions.IsUsable)
-{
-    builder.Services.AddHostedService<
-        SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiJobProcessorService>();
-}
+// Register the queue supervisor even when configuration is incomplete. It
+// reports the disabled state explicitly, while usable configurations keep
+// retrying transient OCR startup failures instead of abandoning queued jobs.
+builder.Services.AddHostedService<
+    SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiJobProcessorService>();
 
 // مقاييس الطلبات بالذاكرة (FIX-004 · OBS-006): خطُّ الأساس الذي كان مفقوداً —
 // زمن الطلب وP95 ومعدّل الأخطاء لكل مسار. Singleton لأن الحالة مشتركة عبر الطلبات.

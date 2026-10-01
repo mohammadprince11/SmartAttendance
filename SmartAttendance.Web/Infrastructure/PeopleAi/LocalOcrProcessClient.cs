@@ -13,6 +13,7 @@ public sealed class PeopleAiWorkerOptions
     public string PythonExecutable { get; set; } = string.Empty;
     public string ScriptPath { get; set; } = "PeopleAI/local_ocr_worker.py";
     public int PollSeconds { get; set; } = 2;
+    public int StartupRetrySeconds { get; set; } = 5;
     public int StartupTimeoutSeconds { get; set; } = 180;
     public int JobTimeoutSeconds { get; set; } = 180;
     public int MaxImageSide { get; set; } = 1600;
@@ -38,6 +39,7 @@ public sealed class PeopleAiWorkerOptions
     public string Device { get; set; } = "auto";
     public string Language { get; set; } = "ar";
     public string TempDirectory { get; set; } = string.Empty;
+    public string PaddleCacheDirectory { get; set; } = string.Empty;
 
     public bool IsUsable =>
         Enabled &&
@@ -398,6 +400,18 @@ public sealed class LocalOcrProcessClient :
             string.IsNullOrWhiteSpace(_options.Language)
                 ? "ar"
                 : _options.Language.Trim();
+
+        if (!string.IsNullOrWhiteSpace(_options.PaddleCacheDirectory))
+        {
+            var cacheDirectory = Path.IsPathRooted(
+                    _options.PaddleCacheDirectory)
+                ? Path.GetFullPath(_options.PaddleCacheDirectory)
+                : Path.GetFullPath(Path.Combine(
+                    _environment.ContentRootPath,
+                    _options.PaddleCacheDirectory));
+            startInfo.Environment["PADDLE_PDX_CACHE_HOME"] =
+                cacheDirectory;
+        }
 
         if (!string.IsNullOrWhiteSpace(_options.TempDirectory))
         {

@@ -93,6 +93,7 @@ PeopleAIWorker__Device=auto
 PeopleAIWorker__Language=ar
 PeopleAIWorker__TempDirectory=/var/lib/zynora/people-ai/tmp
 PADDLE_PDX_CACHE_HOME=/var/lib/zynora/people-ai/paddlex-cache
+PeopleAIWorker__StartupRetrySeconds=5
 PeopleAIWorker__MaxImageSide=1600
 PeopleAIWorker__TextDetectionModel=PP-OCRv5_mobile_det
 PeopleAIWorker__ArabicRecognitionModel=arabic_PP-OCRv5_mobile_rec
@@ -131,5 +132,7 @@ Before queue processing starts, ZYNORA now verifies:
 9. CPU/GPU device selection is valid;
 10. OCR models initialize successfully.
 
-A failure stops only People AI queue processing and writes a Critical startup
-diagnostic. It does not start consuming jobs in a partially initialized state.
+A failure pauses only People AI queue processing, writes a startup diagnostic,
+and retries with bounded exponential backoff. It never consumes jobs from a
+partially initialized worker, and a transient Python/model/cache failure no
+longer strands the queue until the whole web application is restarted.

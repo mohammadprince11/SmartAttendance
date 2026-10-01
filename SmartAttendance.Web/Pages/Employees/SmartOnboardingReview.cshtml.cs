@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -750,6 +751,17 @@ public sealed class SmartOnboardingReviewModel : PageModel
             return RedirectToSelf();
         }
 
+        var licenseCapacity =
+            await GetEmployeeLicenseCapacityAsync();
+
+        if (licenseCapacity is null ||
+            licenseCapacity.UsedEmployees >= licenseCapacity.MaxEmployees)
+        {
+            TempData["SmartOnboardingReviewError"] =
+                BuildEmployeeLicenseLimitMessage(licenseCapacity);
+            return RedirectToSelf();
+        }
+
         await EmployeeRecordsSchema.EnsureAsync(_db);
 
         await using var transaction =
@@ -948,18 +960,105 @@ WHERE Id = @EmployeeId
                 "/Employees/Profile",
                 new { id = employeeId.Value });
         }
+        catch (Exception exception)
+            when (IsEmployeeLicenseLimitException(exception))
+        {
+            await transaction.RollbackAsync(
+                HttpContext.RequestAborted);
+
+            DeletePromotedFiles(promotedFiles.Values);
+            _db.ChangeTracker.Clear();
+
+            TempData["SmartOnboardingReviewError"] =
+                BuildEmployeeLicenseLimitMessage(
+                    await GetEmployeeLicenseCapacityAsync());
+            return RedirectToSelf();
+        }
         catch
         {
             await transaction.RollbackAsync(
                 HttpContext.RequestAborted);
 
-            foreach (var promoted in promotedFiles.Values)
-            {
-                _protectedFiles.TryDelete(
-                    promoted.StoredPath);
-            }
+            DeletePromotedFiles(promotedFiles.Values);
 
             throw;
+        }
+    }
+
+    private sealed record EmployeeLicenseCapacity(
+        long UsedEmployees,
+        int MaxEmployees);
+
+    private async Task<EmployeeLicenseCapacity?>
+        GetEmployeeLicenseCapacityAsync()
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _db,
+            """
+SELECT TOP (1)
+       usage.UsedEmployees,
+       license.MaxEmployees
+FROM dbo.Companies selectedCompany
+INNER JOIN dbo.TenantLicenses license
+    ON license.TenantId = selectedCompany.TenantId
+CROSS APPLY
+(
+    SELECT COUNT_BIG(*) AS UsedEmployees
+    FROM dbo.Employees employee
+    LEFT JOIN dbo.Branches branch ON branch.Id = employee.BranchId
+    INNER JOIN dbo.Companies employeeCompany
+        ON employeeCompany.Id = COALESCE(employee.CompanyId, branch.CompanyId)
+    WHERE employeeCompany.TenantId = selectedCompany.TenantId
+      AND employee.IsDeleted = 0
+) usage
+WHERE selectedCompany.Id = @CompanyId
+  AND selectedCompany.IsDeleted = 0;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@CompanyId",
+                CompanyId),
+            reader => new EmployeeLicenseCapacity(
+                HrmsDatabase.GetLong(reader, "UsedEmployees"),
+                HrmsDatabase.GetInt(reader, "MaxEmployees")));
+
+        return rows.FirstOrDefault();
+    }
+
+    private static string BuildEmployeeLicenseLimitMessage(
+        EmployeeLicenseCapacity? capacity)
+    {
+        if (capacity is null)
+        {
+            return "لا يمكن إنشاء موظف جديد لأن ترخيص المنظومة غير مكتمل. راجع إدارة المنصة.";
+        }
+
+        return
+            $"لا يمكن إنشاء موظف جديد لأن حد الترخيص مكتمل ({capacity.UsedEmployees} من {capacity.MaxEmployees}). راجع إدارة المنصة لزيادة الحد المسموح للموظفين.";
+    }
+
+    private static bool IsEmployeeLicenseLimitException(
+        Exception exception)
+    {
+        for (var current = exception;
+             current is not null;
+             current = current.InnerException)
+        {
+            if (current is SqlException { Number: 51042 })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void DeletePromotedFiles(
+        IEnumerable<PromotedEmployeeFile> promotedFiles)
+    {
+        foreach (var promoted in promotedFiles)
+        {
+            _protectedFiles.TryDelete(promoted.StoredPath);
         }
     }
 
@@ -1563,6 +1662,7 @@ END;
             var result = await PeopleIdentityDuplicateStore.FindAsync(
                 _db,
                 access.Scope,
+                access.TenantCompanyIds,
                 CompanyId,
                 type,
                 normalized);
@@ -1666,6 +1766,7 @@ END;
             var result = await PeopleIdentityDuplicateStore.FindAsync(
                 _db,
                 access.Scope,
+                access.TenantCompanyIds,
                 CompanyId,
                 type,
                 normalized);

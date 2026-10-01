@@ -11,6 +11,7 @@ public sealed record PeopleAiAccessContext(
     int? SystemUserId,
     bool IsAdmin,
     PeopleDataScope Scope,
+    HashSet<int> TenantCompanyIds,
     HashSet<int> AllowedCompanyIds);
 
 public interface IPeopleAiSessionAccessService
@@ -30,13 +31,16 @@ public sealed class PeopleAiSessionAccessService :
 {
     private readonly ApplicationDbContext _db;
     private readonly IEffectiveScopeService _effectiveScopeService;
+    private readonly ICompanyScopeProvider _companyScope;
 
     public PeopleAiSessionAccessService(
         ApplicationDbContext db,
-        IEffectiveScopeService effectiveScopeService)
+        IEffectiveScopeService effectiveScopeService,
+        ICompanyScopeProvider companyScope)
     {
         _db = db;
         _effectiveScopeService = effectiveScopeService;
+        _companyScope = companyScope;
     }
 
     public async Task<PeopleAiAccessContext> ResolveAsync(
@@ -54,14 +58,25 @@ public sealed class PeopleAiSessionAccessService :
                 isAdmin,
                 cancellationToken);
 
-        HashSet<int> companyIds;
-        if (scope.IsUnrestricted && !scope.IsDeniedAll)
+        var tenantScope = await _companyScope.GetAsync(cancellationToken);
+        HashSet<int> tenantCompanyIds;
+        if (tenantScope.IsUnrestricted)
         {
-            companyIds = await _db.Companies
+            tenantCompanyIds = await _db.Companies
                 .AsNoTracking()
                 .Where(x => !x.IsDeleted && x.IsActive)
                 .Select(x => x.Id)
                 .ToHashSetAsync(cancellationToken);
+        }
+        else
+        {
+            tenantCompanyIds = tenantScope.AllowedCompanyIds.ToHashSet();
+        }
+
+        HashSet<int> companyIds;
+        if (scope.IsUnrestricted && !scope.IsDeniedAll)
+        {
+            companyIds = tenantCompanyIds;
         }
         else
         {
@@ -77,12 +92,14 @@ public sealed class PeopleAiSessionAccessService :
 
             companyIds.UnionWith(scopedCompanyIds);
             companyIds.ExceptWith(scope.DeniedCompanyIds);
+            companyIds.IntersectWith(tenantCompanyIds);
         }
 
         return new PeopleAiAccessContext(
             systemUserId,
             isAdmin,
             scope,
+            tenantCompanyIds,
             companyIds);
     }
 

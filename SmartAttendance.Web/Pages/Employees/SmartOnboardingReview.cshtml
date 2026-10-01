@@ -16,6 +16,15 @@
         _ => value
     };
 
+    string ReviewStatusLabel(string value) => value switch
+    {
+        "Pending" => "بانتظار المراجعة",
+        "Accepted" => "معتمد",
+        "Modified" => "معدّل ومعتمد",
+        "Rejected" => "مرفوض",
+        _ => value
+    };
+
     string DocumentTypeFor(
         SmartAttendance.Web.Infrastructure.Hrms.PeopleAiReviewStore.ReviewField field)
     {
@@ -502,7 +511,9 @@
                                     <small>@comparison.Severity</small>
                                 </div>
                                 <span>
-                                    @(comparison.HasConflict ? "تعارض يحتاج قرار" : "متطابق")
+                                    @(comparison.HasConflict
+                                        ? "تعارض يحتاج قرار"
+                                        : "التطابق بين القيم: 100%")
                                 </span>
                             </header>
                             <div class="sor-cross-values">
@@ -511,12 +522,12 @@
                                     <div>
                                         <small>@value.DocumentType · @value.DocumentName</small>
                                         <strong>@value.Value</strong>
+                                        <span>حالة المراجعة: @ReviewStatusLabel(value.ReviewStatus)</span>
                                         <span>
-                                            @value.ReviewStatus
-                                            @if (value.Confidence.HasValue)
-                                            {
-                                                <text> · @($"{value.Confidence.Value * 100m:0.0}%")</text>
-                                            }
+                                            ثقة الاستخراج:
+                                            @(value.Confidence.HasValue
+                                                ? $"{value.Confidence.Value * 100m:0.0}%"
+                                                : "غير متوفرة")
                                         </span>
                                     </div>
                                 }

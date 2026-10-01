@@ -44,52 +44,8 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
             return;
         }
 
-        var preflightStage = "ProtectedStorage";
-
-        try
+        if (!await WaitForWorkerReadinessAsync(stoppingToken))
         {
-            var protectedRoot =
-                OnboardingProtectedAssetService.ResolveRoot(
-                    _environment.ContentRootPath);
-            Directory.CreateDirectory(protectedRoot);
-
-            var probePath = Path.Combine(
-                protectedRoot,
-                $".people-ai-worker-probe-{Guid.NewGuid():N}");
-            await File.WriteAllTextAsync(
-                probePath,
-                "zynora",
-                stoppingToken);
-            File.Delete(probePath);
-
-            preflightStage = "LocalOcrHandshake";
-            await _ocr.EnsureReadyAsync(stoppingToken);
-        }
-        catch (OperationCanceledException)
-            when (stoppingToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception exception)
-        {
-            var startupErrorCode = MapStartupErrorCode(exception);
-
-            if (_environment.IsDevelopment())
-            {
-                _logger.LogCritical(
-                    exception,
-                    "People AI OCR startup preflight failed. Stage={Stage} Error={ErrorCode}. Queue processing will not start.",
-                    preflightStage,
-                    startupErrorCode);
-            }
-            else
-            {
-                _logger.LogCritical(
-                    "People AI OCR startup preflight failed. Stage={Stage} Error={ErrorCode}. Queue processing will not start.",
-                    preflightStage,
-                    startupErrorCode);
-            }
-
             return;
         }
 
@@ -165,6 +121,103 @@ public sealed class PeopleAiJobProcessorService : BackgroundService
                 await Task.Delay(idleDelay, stoppingToken);
             }
         }
+    }
+
+    private async Task<bool> WaitForWorkerReadinessAsync(
+        CancellationToken stoppingToken)
+    {
+        var attempt = 0;
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var preflightStage = "ProtectedStorage";
+
+            try
+            {
+                var protectedRoot =
+                    OnboardingProtectedAssetService.ResolveRoot(
+                        _environment.ContentRootPath);
+                Directory.CreateDirectory(protectedRoot);
+
+                var probePath = Path.Combine(
+                    protectedRoot,
+                    $".people-ai-worker-probe-{Guid.NewGuid():N}");
+                try
+                {
+                    await File.WriteAllTextAsync(
+                        probePath,
+                        "zynora",
+                        stoppingToken);
+                }
+                finally
+                {
+                    File.Delete(probePath);
+                }
+
+                preflightStage = "LocalOcrHandshake";
+                await _ocr.EnsureReadyAsync(stoppingToken);
+
+                if (attempt > 0)
+                {
+                    _logger.LogInformation(
+                        "People AI OCR startup recovered after {AttemptCount} failed attempts.",
+                        attempt);
+                }
+
+                return true;
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                return false;
+            }
+            catch (Exception exception)
+            {
+                attempt++;
+                var startupErrorCode = MapStartupErrorCode(exception);
+                var retryDelay = StartupRetryDelay(attempt);
+
+                if (_environment.IsDevelopment())
+                {
+                    _logger.LogError(
+                        exception,
+                        "People AI OCR startup preflight failed. Stage={Stage} Error={ErrorCode}. Retrying in {RetrySeconds} seconds.",
+                        preflightStage,
+                        startupErrorCode,
+                        retryDelay.TotalSeconds);
+                }
+                else
+                {
+                    _logger.LogError(
+                        "People AI OCR startup preflight failed. Stage={Stage} Error={ErrorCode}. Retrying in {RetrySeconds} seconds.",
+                        preflightStage,
+                        startupErrorCode,
+                        retryDelay.TotalSeconds);
+                }
+
+                try
+                {
+                    await Task.Delay(retryDelay, stoppingToken);
+                }
+                catch (OperationCanceledException)
+                    when (stoppingToken.IsCancellationRequested)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private TimeSpan StartupRetryDelay(int attempt)
+    {
+        var baseSeconds = Math.Clamp(
+            _options.StartupRetrySeconds,
+            1,
+            60);
+        var multiplier = 1 << Math.Min(Math.Max(0, attempt - 1), 4);
+        return TimeSpan.FromSeconds(Math.Min(60, baseSeconds * multiplier));
     }
 
     private async Task ProcessJobAsync(

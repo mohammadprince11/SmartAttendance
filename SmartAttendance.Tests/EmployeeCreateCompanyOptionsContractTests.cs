@@ -32,6 +32,21 @@ public sealed class EmployeeCreateCompanyOptionsContractTests
             StringComparison.Ordinal);
 
         Assert.Contains(
+            "ICompanyScopeProvider",
+            model,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "companyScope.AllowedCompanyIds",
+            model,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "tenantCompanyIds.Contains(item.Id)",
+            model,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
             "CompanyOptions.Select(item => item.Id)",
             model,
             StringComparison.Ordinal);

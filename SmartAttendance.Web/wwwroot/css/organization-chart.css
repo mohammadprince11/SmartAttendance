@@ -160,6 +160,7 @@
 
 /* --- Tree --- */
 .orgchart-canvas {
+    --org-connector: color-mix(in srgb, var(--sa-primary) 52%, var(--sa-border));
     background: var(--sa-surface);
     border: 1px solid var(--sa-border);
     border-radius: 18px;
@@ -199,18 +200,19 @@
     top: 0;
     width: 50%;
     height: 26px;
-    border-top: 2px solid var(--sa-border);
+    border-top: 3px solid var(--org-connector);
 }
 
 .org-tree-children > .org-tree-item::before { right: 50%; }
 .org-tree-children > .org-tree-item::after { left: 50%; }
 
-/* First/last children only need the inner half of the horizontal bar. */
-.org-tree-children > .org-tree-item:first-child::before,
-.org-tree-children > .org-tree-item:last-child::after { border-top: 0; }
+/* The chart is RTL: the first child sits on the right and the last on the left.
+   Remove only each outer half so the remaining rail still reaches the parent. */
+.org-tree-children > .org-tree-item:first-child::after,
+.org-tree-children > .org-tree-item:last-child::before { border-top: 0; }
 
 /* Vertical drop from each child up to the horizontal bar. */
-.org-tree-children > .org-tree-item::before { border-inline-start: 2px solid var(--sa-border); }
+.org-tree-children > .org-tree-item::before { border-right: 3px solid var(--org-connector); }
 
 /* Only child: single straight vertical line, no horizontal bar. */
 .org-tree-children > .org-tree-item:only-child::before,
@@ -224,7 +226,7 @@
     inset-inline-start: 50%;
     width: 0;
     height: 26px;
-    border-inline-start: 2px solid var(--sa-border);
+    border-right: 3px solid var(--org-connector);
 }
 
 .org-tree-item > .org-tree-children {
@@ -242,7 +244,7 @@
     border: 1px solid var(--sa-border);
     border-radius: 14px;
     padding: 10px 14px;
-    width: 240px;
+    width: 280px;
     text-align: start;
     vertical-align: top;
     transition: border-color .15s ease, box-shadow .15s ease;
@@ -297,9 +299,9 @@
     color: var(--sa-text);
     font-weight: 1000;
     font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .org-node-role {

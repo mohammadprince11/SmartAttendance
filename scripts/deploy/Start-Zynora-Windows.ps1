@@ -79,6 +79,15 @@ $env:ASPNETCORE_URLS =
     "https://0.0.0.0:5443;http://0.0.0.0:5080"
 $env:PADDLE_PDX_CACHE_HOME =
     "C:\ZynoraRuntime\PeopleAI\paddlex-cache"
+$env:PeopleAIWorker__Enabled = "true"
+$env:PeopleAIWorker__PythonExecutable =
+    "C:\ZynoraRuntime\PeopleAI\.venv\Scripts\python.exe"
+$env:PeopleAIWorker__ScriptPath = "PeopleAI/local_ocr_worker.py"
+$env:PeopleAIWorker__TempDirectory =
+    "C:\ZynoraRuntime\PeopleAI\tmp"
+$env:PeopleAIWorker__PaddleCacheDirectory =
+    "C:\ZynoraRuntime\PeopleAI\paddlex-cache"
+$env:PeopleAIWorker__StartupRetrySeconds = "5"
 
 
 # Windows/SQL startup settling time

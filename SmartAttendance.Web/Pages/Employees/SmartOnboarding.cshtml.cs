@@ -279,6 +279,16 @@ WHERE d.Id = @DocumentId
             Path.GetExtension(DocumentFile.FileName),
             DeclaredDocumentType);
 
+        if (processingContract.ShouldQueueAutomaticExtraction &&
+            !_workerOptions.IsUsable)
+        {
+            return UploadResponse(
+                false,
+                "محرك المعالجة المحلية غير متاح حالياً، لذلك لم يُضف المستند إلى طابور غير قابل للتنفيذ. راجع إعداد خدمة People AI ثم أعد المحاولة.",
+                companyId,
+                sessionId);
+        }
+
         if (!processingContract.Format.CanUpload ||
             !processingContract.Format.CanStore)
         {
@@ -344,6 +354,17 @@ WHERE d.Id = @DocumentId
         if (!_sessionAccess.CanAccessSession(session, companyId, access))
         {
             return Forbid();
+        }
+
+        if (!_workerOptions.IsUsable)
+        {
+            TempData["SmartOnboardingError"] =
+                "محرك المعالجة المحلية غير متاح حالياً. لم تتم إعادة المستند إلى الطابور.";
+            return RedirectToPage(new
+            {
+                CompanyId = companyId,
+                SessionId = sessionId
+            });
         }
 
         var requeued =
@@ -519,6 +540,14 @@ WHERE d.Id = @DocumentId
         Documents = await EmployeeOnboardingStore.ListDocumentsAsync(
             _db,
             Session!.Id);
+
+        if (!_workerOptions.IsUsable &&
+            Documents.Any(document =>
+                document.ProcessingStatus is "Queued" or "Processing"))
+        {
+            ErrorPageMessage =
+                "محرك المعالجة المحلية غير مهيأ على هذا الخادم. لن يتحرك الطابور حتى تُصحح خدمة People AI.";
+        }
     }
 
     public string? ErrorPageMessage { get; private set; }

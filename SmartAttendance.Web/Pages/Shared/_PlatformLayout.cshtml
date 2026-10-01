@@ -11,6 +11,8 @@
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <title>@(ViewData["Title"] ?? "إدارة المنصة") - ZYNORA</title>
     <link rel="stylesheet" href="~/css/platform-portal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-select-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-dropdown-contract.css" asp-append-version="true" />
     <script src="~/js/platform-portal.js" asp-append-version="true" defer></script>
 </head>
 <body class="platform-body">
@@ -35,5 +37,6 @@
     </main>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/zynora-select-system.js" asp-append-version="true"></script>
 </body>
 </html>

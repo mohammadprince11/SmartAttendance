@@ -522,8 +522,8 @@ WHERE Id = @TenantId AND IsDeleted = 0;
 INSERT INTO dbo.PlatformAuditEvents
     (ActorUsername, ActionCode, TargetType, TargetKey, Details, IpAddress, CreatedAtUtc)
 SELECT @Actor, N'TenantDomainsUpdated', N'Tenant', Code,
-       CONCAT(N'Domain routing updated. Subdomain=', COALESCE(@PortalSubdomain, N'-'),
-              N'; CustomDomain=', COALESCE(@CustomDomain, N'-'), N'; Verification=pending.'),
+       CONCAT(N'تم تحديث نطاقات المنظومة. النطاق الفرعي: ', COALESCE(@PortalSubdomain, N'غير محدد'),
+              N'، النطاق المخصص: ', COALESCE(@CustomDomain, N'غير محدد'), N'، حالة التحقق: بانتظار التحقق.'),
        @IpAddress, SYSUTCDATETIME()
 FROM @Changed;
 
@@ -576,8 +576,8 @@ WHERE invoice.Id = @InvoiceId AND invoice.TenantId = @TenantId
 INSERT INTO dbo.PlatformAuditEvents
     (ActorUsername, ActionCode, TargetType, TargetKey, Details, IpAddress, CreatedAtUtc)
 SELECT @Actor, N'SubscriptionInvoiceVoided', N'Tenant', TenantCode,
-       CONCAT(N'Invoice ', InvoiceNumber, N' voided. Reason: ', @Reason,
-              N' License dates were not changed automatically.'),
+       CONCAT(N'تم إلغاء الفاتورة ', InvoiceNumber, N'. السبب: ', @Reason,
+              N'. لم تتغير تواريخ الترخيص تلقائياً.'),
        @IpAddress, SYSUTCDATETIME()
 FROM @Changed;
 
@@ -639,8 +639,8 @@ INSERT INTO dbo.PlatformAuditEvents
 SELECT @Actor, CASE WHEN @Archive = 1 THEN N'TenantArchived' ELSE N'TenantRestored' END,
        N'Tenant', Code,
        CONCAT(CASE WHEN @Archive = 1
-                   THEN N'Tenant archived and access suspended. Reason: '
-                   ELSE N'Tenant restored in suspended state. Reason: ' END, @Reason),
+                   THEN N'تمت أرشفة المنظومة وإيقاف الدخول إليها. السبب: '
+                   ELSE N'تمت استعادة المنظومة بحالة موقوفة. السبب: ' END, @Reason),
        @IpAddress, SYSUTCDATETIME()
 FROM @Changed;
 
@@ -747,8 +747,8 @@ DECLARE @InvoiceId bigint = SCOPE_IDENTITY();
 INSERT INTO dbo.PlatformAuditEvents
     (ActorUsername, ActionCode, TargetType, TargetKey, Details, IpAddress, CreatedAtUtc)
 SELECT @Actor, N'SubscriptionRenewed', N'Tenant', TenantCode,
-       CONCAT(N'Subscription renewed for ', @Months, N' month(s). Invoice=', @InvoiceNumber,
-              N'; Amount=', CONVERT(nvarchar(40), @Amount), N' ', @Currency),
+       CONCAT(N'تم تجديد الاشتراك لمدة ', @Months, N' شهر. رقم الفاتورة: ', @InvoiceNumber,
+              N'، المبلغ: ', CONVERT(nvarchar(40), @Amount), N' ', @Currency, N'.'),
        @IpAddress, @NowUtc
 FROM @Changed;
 
@@ -850,7 +850,9 @@ INSERT INTO dbo.PlatformAuditEvents
     (ActorUsername, ActionCode, TargetType, TargetKey, Details, IpAddress, CreatedAtUtc)
 VALUES
     (@Actor, N'TenantCreated', N'Tenant', @Code,
-     CONCAT(N'Created tenant and initial administrator. Plan=', @PlanCode),
+     CONCAT(N'تم إنشاء المنظومة وحساب المدير الأول. حدود الاستخدام: ',
+            N'الشركات ', @MaxCompanies, N'، الموظفون ', @MaxEmployees,
+            N'، الأجهزة ', @MaxDevices, N'.'),
      @IpAddress, SYSUTCDATETIME());
 """,
             command =>
@@ -898,7 +900,7 @@ WHERE Id = @TenantId AND IsDeleted = 0;
 INSERT INTO dbo.PlatformAuditEvents
     (ActorUsername, ActionCode, TargetType, TargetKey, Details, IpAddress, CreatedAtUtc)
 SELECT @Actor, N'TenantProfileUpdated', N'Tenant', Code,
-       N'Customer identity and contact profile updated.', @IpAddress, SYSUTCDATETIME()
+       N'تم تحديث بيانات العميل وبيانات الاتصال الخاصة بالمنظومة.', @IpAddress, SYSUTCDATETIME()
 FROM @Changed;
 
 SELECT COUNT(*) FROM @Changed;
@@ -959,7 +961,7 @@ WHERE Id = @AdminId AND TenantId = @TenantId AND Role = N'Admin'
             actorUsername,
             ipAddress,
             "TenantAdminPasswordReset",
-            "Tenant administrator password reset; active sessions invalidated and password change required.",
+            "تمت إعادة تعيين كلمة مرور مدير المنظومة، وإنهاء جلساته النشطة، وإلزامه بتغييرها عند الدخول.",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@PasswordHash", hash);
@@ -990,7 +992,7 @@ WHERE Id = @AdminId AND TenantId = @TenantId AND Role = N'Admin'
             actorUsername,
             ipAddress,
             "TenantAdminUnlocked",
-            "Tenant administrator lockout cleared and active sessions invalidated.");
+            "تم فك قفل حساب مدير المنظومة وإنهاء جلساته النشطة.");
 
     public static Task<bool> SetTenantAdminActiveAsync(
         ApplicationDbContext db,
@@ -1018,8 +1020,8 @@ WHERE Id = @AdminId AND TenantId = @TenantId AND Role = N'Admin'
             ipAddress,
             isActive ? "TenantAdminActivated" : "TenantAdminDeactivated",
             isActive
-                ? "Tenant administrator account activated; active sessions invalidated."
-                : "Tenant administrator account deactivated; active sessions invalidated.",
+                ? "تم تفعيل حساب مدير المنظومة وإنهاء جلساته النشطة."
+                : "تم تعطيل حساب مدير المنظومة وإنهاء جلساته النشطة.",
             command => HrmsDatabase.AddParameter(command, "@IsActive", isActive));
 
     public static async Task<bool> UpdateLicenseAsync(
@@ -1069,7 +1071,16 @@ SELECT @@ROWCOUNT;
 INSERT INTO dbo.PlatformAuditEvents
     (ActorUsername, ActionCode, TargetType, TargetKey, Details, IpAddress, CreatedAtUtc)
 SELECT @Actor, N'LicenseUpdated', N'Tenant', Code,
-       CONCAT(N'License updated. Plan=', @PlanCode, N'; Status=', @Status),
+       CONCAT(N'تم تحديث الترخيص. الحالة: ',
+              CASE @Status
+                  WHEN N'Active' THEN N'فعال'
+                  WHEN N'Trial' THEN N'تجريبي'
+                  WHEN N'Suspended' THEN N'موقوف'
+                  ELSE @Status
+              END,
+              N'، حد الشركات: ', @MaxCompanies,
+              N'، حد الموظفين: ', @MaxEmployees,
+              N'، حد الأجهزة: ', @MaxDevices, N'.'),
        @IpAddress, SYSUTCDATETIME()
 FROM dbo.Tenants WHERE Id = @TenantId;
 """,
@@ -1078,6 +1089,9 @@ FROM dbo.Tenants WHERE Id = @TenantId;
                 HrmsDatabase.AddParameter(command, "@Actor", actorUsername);
                 HrmsDatabase.AddParameter(command, "@PlanCode", input.PlanCode);
                 HrmsDatabase.AddParameter(command, "@Status", input.LicenseStatus);
+                HrmsDatabase.AddParameter(command, "@MaxCompanies", input.MaxCompanies);
+                HrmsDatabase.AddParameter(command, "@MaxEmployees", input.MaxEmployees);
+                HrmsDatabase.AddParameter(command, "@MaxDevices", input.MaxDevices);
                 HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
                 HrmsDatabase.AddParameter(command, "@TenantId", input.TenantId);
             });

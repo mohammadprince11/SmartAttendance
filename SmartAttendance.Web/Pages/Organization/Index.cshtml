@@ -4,52 +4,59 @@
 @{
     ViewData["Title"] = "الهياكل التنظيمية";
 }
-<link rel="stylesheet" href="~/css/pages/index-81f0f3e349.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/organization-hub.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/organization-chart.css" asp-append-version="true" />
 
-<div class="hrms-page" data-hrms-tabs-group>
-    <div class="page-header">
-        <div>
+<div class="hrms-page org-hub" data-hrms-tabs-group>
+    <header class="org-hub__header">
+        <div class="org-hub__heading">
+            <span class="org-hub__eyebrow">دليل المؤسسة</span>
             <h1>الهياكل التنظيمية</h1>
-            <p>هيكلية الشركة، الهيكل الهرمي (المدراء)، والهيكل الوظيفي — في مكان واحد.</p>
+            <p>استعرض تكوين الشركات ومسارات الإدارة والمناصب من شاشة واحدة.</p>
         </div>
-        <div class="hrms-inline-form">
-            <a asp-page="/Setup/Index" class="hrms-btn-secondary">تعديل بيانات الشركة والهيكل</a>
-        </div>
-    </div>
+        <a asp-page="/Setup/Index" class="hrms-btn-secondary org-hub__manage">إدارة بيانات الهيكل</a>
+    </header>
 
-    <div class="hrms-stats-card">
-        <div class="hrms-stats">
-            <div class="hrms-stat"><span>الشركات</span><strong>@Model.TotalCompanies</strong></div>
-            <div class="hrms-stat"><span>الفروع</span><strong>@Model.TotalBranches</strong></div>
-            <div class="hrms-stat"><span>الأقسام</span><strong>@Model.TotalDepartments</strong></div>
-            <div class="hrms-stat"><span>الموظفون</span><strong>@Model.TotalEmployees</strong></div>
-        </div>
-    </div>
+    <section class="org-summary" aria-label="ملخص الهيكل التنظيمي">
+        <div class="org-summary__item"><strong>@Model.TotalCompanies</strong><span>شركة</span></div>
+        <div class="org-summary__item"><strong>@Model.TotalBranches</strong><span>فرع</span></div>
+        <div class="org-summary__item"><strong>@Model.TotalDepartments</strong><span>قسم</span></div>
+        <div class="org-summary__item"><strong>@Model.TotalEmployees</strong><span>موظف</span></div>
+    </section>
 
-    <div class="hrms-tabs" role="tablist">
-        <button type="button" class="hrms-tab active" data-hrms-tab="company" data-hrms-tab-remember>هيكلية الشركة</button>
-        <button type="button" class="hrms-tab" data-hrms-tab="chart" data-hrms-tab-remember>الهيكل الهرمي</button>
-        <button type="button" class="hrms-tab" data-hrms-tab="functional" data-hrms-tab-remember>الهيكل الوظيفي</button>
-    </div>
+    <nav class="hrms-tabs org-tabs" role="tablist" aria-label="أقسام الهيكل التنظيمي">
+        <button type="button" class="hrms-tab active" data-hrms-tab="company" data-hrms-tab-remember>
+            <span>هيكلية الشركة</span><small>الشركات والفروع والأقسام</small>
+        </button>
+        <button type="button" class="hrms-tab" data-hrms-tab="chart" data-hrms-tab-remember>
+            <span>الهيكل الهرمي</span><small>تسلسل المدراء والفرق</small>
+        </button>
+        <button type="button" class="hrms-tab" data-hrms-tab="functional" data-hrms-tab-remember>
+            <span>الهيكل الوظيفي</span><small>المناصب وأعداد شاغليها</small>
+        </button>
+    </nav>
 
     @* ===================== Tab 1: Company structure ===================== *@
-    <div class="hrms-tabpanel active" data-hrms-tabpanel="company">
-        <div class="hrms-tile-head zyu-42a6ced8b67e">
-            <form method="get" class="hrms-inline-form">
-                <label for="org-search">بحث</label>
-                <input id="org-search" type="search" name="Search" value="@Model.Search" placeholder="شركة / فرع / قسم" />
+    <section class="hrms-tabpanel active org-panel" data-hrms-tabpanel="company">
+        <div class="org-panel__intro">
+            <div><h2>هيكلية الشركة</h2><p>افتح أي شركة لمراجعة فروعها وأقسامها.</p></div>
+        </div>
+        <div class="org-toolbar">
+            <form method="get" class="org-search-form">
+                <label class="org-search-form__label" for="org-search">بحث في الهيكل</label>
+                <div class="org-search-form__controls">
+                <input id="org-search" type="search" name="Search" value="@Model.Search" placeholder="اسم أو كود شركة، فرع أو قسم" />
                 <button type="submit" class="hrms-btn-secondary">تطبيق</button>
                 @if (!string.IsNullOrWhiteSpace(Model.Search))
                 {
                     <a asp-page="./Index" class="hrms-btn-secondary">مسح</a>
                 }
+                </div>
             </form>
-            <div class="hrms-inline-form">
+            <div class="org-toolbar__actions">
                 <label class="hrms-toggle"><input type="checkbox" id="org-active-only" /> النشطة فقط</label>
-                <a asp-page="/Setup/Index" class="hrms-btn-primary">إدارة الهيكل</a>
             </div>
         </div>
 
@@ -59,40 +66,38 @@
         }
         else
         {
-            <div class="hrms-grid" id="org-company-grid">
+            <div class="org-company-grid" id="org-company-grid">
                 @foreach (var company in Model.Companies)
                 {
-                    <article class="hrms-tile cursor org-unit" data-active="@(company.IsActive ? "1" : "0")"
+                    <article class="org-company-card org-unit" data-active="@(company.IsActive ? "1" : "0")"
                              data-hrms-open="company-@company.Id">
-                        <div class="hrms-tile-head">
-                            <div class="zyu-b4e7d324c7e6">
-                                <div class="hrms-tile-icon">🏢</div>
-                                <div>
-                                    <h3>@company.Name</h3>
-                                    <span class="hrms-tile-sub">@company.Code · شركة</span>
-                                </div>
+                        <div class="org-company-card__head">
+                            <div class="org-company-card__identity">
+                                <span class="org-company-card__mark" aria-hidden="true">@company.Name.FirstOrDefault()</span>
+                                <div><h3>@company.Name</h3><span>@company.Code</span></div>
                             </div>
                             <span class="hrms-badge @(company.IsActive ? "approved" : "rejected")">
                                 @(company.IsActive ? "فعال" : "متوقف")
                             </span>
                         </div>
-                        <div class="zyu-52ad6a1427bd">
-                            <div><div class="hrms-tile-metric">@company.EmployeeCount</div><span class="hrms-tile-sub">موظف</span></div>
-                            <div><div class="hrms-tile-metric">@company.BranchCount</div><span class="hrms-tile-sub">فرع</span></div>
-                            <div><div class="hrms-tile-metric">@company.DepartmentCount</div><span class="hrms-tile-sub">قسم</span></div>
+                        <div class="org-company-card__counts">
+                            <div><strong>@company.EmployeeCount</strong><span>موظف</span></div>
+                            <div><strong>@company.BranchCount</strong><span>فرع</span></div>
+                            <div><strong>@company.DepartmentCount</strong><span>قسم</span></div>
                         </div>
+                        <span class="org-company-card__open">عرض التفاصيل <b aria-hidden="true">←</b></span>
                     </article>
                 }
             </div>
         }
-    </div>
+    </section>
 
     @* ===================== Tab 2: Hierarchical (chart) ===================== *@
-    <div class="hrms-tabpanel" data-hrms-tabpanel="chart">
-        <div class="hrms-tile-head zyu-42a6ced8b67e">
+    <section class="hrms-tabpanel org-panel" data-hrms-tabpanel="chart">
+        <div class="org-panel__intro org-panel__intro--with-control">
             <div>
-                <h3>الهيكل الهرمي (خريطة المسؤوليات)</h3>
-                <span class="hrms-tile-sub">تسلسل المدراء المباشرين للموظفين الفعالين — مبني من "المدير المباشر".</span>
+                <h2>خريطة المسؤوليات</h2>
+                <p>تسلسل المدراء المباشرين والموظفين الفعالين.</p>
             </div>
             <form method="get" class="hrms-inline-form">
                 <input type="hidden" name="Search" value="@Model.Search" />
@@ -113,14 +118,12 @@
         }
         else
         {
-            <div class="hrms-stats-card zyu-42a6ced8b67e">
-                <div class="hrms-stats">
-                    <div class="hrms-stat"><span>موظفون فعّالون</span><strong>@Model.Chart.TotalEmployees</strong></div>
-                    <div class="hrms-stat"><span>مدراء</span><strong>@Model.Chart.ManagerCount</strong></div>
-                    <div class="hrms-stat"><span>مربوطون بمدير</span><strong>@Model.Chart.WithManagerCount</strong></div>
-                    <div class="hrms-stat"><span>بلا مدير مباشر</span><strong>@Model.Chart.WithoutManagerCount</strong></div>
-                    <div class="hrms-stat"><span>عمق التسلسل</span><strong>@Model.Chart.MaxDepth</strong></div>
-                </div>
+            <div class="org-chart-summary">
+                <span><b>@Model.Chart.TotalEmployees</b> موظف فعّال</span>
+                <span><b>@Model.Chart.ManagerCount</b> مدير</span>
+                <span><b>@Model.Chart.WithManagerCount</b> مرتبطون بمدير</span>
+                <span><b>@Model.Chart.WithoutManagerCount</b> بلا مدير</span>
+                <span><b>@Model.Chart.MaxDepth</b> مستوى إداري</span>
             </div>
 
             @if (Model.Chart.TotalEmployees == 0)
@@ -195,14 +198,14 @@
                 </div>
             }
         }
-    </div>
+    </section>
 
     @* ===================== Tab 3: Functional (positions) ===================== *@
-    <div class="hrms-tabpanel" data-hrms-tabpanel="functional">
-        <div class="hrms-tile-head zyu-42a6ced8b67e">
+    <section class="hrms-tabpanel org-panel" data-hrms-tabpanel="functional">
+        <div class="org-panel__intro org-panel__intro--with-control">
             <div>
-                <h3>الهيكل الوظيفي (المناصب)</h3>
-                <span class="hrms-tile-sub">المناصب الوظيفية الفعّالة وعدد الموظفين في كل منصب.</span>
+                <h2>الهيكل الوظيفي</h2>
+                <p>المناصب الوظيفية الفعّالة وعدد الموظفين في كل منصب.</p>
             </div>
             <a asp-page="/Positions/Index" class="hrms-btn-secondary">إدارة المناصب</a>
         </div>
@@ -244,7 +247,7 @@
                 <div class="hrms-pager" id="pos-pager" data-hrms-pager-for="pos-table" data-hrms-search="pos-search"></div>
             </div>
         }
-    </div>
+    </section>
 </div>
 
 @* ===================== Slide-overs ===================== *@
