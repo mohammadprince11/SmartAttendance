@@ -13,13 +13,54 @@
             <div><h1>@Model.Tenant.Name</h1><p>أُنشئت في @Model.Tenant.CreatedAt.ToString("yyyy/MM/dd")</p></div>
         </div>
     </div>
-    <form method="post" asp-page-handler="SetActive">
-        <input type="hidden" name="id" value="@Model.Tenant.Id" />
-        <input type="hidden" name="active" value="@(!Model.Tenant.IsActive)" />
-        <button class="platform-button @(Model.Tenant.IsActive ? "platform-button--danger" : "platform-button--primary")" type="submit">
-            @(Model.Tenant.IsActive ? "إيقاف المنظومة" : "تفعيل المنظومة")
-        </button>
-    </form>
+    <div class="platform-page-actions">
+        @if (!Model.Tenant.IsDeleted)
+        {
+            <details class="platform-action-confirm">
+                <summary class="platform-button @(Model.Tenant.IsActive ? "platform-button--danger" : "platform-button--primary")">
+                    @(Model.Tenant.IsActive ? "إيقاف المنظومة" : "تفعيل المنظومة")
+                </summary>
+                <form method="post" asp-page-handler="SetActive" class="platform-action-confirm__panel">
+                    <input type="hidden" name="id" value="@Model.Tenant.Id" />
+                    <label class="platform-field">
+                        <span>سبب @(Model.Tenant.IsActive ? "الإيقاف" : "التفعيل")</span>
+                        <textarea name="reason" minlength="5" maxlength="500" required placeholder="اكتب السبب ليظهر في سجل التدقيق"></textarea>
+                    </label>
+                    <label class="platform-confirm-check">
+                        <input type="checkbox" name="confirmed" value="true" required />
+                        <span>أؤكد تنفيذ هذا الإجراء وتأثيره على وصول العميل.</span>
+                    </label>
+                    <button class="platform-button @(Model.Tenant.IsActive ? "platform-button--danger" : "platform-button--primary")" type="submit">
+                        تأكيد @(Model.Tenant.IsActive ? "الإيقاف" : "التفعيل")
+                    </button>
+                </form>
+            </details>
+        }
+        <details class="platform-action-confirm">
+            <summary class="platform-button @(Model.Tenant.IsDeleted ? "platform-button--primary" : "platform-button--ghost")">
+                @(Model.Tenant.IsDeleted ? "استعادة المنظومة" : "أرشفة المنظومة")
+            </summary>
+            <form method="post" asp-page-handler="SetArchived" class="platform-action-confirm__panel">
+                <input type="hidden" name="id" value="@Model.Tenant.Id" />
+                <div class="platform-alert platform-alert--warning">
+                    @(Model.Tenant.IsDeleted
+                        ? "الاستعادة تعيد السجل بحالة موقوفة؛ راجع اللايسنس ثم فعّل الوصول يدوياً."
+                        : "الأرشفة توقف الوصول والجلسات وتحفظ جميع البيانات والكود بدون حذف نهائي.")
+                </div>
+                <label class="platform-field">
+                    <span>سبب @(Model.Tenant.IsDeleted ? "الاستعادة" : "الأرشفة")</span>
+                    <textarea name="reason" minlength="5" maxlength="500" required></textarea>
+                </label>
+                <label class="platform-confirm-check">
+                    <input type="checkbox" name="confirmed" value="true" required />
+                    <span>أؤكد تنفيذ الإجراء وتسجيله في سجل التدقيق.</span>
+                </label>
+                <button class="platform-button @(Model.Tenant.IsDeleted ? "platform-button--primary" : "platform-button--danger")" type="submit">
+                    تأكيد @(Model.Tenant.IsDeleted ? "الاستعادة" : "الأرشفة")
+                </button>
+            </form>
+        </details>
+    </div>
 </section>
 
 @if (!string.IsNullOrWhiteSpace(Model.Message))
@@ -27,10 +68,196 @@
     <div class="platform-alert platform-alert--success">@Model.Message</div>
 }
 
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="platform-alert platform-alert--danger">@Model.ErrorMessage</div>
+}
+
+@if (Model.Tenant.IsDeleted)
+{
+    <div class="platform-alert platform-alert--danger">
+        هذه المنظومة مؤرشفة منذ @(Model.Tenant.ArchivedAtUtc?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "وقت غير مسجل")
+        بواسطة @(Model.Tenant.ArchivedBy ?? "غير معروف"). بياناتها محفوظة لكن الوصول والتعديل التشغيلي متوقفان.
+    </div>
+}
+
+@if (Model.DaysUntilExpiry is int days && days <= 30)
+{
+    <div class="platform-alert @(days < 0 ? "platform-alert--danger" : "platform-alert--warning")">
+        @(days < 0
+            ? $"انتهى اللايسنس قبل {Math.Abs(days)} يوم. راجع حالة الاشتراك وفترة السماح."
+            : days == 0
+                ? "ينتهي اللايسنس اليوم."
+                : $"متبقي {days} يوم على انتهاء اللايسنس.")
+    </div>
+}
+
 <section class="platform-kpis platform-kpis--3">
-    <article><span>الشركات</span><strong>@Model.Tenant.CompanyCount / @Model.Tenant.MaxCompanies</strong></article>
-    <article><span>الموظفون</span><strong>@Model.Tenant.EmployeeCount / @Model.Tenant.MaxEmployees</strong></article>
-    <article><span>أجهزة البصمة</span><strong>@Model.Tenant.DeviceCount / @Model.Tenant.MaxDevices</strong></article>
+    <article><span>الشركات</span><strong>@Model.Tenant.CompanyCount / @Model.Tenant.MaxCompanies</strong><small>@Model.CompanyUsagePercent% من الحد</small></article>
+    <article><span>الموظفون</span><strong>@Model.Tenant.EmployeeCount / @Model.Tenant.MaxEmployees</strong><small>@Model.EmployeeUsagePercent% من الحد</small></article>
+    <article><span>أجهزة البصمة</span><strong>@Model.Tenant.DeviceCount / @Model.Tenant.MaxDevices</strong><small>@Model.DeviceUsagePercent% من الحد</small></article>
+</section>
+
+@if (Model.CompanyUsagePercent >= 80 || Model.EmployeeUsagePercent >= 80 || Model.DeviceUsagePercent >= 80)
+{
+    var reached = new List<string>();
+    var capacityReached = Model.CompanyUsagePercent >= 100 || Model.EmployeeUsagePercent >= 100 || Model.DeviceUsagePercent >= 100;
+    if (Model.CompanyUsagePercent >= 80) reached.Add($"الشركات {Model.CompanyUsagePercent}%");
+    if (Model.EmployeeUsagePercent >= 80) reached.Add($"الموظفون {Model.EmployeeUsagePercent}%");
+    if (Model.DeviceUsagePercent >= 80) reached.Add($"الأجهزة {Model.DeviceUsagePercent}%");
+    <div class="platform-alert @(capacityReached ? "platform-alert--danger" : "platform-alert--warning")">
+        تنبيه سعة: @string.Join("، ", reached). راجع الحدود قبل أن تتوقف إضافة بيانات جديدة.
+    </div>
+}
+
+<form method="post" asp-page-handler="SaveCustomerProfile" class="platform-card platform-form-section">
+    <input asp-for="CustomerProfile.TenantId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="platform-alert platform-alert--danger"></div>
+
+    <header>
+        <span>ORG</span>
+        <div><h2>بيانات العميل</h2><p>بيانات الجهة المتعاقدة ومسؤول التواصل الإداري.</p></div>
+    </header>
+
+    <div class="platform-fields platform-fields--3">
+        <label class="platform-field">
+            <span>اسم العميل أو المجموعة</span>
+            <input asp-for="CustomerProfile.Name" />
+            <span asp-validation-for="CustomerProfile.Name" class="platform-validation"></span>
+        </label>
+        <label class="platform-field">
+            <span>الاسم القانوني (اختياري)</span>
+            <input asp-for="CustomerProfile.LegalName" />
+            <span asp-validation-for="CustomerProfile.LegalName" class="platform-validation"></span>
+        </label>
+        <label class="platform-field">
+            <span>مسؤول التواصل</span>
+            <input asp-for="CustomerProfile.ContactName" />
+            <span asp-validation-for="CustomerProfile.ContactName" class="platform-validation"></span>
+        </label>
+        <label class="platform-field">
+            <span>البريد الإلكتروني</span>
+            <input asp-for="CustomerProfile.ContactEmail" type="email" dir="ltr" />
+            <span asp-validation-for="CustomerProfile.ContactEmail" class="platform-validation"></span>
+        </label>
+        <label class="platform-field">
+            <span>رقم الهاتف</span>
+            <input asp-for="CustomerProfile.ContactPhone" type="tel" dir="ltr" />
+            <span asp-validation-for="CustomerProfile.ContactPhone" class="platform-validation"></span>
+        </label>
+        <label class="platform-field">
+            <span>الدولة</span>
+            <input asp-for="CustomerProfile.Country" />
+            <span asp-validation-for="CustomerProfile.Country" class="platform-validation"></span>
+        </label>
+        <label class="platform-field platform-field--wide">
+            <span>العنوان (اختياري)</span>
+            <textarea asp-for="CustomerProfile.Address"></textarea>
+            <span asp-validation-for="CustomerProfile.Address" class="platform-validation"></span>
+        </label>
+        <label class="platform-field">
+            <span>الرقم الضريبي (اختياري)</span>
+            <input asp-for="CustomerProfile.TaxNumber" dir="ltr" />
+            <span asp-validation-for="CustomerProfile.TaxNumber" class="platform-validation"></span>
+        </label>
+    </div>
+
+    <footer class="platform-form-actions">
+        <button class="platform-button platform-button--primary" type="submit" disabled="@Model.Tenant.IsDeleted">حفظ بيانات العميل</button>
+    </footer>
+</form>
+
+<form method="post" asp-page-handler="SaveDomain" class="platform-card platform-form-section">
+    <input asp-for="Domain.TenantId" type="hidden" />
+    <header>
+        <span>DNS</span>
+        <div>
+            <h2>النطاق والوصول</h2>
+            <p>حجز عناوين فريدة للمنظومة. الحفظ لا يعدّل DNS ولا يصدر شهادة SSL تلقائياً.</p>
+        </div>
+        <span class="platform-domain-state platform-domain-state--@Model.Tenant.DomainStatus.ToLowerInvariant()">@Model.DomainStatusLabel(Model.Tenant.DomainStatus)</span>
+    </header>
+    <div class="platform-fields platform-fields--2">
+        <label class="platform-field">
+            <span>النطاق الفرعي (اختياري)</span>
+            <div class="platform-domain-input" dir="ltr">
+                <input asp-for="Domain.PortalSubdomain" maxlength="63" placeholder="customer" />
+                <span>.zynorahr.com</span>
+            </div>
+            <small>حروف إنجليزية صغيرة وأرقام وشرطة فقط.</small>
+        </label>
+        <label class="platform-field">
+            <span>نطاق العميل المخصص (اختياري)</span>
+            <input asp-for="Domain.CustomDomain" dir="ltr" maxlength="253" placeholder="hr.customer.com" />
+            <small>أدخل اسم النطاق فقط بدون http أو https أو مسار.</small>
+        </label>
+    </div>
+    <div class="platform-alert platform-alert--warning">
+        بعد النشر تتحول الحالة إلى «تم التحقق» فقط بعد مطابقة DNS وتفعيل SSL. حالياً يتم الحجز ومنع التكرار بأمان.
+    </div>
+    <footer class="platform-form-actions">
+        <button class="platform-button platform-button--primary" type="submit" disabled="@Model.Tenant.IsDeleted">حفظ إعدادات النطاق</button>
+    </footer>
+</form>
+
+<section class="platform-card platform-form-section">
+    <header>
+        <span>ADM</span>
+        <div><h2>حساب مدير المنظومة</h2><p>إدارة الحساب الأول بدون عرض كلمة المرور أو تسجيلها.</p></div>
+    </header>
+
+    @if (Model.TenantAdmin is null)
+    {
+        <div class="platform-alert platform-alert--warning">لا يوجد حساب مدير مرتبط بهذه المنظومة.</div>
+    }
+    else
+    {
+        var admin = Model.TenantAdmin;
+        var isLocked = admin.LockoutEndUtc.HasValue && admin.LockoutEndUtc.Value > DateTime.UtcNow;
+        <div class="platform-kpis platform-kpis--3">
+            <article><span>اسم المستخدم</span><strong dir="ltr">@admin.Username</strong></article>
+            <article><span>حالة الحساب</span><strong>@(admin.IsActive ? "فعّال" : "معطّل")</strong></article>
+            <article><span>آخر دخول</span><strong>@(admin.LastLoginAt?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "لم يسجل الدخول")</strong></article>
+        </div>
+
+        <div class="platform-form-actions">
+            <form method="post" asp-page-handler="ToggleTenantAdmin">
+                <input type="hidden" name="id" value="@Model.Tenant.Id" />
+                <input type="hidden" name="adminId" value="@admin.Id" />
+                <button class="platform-button @(admin.IsActive ? "platform-button--danger" : "platform-button--primary")" type="submit" disabled="@Model.Tenant.IsDeleted">
+                    @(admin.IsActive ? "تعطيل حساب المدير" : "تفعيل حساب المدير")
+                </button>
+            </form>
+            @if (isLocked || admin.FailedLoginAttempts > 0)
+            {
+                <form method="post" asp-page-handler="UnlockTenantAdmin">
+                    <input type="hidden" name="id" value="@Model.Tenant.Id" />
+                    <input type="hidden" name="adminId" value="@admin.Id" />
+                    <button class="platform-button platform-button--ghost" type="submit" disabled="@Model.Tenant.IsDeleted">فك القفل وتصفير المحاولات (@admin.FailedLoginAttempts)</button>
+                </form>
+            }
+        </div>
+
+        <details class="platform-action-confirm">
+            <summary class="platform-button platform-button--ghost">إعادة تعيين كلمة المرور</summary>
+            <form method="post" asp-page-handler="ResetTenantAdminPassword" class="platform-action-confirm__panel">
+                <input type="hidden" name="id" value="@Model.Tenant.Id" />
+                <input type="hidden" name="adminId" value="@admin.Id" />
+                <div class="platform-alert platform-alert--warning">
+                    ستُبطل الجلسات الحالية ويُطلب من المدير تغيير كلمة المرور المؤقتة عند أول دخول.
+                </div>
+                <label class="platform-field">
+                    <span>كلمة المرور المؤقتة</span>
+                    <input type="password" name="temporaryPassword" minlength="12" maxlength="200" autocomplete="new-password" required />
+                </label>
+                <label class="platform-field">
+                    <span>تأكيد كلمة المرور</span>
+                    <input type="password" name="confirmPassword" minlength="12" maxlength="200" autocomplete="new-password" required />
+                </label>
+                <button class="platform-button platform-button--primary" type="submit" disabled="@Model.Tenant.IsDeleted">تعيين كلمة المرور المؤقتة</button>
+            </form>
+        </details>
+    }
 </section>
 
 <form method="post" asp-page-handler="SaveLicense" class="platform-card platform-form-section">
@@ -44,7 +271,23 @@
     </header>
 
     <div class="platform-fields platform-fields--3">
-        <label class="platform-field"><span>الخطة</span><input asp-for="Input.PlanCode" /></label>
+        <label class="platform-field">
+            <span>الخطة</span>
+            <select asp-for="Input.PlanCode" data-platform-plan-select>
+                @if (Model.HasCustomPlan)
+                {
+                    <option value="@Model.Tenant.PlanCode" data-custom="true">@Model.Tenant.PlanCode — خطة مخصصة محفوظة</option>
+                }
+                @foreach (var plan in Model.Plans)
+                {
+                    <option value="@plan.Code"
+                            data-max-companies="@plan.MaxCompanies"
+                            data-max-employees="@plan.MaxEmployees"
+                            data-max-devices="@plan.MaxDevices"
+                            data-modules="@string.Join(',', plan.EnabledModules)">@plan.Name — @plan.Description</option>
+                }
+            </select>
+        </label>
         <label class="platform-field">
             <span>حالة اللايسنس</span>
             <select asp-for="Input.LicenseStatus">
@@ -58,9 +301,9 @@
         <label class="platform-field"><span>تاريخ البداية</span><input asp-for="Input.StartsAt" type="date" /></label>
         <label class="platform-field"><span>تاريخ الانتهاء</span><input asp-for="Input.ExpiresAt" type="date" /></label>
         <label class="platform-field"><span>نهاية فترة السماح</span><input asp-for="Input.GraceEndsAt" type="date" /></label>
-        <label class="platform-field"><span>أقصى عدد شركات</span><input asp-for="Input.MaxCompanies" type="number" /></label>
-        <label class="platform-field"><span>أقصى عدد موظفين</span><input asp-for="Input.MaxEmployees" type="number" /></label>
-        <label class="platform-field"><span>أقصى عدد أجهزة</span><input asp-for="Input.MaxDevices" type="number" /></label>
+        <label class="platform-field"><span>أقصى عدد شركات</span><input asp-for="Input.MaxCompanies" type="number" data-plan-limit="companies" /></label>
+        <label class="platform-field"><span>أقصى عدد موظفين</span><input asp-for="Input.MaxEmployees" type="number" data-plan-limit="employees" /></label>
+        <label class="platform-field"><span>أقصى عدد أجهزة</span><input asp-for="Input.MaxDevices" type="number" data-plan-limit="devices" /></label>
     </div>
 
     <fieldset class="platform-modules">
@@ -68,16 +311,159 @@
         @foreach (var module in Model.Modules)
         {
             <label>
-                <input type="checkbox" name="EnabledModules" value="@module.Key" checked="@(Model.EnabledModules.Contains(module.Key))" />
+                <input type="checkbox" name="EnabledModules" value="@module.Key" checked="@(Model.EnabledModules.Contains(module.Key))" data-plan-module />
                 <span>@module.Value</span>
             </label>
         }
     </fieldset>
 
     <footer class="platform-form-actions">
-        <button class="platform-button platform-button--primary" type="submit">حفظ تغييرات اللايسنس</button>
+        <button class="platform-button platform-button--primary" type="submit" disabled="@Model.Tenant.IsDeleted">حفظ تغييرات اللايسنس</button>
     </footer>
 </form>
+
+<section class="platform-card platform-subscription">
+    <header class="platform-card__header platform-card__header--split">
+        <div><h2>التجديد والفواتير</h2><p>تسجيل دفعة تمت خارج النظام يمدد اللايسنس وينشئ فاتورة إدارية مسددة.</p></div>
+        <div class="platform-subscription__summary">
+            <span>عدد الفواتير <strong>@Model.Invoices.Count</strong></span>
+            <span>إجمالي المسدد <strong>@Model.PaidTotalsText</strong></span>
+            <a class="platform-button platform-button--ghost" asp-page-handler="ExportInvoices" asp-route-id="@Model.Tenant.Id">تصدير CSV</a>
+        </div>
+    </header>
+
+    <form method="post" asp-page-handler="RenewSubscription" class="platform-renewal-form">
+        <input asp-for="Renewal.TenantId" type="hidden" />
+        <input asp-for="Renewal.VersionToken" type="hidden" />
+        <input asp-for="Renewal.IdempotencyKey" type="hidden" />
+
+        <div class="platform-alert platform-alert--warning platform-renewal-warning">
+            هذه الصفحة لا تنفذ أي دفع إلكتروني ولا تتصل ببوابة دفع. سجّل فقط دفعة استلمتها خارج النظام نقداً أو بتحويل مصرفي أو صك، ولا تُدخل بيانات بطاقة أو حساب مصرفي.
+        </div>
+
+        <div class="platform-fields platform-fields--3">
+            <label class="platform-field"><span>مدة التجديد بالأشهر</span><input asp-for="Renewal.Months" type="number" min="1" max="60" required /></label>
+            <label class="platform-field"><span>فترة السماح بالأيام</span><input asp-for="Renewal.GraceDays" type="number" min="0" max="90" required /></label>
+            <label class="platform-field"><span>المبلغ المسدد</span><input asp-for="Renewal.Amount" type="number" min="0" max="9999999999999999.99" step="0.01" required /></label>
+            <label class="platform-field">
+                <span>العملة</span>
+                <select asp-for="Renewal.Currency">
+                    @foreach (var currency in Model.Currencies)
+                    {
+                        <option value="@currency.Key">@currency.Value (@currency.Key)</option>
+                    }
+                </select>
+            </label>
+            <label class="platform-field">
+                <span>طريقة التحصيل الخارجي</span>
+                <select asp-for="Renewal.PaymentMethod">
+                    @foreach (var method in Model.PaymentMethods)
+                    {
+                        <option value="@method.Key">@method.Value</option>
+                    }
+                </select>
+            </label>
+            <label class="platform-field"><span>مرجع التحصيل (اختياري)</span><input asp-for="Renewal.PaymentReference" maxlength="120" placeholder="رقم وصل أو مرجع تحويل أو صك" /></label>
+            <label class="platform-field platform-field--wide"><span>ملاحظات (اختياري)</span><textarea asp-for="Renewal.Notes" maxlength="500" placeholder="ملاحظة إدارية مختصرة"></textarea></label>
+        </div>
+
+        <footer class="platform-form-actions">
+            <button class="platform-button platform-button--primary" type="submit" disabled="@Model.Tenant.IsDeleted">تسجيل دفعة خارجية وتجديد الاشتراك</button>
+        </footer>
+    </form>
+
+    <div class="platform-table-wrap platform-invoices">
+        <table class="platform-table">
+            <thead>
+                <tr>
+                    <th>رقم الفاتورة</th>
+                    <th>الفترة</th>
+                    <th>المبلغ</th>
+                    <th>طريقة التحصيل</th>
+                    <th>المرجع</th>
+                    <th>المسجل بواسطة</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Invoices.Count == 0)
+                {
+                    <tr><td colspan="8" class="platform-table__empty">لا توجد فواتير اشتراك مسجلة لهذه المنظومة بعد.</td></tr>
+                }
+                else
+                {
+                    @foreach (var invoice in Model.Invoices)
+                    {
+                        <tr>
+                            <td><strong class="platform-invoice-number">@invoice.InvoiceNumber</strong><small>@invoice.PaidAtUtc.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</small></td>
+                            <td><span>@invoice.PeriodStartsAtUtc.ToLocalTime().ToString("yyyy/MM/dd") — @invoice.PeriodEndsAtUtc.ToLocalTime().ToString("yyyy/MM/dd")</span><small>@invoice.Months شهر + @invoice.GraceDays يوم سماح</small></td>
+                            <td><strong>@invoice.Amount.ToString("N2") @invoice.Currency</strong><small>@(invoice.Status == "Paid" ? "مسددة" : "ملغاة")</small></td>
+                            <td>@Model.PaymentMethodLabel(invoice.PaymentMethod)</td>
+                            <td>@(string.IsNullOrWhiteSpace(invoice.PaymentReference) ? "—" : invoice.PaymentReference)</td>
+                            <td>@invoice.CreatedBy</td>
+                            <td>
+                                <span class="platform-status @(invoice.Status == "Paid" ? "platform-status--active" : "platform-status--blocked")">
+                                    @(invoice.Status == "Paid" ? "مسددة" : "ملغاة")
+                                </span>
+                                @if (invoice.Status == "Voided")
+                                {
+                                    <small title="@invoice.VoidReason">@invoice.VoidedAtUtc?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") بواسطة @invoice.VoidedBy</small>
+                                }
+                            </td>
+                            <td>
+                                @if (invoice.Status == "Paid")
+                                {
+                                    <details class="platform-action-confirm platform-action-confirm--table">
+                                        <summary class="platform-link">إلغاء</summary>
+                                        <form method="post" asp-page-handler="VoidInvoice" class="platform-action-confirm__panel">
+                                            <input type="hidden" name="id" value="@Model.Tenant.Id" />
+                                            <input type="hidden" name="invoiceId" value="@invoice.Id" />
+                                            <div class="platform-alert platform-alert--warning">الإلغاء مالي فقط ولا يعكس مدة اللايسنس تلقائياً.</div>
+                                            <label class="platform-field"><span>سبب الإلغاء</span><textarea name="reason" minlength="5" maxlength="500" required></textarea></label>
+                                            <label class="platform-confirm-check"><input type="checkbox" name="confirmed" value="true" required /><span>أؤكد إلغاء الفاتورة مع إبقائها في السجل.</span></label>
+                                            <button class="platform-button platform-button--danger" type="submit">تأكيد الإلغاء</button>
+                                        </form>
+                                    </details>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="platform-card platform-audit">
+    <header class="platform-card__header platform-card__header--split">
+        <div><h2>سجل التدقيق</h2><p>آخر الإجراءات الإدارية على هذه المنظومة مع السبب والمنفذ والوقت.</p></div>
+        <a class="platform-button platform-button--ghost" asp-page-handler="ExportAudit" asp-route-id="@Model.Tenant.Id">تصدير السجل CSV</a>
+    </header>
+    @if (Model.AuditEvents.Count == 0)
+    {
+        <p class="platform-empty-state">لا توجد أحداث مسجلة بعد.</p>
+    }
+    else
+    {
+        <ol class="platform-timeline">
+            @foreach (var audit in Model.AuditEvents)
+            {
+                <li>
+                    <span class="platform-timeline__dot"></span>
+                    <div>
+                        <div class="platform-timeline__title">
+                            <strong>@Model.AuditActionLabel(audit.ActionCode)</strong>
+                            <time datetime="@audit.CreatedAtUtc.ToString("O")">@audit.CreatedAtUtc.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</time>
+                        </div>
+                        <p>@audit.Details</p>
+                        <small>بواسطة @audit.ActorUsername@(string.IsNullOrWhiteSpace(audit.IpAddress) ? null : $" — {audit.IpAddress}")</small>
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

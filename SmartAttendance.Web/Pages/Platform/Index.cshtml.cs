@@ -18,12 +18,24 @@ public sealed class IndexModel : PageModel
     public string? Search { get; set; }
 
     public bool HasSearch => !string.IsNullOrWhiteSpace(Search);
-    public int ActiveCount => Tenants.Count(item => item.IsActive && item.EffectiveStatus is "فعّالة" or "تجريبية" or "فترة سماح");
-    public int TotalEmployees => Tenants.Sum(item => item.EmployeeCount);
+    public int ActiveCount => Tenants.Count(item => !item.IsDeleted && item.IsActive && item.EffectiveStatus is "فعّالة" or "تجريبية" or "فترة سماح");
+    public int ArchivedCount => Tenants.Count(item => item.IsDeleted);
+    public int TotalEmployees => Tenants.Where(item => !item.IsDeleted).Sum(item => item.EmployeeCount);
     public int ExpiringSoonCount => Tenants.Count(item =>
-        item.ExpiresAtUtc.HasValue &&
+        !item.IsDeleted && item.ExpiresAtUtc.HasValue &&
         item.ExpiresAtUtc.Value >= DateTime.UtcNow &&
         item.ExpiresAtUtc.Value <= DateTime.UtcNow.AddDays(30));
+    public IReadOnlyList<PlatformPortalStore.TenantSummary> ExpiringTenants => Tenants
+        .Where(item => !item.IsDeleted && item.IsActive && item.ExpiresAtUtc.HasValue &&
+                       item.ExpiresAtUtc.Value >= DateTime.UtcNow &&
+                       item.ExpiresAtUtc.Value <= DateTime.UtcNow.AddDays(30))
+        .OrderBy(item => item.ExpiresAtUtc)
+        .ToList();
+
+    public static int DaysUntilExpiry(PlatformPortalStore.TenantSummary tenant) =>
+        tenant.ExpiresAtUtc.HasValue
+            ? Math.Max(0, (int)Math.Ceiling((tenant.ExpiresAtUtc.Value.Date - DateTime.UtcNow.Date).TotalDays))
+            : 0;
 
     [TempData]
     public string? Message { get; set; }

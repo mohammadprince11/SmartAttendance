@@ -3556,6 +3556,155 @@ BEGIN CATCH
     THROW;
 END CATCH;
 """),
+
+        // سجل الاشتراكات والفواتير الخاص بمالك المنصة. التجديد لا يغيّر اللايسنس
+        // إلا داخل المعاملة نفسها التي تنشئ الفاتورة، ومفتاح idempotency يمنع
+        // تمديد الاشتراك مرتين عند إعادة إرسال الطلب.
+        new(
+            "20261001-04-platform-subscription-invoices",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.TenantLicenses', 'U') IS NULL
+        THROW 51050, 'TenantLicenses is missing. Apply the platform license migration first.', 1;
+
+    IF OBJECT_ID('dbo.PlatformSubscriptionInvoices', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.PlatformSubscriptionInvoices
+        (
+            Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_PlatformSubscriptionInvoices PRIMARY KEY,
+            TenantId int NOT NULL,
+            InvoiceNumber nvarchar(80) NOT NULL,
+            IdempotencyKey uniqueidentifier NOT NULL,
+            PeriodStartsAtUtc datetime2 NOT NULL,
+            PeriodEndsAtUtc datetime2 NOT NULL,
+            Months int NOT NULL,
+            GraceDays int NOT NULL,
+            Amount decimal(18,2) NOT NULL,
+            Currency nvarchar(3) NOT NULL,
+            PaymentMethod nvarchar(30) NOT NULL,
+            PaymentReference nvarchar(120) NULL,
+            Notes nvarchar(500) NULL,
+            Status nvarchar(20) NOT NULL,
+            PaidAtUtc datetime2 NOT NULL,
+            CreatedBy nvarchar(100) NOT NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_PlatformSubscriptionInvoices_CreatedAtUtc DEFAULT(SYSUTCDATETIME()),
+            CONSTRAINT FK_PlatformSubscriptionInvoices_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Period
+                CHECK (PeriodEndsAtUtc > PeriodStartsAtUtc),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Months
+                CHECK (Months BETWEEN 1 AND 60 AND GraceDays BETWEEN 0 AND 90),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Amount
+                CHECK (Amount >= 0),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Currency
+                CHECK (Currency IN (N'IQD', N'USD')),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Status
+                CHECK (Status IN (N'Paid', N'Voided'))
+        );
+
+        CREATE UNIQUE INDEX UX_PlatformSubscriptionInvoices_InvoiceNumber
+            ON dbo.PlatformSubscriptionInvoices(InvoiceNumber);
+        CREATE UNIQUE INDEX UX_PlatformSubscriptionInvoices_IdempotencyKey
+            ON dbo.PlatformSubscriptionInvoices(IdempotencyKey);
+        CREATE INDEX IX_PlatformSubscriptionInvoices_TenantDate
+            ON dbo.PlatformSubscriptionInvoices(TenantId, CreatedAtUtc DESC);
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // ملف العميل التجاري الخاص بمالك المنصة. الحقول اختيارية للمستأجرين
+        // التاريخيين، بينما تفرض صفحة الإنشاء القيم التشغيلية على العملاء الجدد.
+        new(
+            "20261001-05-tenant-customer-profile",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.Tenants', 'U') IS NULL
+        THROW 51060, 'Tenants is missing. Apply the tenant-code migration first.', 1;
+
+    IF COL_LENGTH('dbo.Tenants', 'LegalName') IS NULL
+        ALTER TABLE dbo.Tenants ADD LegalName nvarchar(240) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ContactName') IS NULL
+        ALTER TABLE dbo.Tenants ADD ContactName nvarchar(160) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ContactEmail') IS NULL
+        ALTER TABLE dbo.Tenants ADD ContactEmail nvarchar(254) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ContactPhone') IS NULL
+        ALTER TABLE dbo.Tenants ADD ContactPhone nvarchar(40) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'Country') IS NULL
+        ALTER TABLE dbo.Tenants ADD Country nvarchar(100) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'Address') IS NULL
+        ALTER TABLE dbo.Tenants ADD Address nvarchar(500) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'TaxNumber') IS NULL
+        ALTER TABLE dbo.Tenants ADD TaxNumber nvarchar(80) NULL;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // العمليات النهائية لصفحة المستأجر: نطاقات فريدة قابلة للتحقق، دورة إلغاء
+        // الفاتورة اليدوية، وأرشفة قابلة للاستعادة من دون حذف البيانات أو إعادة
+        // استخدام كود المستأجر.
+        new(
+            "20261001-06-platform-tenant-operations",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.Tenants', 'U') IS NULL
+        THROW 51070, 'Tenants is missing. Apply the tenant-code migration first.', 1;
+    IF OBJECT_ID('dbo.PlatformSubscriptionInvoices', 'U') IS NULL
+        THROW 51071, 'PlatformSubscriptionInvoices is missing. Apply the subscription migration first.', 1;
+
+    IF COL_LENGTH('dbo.Tenants', 'PortalSubdomain') IS NULL
+        ALTER TABLE dbo.Tenants ADD PortalSubdomain nvarchar(63) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'CustomDomain') IS NULL
+        ALTER TABLE dbo.Tenants ADD CustomDomain nvarchar(253) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'DomainStatus') IS NULL
+        ALTER TABLE dbo.Tenants ADD DomainStatus nvarchar(20) NOT NULL
+            CONSTRAINT DF_Tenants_DomainStatus DEFAULT(N'NotConfigured');
+    IF COL_LENGTH('dbo.Tenants', 'ArchivedAtUtc') IS NULL
+        ALTER TABLE dbo.Tenants ADD ArchivedAtUtc datetime2 NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ArchivedBy') IS NULL
+        ALTER TABLE dbo.Tenants ADD ArchivedBy nvarchar(100) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Tenants_DomainStatus')
+        EXEC sp_executesql N'ALTER TABLE dbo.Tenants ADD CONSTRAINT CK_Tenants_DomainStatus
+            CHECK (DomainStatus IN (N''NotConfigured'', N''Pending'', N''Verified'', N''Failed''));';
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Tenants') AND name = N'UX_Tenants_PortalSubdomain')
+        EXEC sp_executesql N'CREATE UNIQUE INDEX UX_Tenants_PortalSubdomain ON dbo.Tenants(PortalSubdomain)
+            WHERE PortalSubdomain IS NOT NULL;';
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Tenants') AND name = N'UX_Tenants_CustomDomain')
+        EXEC sp_executesql N'CREATE UNIQUE INDEX UX_Tenants_CustomDomain ON dbo.Tenants(CustomDomain)
+            WHERE CustomDomain IS NOT NULL;';
+
+    IF COL_LENGTH('dbo.PlatformSubscriptionInvoices', 'VoidedAtUtc') IS NULL
+        ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidedAtUtc datetime2 NULL;
+    IF COL_LENGTH('dbo.PlatformSubscriptionInvoices', 'VoidedBy') IS NULL
+        ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidedBy nvarchar(100) NULL;
+    IF COL_LENGTH('dbo.PlatformSubscriptionInvoices', 'VoidReason') IS NULL
+        ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidReason nvarchar(500) NULL;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
     };
 
     /// <summary>

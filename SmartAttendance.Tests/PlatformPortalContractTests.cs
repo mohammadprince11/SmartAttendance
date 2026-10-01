@@ -145,6 +145,119 @@ public sealed class PlatformPortalContractTests
         Assert.Contains("N'Mobile'", tokens, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TenantActivation_IsServerSideToggleAndReportsFailedUpdates()
+    {
+        var root = RepoRoot();
+        var page = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml");
+        var model = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml.cs");
+        var store = Read(root, "SmartAttendance.Web", "Infrastructure", "Platform", "PlatformPortalStore.cs");
+
+        Assert.DoesNotContain("name=\"active\"", page, StringComparison.Ordinal);
+        Assert.Contains("var activate = !tenant.IsActive", model, StringComparison.Ordinal);
+        Assert.Contains("if (tenant is null) return NotFound()", model, StringComparison.Ordinal);
+        Assert.Contains("تعذر تغيير حالة المنظومة", model, StringComparison.Ordinal);
+        Assert.Contains("OUTPUT inserted.Code, inserted.IsActive INTO @Changed", store, StringComparison.Ordinal);
+        Assert.Contains("SELECT COUNT(*) FROM @Changed", store, StringComparison.Ordinal);
+        Assert.Contains("string? reason, bool confirmed", model, StringComparison.Ordinal);
+        Assert.Contains("name=\"reason\"", page, StringComparison.Ordinal);
+        Assert.Contains("name=\"confirmed\"", page, StringComparison.Ordinal);
+        Assert.Contains("@Reason", store, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Portal_ProvidesPlanPresetsAuditHistoryAndExpiryWarnings()
+    {
+        var root = RepoRoot();
+        var plans = Read(root, "SmartAttendance.Web", "Infrastructure", "Platform", "PlatformPlanCatalog.cs");
+        var store = Read(root, "SmartAttendance.Web", "Infrastructure", "Platform", "PlatformPortalStore.cs");
+        var details = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml");
+        var index = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Index.cshtml");
+        var layout = Read(root, "SmartAttendance.Web", "Pages", "Shared", "_PlatformLayout.cshtml");
+
+        Assert.Contains("\"Basic\"", plans, StringComparison.Ordinal);
+        Assert.Contains("\"Business\"", plans, StringComparison.Ordinal);
+        Assert.Contains("\"Enterprise\"", plans, StringComparison.Ordinal);
+        Assert.Contains("ListTenantAuditAsync", store, StringComparison.Ordinal);
+        Assert.Contains("سجل التدقيق", details, StringComparison.Ordinal);
+        Assert.Contains("اشتراكات تحتاج متابعة", index, StringComparison.Ordinal);
+        Assert.Contains("platform-portal.js", layout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SubscriptionRenewal_IsAtomicIdempotentAndAudited()
+    {
+        var root = RepoRoot();
+        var migration = Read(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs");
+        var store = Read(root, "SmartAttendance.Web", "Infrastructure", "Platform", "PlatformPortalStore.cs");
+        var page = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml");
+        var model = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml.cs");
+
+        Assert.Contains("20261001-04-platform-subscription-invoices", migration, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE dbo.PlatformSubscriptionInvoices", migration, StringComparison.Ordinal);
+        Assert.Contains("UX_PlatformSubscriptionInvoices_IdempotencyKey", migration, StringComparison.Ordinal);
+        Assert.Contains("BeginTransactionAsync(IsolationLevel.Serializable)", store, StringComparison.Ordinal);
+        Assert.Contains("WHERE IdempotencyKey = @IdempotencyKey", store, StringComparison.Ordinal);
+        Assert.Contains("license.Version = @ExpectedVersion", store, StringComparison.Ordinal);
+        Assert.Contains("SubscriptionRenewed", store, StringComparison.Ordinal);
+        Assert.Contains("RecordPaidRenewalAsync", model, StringComparison.Ordinal);
+        Assert.Contains("تسجيل دفعة خارجية وتجديد الاشتراك", page, StringComparison.Ordinal);
+        Assert.Contains("لا تنفذ أي دفع إلكتروني ولا تتصل ببوابة دفع", page, StringComparison.Ordinal);
+        Assert.Contains("[\"Cheque\"]", store, StringComparison.Ordinal);
+        Assert.DoesNotContain("[\"Card\"]", store, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CustomerProfileAndTenantAdminManagement_AreControlledAndAudited()
+    {
+        var root = RepoRoot();
+        var migration = Read(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs");
+        var store = Read(root, "SmartAttendance.Web", "Infrastructure", "Platform", "PlatformPortalStore.cs");
+        var page = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml");
+        var model = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml.cs");
+
+        Assert.Contains("20261001-05-tenant-customer-profile", migration, StringComparison.Ordinal);
+        Assert.Contains("ALTER TABLE dbo.Tenants ADD ContactEmail", migration, StringComparison.Ordinal);
+        Assert.Contains("UpdateTenantProfileAsync", store, StringComparison.Ordinal);
+        Assert.Contains("GetTenantAdminAsync", store, StringComparison.Ordinal);
+        Assert.Contains("ResetTenantAdminPasswordAsync", store, StringComparison.Ordinal);
+        Assert.Contains("SecurityStamp = REPLACE(CONVERT(nvarchar(36), NEWID())", store, StringComparison.Ordinal);
+        Assert.Contains("MustChangePassword = 1", store, StringComparison.Ordinal);
+        Assert.Contains("TenantAdminPasswordReset", store, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"SaveCustomerProfile\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"ResetTenantAdminPassword\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"UnlockTenantAdmin\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"ToggleTenantAdmin\"", page, StringComparison.Ordinal);
+        Assert.Contains("OnPostResetTenantAdminPasswordAsync", model, StringComparison.Ordinal);
+        Assert.DoesNotContain("@temporaryPassword", store, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TenantOperations_AreRecoverableAuditedAndDoNotDeleteFinancialHistory()
+    {
+        var root = RepoRoot();
+        var migration = Read(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs");
+        var store = Read(root, "SmartAttendance.Web", "Infrastructure", "Platform", "PlatformPortalStore.cs");
+        var page = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml");
+        var model = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Details.cshtml.cs");
+
+        Assert.Contains("20261001-06-platform-tenant-operations", migration, StringComparison.Ordinal);
+        Assert.Contains("UX_Tenants_PortalSubdomain", migration, StringComparison.Ordinal);
+        Assert.Contains("UX_Tenants_CustomDomain", migration, StringComparison.Ordinal);
+        Assert.Contains("ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidReason", migration, StringComparison.Ordinal);
+        Assert.Contains("SetTenantArchivedAsync", store, StringComparison.Ordinal);
+        Assert.Contains("SecurityStamp = REPLACE(CONVERT(nvarchar(36), NEWID())", store, StringComparison.Ordinal);
+        Assert.Contains("Status = N'Voided'", store, StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE FROM dbo.PlatformSubscriptionInvoices", store, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("asp-page-handler=\"SaveDomain\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"VoidInvoice\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"SetArchived\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"ExportInvoices\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"ExportAudit\"", page, StringComparison.Ordinal);
+        Assert.Contains("OnPostSetArchivedAsync", model, StringComparison.Ordinal);
+        Assert.Contains("text/csv; charset=utf-8", model, StringComparison.Ordinal);
+    }
+
     private static string Read(string root, params string[] parts) =>
         File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
 

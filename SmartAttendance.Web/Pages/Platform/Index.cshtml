@@ -19,12 +19,32 @@
     <div class="platform-alert platform-alert--success">@Model.Message</div>
 }
 
-<section class="platform-kpis" aria-label="ملخص المنصة">
+<section class="platform-kpis platform-kpis--5" aria-label="ملخص المنصة">
     <article><span>إجمالي المنظومات</span><strong>@Model.Tenants.Count</strong></article>
     <article><span>المنظومات المتاحة</span><strong>@Model.ActiveCount</strong></article>
+    <article><span>المنظومات المؤرشفة</span><strong>@Model.ArchivedCount</strong></article>
     <article><span>إجمالي الموظفين</span><strong>@Model.TotalEmployees</strong></article>
     <article><span>تنتهي خلال 30 يوماً</span><strong>@Model.ExpiringSoonCount</strong></article>
 </section>
+
+@if (Model.ExpiringTenants.Count > 0)
+{
+    <section class="platform-card platform-expiry-panel" aria-label="اشتراكات قريبة الانتهاء">
+        <header class="platform-card__header">
+            <div><h2>اشتراكات تحتاج متابعة</h2><p>منظومات فعالة ينتهي اشتراكها خلال الثلاثين يوماً القادمة.</p></div>
+        </header>
+        <div class="platform-expiry-list">
+            @foreach (var tenant in Model.ExpiringTenants)
+            {
+                var days = SmartAttendance.Web.Pages.Platform.IndexModel.DaysUntilExpiry(tenant);
+                <a asp-page="/Platform/Tenants/Details" asp-route-id="@tenant.Id">
+                    <span><strong>@tenant.Name</strong><small>الكود @tenant.Code — @tenant.ExpiresAtUtc?.ToString("yyyy/MM/dd")</small></span>
+                    <span class="platform-expiry-badge @(days <= 7 ? "platform-expiry-badge--urgent" : null)">@days يوم</span>
+                </a>
+            }
+        </div>
+    </section>
+}
 
 <section class="platform-card platform-table-card">
     <header class="platform-card__header">
@@ -95,8 +115,8 @@
                             </td>
                             <td>@(tenant.ExpiresAtUtc?.ToString("yyyy/MM/dd") ?? "دائم")</td>
                             <td>
-                                <span class="platform-status @(tenant.IsActive ? "platform-status--active" : "platform-status--blocked")">
-                                    @(tenant.IsActive ? tenant.EffectiveStatus : "موقوفة")
+                                <span class="platform-status @(!tenant.IsDeleted && tenant.IsActive ? "platform-status--active" : "platform-status--blocked")">
+                                    @(tenant.IsDeleted ? "مؤرشفة" : tenant.IsActive ? tenant.EffectiveStatus : "موقوفة")
                                 </span>
                             </td>
                             <td><a class="platform-link" asp-page="/Platform/Tenants/Details" asp-route-id="@tenant.Id">إدارة</a></td>

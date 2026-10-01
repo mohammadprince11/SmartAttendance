@@ -24,6 +24,41 @@
                 <input asp-for="Input.Name" placeholder="مثال: مجموعة الرافدين" />
                 <span asp-validation-for="Input.Name" class="platform-validation"></span>
             </label>
+            <label class="platform-field platform-field--wide">
+                <span>الاسم القانوني (اختياري)</span>
+                <input asp-for="Input.LegalName" placeholder="الاسم المسجل في الوثائق الرسمية" />
+                <span asp-validation-for="Input.LegalName" class="platform-validation"></span>
+            </label>
+            <label class="platform-field">
+                <span>مسؤول التواصل</span>
+                <input asp-for="Input.ContactName" />
+                <span asp-validation-for="Input.ContactName" class="platform-validation"></span>
+            </label>
+            <label class="platform-field">
+                <span>البريد الإلكتروني</span>
+                <input asp-for="Input.ContactEmail" type="email" dir="ltr" />
+                <span asp-validation-for="Input.ContactEmail" class="platform-validation"></span>
+            </label>
+            <label class="platform-field">
+                <span>رقم الهاتف</span>
+                <input asp-for="Input.ContactPhone" type="tel" dir="ltr" />
+                <span asp-validation-for="Input.ContactPhone" class="platform-validation"></span>
+            </label>
+            <label class="platform-field">
+                <span>الدولة</span>
+                <input asp-for="Input.Country" />
+                <span asp-validation-for="Input.Country" class="platform-validation"></span>
+            </label>
+            <label class="platform-field platform-field--wide">
+                <span>العنوان (اختياري)</span>
+                <textarea asp-for="Input.Address"></textarea>
+                <span asp-validation-for="Input.Address" class="platform-validation"></span>
+            </label>
+            <label class="platform-field">
+                <span>الرقم الضريبي (اختياري)</span>
+                <input asp-for="Input.TaxNumber" dir="ltr" />
+                <span asp-validation-for="Input.TaxNumber" class="platform-validation"></span>
+            </label>
         </div>
     </section>
 
@@ -46,7 +81,19 @@
     <section class="platform-card platform-form-section">
         <header><span>03</span><div><h2>اللايسنس والحدود</h2><p>التحكم بالمدة والطاقة الاستيعابية والمودلات المفعّلة.</p></div></header>
         <div class="platform-fields platform-fields--3">
-            <label class="platform-field"><span>الخطة</span><input asp-for="Input.PlanCode" /></label>
+            <label class="platform-field">
+                <span>الخطة</span>
+                <select asp-for="Input.PlanCode" data-platform-plan-select>
+                    @foreach (var plan in Model.Plans)
+                    {
+                        <option value="@plan.Code"
+                                data-max-companies="@plan.MaxCompanies"
+                                data-max-employees="@plan.MaxEmployees"
+                                data-max-devices="@plan.MaxDevices"
+                                data-modules="@string.Join(',', plan.EnabledModules)">@plan.Name — @plan.Description</option>
+                    }
+                </select>
+            </label>
             <label class="platform-field">
                 <span>الحالة</span>
                 <select asp-for="Input.LicenseStatus">
@@ -58,9 +105,9 @@
             <label class="platform-field"><span>تاريخ البداية</span><input asp-for="Input.StartsAt" type="date" /></label>
             <label class="platform-field"><span>تاريخ الانتهاء</span><input asp-for="Input.ExpiresAt" type="date" /></label>
             <label class="platform-field"><span>نهاية فترة السماح</span><input asp-for="Input.GraceEndsAt" type="date" /></label>
-            <label class="platform-field"><span>أقصى عدد شركات</span><input asp-for="Input.MaxCompanies" type="number" /></label>
-            <label class="platform-field"><span>أقصى عدد موظفين</span><input asp-for="Input.MaxEmployees" type="number" /></label>
-            <label class="platform-field"><span>أقصى عدد أجهزة</span><input asp-for="Input.MaxDevices" type="number" /></label>
+            <label class="platform-field"><span>أقصى عدد شركات</span><input asp-for="Input.MaxCompanies" type="number" data-plan-limit="companies" /></label>
+            <label class="platform-field"><span>أقصى عدد موظفين</span><input asp-for="Input.MaxEmployees" type="number" data-plan-limit="employees" /></label>
+            <label class="platform-field"><span>أقصى عدد أجهزة</span><input asp-for="Input.MaxDevices" type="number" data-plan-limit="devices" /></label>
         </div>
 
         <fieldset class="platform-modules">
@@ -68,7 +115,7 @@
             @foreach (var module in Model.Modules)
             {
                 <label>
-                    <input type="checkbox" name="EnabledModules" value="@module.Key" checked="@(Model.EnabledModules.Contains(module.Key))" />
+                    <input type="checkbox" name="EnabledModules" value="@module.Key" checked="@(Model.EnabledModules.Contains(module.Key))" data-plan-module />
                     <span>@module.Value</span>
                 </label>
             }
