@@ -8,7 +8,7 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
 {
     public void Configure(EntityTypeBuilder<Device> builder)
     {
-        builder.ToTable("Devices");
+        builder.ToTable("Devices", table => table.UseSqlOutputClause(false));
 
         builder.HasKey(x => x.Id);
 

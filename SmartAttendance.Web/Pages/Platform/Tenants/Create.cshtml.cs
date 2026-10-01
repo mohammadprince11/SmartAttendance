@@ -10,6 +10,7 @@ namespace SmartAttendance.Web.Pages.Platform.Tenants;
 [Authorize(Policy = PlatformAuthenticationDefaults.Policy)]
 public sealed class CreateModel : PageModel
 {
+    private const string DefaultPlanCode = "Custom";
     private readonly ApplicationDbContext _db;
 
     public CreateModel(ApplicationDbContext db) => _db = db;
@@ -21,7 +22,6 @@ public sealed class CreateModel : PageModel
     public string[] EnabledModules { get; set; } = PlatformPortalStore.ModuleCatalog.Keys.ToArray();
 
     public IReadOnlyDictionary<string, string> Modules => PlatformPortalStore.ModuleCatalog;
-    public IReadOnlyList<PlatformPlanCatalog.Plan> Plans => PlatformPlanCatalog.Plans;
 
     public sealed class InputModel
     {
@@ -52,11 +52,8 @@ public sealed class CreateModel : PageModel
         [Required, RegularExpression("^[A-Za-z0-9._-]{3,100}$")]
         public string AdminUsername { get; set; } = "admin";
 
-        [Required, StringLength(200, MinimumLength = 12)]
+        [Required, StringLength(200, MinimumLength = 8)]
         public string AdminPassword { get; set; } = string.Empty;
-
-        [Required, StringLength(60, MinimumLength = 2)]
-        public string PlanCode { get; set; } = "Business";
 
         [Required]
         public string LicenseStatus { get; set; } = "Trial";
@@ -78,11 +75,6 @@ public sealed class CreateModel : PageModel
 
         [Range(0, 100000)]
         public int MaxDevices { get; set; } = 10;
-    }
-
-    public void OnGet()
-    {
-        ApplyPlanDefaults(Input.PlanCode);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -113,7 +105,7 @@ public sealed class CreateModel : PageModel
                 Input.TaxNumber,
                 Input.AdminUsername,
                 Input.AdminPassword,
-                Input.PlanCode,
+                DefaultPlanCode,
                 Input.LicenseStatus,
                 DateTime.SpecifyKind(Input.StartsAt.Date, DateTimeKind.Utc),
                 Input.ExpiresAt.HasValue ? DateTime.SpecifyKind(Input.ExpiresAt.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc) : null,
@@ -129,14 +121,4 @@ public sealed class CreateModel : PageModel
         return RedirectToPage("/Platform/Tenants/Details", new { id = result.TenantId });
     }
 
-    private void ApplyPlanDefaults(string planCode)
-    {
-        var plan = PlatformPlanCatalog.Find(planCode);
-        if (plan is null) return;
-
-        Input.MaxCompanies = plan.MaxCompanies;
-        Input.MaxEmployees = plan.MaxEmployees;
-        Input.MaxDevices = plan.MaxDevices;
-        EnabledModules = plan.EnabledModules.ToArray();
-    }
 }

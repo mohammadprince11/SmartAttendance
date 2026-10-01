@@ -5,6 +5,7 @@ using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Companies.ViewModels;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Localization;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Companies;
 
@@ -34,7 +35,11 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        var company = await _companyService.GetEditByIdAsync(id);
+        var tenantId = TenantContext.GetTenantId(User);
+        if (tenantId is not > 0)
+            return Forbid();
+
+        var company = await _companyService.GetEditByIdAsync(id, tenantId.Value);
 
         if (company == null)
             return NotFound();
@@ -47,13 +52,20 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        var tenantId = TenantContext.GetTenantId(User);
+        if (tenantId is not > 0)
+            return Forbid();
+
+        if (await _companyService.GetEditByIdAsync(Company.Id, tenantId.Value) is null)
+            return NotFound();
+
         ModelState.Remove("Company.Name");
         await LoadTranslationsAsync(true);
         await ValidateAndMapAsync();
         if (!ModelState.IsValid)
             return Page();
 
-        var updated = await _companyService.UpdateAsync(Company);
+        var updated = await _companyService.UpdateAsync(Company, tenantId.Value);
 
         if (!updated)
         {

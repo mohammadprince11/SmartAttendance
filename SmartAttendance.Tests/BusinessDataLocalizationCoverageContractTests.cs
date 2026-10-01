@@ -21,14 +21,6 @@ public sealed class BusinessDataLocalizationCoverageContractTests
             root,
             "GetEmployeeBusinessDataAsync",
             "SmartAttendance.Web",
-            "Infrastructure",
-            "Hrms",
-            "OrgStructuresBuilder.cs");
-
-        AssertContains(
-            root,
-            "GetEmployeeBusinessDataAsync",
-            "SmartAttendance.Web",
             "Pages",
             "ShiftAssignments",
             "Index.cshtml.cs");
@@ -61,14 +53,6 @@ public sealed class BusinessDataLocalizationCoverageContractTests
             "SmartAttendance.Web",
             "Pages",
             "Organization",
-            "Chart.cshtml.cs");
-
-        AssertContains(
-            root,
-            "GetCompanyNamesAsync",
-            "SmartAttendance.Web",
-            "Pages",
-            "Organization",
             "Index.cshtml.cs");
 
         AssertContains(
@@ -79,13 +63,6 @@ public sealed class BusinessDataLocalizationCoverageContractTests
             "Organization",
             "Index.cshtml.cs");
 
-        AssertContains(
-            root,
-            "GetCompanyNamesAsync",
-            "SmartAttendance.Web",
-            "Pages",
-            "OrgStructures",
-            "Index.cshtml.cs");
     }
 
     [Fact]

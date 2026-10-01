@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -63,6 +64,7 @@ public class ChangePasswordModel : PageModel
         }
 
         IsForced = await ReadMustChangeAsync();
+        var wasForced = IsForced;
 
         if (string.IsNullOrWhiteSpace(CurrentPassword) ||
             string.IsNullOrWhiteSpace(NewPassword) ||
@@ -148,6 +150,21 @@ WHERE Id = @Id;
         }
 
         IsForced = false;
+
+        if (wasForced && !User.IsInRole("Employee"))
+        {
+            var hasCompany = await _dbContext.Companies
+                .AsNoTracking()
+                .AnyAsync(company => !company.IsDeleted && company.IsActive);
+
+            if (!hasCompany)
+            {
+                TempData["SuccessMessage"] =
+                    "تم تغيير كلمة المرور. أكمل الآن خطوات تأسيس المنظومة بالترتيب.";
+                return RedirectToPage("/Setup/Index", new { onboarding = true });
+            }
+        }
+
         Success = true;
         return Page();
     }

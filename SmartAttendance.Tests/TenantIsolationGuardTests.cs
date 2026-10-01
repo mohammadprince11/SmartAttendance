@@ -115,19 +115,21 @@ public sealed class TenantIsolationGuardTests
     }
 
     [Fact]
-    public void OrganizationChart_ScopesCompanyPicker()
+    public void OrganizationChart_RedirectsToScopedUnifiedPage()
     {
         var page = Page("Organization", "Chart.cshtml.cs");
-        Assert.Contains("ICompanyScopeProvider", page);
-        Assert.Contains("scope.Allows", page);
+        Assert.Contains("/Organization/Index", page);
+        Assert.Contains("ChartCompanyId", page);
+        Assert.DoesNotContain("ApplicationDbContext", page);
     }
 
     [Fact]
-    public void OrgStructures_ScopesCompanyPicker()
+    public void OrgStructures_RedirectsToScopedUnifiedPage()
     {
         var page = Page("OrgStructures", "Index.cshtml.cs");
-        Assert.Contains("ICompanyScopeProvider", page);
-        Assert.Contains("scope.Allows", page);
+        Assert.Contains("/Organization/Index", page);
+        Assert.Contains("ChartCompanyId", page);
+        Assert.DoesNotContain("ApplicationDbContext", page);
     }
 
     // ---- Phase 2: لوحة التحكم (المُنتقي يصله كل دور) ----

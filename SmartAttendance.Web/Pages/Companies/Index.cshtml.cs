@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Companies.Services;
 using SmartAttendance.Application.Companies.ViewModels;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Companies;
 
@@ -19,8 +20,13 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? SearchTerm { get; set; }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
-        Companies = await _companyService.GetAllAsync(SearchTerm);
+        var tenantId = TenantContext.GetTenantId(User);
+        if (tenantId is not > 0)
+            return Forbid();
+
+        Companies = await _companyService.GetAllAsync(tenantId.Value, SearchTerm);
+        return Page();
     }
 }

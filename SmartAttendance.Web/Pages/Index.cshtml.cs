@@ -72,7 +72,7 @@ public class IndexModel : PageModel
         _ => "مساء الخير"
     };
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
         // اللوحة يصلها كل دور؛ فالمُنتقي محصورٌ بشركات المستخدم كي لا يرى دورٌ مقيَّد
         // أسماء/أعداد شركةٍ أخرى، ولا يُنفَّذ أي مقياس لشركةٍ خارج نطاقه. و`Resolve`
@@ -101,11 +101,16 @@ public class IndexModel : PageModel
             CompanyId,
             CompanyOptions.Select(x => x.Id).ToArray());
 
+        if (CompanyOptions.Count == 0 && User.IsInRole(RoleRouteCatalog.Admin))
+        {
+            return RedirectToPage("/Setup/Index", new { onboarding = true });
+        }
+
         // حارس دفاعيّ صريح: لا يُنفَّذ أي مقياس إلا لشركةٍ يسمح بها النطاق.
         if (!CompanyId.HasValue || !scope.Allows(CompanyId.Value))
         {
             CompanyId = null;
-            return;
+            return Page();
         }
 
         AllWidgets = await DashboardWidgetStore.ListAsync(_dbContext, scope, CompanyId.Value);
@@ -117,6 +122,8 @@ public class IndexModel : PageModel
             var data = await DashboardWidgetStore.ExecuteAsync(_dbContext, widget.Metric, CompanyId.Value);
             VisibleWidgets.Add((widget, data));
         }
+
+        return Page();
     }
 
     /// <summary>

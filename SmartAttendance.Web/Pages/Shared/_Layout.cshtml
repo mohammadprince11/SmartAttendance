@@ -392,20 +392,14 @@
                                 </details>
                             }
 
-                            @* ④ الهياكل التنظيمية — صارت قسماً مطويّاً كما بكيان لا ثلاثة روابط سائبة *@
+                            @* الهياكل التنظيمية موحدة في صفحة واحدة بثلاثة تبويبات. *@
                             @if (canViewOrganization)
                             {
                                 <details class="ky-acc" @(IsUnder("/Organization") || IsUnder("/OrgStructures") ? "open" : "")>
                                     <summary><span>الهياكل التنظيمية</span><span class="ky-acc-chev"></span></summary>
                                     <div class="ky-acc-body">
-                                        <a asp-page="/Organization/Index" class="zynora-nav-link @(IsUnder("/Organization/Index") || (IsUnder("/Organization") && !IsUnder("/Organization/Chart")) ? "active zynora-active" : "")">
-                                            <span>وحدات العمل</span>
-                                        </a>
-                                        <a href="/Organization/Index#tab=chart" class="zynora-nav-link @(IsUnder("/Organization/Chart") ? "active zynora-active" : "")">
-                                            <span>الهيكل الإداري</span>
-                                        </a>
-                                        <a href="/OrgStructures" class="zynora-nav-link @(IsUnder("/OrgStructures") ? "active zynora-active" : "")">
-                                            <span>الهياكل الثلاث المتوازية</span>
+                                        <a asp-page="/Organization/Index" class="zynora-nav-link @(IsUnder("/Organization") || IsUnder("/OrgStructures") ? "active zynora-active" : "")">
+                                            <span>مركز الهيكل التنظيمي</span>
                                         </a>
                                     </div>
                                 </details>
@@ -493,26 +487,8 @@
                                         <a asp-page="/Documents/Templates" class="zynora-nav-link @(IsUnder("/Documents/Templates") ? "active zynora-active" : "")">
                                             <span>منشئ الوثائق</span>
                                         </a>
-                                        <a asp-page="/HrSettings/NoticePeriod" class="zynora-nav-link @(IsUnder("/HrSettings/NoticePeriod") ? "active zynora-active" : "")">
-                                            <span>فترة الإنذار</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/SelfServiceSettings" class="zynora-nav-link @(IsUnder("/HrSettings/SelfServiceSettings") ? "active zynora-active" : "")">
-                                            <span>إعدادات الخدمة الذاتية</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/TerminationReasons" class="zynora-nav-link @(IsUnder("/HrSettings/TerminationReasons") ? "active zynora-active" : "")">
-                                            <span>أسباب الإيقاف</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/NotificationCenter" class="zynora-nav-link @(IsUnder("/HrSettings/NotificationCenter") ? "active zynora-active" : "")">
-                                            <span>مركز الإشعارات</span>
-                                        </a>
-                                        <a asp-page="/HrSettings/Lookups" class="zynora-nav-link @(IsUnder("/HrSettings/Lookups") ? "active zynora-active" : "")">
-                                            <span>القوائم المرجعية</span>
-                                        </a>
-                                        <a href="/HrSettings/EmployeeCodeSchema" class="zynora-nav-link @(IsUnder("/HrSettings/EmployeeCodeSchema") ? "active zynora-active" : "")">
-                                            <span>مخطط رمز الموظف</span>
-                                        </a>
-                                        <a href="/HrSettings/ApprovalTemplates" class="zynora-nav-link @(IsUnder("/HrSettings/ApprovalTemplates") ? "active zynora-active" : "")">
-                                            <span>قوالب الموافقات</span>
+                                        <a asp-page="/HrSettings/Index" class="zynora-nav-link @(IsUnder("/HrSettings") ? "active zynora-active" : "")">
+                                            <span>مركز إعدادات الموارد البشرية</span>
                                         </a>
                                     </div>
                                 </details>
@@ -824,14 +800,6 @@
                         </summary>
                         <div class="zynora-nav-group-links" data-ky-title="الإعدادات">
                             <a asp-page="/Settings/Index" class="zynora-nav-link ky-drawer-title @(IsCurrent("/Settings") || IsCurrent("/Settings/Index") ? "active zynora-active" : "")"><span>مركز الإعدادات</span></a>
-                            <a asp-page="/Setup/Index" class="zynora-nav-link @(IsUnder("/Setup") ? "active zynora-active" : "")"><span>تهيئة الشركة</span></a>
-                            <a asp-page="/UserAccess/Index" class="zynora-nav-link @(IsUnder("/UserAccess") ? "active zynora-active" : "")"><span>إدارة المستخدمين</span></a>
-                            <a asp-page="/AccessControl/Index" class="zynora-nav-link @(IsUnder("/AccessControl") ? "active zynora-active" : "")"><span>مركز الصلاحيات</span></a>
-                            <a asp-page="/AuditLogs/Index" class="zynora-nav-link @(IsUnder("/AuditLogs") ? "active zynora-active" : "")"><span>سجل التدقيق</span></a>
-                            <a asp-page="/Settings/Dictionary" class="zynora-nav-link @(IsUnder("/Settings/Dictionary") ? "active zynora-active" : "")"><span>قاموس اللغات</span></a>
-                            <a asp-page="/Settings/DataLanguages" class="zynora-nav-link @(IsUnder("/Settings/DataLanguages") ? "active zynora-active" : "")"><span>لغات بيانات الشركة</span></a>
-                            <a asp-page="/Branding/Index" class="zynora-nav-link @(IsUnder("/Branding") ? "active zynora-active" : "")"><span>الهوية والثيم</span></a>
-                            <a asp-page="/Integrations/Webhooks" class="zynora-nav-link @(IsUnder("/Integrations") ? "active zynora-active" : "")"><span>التكاملات</span></a>
                         </div>
                     </details>
                 }

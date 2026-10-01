@@ -11,6 +11,13 @@
 <main class="zy-data-languages" dir="rtl">
     <nav class="zy-data-languages__breadcrumb" aria-label="مسار الصفحة">
         <a asp-page="/Settings/Index">الإعدادات</a><span>/</span><strong>لغات بيانات الشركة</strong>
+        @if (Model.Onboarding)
+        {
+            <span>/</span>
+            <a asp-page="/Setup/Index"
+               asp-route-companyId="@Model.CompanyId"
+               asp-route-onboarding="true">الرجوع إلى خطوات التأسيس</a>
+        }
     </nav>
 
     <header class="zy-data-languages__hero">
@@ -23,6 +30,7 @@
         @if (Model.Companies.Count > 0)
         {
             <form method="get" class="zy-data-languages__company">
+                <input type="hidden" name="onboarding" value="@Model.Onboarding.ToString().ToLowerInvariant()" />
                 <label for="companyId">الشركة</label>
                 <select id="companyId" name="companyId" onchange="this.form.submit()">
                     @foreach (var company in Model.Companies)
@@ -69,6 +77,7 @@
     {
         <form method="post" asp-page-handler="Save" class="zy-data-languages__form">
             <input type="hidden" asp-for="CompanyId" />
+            <input type="hidden" asp-for="Onboarding" />
 
             <section class="zy-data-languages__explain">
                 <strong>قاعدة الإدخال</strong>

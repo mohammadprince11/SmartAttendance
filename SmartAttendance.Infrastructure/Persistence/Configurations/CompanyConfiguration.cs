@@ -8,7 +8,7 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
 {
     public void Configure(EntityTypeBuilder<Company> builder)
     {
-        builder.ToTable("Companies");
+        builder.ToTable("Companies", table => table.UseSqlOutputClause(false));
 
         builder.HasKey(x => x.Id);
 

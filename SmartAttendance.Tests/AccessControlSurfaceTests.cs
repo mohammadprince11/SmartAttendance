@@ -35,7 +35,7 @@ public sealed class AccessControlSurfaceTests
         var settings = File.ReadAllText(Path.Combine(root,
             "SmartAttendance.Web", "Pages", "Settings", "Index.cshtml"));
 
-        Assert.Contains("/AccessControl/Index", layout, StringComparison.Ordinal);
+        Assert.Contains("/Settings/Index", layout, StringComparison.Ordinal);
         Assert.Contains("/AccessControl/Index", settings, StringComparison.Ordinal);
         Assert.DoesNotContain("/AccessRoles", layout, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("/EmployeePermissions", layout, StringComparison.OrdinalIgnoreCase);

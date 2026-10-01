@@ -30,7 +30,9 @@ public class DeleteModel : PageModel
     public async Task<IActionResult> OnGetAsync(int id)
     {
         if(!(await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted) return Forbid();
-        var company = await _companyService.GetByIdAsync(id);
+        var tenantId = TenantContext.GetTenantId(User);
+        if (tenantId is not > 0) return Forbid();
+        var company = await _companyService.GetByIdAsync(id, tenantId.Value);
 
         if (company == null)
             return NotFound();
@@ -44,19 +46,20 @@ public class DeleteModel : PageModel
     public async Task<IActionResult> OnPostAsync(int id)
     {
         if(!(await _companyScope.GetAsync(HttpContext.RequestAborted)).IsUnrestricted) return Forbid();
+        var tenantId = TenantContext.GetTenantId(User);
+        if (tenantId is not > 0) return Forbid();
+        var company = await _companyService.GetByIdAsync(id, tenantId.Value);
+        if (company is null) return NotFound();
+
         var hasLinkedData = await HasCompanyLinkedDataAsync(id);
-        var deleted = await _companyService.DeleteAsync(id);
+        var deleted = await _companyService.DeleteAsync(id, tenantId.Value);
 
         if (!deleted)
         {
             ErrorMessage = "Company not found or could not be deleted.";
 
-            var company = await _companyService.GetByIdAsync(id);
-            if (company != null)
-            {
-                Company = company;
-                HasLinkedData = hasLinkedData;
-            }
+            Company = company;
+            HasLinkedData = hasLinkedData;
 
             return Page();
         }

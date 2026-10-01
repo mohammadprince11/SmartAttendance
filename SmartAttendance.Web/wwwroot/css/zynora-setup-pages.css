@@ -3303,3 +3303,131 @@ body.nx-setup-modal-open .nxcs-panel {
                 var(--color-primary);
         }
 /* END ZYNORA_DEPARTMENT_EDIT_LANGUAGES_EXTERNALIZED_20260904 */
+
+/* First-run company setup: a restrained, linear checklist that reuses the
+   existing setup pages instead of introducing a second administration UI. */
+.nx-setup-wizard {
+    margin-block: 18px 24px;
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    background: var(--surface-raised);
+    overflow: hidden;
+}
+
+.nx-setup-wizard__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.nx-setup-wizard__head span,
+.nx-setup-wizard__head p,
+.nx-setup-wizard__steps small,
+.nx-setup-wizard__state {
+    color: var(--text-muted);
+}
+
+.nx-setup-wizard__head span {
+    display: block;
+    margin-bottom: 5px;
+    font-size: .76rem;
+    font-weight: 800;
+}
+
+.nx-setup-wizard__head h2,
+.nx-setup-wizard__head p {
+    margin: 0;
+}
+
+.nx-setup-wizard__head p {
+    margin-top: 6px;
+}
+
+.nx-setup-wizard__head > strong {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    font-size: .78rem;
+}
+
+.nx-setup-wizard__steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.nx-setup-wizard__steps li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 72px;
+    padding: 13px 24px;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.nx-setup-wizard__steps li:last-child {
+    border-bottom: 0;
+}
+
+.nx-setup-wizard__steps li > b {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid var(--border-default);
+    border-radius: 50%;
+    font-size: .82rem;
+}
+
+.nx-setup-wizard__steps li > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.nx-setup-wizard__steps li a {
+    min-width: 72px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-primary);
+    border-radius: 8px;
+    color: var(--color-primary);
+    text-align: center;
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.nx-setup-wizard__steps li.is-complete > b {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.nx-setup-wizard__steps li.is-current {
+    background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+.nx-setup-wizard__steps li.is-locked {
+    opacity: .58;
+}
+
+@media (max-width: 720px) {
+    .nx-setup-wizard__head {
+        padding: 18px;
+    }
+
+    .nx-setup-wizard__steps li {
+        grid-template-columns: 32px minmax(0, 1fr);
+        padding-inline: 18px;
+    }
+
+    .nx-setup-wizard__steps li > a,
+    .nx-setup-wizard__steps li > .nx-setup-wizard__state {
+        grid-column: 2;
+        justify-self: start;
+    }
+}

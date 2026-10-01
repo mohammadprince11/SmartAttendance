@@ -16,20 +16,9 @@
             <p>هيكلية الشركة، الهيكل الهرمي (المدراء)، والهيكل الوظيفي — في مكان واحد.</p>
         </div>
         <div class="hrms-inline-form">
-            <a asp-page="/Companies/Index" class="hrms-btn-secondary">إعدادات الشركات</a>
-            <a asp-page="/Branches/Index" class="hrms-btn-secondary">إعدادات الفروع</a>
-            <a asp-page="/Departments/Index" class="hrms-btn-secondary">إعدادات الأقسام</a>
+            <a asp-page="/Setup/Index" class="hrms-btn-secondary">تعديل بيانات الشركة والهيكل</a>
         </div>
     </div>
-
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="hrms-badge approved zyu-961915113e90">@Model.SuccessMessage</div>
-    }
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="hrms-badge rejected zyu-961915113e90">@Model.ErrorMessage</div>
-    }
 
     <div class="hrms-stats-card">
         <div class="hrms-stats">
@@ -60,9 +49,7 @@
             </form>
             <div class="hrms-inline-form">
                 <label class="hrms-toggle"><input type="checkbox" id="org-active-only" /> النشطة فقط</label>
-                <button type="button" class="hrms-btn-primary" data-hrms-open="add-company">+ شركة</button>
-                <button type="button" class="hrms-btn-secondary" data-hrms-open="add-branch">+ فرع</button>
-                <button type="button" class="hrms-btn-secondary" data-hrms-open="add-department">+ قسم</button>
+                <a asp-page="/Setup/Index" class="hrms-btn-primary">إدارة الهيكل</a>
             </div>
         </div>
 
@@ -307,75 +294,6 @@
         </div>
     </aside>
 }
-
-<aside class="hrms-slideover" id="add-company" aria-hidden="true">
-    <div class="hrms-slideover-head">
-        <h2>إضافة شركة</h2>
-        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
-    </div>
-    <div class="hrms-slideover-body">
-        <form method="post" asp-page-handler="CreateCompany" class="hrms-page">
-            <div class="hrms-field"><label>اسم الشركة</label><input name="CompanyInput.Name" required /></div>
-            <div class="hrms-field"><label>الكود (اختياري)</label><input name="CompanyInput.Code" /></div>
-            <label><input type="checkbox" name="CompanyInput.IsActive" value="true" checked /> فعّالة</label>
-            <button type="submit" class="hrms-btn-primary">حفظ</button>
-        </form>
-    </div>
-</aside>
-
-<aside class="hrms-slideover" id="add-branch" aria-hidden="true">
-    <div class="hrms-slideover-head">
-        <h2>إضافة فرع</h2>
-        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
-    </div>
-    <div class="hrms-slideover-body">
-        <form method="post" asp-page-handler="CreateBranch" class="hrms-page">
-            <div class="hrms-field">
-                <label>الشركة</label>
-                <select name="BranchInput.CompanyId" required>
-                    <option value="">اختر الشركة</option>
-                    @foreach (var company in Model.Companies)
-                    {
-                        <option value="@company.Id">@company.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="hrms-field"><label>اسم الفرع</label><input name="BranchInput.Name" required /></div>
-            <div class="hrms-field"><label>الكود (اختياري)</label><input name="BranchInput.Code" /></div>
-            <div class="hrms-field"><label>العنوان (اختياري)</label><input name="BranchInput.Address" /></div>
-            <label><input type="checkbox" name="BranchInput.IsActive" value="true" checked /> فعّال</label>
-            <button type="submit" class="hrms-btn-primary">حفظ</button>
-        </form>
-    </div>
-</aside>
-
-<aside class="hrms-slideover" id="add-department" aria-hidden="true">
-    <div class="hrms-slideover-head">
-        <h2>إضافة قسم</h2>
-        <button type="button" class="hrms-slideover-close" data-hrms-close aria-label="إغلاق">×</button>
-    </div>
-    <div class="hrms-slideover-body">
-        <form method="post" asp-page-handler="CreateDepartment" class="hrms-page">
-            <div class="hrms-field">
-                <label>الفرع</label>
-                <select name="DepartmentInput.BranchId" required>
-                    <option value="">اختر الفرع</option>
-                    @foreach (var company in Model.Companies)
-                    {
-                        foreach (var branch in company.Branches)
-                        {
-                            <option value="@branch.Id">@company.Name — @branch.Name</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="hrms-field"><label>اسم القسم</label><input name="DepartmentInput.Name" required /></div>
-            <div class="hrms-field"><label>الكود (اختياري)</label><input name="DepartmentInput.Code" /></div>
-            <label><input type="checkbox" name="DepartmentInput.IsActive" value="true" checked /> فعّال</label>
-            <button type="submit" class="hrms-btn-primary">حفظ</button>
-        </form>
-    </div>
-</aside>
 
 @section Scripts {
     <script src="~/js/organization-chart.js" asp-append-version="true"></script>

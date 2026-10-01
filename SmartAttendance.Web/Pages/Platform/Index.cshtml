@@ -82,7 +82,6 @@
                 <tr>
                     <th>الكود</th>
                     <th>العميل</th>
-                    <th>الخطة</th>
                     <th>الاستخدام</th>
                     <th>انتهاء اللايسنس</th>
                     <th>الحالة</th>
@@ -93,7 +92,7 @@
                 @if (Model.Tenants.Count == 0)
                 {
                     <tr>
-                        <td colspan="7" class="platform-table__empty">
+                        <td colspan="6" class="platform-table__empty">
                             لا توجد منظومة أو شركة مطابقة لعبارة البحث.
                         </td>
                     </tr>
@@ -108,7 +107,6 @@
                                 <strong>@tenant.Name</strong>
                                 <small>@tenant.CompanyCount شركة</small>
                             </td>
-                            <td>@tenant.PlanCode</td>
                             <td>
                                 <span>@tenant.EmployeeCount / @tenant.MaxEmployees موظف</span>
                                 <small>@tenant.DeviceCount / @tenant.MaxDevices جهاز</small>

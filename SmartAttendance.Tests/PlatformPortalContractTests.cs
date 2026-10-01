@@ -116,12 +116,16 @@ public sealed class PlatformPortalContractTests
     [Fact]
     public void CapacityLimits_AreEnforcedInTheDatabaseForEveryWritePath()
     {
+        var root = RepoRoot();
         var migration = Read(
-            RepoRoot(),
+            root,
             "SmartAttendance.Web",
             "Infrastructure",
             "Hrms",
             "SqlSchemaMigrator.cs");
+        var companyConfiguration = Read(root, "SmartAttendance.Infrastructure", "Persistence", "Configurations", "CompanyConfiguration.cs");
+        var employeeConfiguration = Read(root, "SmartAttendance.Infrastructure", "Persistence", "Configurations", "EmployeeConfiguration.cs");
+        var deviceConfiguration = Read(root, "SmartAttendance.Infrastructure", "Persistence", "Configurations", "DeviceConfiguration.cs");
 
         Assert.Contains("20261001-03-license-capacity-guards", migration, StringComparison.Ordinal);
         Assert.Contains("TR_LicenseCapacity_Companies", migration, StringComparison.Ordinal);
@@ -131,6 +135,9 @@ public sealed class PlatformPortalContractTests
         Assert.Contains("51041", migration, StringComparison.Ordinal);
         Assert.Contains("51042", migration, StringComparison.Ordinal);
         Assert.Contains("51043", migration, StringComparison.Ordinal);
+        Assert.Contains("UseSqlOutputClause(false)", companyConfiguration, StringComparison.Ordinal);
+        Assert.Contains("UseSqlOutputClause(false)", employeeConfiguration, StringComparison.Ordinal);
+        Assert.Contains("UseSqlOutputClause(false)", deviceConfiguration, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -230,6 +237,23 @@ public sealed class PlatformPortalContractTests
         Assert.Contains("asp-page-handler=\"ToggleTenantAdmin\"", page, StringComparison.Ordinal);
         Assert.Contains("OnPostResetTenantAdminPasswordAsync", model, StringComparison.Ordinal);
         Assert.DoesNotContain("@temporaryPassword", store, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TenantCreation_RequiresAnEightCharacterInitialAdminPassword()
+    {
+        var root = RepoRoot();
+        var page = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Create.cshtml");
+        var model = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Tenants", "Create.cshtml.cs");
+        var index = Read(root, "SmartAttendance.Web", "Pages", "Platform", "Index.cshtml");
+
+        Assert.Contains("StringLength(200, MinimumLength = 8)", model, StringComparison.Ordinal);
+        Assert.Contains("asp-for=\"Input.AdminPassword\" type=\"password\" minlength=\"8\" maxlength=\"200\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("Input.PlanCode", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-platform-plan-select", page, StringComparison.Ordinal);
+        Assert.Contains("DefaultPlanCode = \"Custom\"", model, StringComparison.Ordinal);
+        Assert.DoesNotContain("<th>الخطة</th>", index, StringComparison.Ordinal);
+        Assert.DoesNotContain("@tenant.PlanCode", index, StringComparison.Ordinal);
     }
 
     [Fact]

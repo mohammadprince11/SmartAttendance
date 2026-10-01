@@ -51,6 +51,24 @@ public sealed class DataLanguagesEmptyCompanyContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DataLanguages_ReturnsToOnboardingStepsAfterSave()
+    {
+        var root = FindRoot();
+        var model = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Settings", "DataLanguages.cshtml.cs"));
+        var page = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Settings", "DataLanguages.cshtml"));
+        var setup = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Setup", "Index.cshtml"));
+
+        Assert.Contains("[BindProperty(SupportsGet = true)] public bool Onboarding", model, StringComparison.Ordinal);
+        Assert.Contains("RedirectToPage(\"/Setup/Index\", new { companyId, onboarding = true })", model, StringComparison.Ordinal);
+        Assert.Contains("asp-for=\"Onboarding\"", page, StringComparison.Ordinal);
+        Assert.Contains("الرجوع إلى خطوات التأسيس", page, StringComparison.Ordinal);
+        Assert.Contains("asp-route-onboarding=\"true\"", setup, StringComparison.Ordinal);
+    }
+
     private static string FindRoot()
     {
         var directory = new DirectoryInfo(

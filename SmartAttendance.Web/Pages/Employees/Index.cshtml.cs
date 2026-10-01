@@ -133,7 +133,8 @@ public class IndexModel : PageModel
                 .Distinct()
                 .ToArray();
 
-        var allCompanies = (await _companyService.GetAllAsync())
+        var tenantId = TenantContext.GetTenantId(User) ?? 0;
+        var allCompanies = (await _companyService.GetAllAsync(tenantId))
             .Where(x => x.IsActive)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Code)

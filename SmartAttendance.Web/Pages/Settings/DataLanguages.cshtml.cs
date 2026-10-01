@@ -30,6 +30,7 @@ public sealed class DataLanguagesModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)] public int? CompanyId { get; set; }
+    [BindProperty(SupportsGet = true)] public bool Onboarding { get; set; }
     [BindProperty] public string DefaultCultureCode { get; set; } = string.Empty;
     [BindProperty] public List<string> ActiveCultureCodes { get; set; } = [];
     [BindProperty] public List<string> RequiredCultureCodes { get; set; } = [];
@@ -64,7 +65,9 @@ public sealed class DataLanguagesModel : PageModel
 
             TempData["SuccessMessage"] =
                 "تم حفظ اللغات المفعلة وتحديد اللغات المطلوبة والاختيارية بنجاح.";
-            return RedirectToPage(new { companyId });
+            return Onboarding
+                ? RedirectToPage("/Setup/Index", new { companyId, onboarding = true })
+                : RedirectToPage(new { companyId });
         }
         catch (Exception exception) when (
             exception is InvalidOperationException or UnauthorizedAccessException)
