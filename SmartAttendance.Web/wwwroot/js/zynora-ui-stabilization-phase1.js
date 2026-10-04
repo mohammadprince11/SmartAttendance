@@ -115,14 +115,6 @@
             );
             best.setAttribute("aria-current", "page");
 
-            var activeGroup = best.closest(
-                ".zynora-nav-group"
-            );
-
-            if (activeGroup) {
-                closeOtherGroups(activeGroup);
-                activeGroup.open = true;
-            }
         }
 
         document
@@ -184,7 +176,6 @@
     function init() {
         lockExpandedSidebar();
         activateCurrentNavigation();
-        bindAccordion();
         bindSearchShortcut();
 
         window.setTimeout(

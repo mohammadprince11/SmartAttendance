@@ -576,10 +576,15 @@ using (var migrationScope = app.Services.CreateScope())
     await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
+    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeUpdateSchema.EnsureAsync(migrationDb);
     // الجداول القديمة الأساسية يجب أن توجد قبل الهجرات التي تضيف لها علاقات
     // (مثل ApprovalRequestWatchers -> SelfServiceRequests).
     await SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.EnsureCreatedAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Security.LoginDatabase.EnsureCreatedAsync(migrationDb);
+    // ShiftTypes must exist before controlled migrations that extend it. Previously the
+    // migrator ran first, recorded guarded ALTER migrations as applied, then the shift
+    // table was created later without those columns.
+    await SmartAttendance.Web.Infrastructure.Hrms.ShiftTypeStore.EnsureAsync(migrationDb);
     await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
 
     // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.

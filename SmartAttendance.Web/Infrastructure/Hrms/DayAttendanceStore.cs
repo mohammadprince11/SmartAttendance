@@ -814,27 +814,40 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         IEnumerable<(TimeOnly Start, TimeOnly End)> permissions,
         TimeOnly shiftStart, TimeOnly checkIn, bool considerOutsideShift, TimeOnly shiftEnd)
     {
-        if (checkIn <= shiftStart) return TimeSpan.Zero;
+        static double Minutes(TimeOnly value) =>
+            value.Hour * 60d + value.Minute + value.Second / 60d;
+        static double OnAxis(TimeOnly value, double anchor)
+        {
+            var minutes = Minutes(value);
+            return minutes < anchor ? minutes + 1440d : minutes;
+        }
 
-        var credit = TimeSpan.Zero;
+        var shiftStartMinutes = Minutes(shiftStart);
+        var checkInMinutes = OnAxis(checkIn, shiftStartMinutes);
+        if (checkInMinutes <= shiftStartMinutes) return TimeSpan.Zero;
+
+        var shiftEndMinutes = OnAxis(shiftEnd, shiftStartMinutes);
+        if (shiftEndMinutes <= shiftStartMinutes) shiftEndMinutes += 1440d;
+        var creditMinutes = 0d;
+
         foreach (var (permStart, permEnd) in permissions)
         {
-            var start = permStart;
-            var end = permEnd;
-            if (end <= start) continue;
+            var start = OnAxis(permStart, shiftStartMinutes);
+            var end = OnAxis(permEnd, shiftStartMinutes);
+            if (end <= start) end += 1440d;
 
             if (!considerOutsideShift)
             {
-                if (start < shiftStart) start = shiftStart;
-                if (shiftEnd > shiftStart && end > shiftEnd) end = shiftEnd;
+                start = Math.Max(start, shiftStartMinutes);
+                end = Math.Min(end, shiftEndMinutes);
                 if (end <= start) continue;
             }
 
-            var overlapStart = start > shiftStart ? start : shiftStart;
-            var overlapEnd = end < checkIn ? end : checkIn;
-            if (overlapEnd > overlapStart) credit += overlapEnd - overlapStart;
+            var overlapStart = Math.Max(start, shiftStartMinutes);
+            var overlapEnd = Math.Min(end, checkInMinutes);
+            if (overlapEnd > overlapStart) creditMinutes += overlapEnd - overlapStart;
         }
-        return credit;
+        return TimeSpan.FromMinutes(creditMinutes);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
-﻿@page
+@page
 @model SmartAttendance.Web.Pages.Employees.ProfileModel
 @using SmartAttendance.Domain.Enums
+@using System.Globalization
 
 @functions {
     private static string Z360Age(DateOnly? birthDate)
@@ -115,6 +116,7 @@
             1 => "z360-badge-ok",
             2 => "z360-badge-warn",
             3 => "z360-badge-danger",
+            6 => "z360-badge-warn",
             _ => string.Empty
         };
     }
@@ -135,6 +137,7 @@
     ViewData["Title"] = "ملف الموظف";
 
     var employee = Model.Employee;
+    var z360ArabicUi = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ar", StringComparison.OrdinalIgnoreCase);
     var today = DateOnly.FromDateTime(DateTime.Today);
     var photoFallback = Url.Content("~/brand/zynora-symbol.svg");
     var readinessClass = Model.PayrollRiskItems == 0 ? "z360-kpi-ok" : "z360-kpi-warn";
@@ -889,7 +892,7 @@
                             <button type="submit" class="z360-action z360-action-primary">تحديث الفترة</button>
                             <a asp-page="./Profile"
                                asp-route-id="@employee.Id"
-                               class="z360-action">آخر 30 يوم</a>
+                               class="z360-action">الفترة الحالية</a>
                         </form>
 
                         <div class="z360-mini-kpis">
@@ -918,29 +921,53 @@
                                 <thead>
                                     <tr>
                                         <th>التاريخ</th>
+                                        <th>اليوم</th>
                                         <th>الدخول</th>
                                         <th>الخروج</th>
                                         <th>الجهاز</th>
                                         <th>الحالة</th>
-                                        <th>الملاحظات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if (Model.AttendanceRows.Any())
                                     {
-                                        foreach (var row in Model.AttendanceRows.Take(15))
+                                        foreach (var row in Model.AttendanceRows)
                                         {
-                                            <tr>
+                                            var rowClasses = new List<string> { "z360-attendance-day-row" };
+                                            if (!string.IsNullOrWhiteSpace(row.PendingPunchRef)) rowClasses.Add("z360-attendance-row-pending");
+                                            if (row.IsAdjusted) rowClasses.Add("z360-attendance-row-adjusted");
+                                            <tr class="@string.Join(" ", rowClasses)"
+                                                data-z360-day-open
+                                                tabindex="0"
+                                                role="button"
+                                                aria-label="فتح تفاصيل @Model.DisplayDayName(row.AttendanceDate) @Model.DisplayDate(row.AttendanceDate)"
+                                                data-date="@Model.DisplayDate(row.AttendanceDate)"
+                                                data-day="@Model.DisplayDayName(row.AttendanceDate)"
+                                                data-checkin="@Model.DisplayTime(row.CheckIn)"
+                                                data-checkout="@Model.DisplayTime(row.CheckOut)"
+                                                data-device="@Model.Display(row.DeviceName)"
+                                                data-shift="@Model.Display(row.ShiftName)"
+                                                data-daykind="@Model.DayKindText(row.DayKind)"
+                                                data-status="@Model.StatusText(row.Status)"
+                                                data-adjusted="@(row.IsAdjusted ? "true" : "false")"
+                                                data-pending-ref="@row.PendingPunchRef">
                                                 <td>@Model.DisplayDate(row.AttendanceDate)</td>
+                                                <td><span class="z360-day-link">@Model.DisplayDayName(row.AttendanceDate)</span></td>
                                                 <td>@Model.DisplayTime(row.CheckIn)</td>
                                                 <td>@Model.DisplayTime(row.CheckOut)</td>
-                                                <td>@Model.Display(row.DeviceName)</td>
-                                                <td>
+                                                <td>@Model.Display(row.DeviceName)</td>                                                <td>
                                                     <span class="z360-badge @Z360AttendanceClass(row.Status)">
                                                         @Model.StatusText(row.Status)
                                                     </span>
+                                                    @if (!string.IsNullOrWhiteSpace(row.PendingPunchRef))
+                                                    {
+                                                        <span class="z360-row-state z360-row-state-pending" title="طلب بصمة قيد المراجعة">قيد المراجعة</span>
+                                                    }
+                                                    else if (row.IsAdjusted)
+                                                    {
+                                                        <span class="z360-row-state z360-row-state-adjusted" title="تم تعديل بصمات هذا اليوم يدوياً">معدّل</span>
+                                                    }
                                                 </td>
-                                                <td>@Model.DisplayAttendanceNote(row.Notes)</td>
                                             </tr>
                                         }
                                     }
@@ -956,6 +983,187 @@
                             </table>
                         </div>
                     </article>
+
+                    <div class="z360-modal z360-day-modal" data-z360-day-modal data-employee-id="@employee.Id" hidden>
+                        <div class="z360-modal-dialog z360-day-dialog" role="dialog" aria-modal="true" aria-labelledby="z360-day-title">
+                            <div class="z360-modal-head">
+                                <div>
+                                    <strong id="z360-day-title">تفاصيل اليوم</strong>
+                                    <span data-z360-day-subtitle>—</span>
+                                </div>
+                                <button type="button" class="z360-modal-close" data-z360-day-close aria-label="إغلاق">&times;</button>
+                            </div>
+
+                            <div class="z360-modal-body">
+                                <section class="z360-day-summary" aria-label="ملخص اليوم">
+                                    <div><span>التاريخ</span><strong data-z360-day-date>—</strong></div>
+                                    <div><span>اليوم</span><strong data-z360-day-name>—</strong></div>
+                                    <div><span>الحالة</span><strong data-z360-day-status>—</strong></div>
+                                    <div><span>الدخول</span><strong data-z360-day-checkin>—</strong></div>
+                                    <div><span>الخروج</span><strong data-z360-day-checkout>—</strong></div>
+                                    <div><span>الجهاز</span><strong data-z360-day-device>—</strong></div>
+                                    <div><span>الشفت</span><strong data-z360-day-shift>—</strong></div>
+                                    <div><span>نوع اليوم</span><strong data-z360-day-kind>—</strong></div>
+                                </section>
+                                <div class="z360-day-pending-note" data-z360-day-pending hidden>
+                                    <span>يوجد طلب بصمة <strong data-z360-pending-ref></strong> قيد المراجعة لهذا اليوم.</span>
+                                    <a href="/MissingPunchRequests" data-z360-pending-link>فتح المراجعة</a>
+                                </div>
+
+                                <div class="z360-day-adjusted-note" data-z360-day-adjusted hidden>
+                                    تم تعديل بصمات هذا اليوم يدوياً؛ لذلك يظهر السطر بلون مختلف.
+                                </div>
+
+                                <section class="z360-modal-section">
+                                    <h4>إجراء على هذا اليوم</h4>
+                                    <div class="z360-day-action-switch" role="group" aria-label="إجراءات اليوم">
+                                        <button type="button" class="z360-day-action z360-day-action-manual"
+                                                data-z360-day-action="edit">تعديل البصمات</button>
+                                        <button type="button" class="z360-day-action" data-z360-day-action="punch">طلب إضافة بصمة</button>
+                                        <button type="button" class="z360-day-action" data-z360-day-action="request">إضافة طلب</button>
+                                    </div>
+                                </section>
+
+                                <section class="z360-modal-section z360-day-request-panel" data-z360-day-panel="edit" hidden>
+                                    <h4>تعديل بصمات هذا اليوم</h4>
+                                    <p class="z360-day-panel-note">التعديل يحفظ كمصدر يدوي ويعيد احتساب اليومية فوراً في كل شاشات الحضور.</p>
+                                    <form method="post" asp-page-handler="DayPunchEdit" asp-route-id="@employee.Id">
+                                        <input type="hidden" name="dayDate" data-z360-day-form-date />
+                                        <input type="hidden" name="returnFromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                                        <input type="hidden" name="returnToDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+                                        <div class="z360-punch-pair-list" data-z360-pair-list></div>
+                                        <div class="z360-pair-tools">
+                                            <button type="button" class="z360-day-action" data-z360-pair-add>+ إضافة زوج بصمات</button>
+                                        </div>
+                                        <label class="z360-day-form-wide z360-edit-reason">
+                                            <span>سبب التعديل</span>
+                                            <textarea name="editReason" rows="2" placeholder="مثال: تصحيح وقت البصمة حسب اعتماد الموارد البشرية"></textarea>
+                                        </label>
+                                        <div class="z360-day-form-actions">
+                                            <button type="submit" class="z360-action z360-action-primary">حفظ التعديل وإعادة الاحتساب</button>
+                                        </div>
+                                    </form>
+                                </section>
+
+                                <section class="z360-modal-section z360-day-request-panel" data-z360-day-panel="punch" hidden>
+                                    <h4>طلب إضافة بصمة مفقودة</h4>
+                                    <p class="z360-day-panel-note">يذهب الطلب إلى الحضور والانصراف ← طلبات البصمة المفقودة، ولا يغيّر البصمة قبل الموافقة.</p>
+                                    <form method="post" asp-page-handler="DayPunchRequest" asp-route-id="@employee.Id">
+                                        <input type="hidden" name="dayDate" data-z360-day-form-date />
+                                        <input type="hidden" name="returnFromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                                        <input type="hidden" name="returnToDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />                                        <div class="z360-day-form-grid">
+                                            <label>
+                                                <span>وقت البصمة</span>
+                                                <div data-z360-generated-time data-name="punchTime" data-required="true"></div>
+                                            </label>
+                                            <label class="z360-day-form-wide">
+                                                <span>سبب الإضافة</span>
+                                                <textarea name="dayReason" rows="3" placeholder="مثال: تعطل جهاز البصمة"></textarea>
+                                            </label>
+                                        </div>
+                                        <div class="z360-day-form-actions">
+                                            <button type="submit" class="z360-action z360-action-primary">إرسال للمراجعة</button>
+                                        </div>
+                                    </form>
+                                </section>
+
+                                <section class="z360-modal-section z360-day-request-panel" data-z360-day-panel="request" hidden>
+                                    <h4>إضافة طلب لهذا اليوم</h4>
+                                    <form method="post" asp-page-handler="DayRequest" asp-route-id="@employee.Id" enctype="multipart/form-data">
+                                        <input type="hidden" name="dayDate" data-z360-day-form-date />
+                                        <input type="hidden" name="returnFromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                                        <input type="hidden" name="returnToDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+                                        <div class="z360-day-form-grid">
+                                            <label class="z360-day-form-wide">
+                                                <span>نوع الطلب</span>
+                                                <select name="requestOption" data-z360-request-type required>
+                                                    <option value="">— اختر نوع الطلب —</option>                                                    @foreach (var group in Model.DayRequestOptions.GroupBy(option => option.Group))
+                                                    {
+                                                        <optgroup label="@group.Key">
+                                                            @foreach (var option in group)
+                                                            {
+                                                                <option value="@option.Value"
+                                                                        data-needs-time="@option.NeedsTime.ToString().ToLowerInvariant()"
+                                                                        data-needs-shift="@option.NeedsShift.ToString().ToLowerInvariant()"
+                                                                        data-attachment-required="@option.AttachmentRequired.ToString().ToLowerInvariant()"
+                                                                        data-attachment-label="@option.AttachmentLabel">@option.Label</option>
+                                                            }
+                                                        </optgroup>
+                                                    }
+                                                </select>
+                                            </label>
+
+                                            <div class="z360-day-time-fields z360-day-form-wide" data-z360-request-time hidden>
+                                                @foreach (var timeField in new[] { (Name: "requestStartTime", Label: "من وقت"), (Name: "requestEndTime", Label: "إلى وقت") })
+                                                {
+                                                    <div class="z360-time-field">
+                                                        <span>@timeField.Label</span>
+                                                        <div class="z360-time-picker" data-z360-time-picker
+                                                             data-am-label="@(z360ArabicUi ? "ص" : "AM")"
+                                                             data-pm-label="@(z360ArabicUi ? "م" : "PM")">
+                                                            <input type="hidden" name="@timeField.Name" data-z360-time-value />
+                                                            <div class="z360-time-input-shell">
+                                                                <input type="text" class="z360-time-text" data-z360-time-text
+                                                                       inputmode="text" autocomplete="off"
+                                                                       placeholder="@(z360ArabicUi ? "مثال: 12:03 ص" : "e.g. 12:03 AM")"
+                                                                       aria-label="@(z360ArabicUi ? "اكتب الوقت أو اختره من القائمة" : "Type or select time")" />
+                                                                <button type="button" class="z360-time-trigger" data-z360-time-trigger
+                                                                        aria-haspopup="listbox" aria-expanded="false"
+                                                                        title="@(z360ArabicUi ? "اختيار الوقت" : "Select time")">
+                                                                    <span class="z360-time-chevron" aria-hidden="true"></span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="z360-time-popover" data-z360-time-popover hidden>
+                                                                <div class="z360-time-popover-head">
+                                                                    <strong>@(z360ArabicUi ? "اختر الوقت" : "Select time")</strong>
+                                                                    <span>@(z360ArabicUi ? "أو اكتب الوقت بالدقيقة بالحقل أعلاه" : "Or type any exact minute above")</span>
+                                                                </div>
+                                                                <div class="z360-time-suggestion-list" role="listbox">
+                                                                    @for (var slot = 0; slot < 24 * 60; slot += 30)
+                                                                    {
+                                                                        var h24 = slot / 60;
+                                                                        var mm = slot % 60;
+                                                                        var h12 = h24 % 12 == 0 ? 12 : h24 % 12;
+                                                                        var periodLabel = z360ArabicUi ? (h24 < 12 ? "ص" : "م") : (h24 < 12 ? "AM" : "PM");
+                                                                        var machineValue = $"{h24:00}:{mm:00}";
+                                                                        var displayValue = $"{h12:00}:{mm:00} {periodLabel}";
+                                                                        <button type="button" class="z360-time-suggestion" data-z360-time-option data-value="@machineValue">@displayValue</button>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+
+                                            <label class="z360-day-form-wide" data-z360-request-shift hidden>
+                                                <span>المناوبة الجديدة</span>
+                                                <select name="requestShiftTypeId">
+                                                    <option value="">— اختر المناوبة —</option>
+                                                    @foreach (var shift in Model.DayShiftOptions)
+                                                    {
+                                                        <option value="@shift.Id">@shift.Name</option>
+                                                    }
+                                                </select>
+                                            </label>
+
+                                            <label class="z360-day-form-wide" data-z360-request-attachment hidden>
+                                                <span data-z360-request-attachment-label>المرفق</span>
+                                                <input type="file" name="requestAttachment" accept=".pdf,.png,.jpg,.jpeg,.webp" />
+                                            </label>
+                                            <label class="z360-day-form-wide">
+                                                <span>السبب / التفاصيل</span>
+                                                <textarea name="requestReason" rows="3" placeholder="اكتب تفاصيل الطلب"></textarea>
+                                            </label>
+                                        </div>
+                                        <div class="z360-day-form-actions">
+                                            <button type="submit" class="z360-action z360-action-primary">إرسال الطلب</button>
+                                        </div>
+                                    </form>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
 
                     <article id="requests" class="z360-module">
                         <div class="z360-module-head">
@@ -974,7 +1182,17 @@
                                     <div class="z360-list-row">
                                         <div class="z360-list-main">
                                             <strong>@Model.Display(row.RequestType)</strong>
-                                            <span>@Model.DisplayDate(row.RequestDate) · @Model.Display(row.CurrentStep)</span>
+                                            <span>
+                                                @Model.DisplayDate(row.RequestDate) · @Model.Display(row.CurrentStep)
+                                                @if (!string.IsNullOrWhiteSpace(row.Reference))
+                                                {
+                                                    <text> · @row.Reference</text>
+                                                }
+                                            </span>
+                                            @if (!string.IsNullOrWhiteSpace(row.ReviewUrl))
+                                            {
+                                                <a class="z360-request-review-link" href="@row.ReviewUrl">فتح المراجعة</a>
+                                            }
                                         </div>
                                         <span class="z360-badge @Z360RequestClass(row.Status)">
                                             @Model.RequestStatusText(row.Status)
@@ -1591,6 +1809,7 @@
 @section Scripts {
     <script src="~/js/zynora-employee-photo-upload.js" asp-append-version="true"></script>
     <script src="~/js/zynora-profile-reassign-modal.js" asp-append-version="true"></script>
+    <script src="~/js/zynora-profile-attendance-day.js" asp-append-version="true"></script>
 
     <script>
         // الحقول المخصصة (الداينمك مرحلة 2): قيم كل السجلات + تعبئة/تفريغ بالسلايدات.

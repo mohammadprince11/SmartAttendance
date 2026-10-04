@@ -116,6 +116,13 @@
                     الخصم الزائد يُطبَّق فوق التنسيب مهما كان النمط.
                 </span>
                 <label class="zyu-bbca822d7973">
+                    <b>خصم البصمة الناقصة</b>
+                    <input type="number" name="missingPunchPenaltyPercent" step="0.25" min="0" max="100"
+                           value="@Model.MissingPunchPenaltyPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" />
+                    <span>% من الأجر اليومي الأساسي لكل يوم Incomplete</span>
+                </label>
+                <span class="zyu-5040f64097e1">0 = بدون أثر مالي. 25 = ربع الأجر اليومي لكل يوم بصمة ناقصة.</span>
+                <label class="zyu-bbca822d7973">
                     <input type="checkbox" name="allowNegative" value="true" checked="@Model.LinkPolicy.AllowNegative" />
                     <b>اسمح بأن يكون الراتب سالباً</b>
                 </label>

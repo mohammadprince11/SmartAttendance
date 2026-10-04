@@ -381,7 +381,7 @@
                     if (!d.ok || !d.types || !d.types.length){ box.innerHTML = '<span class="sd-bal-empty">لا رصيد متتبَّع لهذا الموظف.</span>'; return; }
                     box.innerHTML = d.types.map(function(t){
                         return '<span class="sd-bal-chip">' + t.label + ' — المتاح <b>' + (+t.remaining).toFixed(1) + '</b> يوم</span>';
-                    }).join('') + '<span class="sd-bal-empty zyu-b7aa1ec0049d">رصيد سنة ' + d.year + ' (إرشادي، لا يمنع الصرف).</span>';
+                    }).join('') + '<span class="sd-bal-empty zyu-b7aa1ec0049d">رصيد سنة ' + d.year + ' — حد صرف نافذ من النظام.</span>';
                 })
                 .catch(function(){ box.innerHTML = '<span class="sd-bal-empty">تعذّر تحميل الرصيد.</span>'; });
         }

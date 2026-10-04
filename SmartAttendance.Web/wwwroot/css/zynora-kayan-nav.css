@@ -1,154 +1,65 @@
 /* =========================================================
-   ZYNORA — سلوك تنقّل كيان (قسم 20 بالدراسة) بهويتنا البصرية:
-   - النقر على المجموعة يفتح «درج فروع» كامل الارتفاع ينزلق بجانب
-     القائمة (transition 0.1s ease-in-out مثل كيان حرفياً).
-   - أول صف بالدرج = عنوان المجموعة كرابط (ky-drawer-title).
-   - الفروع الداخلية أكورديون حصري بانميشن ارتفاع (~0.35s ease
-     مثل Bootstrap collapse الذي يستخدمه كيان).
-   - الظهور بكلاس ky-open (يديره zynora-kayan-nav.js) وليس خاصية
-     open — لتفادي تعارض سكربتات الأكورديون القديمة.
-   - الموبايل (<981px): يبقى أكورديون داخلياً كما هو.
+   ZYNORA — Unified Single-Sidebar Navigation
+   Parent modules and nested dropdowns each own only their own motion.
    ========================================================= */
 
-/* زر الرجوع يظهر فقط بوضع الدرج (سطح المكتب) */
-.ky-back { display: none; }
-
-@media (min-width: 981px) {
-    .zynora-nav-group { position: static !important; }
-
-    .zynora-nav-group:not(.ky-open):not(.ky-closing) > .zynora-nav-group-links { display: none !important; }
-
-    /* كروم 131+ يخفي محتوى details المغلق عبر ::details-content بـ content-visibility:hidden،
-       ولأننا نفتح بكلاس ky-open دون خاصية open يجب كشف المحتوى صراحةً وإلا لا يُرسم الدرج إطلاقاً */
-    .zynora-nav-group.ky-open::details-content,
-    .zynora-nav-group.ky-closing::details-content {
-        content-visibility: visible !important;
-        display: contents !important;
-    }
-
-    .zynora-nav-group.ky-open > summary {
-        background: rgba(18, 217, 227, .10) !important;
-        color: #e6eaee !important;
-    }
-
-    /* الدرج: لوحة كاملة الارتفاع تغطي القائمة نفسها (لا تطغى على المحتوى)
-       — موضعها وعرضها يُطابقان القائمة ديناميكياً بالـ JS (--ky-right / --ky-w) */
-    .zynora-nav-group.ky-open > .zynora-nav-group-links,
-    .zynora-nav-group.ky-closing > .zynora-nav-group-links {
-        position: fixed !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
-        right: var(--ky-right, 0) !important;
-        left: auto !important;
-        width: var(--ky-w, var(--nxr-sidebar, 286px)) !important;
-        margin: 0 !important;
-        padding: 10px 10px 16px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 2px !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        z-index: 1071; /* نفس طبقة درج كيان */
-        background:
-            radial-gradient(circle at 85% 0%, rgba(18, 217, 227, .10), transparent 32%),
-            linear-gradient(180deg, rgba(7, 18, 31, .99), rgba(5, 13, 23, .99)) !important;
-        border-inline-start: 1px solid rgba(18, 217, 227, .16) !important;
-        box-shadow: -18px 0 44px rgba(0, 0, 0, .34) !important;
-    }
-
-    /* الدرج عمود flex: بلا هذي القاعدة تنضغط عناصره لتطابق الارتفاع بدل أن تفيض،
-       فلا يكبر scrollHeight ولا يشتغل التمرير وتُقص العناصر السفلية بالشاشات القصيرة */
-    .zynora-nav-group.ky-open > .zynora-nav-group-links > *,
-    .zynora-nav-group.ky-closing > .zynora-nav-group-links > * {
-        flex-shrink: 0;
-    }
-
-    .zynora-nav-group.ky-open > .zynora-nav-group-links {
-        animation: kySlideOver .32s cubic-bezier(.22, .61, .36, 1) both;
-    }
-
-    .zynora-nav-group.ky-closing > .zynora-nav-group-links {
-        animation: kySlideOut .22s cubic-bezier(.55, .06, .68, .19) both;
-        pointer-events: none;
-    }
-
-    /* الدرج ينزلق من حافة القائمة اليمنى فوقها (RTL) */
-    @keyframes kySlideOver {
-        from { transform: translateX(28px); opacity: 0; }
-        to { transform: none; opacity: 1; }
-    }
-
-    @keyframes kySlideOut {
-        from { transform: none; opacity: 1; }
-        to { transform: translateX(28px); opacity: 0; }
-    }
-
-    /* صف الرجوع أعلى الدرج (يحقنه JS) */
-    .ky-back {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-height: 44px;
-        margin: -10px -10px 0;
-        padding: 12px 16px;
-        border: 0;
-        border-bottom: 1px solid rgba(157, 184, 204, .16);
-        background: rgba(18, 217, 227, .05);
-        color: #9FB0BE;
-        font-size: 13px;
-        font-weight: 900;
-        font-family: inherit;
-        text-align: start;
-        cursor: pointer;
-        flex: none;
-        transition: background .15s ease, color .15s ease;
-    }
-
-    .ky-back:hover { background: rgba(18, 217, 227, .12); color: #E6EAEE; }
-
-    .ky-back-chev {
-        width: 8px;
-        height: 8px;
-        border-top: 2px solid currentColor;
-        border-right: 2px solid currentColor;
-        transform: rotate(45deg);
-        flex: none;
-    }
-
-    /* عنوان المجموعة يلي صف الرجوع — **اسم شاشة لا رابط**.
-       كان `<a>` إلى قائمة الموظفين فيفتح صفحةً لمن ظنّه عنواناً، وهي وجهة
-       «عرض الموظفين» نفسها. صار `<div>`، فيلزم إبطال ما يوحي بالنقر:
-       المؤشّر وتأثير المرور الموروثان من `.zynora-nav-link`. */
-    .ky-drawer-title,
-    .ky-drawer-title:hover {
-        cursor: default !important;
-        transform: none !important;
-    }
-
-    .ky-drawer-title {
-        min-height: 46px !important;
-        margin: 0 -10px 8px !important;
-        padding: 14px 16px !important;
-        border-radius: 0 !important;
-        border-bottom: 1px solid rgba(157, 184, 204, .16) !important;
-        background: rgba(18, 217, 227, .07) !important;
-        color: #e6eaee !important;
-        font-size: 15px !important;
-        font-weight: 1000 !important;
-    }
+.ky-back,
+.ky-drawer-title {
+    display: none !important;
 }
 
-/* علامة هادئة على مجموعة الصفحة الحالية دون فتح الدرج تلقائياً */
+.zynora-nav-group {
+    position: relative !important;
+}
+
+/* Disable the older global open animation; JS owns top-level height motion. */
+.zynora-nav-group[open] {
+    animation: none !important;
+}
+
+/* Once fully open, the parent must be free to grow with nested dropdowns. */
+.zynora-nav-group > .zynora-nav-group-links {
+    overflow: visible !important;
+}
+
+/* Overflow is clipped only while the parent itself is moving. */
+.zynora-nav-group[data-zy-nav-motion] > .zynora-nav-group-links {
+    overflow: hidden !important;
+    will-change: height, opacity;
+}
+
+.zynora-nav-group:not([open]) > .zynora-nav-group-links {
+    display: none !important;
+}
+
+.zynora-nav-group[open] > .zynora-nav-group-links {
+    display: grid !important;
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 2px 9px 9px !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    animation: none !important;
+    transform: none !important;
+}
+
 .zynora-nav-group > summary.ky-current {
     background: rgba(18, 217, 227, .07) !important;
 }
 
-/* ---------- الأكورديون الداخلي (حصري + انميشن ارتفاع مثل Bootstrap collapse) ---------- */
+html[data-theme="light"] .zynora-nav-group > summary.ky-current {
+    background: rgba(72, 108, 143, .07) !important;
+}
+
+/* Nested dropdowns */
 .ky-acc {
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .ky-acc > summary {
@@ -165,39 +76,52 @@
     cursor: pointer;
     list-style: none;
     user-select: none;
-    transition: background .12s ease, color .12s ease;
+    transition: background 220ms cubic-bezier(.22,.61,.36,1), color 220ms cubic-bezier(.22,.61,.36,1);
 }
 
-.ky-acc > summary::-webkit-details-marker { display: none; }
+.ky-acc > summary::-webkit-details-marker {
+    display: none;
+}
 
-.ky-acc > summary:hover { background: rgba(18, 217, 227, .06); color: var(--nxr-text, #E6EAEE); }
+.ky-acc > summary:hover {
+    background: rgba(18, 217, 227, .06);
+    color: var(--nxr-text, #E6EAEE);
+}
 
-.ky-acc[open] > summary { color: var(--nxr-teal, var(--color-primary)); }
+.ky-acc[open] > summary {
+    color: var(--nxr-teal, var(--color-primary));
+}
 
 .ky-acc-chev {
-    width: 7px; height: 7px;
+    width: 7px;
+    height: 7px;
     border-left: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
     transform: rotate(-45deg);
-    transition: transform .2s ease;
+    transition: transform 220ms cubic-bezier(.22,.61,.36,1);
     flex: none;
 }
 
 .ky-acc[open] > .ky-acc-chev,
-.ky-acc[open] > summary .ky-acc-chev { transform: rotate(135deg); }
+.ky-acc[open] > summary .ky-acc-chev {
+    transform: rotate(135deg);
+}
 
-/* جسم الأكورديون: انميشن ارتفاع بنمط Bootstrap collapse (~0.35s ease) */
+/* No max-height animation anymore: JS animates exact measured height. */
 .ky-acc > .ky-acc-body {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height .35s ease;
+    height: auto;
+    max-height: none !important;
+    overflow: visible;
     padding: 0 4px 0 0;
 }
 
-.ky-acc[open] > .ky-acc-body { max-height: 460px; }
+.ky-acc[data-zy-acc-motion] > .ky-acc-body {
+    overflow: hidden !important;
+    will-change: height, opacity;
+}
 
 .ky-acc .ky-acc-body .zynora-nav-link {
     margin-inline-start: 10px;
@@ -205,47 +129,26 @@
     border-radius: 0 10px 10px 0;
 }
 
-/*
-   The full-height desktop drawer used to be hard-coded to the dark palette.
-   That made every light page look half dark as soon as its active module drawer
-   opened. Keep the same structure and motion, but resolve the complete drawer
-   surface, title and return row for the selected light mode.
-*/
+html[data-theme="light"] .ky-acc .ky-acc-body .zynora-nav-link {
+    border-inline-start-color: rgba(15, 60, 100, .16);
+}
+
 @media (min-width: 981px) {
-    html[data-theme="light"] .zynora-nav-group.ky-open > summary {
-        background: rgba(72, 108, 143, .09) !important;
-        color: #0B2239 !important;
+    html[dir="ltr"] .ky-acc .ky-acc-body .zynora-nav-link {
+        border-radius: 0 10px 10px 0 !important;
     }
 
-    html[data-theme="light"] .zynora-nav-group.ky-open > .zynora-nav-group-links,
-    html[data-theme="light"] .zynora-nav-group.ky-closing > .zynora-nav-group-links {
-        background:
-            radial-gradient(circle at 85% 0%, rgba(72, 108, 143, .10), transparent 34%),
-            linear-gradient(180deg, rgba(255, 255, 255, .995), rgba(244, 246, 248, .995)) !important;
-        border-inline-start-color: rgba(15, 60, 100, .14) !important;
-        box-shadow: -18px 0 44px rgba(8, 20, 38, .14) !important;
-        color: #0B2239 !important;
+    html[dir="rtl"] .ky-acc .ky-acc-body .zynora-nav-link {
+        border-radius: 10px 0 0 10px !important;
     }
+}
 
-    html[data-theme="light"] .zynora-nav-group-links .ky-back {
-        border-bottom-color: rgba(15, 60, 100, .14) !important;
-        background: rgba(72, 108, 143, .05) !important;
-        color: #53697D !important;
-    }
-
-    html[data-theme="light"] .zynora-nav-group-links .ky-back:hover {
-        background: rgba(72, 108, 143, .11) !important;
-        color: #0B2239 !important;
-    }
-
-    html[data-theme="light"] .zynora-nav-group-links .ky-drawer-title,
-    html[data-theme="light"] .zynora-nav-group-links .ky-drawer-title:hover {
-        border-bottom-color: rgba(15, 60, 100, .14) !important;
-        background: rgba(72, 108, 143, .07) !important;
-        color: #0B2239 !important;
-    }
-
-    html[data-theme="light"] .ky-acc .ky-acc-body .zynora-nav-link {
-        border-inline-start-color: rgba(15, 60, 100, .16);
+@media (prefers-reduced-motion: reduce) {
+    .zynora-nav-group > .zynora-nav-group-links,
+    .ky-acc > .ky-acc-body,
+    .zynora-chevron,
+    .ky-acc-chev {
+        transition: none !important;
+        animation: none !important;
     }
 }

@@ -1517,3 +1517,1018 @@
         margin:10px 14px 16px !important;
     }
 }
+
+
+/* =========================================================
+   V8 — fresh selectors, new stylesheet filename
+   This block intentionally uses unique selectors to avoid old cascade conflicts.
+   ========================================================= */
+
+/* Period picker */
+.ppd-page .ppd-v3-date-wrap,
+.ppd-page .ppd-v4-date-wrap,
+.ppd-page .ppd-v6-date-wrap,
+.ppd-page .ppd-v3-date,
+.ppd-page .ppd-v4-period,
+.ppd-page .ppd-v6-period{
+    display:none !important;
+}
+
+.ppd-page .ppd-hero{
+    overflow:visible !important;
+    position:relative !important;
+    z-index:1 !important;
+}
+
+.ppd-page .ppd-v8-date-wrap{
+    grid-column:2 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    position:relative !important;
+    z-index:2 !important;
+}
+
+.ppd-page .ppd-v8-period{
+    position:relative !important;
+    width:186px !important;
+}
+
+.ppd-page .ppd-v8-trigger{
+    width:186px !important;
+    height:50px !important;
+    display:grid !important;
+    grid-template-columns:18px minmax(0,1fr) 24px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 14px !important;
+    border:1px solid #345b7d !important;
+    border-radius:13px !important;
+    background:#10253c !important;
+    color:#fff !important;
+    font-family:inherit !important;
+    cursor:pointer !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-v8-period.is-open .ppd-v8-trigger{
+    border-color:#5aa9ef !important;
+    box-shadow:0 0 0 3px rgba(90,169,239,.12) !important;
+}
+
+.ppd-page .ppd-v8-label{
+    font-size:12px !important;
+    font-weight:900 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+}
+
+.ppd-page .ppd-v8-chevron,
+.ppd-page .ppd-v8-calendar{
+    display:grid !important;
+    place-items:center !important;
+    color:#d7e8fa !important;
+}
+
+.ppd-page .ppd-v8-chevron svg{
+    width:15px !important;
+    height:15px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:2 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+    transition:transform .15s ease !important;
+}
+
+.ppd-page .ppd-v8-period.is-open .ppd-v8-chevron svg{
+    transform:rotate(180deg) !important;
+}
+
+.ppd-page .ppd-v8-calendar svg{
+    width:23px !important;
+    height:23px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:1.8 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+}
+
+.ppd-page .ppd-v8-menu{
+    position:absolute !important;
+    top:56px !important;
+    inset-inline-start:0 !important;
+    z-index:3 !important;
+    width:100% !important;
+    padding:8px 0 !important;
+    border:1px solid #345b7d !important;
+    border-radius:13px !important;
+    background:#0f1f33 !important;
+    box-shadow:0 18px 40px rgba(0,0,0,.38) !important;
+    overflow:hidden !important;
+}
+
+.ppd-page .ppd-v8-menu button{
+    width:100% !important;
+    height:40px !important;
+    margin:0 !important;
+    padding:0 14px !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    color:#dce7f4 !important;
+    box-shadow:none !important;
+    font-family:inherit !important;
+    font-size:11px !important;
+    font-weight:800 !important;
+    text-align:center !important;
+    cursor:pointer !important;
+}
+
+.ppd-page .ppd-v8-menu button:hover{
+    background:rgba(18,48,78,.75) !important;
+    color:#fff !important;
+}
+
+.ppd-page .ppd-v8-menu button.is-active{
+    background:transparent !important;
+    color:#63adff !important;
+    font-weight:950 !important;
+}
+
+/* Never show details actions */
+.ppd-page .ppd-v3-action,
+.ppd-page .ppd-detail-link{
+    display:none !important;
+}
+
+/* Header title rows */
+.ppd-page .ppd-v3-head{
+    justify-content:flex-start !important;
+}
+
+/* Gender card — fresh structure */
+.ppd-page .ppd-v8-gender-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+    display:grid !important;
+    grid-template-rows:56px minmax(0,1fr) auto !important;
+    overflow:hidden !important;
+}
+
+.ppd-page .ppd-v8-card-head{
+    display:flex !important;
+    align-items:center !important;
+    min-height:56px !important;
+    height:56px !important;
+    padding:0 22px !important;
+    border-bottom:1px solid #1b3149 !important;
+    background:transparent !important;
+}
+
+.ppd-page .ppd-v8-card-head h2{
+    margin:0 !important;
+    padding:0 !important;
+    color:#f5f8fd !important;
+    font-size:15px !important;
+    line-height:1 !important;
+    font-weight:900 !important;
+}
+
+.ppd-page .ppd-v8-gender-content{
+    min-height:0 !important;
+    display:grid !important;
+    grid-template-columns:200px minmax(0,1fr) !important;
+    align-items:center !important;
+    gap:28px !important;
+    padding:14px 24px 8px !important;
+    direction:ltr !important;
+}
+
+.ppd-page .ppd-v8-donut{
+    --male:0;
+    --female:0;
+    width:124px !important;
+    height:124px !important;
+    justify-self:center !important;
+    position:relative !important;
+    display:grid !important;
+    place-items:center !important;
+    border-radius:50% !important;
+    background:conic-gradient(
+        #4e8fff 0 calc(var(--male) * 1%),
+        #a77cf7 0 calc((var(--male) + var(--female)) * 1%),
+        #213249 0
+    ) !important;
+}
+
+.ppd-page .ppd-v8-donut::after{
+    content:"" !important;
+    position:absolute !important;
+    inset:20px !important;
+    border-radius:50% !important;
+    background:#0b1727 !important;
+}
+
+.ppd-page .ppd-v8-donut-core{
+    position:relative !important;
+    z-index:2 !important;
+    text-align:center !important;
+    color:#fff !important;
+    direction:rtl !important;
+}
+
+.ppd-page .ppd-v8-donut-core strong{
+    display:block !important;
+    font-size:22px !important;
+    line-height:1 !important;
+    font-weight:950 !important;
+}
+
+.ppd-page .ppd-v8-donut-core span{
+    display:block !important;
+    margin-top:6px !important;
+    color:#d5e0ec !important;
+    font-size:9px !important;
+    font-weight:800 !important;
+}
+
+.ppd-page .ppd-v8-gender-legend{
+    min-width:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:10px !important;
+    direction:rtl !important;
+}
+
+.ppd-page .ppd-v8-gender-row{
+    height:42px !important;
+    min-height:42px !important;
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) 32px 48px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 12px !important;
+    border:1px solid #213954 !important;
+    border-radius:11px !important;
+    background:#102238 !important;
+}
+
+.ppd-page .ppd-v8-gender-name{
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    min-width:0 !important;
+    color:#d8e4f0 !important;
+    font-size:10px !important;
+    font-weight:800 !important;
+    white-space:nowrap !important;
+}
+
+.ppd-page .ppd-v8-gender-name i{
+    width:8px !important;
+    height:8px !important;
+    flex:0 0 8px !important;
+    border-radius:50% !important;
+}
+
+.ppd-page .ppd-v8-gender-name i.male{background:#4e8fff !important;}
+.ppd-page .ppd-v8-gender-name i.female{background:#f45d8a !important;}
+
+.ppd-page .ppd-v8-gender-row strong{
+    font-size:12px !important;
+    text-align:center !important;
+    direction:ltr !important;
+}
+
+.ppd-page .ppd-v8-gender-row em{
+    padding:4px 6px !important;
+    border-radius:999px !important;
+    background:#16304e !important;
+    color:#8fbaf0 !important;
+    font-size:9px !important;
+    font-style:normal !important;
+    text-align:center !important;
+    direction:ltr !important;
+}
+
+.ppd-page .ppd-v8-gender-note{
+    height:36px !important;
+    min-height:36px !important;
+    margin:0 22px 16px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 14px !important;
+    border:1px solid #22476e !important;
+    border-radius:10px !important;
+    background:#143862 !important;
+    color:#d8e9fb !important;
+    font-size:9.5px !important;
+    line-height:1 !important;
+    font-weight:750 !important;
+    text-align:center !important;
+}
+
+/* Match turnover to the same height */
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+/* KPI bottom numbers / trend clear of lower edge */
+.ppd-page .ppd-kpi{
+    padding-bottom:20px !important;
+}
+
+.ppd-page .ppd-trend{
+    bottom:8px !important;
+    line-height:1.1 !important;
+}
+
+@media (max-width:760px){
+    .ppd-page .ppd-v8-date-wrap{
+        grid-column:1 !important;
+        justify-content:stretch !important;
+    }
+
+    .ppd-page .ppd-v8-period,
+    .ppd-page .ppd-v8-trigger{
+        width:100% !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+
+    .ppd-page .ppd-v8-gender-content{
+        grid-template-columns:1fr !important;
+        gap:16px !important;
+    }
+}
+
+
+/* =========================================================
+   V9 — Unified cards, separators and colors
+   Design-only.
+   ========================================================= */
+
+/* One visual language for all dashboard cards */
+.ppd-page .ppd-card{
+    background:#101c2d !important;
+    border:1px solid #22374f !important;
+    border-radius:16px !important;
+    box-shadow:none !important;
+    color:#f4f8ff !important;
+}
+
+/* NEW title row avoids global HEADER styling entirely */
+.ppd-page .ppd-v9-card-head{
+    width:auto !important;
+    height:56px !important;
+    min-height:56px !important;
+    max-height:56px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    margin:0 18px !important;
+    padding:0 4px !important;
+    border:0 !important;
+    border-bottom:1px solid #263b53 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    outline:none !important;
+}
+
+.ppd-page .ppd-v9-card-head::before,
+.ppd-page .ppd-v9-card-head::after{
+    content:none !important;
+    display:none !important;
+}
+
+.ppd-page .ppd-v9-card-head h2{
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:#f2f6fb !important;
+    font-size:15px !important;
+    line-height:1.2 !important;
+    font-weight:900 !important;
+}
+
+/* Remove old title containers completely if old CSS targets still survive */
+.ppd-page .ppd-v8-card-head,
+.ppd-page .ppd-v3-head{
+    display:none !important;
+}
+
+/* Same inner divider language used across all main cards */
+.ppd-page .ppd-gender-card,
+.ppd-page .ppd-turnover-card,
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    position:relative !important;
+    overflow:hidden !important;
+}
+
+/* Turnover/Gender content uses same panel tones */
+.ppd-page .ppd-v8-gender-row,
+.ppd-page .ppd-turnover-summary > div{
+    background:#0d2238 !important;
+    border:1px solid #1f3f5e !important;
+    color:#dce7f4 !important;
+}
+
+/* Same accent/border shade */
+.ppd-page .ppd-v8-gender-note{
+    background:#11365b !important;
+    border:1px solid #28527b !important;
+    color:#dcecff !important;
+}
+
+/* Unified chart grid lines */
+.ppd-page .ppd-column-chart::before,
+.ppd-page .ppd-column-chart::after{
+    border-top:1px solid #263b53 !important;
+    opacity:1 !important;
+}
+
+/* Add a baseline so all chart cards have the same visual structure */
+.ppd-page .ppd-column-chart{
+    border-bottom:0 !important;
+}
+
+.ppd-page .ppd-chart-item::before{
+    content:"" !important;
+    position:absolute !important;
+    left:-10px !important;
+    right:-10px !important;
+    bottom:30px !important;
+    height:1px !important;
+    background:#263b53 !important;
+    z-index:-1 !important;
+}
+
+/* Unify all dashboard borders/secondary tones */
+.ppd-page .ppd-kpi{
+    background:#0d1d30 !important;
+    border-color:#22374f !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-hero{
+    border-color:#22374f !important;
+}
+
+/* Turnover separator line uses the same border color as all blocks */
+.ppd-page .ppd-stability{
+    border-inline-start:1px solid #263b53 !important;
+}
+
+/* Donut rings / muted structural colors unified */
+.ppd-page .ppd-v8-donut,
+.ppd-page .ppd-gauge{
+    background-color:#213249 !important;
+}
+
+.ppd-page .ppd-v8-donut::after,
+.ppd-page .ppd-gauge::after{
+    background:#0b1727 !important;
+}
+
+/* Keep titles aligned at one level */
+.ppd-page .ppd-v9-card-head h2{
+    text-align:start !important;
+}
+
+/* Lower row stays exactly balanced */
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    height:244px !important;
+    min-height:244px !important;
+    max-height:244px !important;
+}
+
+/* top cards stay exactly balanced */
+.ppd-page .ppd-v8-gender-card,
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+/* Strip any global rounded block styling applied to headings */
+.ppd-page .ppd-v9-card-head > *,
+.ppd-page .ppd-v9-card-head h2,
+.ppd-page .ppd-v9-card-head span{
+    background-color:transparent !important;
+    background-image:none !important;
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+}
+
+/* Mobile */
+@media (max-width:760px){
+    .ppd-page .ppd-v9-card-head{
+        margin:0 14px !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card,
+    .ppd-page .ppd-age-card,
+    .ppd-page .ppd-tenure-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+}
+
+
+/* =========================================================
+   V10 — Remove nested title blocks completely
+   Titles live directly on the original card surface.
+   ========================================================= */
+
+.ppd-page .ppd-v9-card-head,
+.ppd-page .ppd-v8-card-head,
+.ppd-page .ppd-v3-head{
+    display:none !important;
+}
+
+/* Title is now a direct child of the original card — no inner box */
+.ppd-page .ppd-v10-title{
+    width:auto !important;
+    height:56px !important;
+    min-height:56px !important;
+    display:flex !important;
+    align-items:center !important;
+    margin:0 18px !important;
+    padding:0 4px !important;
+
+    border:0 !important;
+    border-bottom:1px solid #263b53 !important;
+    border-radius:0 !important;
+
+    background:transparent !important;
+    background-color:transparent !important;
+    background-image:none !important;
+
+    box-shadow:none !important;
+    outline:none !important;
+
+    color:#f2f6fb !important;
+    font-size:15px !important;
+    line-height:1.2 !important;
+    font-weight:900 !important;
+    text-align:start !important;
+}
+
+/* Prevent any global h2/title styling from recreating a block */
+.ppd-page .ppd-card > .ppd-v10-title,
+.ppd-page .ppd-card > h2.ppd-v10-title{
+    border-left:0 !important;
+    border-right:0 !important;
+    border-top:0 !important;
+    border-bottom:1px solid #263b53 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    background-color:transparent !important;
+    background-image:none !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-v10-title::before,
+.ppd-page .ppd-v10-title::after{
+    content:none !important;
+    display:none !important;
+}
+
+/* Keep original cards themselves unchanged and unified */
+.ppd-page .ppd-card{
+    background:#101c2d !important;
+    border:1px solid #22374f !important;
+    border-radius:16px !important;
+    box-shadow:none !important;
+    overflow:hidden !important;
+}
+
+/* Reconfirm equal geometry after removing header wrappers */
+.ppd-page .ppd-v8-gender-card,
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    height:244px !important;
+    min-height:244px !important;
+    max-height:244px !important;
+}
+
+/* Ensure content begins directly below the title separator */
+.ppd-page .ppd-v8-gender-content{
+    padding-top:14px !important;
+}
+
+.ppd-page .ppd-turnover-layout{
+    padding-top:14px !important;
+}
+
+.ppd-page .ppd-column-chart{
+    padding-top:16px !important;
+}
+
+@media (max-width:760px){
+    .ppd-page .ppd-v10-title{
+        margin:0 14px !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card,
+    .ppd-page .ppd-age-card,
+    .ppd-page .ppd-tenure-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+}
+
+
+/* =========================================================
+   V11 — Hero uses the same visual family as dashboard cards
+   Navbar remains the distinct darker application shell.
+   ========================================================= */
+
+/* Hero becomes a content card, not a second navbar/header */
+.ppd-page .ppd-hero{
+    background:#101c2d !important;
+    background-color:#101c2d !important;
+    background-image:none !important;
+    border:1px solid #22374f !important;
+    border-radius:16px !important;
+    box-shadow:none !important;
+}
+
+/* Remove the large decorative blue geometry/gradient */
+.ppd-page .ppd-hero::before,
+.ppd-page .ppd-hero::after{
+    content:none !important;
+    display:none !important;
+}
+
+/* Keep hero text hierarchy but align colors with the cards */
+.ppd-page .ppd-welcome{
+    color:#64afff !important;
+}
+
+.ppd-page .ppd-title-block h1{
+    color:#f2f6fb !important;
+}
+
+.ppd-page .ppd-title-block p{
+    color:#9fb0c5 !important;
+}
+
+/* Date selector belongs to the card family too */
+.ppd-page .ppd-v8-trigger{
+    background:#0d2238 !important;
+    border-color:#2b4865 !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-v8-period.is-open .ppd-v8-trigger{
+    border-color:#4f8fc8 !important;
+    box-shadow:0 0 0 3px rgba(79,143,200,.10) !important;
+}
+
+.ppd-page .ppd-v8-menu{
+    background:#0d1d30 !important;
+    border-color:#2b4865 !important;
+}
+
+/* Same surface language across hero, KPI cards and content cards */
+.ppd-page .ppd-kpi,
+.ppd-page .ppd-card,
+.ppd-page .ppd-hero{
+    border-color:#22374f !important;
+}
+
+/* Slightly tighter hero because it no longer needs to behave like a banner */
+.ppd-page .ppd-hero{
+    min-height:124px !important;
+}
+
+.ppd-page .ppd-hero-content{
+    min-height:124px !important;
+    padding-top:20px !important;
+    padding-bottom:20px !important;
+}
+
+
+/* =========================================================
+   V12 — Unified cycle/donut placement
+   Rule: cycle on the LEFT, details/data on the RIGHT.
+   Design-only.
+   ========================================================= */
+
+/* Gender: donut left / legend right */
+.ppd-page .ppd-v8-gender-content{
+    display:grid !important;
+    grid-template-columns:180px minmax(0,1fr) !important;
+    grid-template-areas:"donut legend" !important;
+    align-items:center !important;
+    gap:28px !important;
+    direction:ltr !important;
+    padding:16px 24px 10px !important;
+}
+
+.ppd-page .ppd-v8-donut{
+    grid-area:donut !important;
+    justify-self:center !important;
+    align-self:center !important;
+    margin:0 !important;
+}
+
+.ppd-page .ppd-v8-gender-legend{
+    grid-area:legend !important;
+    width:100% !important;
+    min-width:0 !important;
+    direction:rtl !important;
+}
+
+/* Turnover: gauge left / all data on the right */
+.ppd-page .ppd-turnover-layout{
+    display:grid !important;
+    grid-template-columns:180px minmax(0,1fr) minmax(190px,.78fr) !important;
+    grid-template-areas:"gauge summary stability" !important;
+    align-items:center !important;
+    gap:24px !important;
+    direction:ltr !important;
+    padding:16px 24px !important;
+}
+
+.ppd-page .ppd-gauge{
+    grid-area:gauge !important;
+    justify-self:center !important;
+    align-self:center !important;
+    margin:0 !important;
+}
+
+.ppd-page .ppd-turnover-summary{
+    grid-area:summary !important;
+    width:100% !important;
+    min-width:0 !important;
+    direction:rtl !important;
+}
+
+.ppd-page .ppd-stability{
+    grid-area:stability !important;
+    width:100% !important;
+    min-width:0 !important;
+    align-self:stretch !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding-inline-start:22px !important;
+    border-inline-start:1px solid #263b53 !important;
+    direction:rtl !important;
+}
+
+/* Exact visual alignment between the two cycles */
+.ppd-page .ppd-v8-donut,
+.ppd-page .ppd-gauge{
+    width:136px !important;
+    height:136px !important;
+}
+
+/* Make detail rows visually parallel across both cards */
+.ppd-page .ppd-v8-gender-row,
+.ppd-page .ppd-turnover-summary > div{
+    height:42px !important;
+    min-height:42px !important;
+    border-radius:10px !important;
+}
+
+/* Top row cards remain equal */
+.ppd-page .ppd-v8-gender-card,
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+/* Mobile / narrow widths */
+@media (max-width:1100px){
+    .ppd-page .ppd-turnover-layout{
+        grid-template-columns:160px minmax(0,1fr) !important;
+        grid-template-areas:
+            "gauge summary"
+            "gauge stability" !important;
+        gap:14px 20px !important;
+    }
+
+    .ppd-page .ppd-stability{
+        border-inline-start:0 !important;
+        border-top:1px solid #263b53 !important;
+        padding:14px 0 0 !important;
+        min-height:90px !important;
+        height:auto !important;
+    }
+}
+
+@media (max-width:760px){
+    .ppd-page .ppd-v8-gender-content{
+        grid-template-columns:1fr !important;
+        grid-template-areas:
+            "donut"
+            "legend" !important;
+        gap:16px !important;
+    }
+
+    .ppd-page .ppd-turnover-layout{
+        grid-template-columns:1fr !important;
+        grid-template-areas:
+            "gauge"
+            "summary"
+            "stability" !important;
+        gap:16px !important;
+    }
+}
+
+
+/* =========================================================
+   V16 dashboard-only refinements
+   No account-menu / shell rules live in this page stylesheet.
+   ========================================================= */
+
+/* Same rhythm: cycle left / details right */
+.ppd-page .ppd-v8-gender-content{
+    grid-template-columns:160px minmax(0,1fr) !important;
+    grid-template-areas:"donut legend" !important;
+    gap:20px !important;
+    padding:14px 22px 8px !important;
+}
+
+.ppd-page .ppd-v8-donut{
+    grid-area:donut !important;
+    width:132px !important;
+    height:132px !important;
+    justify-self:center !important;
+}
+
+.ppd-page .ppd-v8-gender-legend{
+    grid-area:legend !important;
+    width:100% !important;
+    gap:8px !important;
+}
+
+.ppd-page .ppd-turnover-layout{
+    display:grid !important;
+    grid-template-columns:160px minmax(0,1fr) !important;
+    grid-template-rows:auto auto !important;
+    grid-template-areas:
+        "gauge summary"
+        "gauge stability" !important;
+    align-items:center !important;
+    gap:10px 20px !important;
+    padding:14px 22px 12px !important;
+}
+
+.ppd-page .ppd-gauge{
+    grid-area:gauge !important;
+    width:132px !important;
+    height:132px !important;
+    justify-self:center !important;
+    align-self:center !important;
+    margin:0 !important;
+}
+
+.ppd-page .ppd-turnover-summary{
+    grid-area:summary !important;
+    width:100% !important;
+    gap:7px !important;
+}
+
+.ppd-page .ppd-stability{
+    grid-area:stability !important;
+    width:100% !important;
+    min-height:58px !important;
+    height:auto !important;
+    align-self:start !important;
+    display:grid !important;
+    grid-template-columns:40px minmax(0,1fr) !important;
+    grid-template-rows:auto auto !important;
+    align-items:center !important;
+    column-gap:10px !important;
+    padding:10px 12px !important;
+    border:1px solid #1f3f5e !important;
+    border-radius:10px !important;
+    background:#0d2238 !important;
+    text-align:start !important;
+}
+
+.ppd-page .ppd-stability-icon{
+    grid-column:1 !important;
+    grid-row:1 / span 2 !important;
+    width:36px !important;
+    height:36px !important;
+    margin:0 !important;
+    border-radius:9px !important;
+}
+
+.ppd-page .ppd-stability strong{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    font-size:11px !important;
+    text-align:start !important;
+}
+
+.ppd-page .ppd-stability p{
+    grid-column:2 !important;
+    grid-row:2 !important;
+    max-width:none !important;
+    margin:3px 0 0 !important;
+    font-size:8.5px !important;
+    line-height:1.45 !important;
+    text-align:start !important;
+}
+
+.ppd-page .ppd-v8-gender-row,
+.ppd-page .ppd-turnover-summary > div{
+    height:40px !important;
+    min-height:40px !important;
+}
+
+/* Quiet empty state */
+.ppd-page .ppd-v8-gender-note{
+    height:34px !important;
+    min-height:34px !important;
+    margin:4px 22px 14px !important;
+    padding:0 12px !important;
+    border:1px solid #1f3f5e !important;
+    border-radius:9px !important;
+    background:#0d2238 !important;
+    color:#8fa5be !important;
+    font-size:9px !important;
+    font-weight:700 !important;
+}
+
+/* Compact lower charts */
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    height:214px !important;
+    min-height:214px !important;
+    max-height:214px !important;
+}
+
+.ppd-page .ppd-column-chart{
+    min-height:0 !important;
+    height:158px !important;
+    padding:10px 18px 8px !important;
+    align-items:end !important;
+}
+
+.ppd-page .ppd-chart-item{
+    height:104px !important;
+    grid-template-rows:16px 1fr 28px !important;
+}
+
+.ppd-page .ppd-column-chart::before{ top:30% !important; }
+.ppd-page .ppd-column-chart::after{ top:61% !important; }
+.ppd-page .ppd-chart-column{ width:min(44px,60%) !important; }
+
+@media (max-width:760px){
+    .ppd-page .ppd-v8-gender-content{
+        grid-template-columns:1fr !important;
+        grid-template-areas:"donut" "legend" !important;
+        gap:14px !important;
+    }
+
+    .ppd-page .ppd-turnover-layout{
+        grid-template-columns:1fr !important;
+        grid-template-areas:"gauge" "summary" "stability" !important;
+        gap:14px !important;
+    }
+
+    .ppd-page .ppd-age-card,
+    .ppd-page .ppd-tenure-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+}

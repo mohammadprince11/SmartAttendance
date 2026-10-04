@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -524,7 +524,6 @@ ORDER BY ar.AttendanceDate, e.EmployeeNo, ar.CheckIn;
     /// </summary>
     public async Task<IActionResult> OnPostSavePunchesAsync()
     {
-
         var redirect = new
         {
             Tab = "process",
@@ -534,172 +533,47 @@ ORDER BY ar.AttendanceDate, e.EmployeeNo, ar.CheckIn;
             MaxRows
         };
 
-        if (string.IsNullOrWhiteSpace(Correction.EmployeeNo) || string.IsNullOrWhiteSpace(Correction.Date))
+        if (string.IsNullOrWhiteSpace(Correction.EmployeeNo) ||
+            !DateOnly.TryParse(Correction.Date, out var date))
         {
             ErrorMessage = "رقم الموظف والتاريخ مطلوبان.";
             return RedirectToPage("./Index", redirect);
         }
 
         var employeeId = await ResolveScopedEmployeeIdAsync(Correction.EmployeeNo);
-
         if (employeeId <= 0)
         {
             ErrorMessage = "لم يتم العثور على الموظف.";
             return RedirectToPage("./Index", redirect);
         }
 
-        var date = DateOnly.Parse(Correction.Date);
-        var attendanceId = await PunchSemanticStore.AttendanceSemanticIdAsync(_dbContext);
-
         var pairs = (PunchPairs ?? new List<PunchPairInput>())
-            .Where(p => !p.IsEmpty || p.Id > 0)
+            .Select(pair => new AttendancePunchEditorStore.PairInput
+            {
+                Id = pair.Id,
+                CheckIn = pair.CheckIn,
+                CheckOut = pair.CheckOut
+            })
             .ToList();
 
-        if (pairs.All(p => p.IsEmpty))
-        {
-            ErrorMessage = "أبقِ زوجاً واحداً على الأقل — لحذف اليوم كاملاً استخدم سجلات الحضور الخام.";
-            return RedirectToPage("./Index", redirect);
-        }
-
-        var noteText = string.IsNullOrWhiteSpace(Correction.Notes)
-            ? "تعديل يدوي لأزواج البصمات"
-            : Correction.Notes.Trim();
-
-        var keptIds = new List<int>();
-
-        foreach (var pair in pairs)
-        {
-            // زوج فارغ الوقتين بمعرّف قائم = حذف صريح
-            if (pair.IsEmpty)
-            {
-                await HrmsDatabase.ExecuteAsync(
-                    _dbContext,
-                    "DELETE FROM AttendanceRecords WHERE Id = @Id;",
-                    command => HrmsDatabase.AddParameter(command, "@Id", pair.Id));
-                continue;
-            }
-
-            var checkIn = BuildDateTime(date, pair.CheckIn);
-            object checkOut = string.IsNullOrWhiteSpace(pair.CheckOut)
-                ? DBNull.Value
-                : BuildDateTime(date, pair.CheckOut);
-
-            if (pair.Id > 0)
-            {
-                keptIds.Add(pair.Id);
-                await HrmsDatabase.ExecuteAsync(
-                    _dbContext,
-                    """
-UPDATE AttendanceRecords
-SET CheckIn = @CheckIn, CheckOut = @CheckOut, Source = 3, Notes = @Notes
-WHERE Id = @Id;
-""",
-                    command =>
-                    {
-                        HrmsDatabase.AddParameter(command, "@Id", pair.Id);
-                        HrmsDatabase.AddParameter(command, "@CheckIn", checkIn);
-                        HrmsDatabase.AddParameter(command, "@CheckOut", checkOut);
-                        HrmsDatabase.AddParameter(command, "@Notes", noteText);
-                    });
-            }
-            else
-            {
-                var newId = await HrmsDatabase.ScalarAsync<int>(
-                    _dbContext,
-                    """
-INSERT INTO AttendanceRecords
-    (EmployeeId, AttendanceDate, CheckIn, CheckOut, Source, Status, DeviceId, Notes, CreatedAt, IsDeleted, PunchSemanticId)
-VALUES
-    (@EmployeeId, @Date, @CheckIn, @CheckOut, 3, 1, NULL, @Notes, SYSUTCDATETIME(), 0, NULL);
-SELECT CAST(SCOPE_IDENTITY() AS int);
-""",
-                    command =>
-                    {
-                        HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                        HrmsDatabase.AddParameter(command, "@Date", date);
-                        HrmsDatabase.AddParameter(command, "@CheckIn", checkIn);
-                        HrmsDatabase.AddParameter(command, "@CheckOut", checkOut);
-                        HrmsDatabase.AddParameter(command, "@Notes", noteText);
-                    });
-
-                keptIds.Add(newId);
-            }
-        }
-
-        // الأزواج الحضورية التي اختفت من النموذج تُحذف — التحرير يعكس اليوم كاملاً
-        var keepList = keptIds.Count > 0 ? string.Join(",", keptIds) : "0";
-
-        await HrmsDatabase.ExecuteAsync(
+        var result = await AttendancePunchEditorStore.SaveAsync(
             _dbContext,
-            $"""
-DELETE FROM AttendanceRecords
-WHERE EmployeeId = @EmployeeId AND AttendanceDate = @Date
-  AND ISNULL(PunchSemanticId, @Semantic) = @Semantic
-  AND Id NOT IN ({keepList});
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                HrmsDatabase.AddParameter(command, "@Date", date);
-                HrmsDatabase.AddParameter(command, "@Semantic", attendanceId);
-            });
+            await _companyScope.GetAsync(HttpContext.RequestAborted),
+            employeeId,
+            date,
+            pairs,
+            Correction.Notes,
+            User.Identity?.Name ?? "HR",
+            HttpContext.Connection.RemoteIpAddress?.ToString());
 
-        // ⟵ جوهر التغيير: الحالة تُشتق من المحرك لا تُفرض يدوياً
-        var derived = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-SELECT MIN(CheckIn) AS FirstIn, MAX(CheckOut) AS LastOut
-FROM AttendanceRecords
-WHERE EmployeeId = @EmployeeId AND AttendanceDate = @Date
-  AND ISNULL(IsDeleted, 0) = 0
-  AND ISNULL(PunchSemanticId, @Semantic) = @Semantic;
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                HrmsDatabase.AddParameter(command, "@Date", date);
-                HrmsDatabase.AddParameter(command, "@Semantic", attendanceId);
-            },
-            reader => new
-            {
-                FirstIn = HrmsDatabase.GetDateTime(reader, "FirstIn"),
-                LastOut = HrmsDatabase.GetDateTime(reader, "LastOut")
-            });
-
-        var day = derived.FirstOrDefault();
-        var reDerived = day != null &&
-            await DayAttendanceStore.UpdateDayAsync(
-                _dbContext, await _companyScope.GetAsync(), employeeId, date, day.FirstIn, day.LastOut);
-
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
-BEGIN
-    INSERT INTO AuditLogs (EntityName, EntityId, Action, NewValues, UserName, IpAddress)
-    VALUES ('AttendanceRecord', CAST(@EmployeeId AS nvarchar(80)), 'Attendance Punch Pairs Edit', @NewValues, @UserName, @IpAddress);
-END;
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                HrmsDatabase.AddParameter(command, "@NewValues", HrmsDatabase.JsonLine(
-                    ("EmployeeNo", Correction.EmployeeNo),
-                    ("Date", Correction.Date),
-                    ("Pairs", keptIds.Count.ToString()),
-                    ("FirstIn", day?.FirstIn?.ToString("HH:mm") ?? "-"),
-                    ("LastOut", day?.LastOut?.ToString("HH:mm") ?? "-"),
-                    ("Notes", noteText)));
-                HrmsDatabase.AddParameter(command, "@UserName", User.Identity?.Name ?? "HR");
-                HrmsDatabase.AddParameter(command, "@IpAddress", HttpContext.Connection.RemoteIpAddress?.ToString());
-            });
-
-        SuccessMessage = reDerived
-            ? $"حُفظت {keptIds.Count} من أزواج البصمات وأُعيد اشتقاق اليومية."
-            : $"حُفظت {keptIds.Count} من أزواج البصمات — اليومية غير محللة بعد، شغّل «تحديث الحضور».";
+        if (result.Ok)
+            SuccessMessage = result.Message;
+        else
+            ErrorMessage = result.Message;
 
         return RedirectToPage("./Index", redirect);
     }
+
 
     /// <summary>إضافة زوج بصمة غير-حضوري (نظير «إضافة بصمات أخرى» بكيان).</summary>
     public async Task<IActionResult> OnPostAddOtherPunchAsync()

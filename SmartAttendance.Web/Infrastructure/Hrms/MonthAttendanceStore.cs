@@ -88,7 +88,7 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
     /// </remarks>
     /// <returns>عدد صفوف الموظفين ضمن النطاق بعد البناء.</returns>
     public static async Task<int> BuildMonthAsync(
-        ApplicationDbContext dbContext, CompanyScope scope, int year, int month)
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, int? companyId = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return 0;
@@ -99,7 +99,13 @@ IF COL_LENGTH('EmployeeMonthAttendance', 'UnpaidLeaveDays') IS NULL
         // نافذة التجميع تتبع **سياسة فترة الحضور** (المصدر الوحيد الذي تستخدمه اليوميات
         // وبقية الشاشات) لا الشهر التقويمي — بلا سياسة نشطة ترجع الشهر التقويمي كما كان.
         // بلاغ محمد: التقويمي كان يبتلع غياب 21/7→31/7 (يخصّ دورة آب) براتب تموز.
-        var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(dbContext, year, month);
+        var resolvedCompanyId = companyId is > 0
+            ? companyId
+            : (!scope.IsUnrestricted && scope.AllowedCompanyIds.Count == 1
+                ? scope.AllowedCompanyIds.First()
+                : (int?)null);
+        var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+            dbContext, year, month, SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance, resolvedCompanyId);
         var from = period.From;
         var to = period.To;
 
@@ -247,46 +253,44 @@ ORDER BY e.EmployeeNo;
         await DayAttendanceStore.EnsureAsync(dbContext);
         var today = DateOnly.FromDateTime(DateTime.Today);
         var eligible = new List<int>();
-        // 🛡️ عزل الشركات (Issue 4): صفٌّ لموظف خارج نطاق المستخدم لا يُعدّ مؤهّلاً
-        // أصلاً، فلا يُعتمَد بمعرّفٍ مزوَّر من شركةٍ أخرى.
         var scopeFilter = scope.IsUnrestricted ? "1 = 1" : scope.ToSqlPredicate("e.CompanyId");
 
         foreach (var chunk in ids.Chunk(500))
         {
             var inList = string.Join(",", chunk.Select((_, i) => $"@P{i}"));
-            var rows = await HrmsDatabase.QueryAsync(
-                dbContext,
-                $"""
-SELECT m.Id,
-       DATEDIFF(day, DATEFROMPARTS(m.[Year], m.[Month], 1),
-                CASE WHEN EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1)) < @Today
-                     THEN EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1)) ELSE @Today END) + 1 AS ExpectedDays,
-       (SELECT COUNT(1) FROM DayAttendances d
-        WHERE d.EmployeeId = m.EmployeeId AND d.IsAnalyzed = 1
-          AND d.WorkDate >= DATEFROMPARTS(m.[Year], m.[Month], 1)
-          AND d.WorkDate <= EOMONTH(DATEFROMPARTS(m.[Year], m.[Month], 1))) AS AnalyzedDays
+            var rows = await HrmsDatabase.QueryAsync(dbContext, $"""
+SELECT m.Id,m.EmployeeId,m.[Year],m.[Month],e.CompanyId
 FROM EmployeeMonthAttendance m
-INNER JOIN Employees e ON e.Id = m.EmployeeId
+INNER JOIN Employees e ON e.Id=m.EmployeeId
 WHERE m.Id IN ({inList}) AND {scopeFilter};
-""",
+""", command =>
+            {
+                for (var i=0;i<chunk.Length;i++) HrmsDatabase.AddParameter(command,$"@P{i}",chunk[i]);
+            }, reader => new
+            {
+                Id=HrmsDatabase.GetInt(reader,"Id"), EmployeeId=HrmsDatabase.GetInt(reader,"EmployeeId"),
+                Year=HrmsDatabase.GetInt(reader,"Year"), Month=HrmsDatabase.GetInt(reader,"Month"),
+                CompanyId=HrmsDatabase.GetNullableInt(reader,"CompanyId")
+            });
+
+        foreach (var row in rows)
+        {
+            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                dbContext,row.Year,row.Month,SmartAttendance.Domain.Enums.PayrollCutoffType.Attendance,row.CompanyId);
+            var requiredTo = period.To < today ? period.To : today;
+            if (requiredTo < period.From) continue;
+            var expected = requiredTo.DayNumber - period.From.DayNumber + 1;
+            var analyzed = await HrmsDatabase.ScalarAsync<int>(dbContext,
+                "SELECT COUNT(1) FROM DayAttendances WHERE EmployeeId=@Emp AND IsAnalyzed=1 AND WorkDate>=@From AND WorkDate<=@To;",
                 command =>
                 {
-                    HrmsDatabase.AddParameter(command, "@Today", today.ToDateTime(TimeOnly.MinValue));
-                    var index = 0;
-                    foreach (var id in chunk) HrmsDatabase.AddParameter(command, $"@P{index++}", id);
-                },
-                reader => new
-                {
-                    Id = HrmsDatabase.GetInt(reader, "Id"),
-                    Expected = HrmsDatabase.GetInt(reader, "ExpectedDays"),
-                    Analyzed = HrmsDatabase.GetInt(reader, "AnalyzedDays")
+                    HrmsDatabase.AddParameter(command,"@Emp",row.EmployeeId);
+                    HrmsDatabase.AddParameter(command,"@From",period.From.ToDateTime(TimeOnly.MinValue));
+                    HrmsDatabase.AddParameter(command,"@To",requiredTo.ToDateTime(TimeOnly.MinValue));
                 });
-
-            eligible.AddRange(rows
-                .Where(r => r.Expected > 0 && r.Analyzed >= r.Expected)
-                .Select(r => r.Id));
+            if (expected > 0 && analyzed >= expected) eligible.Add(row.Id);
         }
-
+        }
         return eligible;
     }
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -18,6 +19,29 @@ public static class PayrollTransactionStore
     public const string Overtime = "Overtime";
     public const string SalaryDays = "SalaryDays";
     public const string LeaveEncashment = "LeaveEncashment";
+
+    public static PayrollCutoffType CutoffTypeFor(string txType) => txType switch
+    {
+        Overtime => PayrollCutoffType.Overtime,
+        Deduction => PayrollCutoffType.Deductions,
+        Income => PayrollCutoffType.Additions,
+        SalaryDays => PayrollCutoffType.SalaryChanges,
+        LeaveEncashment => PayrollCutoffType.Leaves,
+        _ => PayrollCutoffType.WorkingDays
+    };
+
+    private static async Task<Dictionary<string, AttendancePeriodPolicy.Period>> ResolveRunPeriodsAsync(
+        ApplicationDbContext dbContext, int companyId, int year, int month)
+    {
+        var result = new Dictionary<string, AttendancePeriodPolicy.Period>(StringComparer.OrdinalIgnoreCase);
+        foreach (var txType in new[] { Income, Deduction, Overtime, SalaryDays, LeaveEncashment })
+        {
+            var (period, _) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                dbContext, year, month, CutoffTypeFor(txType), companyId);
+            result[txType] = period;
+        }
+        return result;
+    }
 
     /// <summary>معامل بدل العمل الإضافي الافتراضي (1.5× الأجر الساعي) عند عدم تحديده.</summary>
     public const decimal DefaultRateFactor = 1.5m;
@@ -258,22 +282,26 @@ ORDER BY t.CreatedAt DESC;
     public static async Task LockForRunAsync(ApplicationDbContext dbContext, int runId, int year, int month)
     {
         await EnsureAsync(dbContext);
-        // ⚠️ **عزل الشركات**: كان القفل يشمل حركات **كل الشركات** للشهر (WHERE Year+Month
-        // فقط)، فقفلُ مسير شركة A يقفل حركات شركة B بنفس الشهر. الآن يُحصر بموظفي الدفعة
-        // نفسها: شركةُ الدفعة (join Employees ↔ PayrollRuns.CompanyId) وأعضاء نطاقها إن
-        // وُجدوا (PayrollRunScopeMembers). دفعةٌ بلا شركة (تاريخية أحادية الشركة) وبلا
-        // أعضاء نطاق تبقى على السلوك القديم للتوافق. النطاق مشتقٌّ من الدفعة داخل المتجر
-        // فيتعذّر إغفاله من المستدعي.
-        await HrmsDatabase.ExecuteAsync(
-            dbContext,
+        var companyId = await HrmsDatabase.ScalarAsync<int>(dbContext,
+            "SELECT ISNULL(CompanyId,0) FROM PayrollRuns WHERE Id=@Run;",
+            command => HrmsDatabase.AddParameter(command, "@Run", runId));
+        var periods = companyId > 0
+            ? await ResolveRunPeriodsAsync(dbContext, companyId, year, month)
+            : new Dictionary<string, AttendancePeriodPolicy.Period>();
+
+        AttendancePeriodPolicy.Period P(string type) => periods.TryGetValue(type, out var p)
+            ? p : AttendancePeriodPolicy.Resolve(year, month, 1, DateTime.DaysInMonth(year, month));
+        var add = P(Income); var ded = P(Deduction); var ot = P(Overtime);
+        var sal = P(SalaryDays); var leave = P(LeaveEncashment);
+
+        await HrmsDatabase.ExecuteAsync(dbContext,
             """
 UPDATE t
 SET t.IsLocked = 1, t.LockedRunId = @Run
 FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
 INNER JOIN PayrollRuns r ON r.Id = @Run
-WHERE t.[Year] = @Y AND t.[Month] = @M
-  AND ISNULL(t.Status, N'Approved') = N'Approved'
+WHERE ISNULL(t.Status, N'Approved') = N'Approved'
   AND ISNULL(t.IsLocked, 0) = 0
   AND ((ISNULL(r.RunType,N'Regular')=N'Regular'
         AND ISNULL(t.PaymentType,N'InSalary')=N'InSalary' AND ISNULL(t.IsRetroactive,0)=0)
@@ -282,13 +310,22 @@ WHERE t.[Year] = @Y AND t.[Month] = @M
     OR (r.RunType=N'Retroactive' AND ISNULL(t.IsRetroactive,0)=1))
   AND (r.CompanyId IS NULL OR e.CompanyId = r.CompanyId)
   AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run)
-       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run AND s.EmployeeId = t.EmployeeId));
+       OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run AND s.EmployeeId = t.EmployeeId))
+  AND (
+       (t.TxType=N'Income' AND ((t.TransactionDate BETWEEN @AddFrom AND @AddTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'Deduction' AND ((t.TransactionDate BETWEEN @DedFrom AND @DedTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'Overtime' AND ((t.TransactionDate BETWEEN @OtFrom AND @OtTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'SalaryDays' AND ((t.TransactionDate BETWEEN @SalFrom AND @SalTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'LeaveEncashment' AND ((t.TransactionDate BETWEEN @LeaveFrom AND @LeaveTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+  );
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Run", runId);
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
+                AddPeriod(command, "Add", add); AddPeriod(command, "Ded", ded); AddPeriod(command, "Ot", ot);
+                AddPeriod(command, "Sal", sal); AddPeriod(command, "Leave", leave);
             });
     }
 
@@ -322,17 +359,21 @@ WHERE t.[Year] = @Y AND t.[Month] = @M
     /// <summary>حركات فترة/نوع للاحتساب بالمسير — المعتمدة داخل الراتب فقط.</summary>
     public static async Task<List<Transaction>> ForPeriodAsync(
         ApplicationDbContext dbContext, CompanyScope scope, int year, int month, string txType,
-        int? runId = null)
+        int? runId = null, DateOnly? fromDate = null, DateOnly? toDate = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<Transaction>();
         await EnsureAsync(dbContext);
+        var hasRange = fromDate.HasValue && toDate.HasValue;
         return await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
 SELECT t.* FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
-WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
+WHERE t.TxType = @Type
+  AND ((@UseRange=1 AND ((t.TransactionDate IS NOT NULL AND t.TransactionDate >= @From AND t.TransactionDate <= @To)
+                         OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+       OR (@UseRange=0 AND t.[Year]=@Y AND t.[Month]=@M))
   AND ISNULL(PaymentType, N'InSalary') = N'InSalary'
   AND ISNULL(Status, N'Approved') = N'Approved'
   AND ISNULL(IsRetroactive,0)=0
@@ -348,6 +389,9 @@ WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@Type", txType);
                 HrmsDatabase.AddParameter(command, "@RunId", (object?)runId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@UseRange", hasRange ? 1 : 0);
+                HrmsDatabase.AddParameter(command, "@From", hasRange ? fromDate!.Value.ToDateTime(TimeOnly.MinValue) : DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@To", hasRange ? toDate!.Value.ToDateTime(TimeOnly.MaxValue) : DBNull.Value);
             },
             reader => new Transaction
             {
@@ -358,7 +402,8 @@ WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
                 Taxable = HrmsDatabase.GetBool(reader, "Taxable"),
                 Hours = reader["Hours"] is decimal h ? h : null,
                 RateFactor = reader["RateFactor"] is decimal rf ? rf : null,
-                Days = reader["Days"] is decimal dy ? dy : null
+                Days = reader["Days"] is decimal dy ? dy : null,
+                TransactionDate = HrmsDatabase.GetDateOnly(reader, "TransactionDate")
             });
     }
 
@@ -372,11 +417,20 @@ WHERE t.[Year] = @Y AND t.[Month] = @M AND t.TxType = @Type
     /// مرّتين؛ ومن يراه أولاً يعتمد أو يتخطّى عن علم.
     /// </summary>
     public static async Task<List<Transaction>> PreflightDraftsAsync(
-        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, int? runId = null)
+        ApplicationDbContext dbContext, CompanyScope scope, int year, int month, int? runId = null, int? companyId = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         if (scope.IsDeniedAll) return new List<Transaction>();
         await EnsureAsync(dbContext);
+
+        var periods = companyId is > 0
+            ? await ResolveRunPeriodsAsync(dbContext, companyId.Value, year, month)
+            : new Dictionary<string, AttendancePeriodPolicy.Period>();
+        AttendancePeriodPolicy.Period P(string type) => periods.TryGetValue(type, out var p)
+            ? p : AttendancePeriodPolicy.Resolve(year, month, 1, DateTime.DaysInMonth(year, month));
+        var add = P(Income); var ded = P(Deduction); var ot = P(Overtime);
+        var sal = P(SalaryDays); var leave = P(LeaveEncashment);
+
         return await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
@@ -385,14 +439,20 @@ SELECT t.Id, t.EmployeeId, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.Ful
        ISNULL(t.Status, N'Approved') AS Status
 FROM PayrollTransactions t
 INNER JOIN Employees e ON e.Id = t.EmployeeId
-WHERE t.[Year] = @Y AND t.[Month] = @M
-  AND ISNULL(t.PaymentType, N'InSalary') = N'InSalary'
+WHERE ISNULL(t.PaymentType, N'InSalary') = N'InSalary'
   AND ISNULL(t.Status, N'Approved') <> N'Approved'
   AND ISNULL(t.Status, N'Approved') <> N'Rejected'
   AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")}
   AND (@RunId IS NULL
        OR NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId)
        OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=t.EmployeeId))
+  AND (
+       (t.TxType=N'Income' AND ((t.TransactionDate BETWEEN @AddFrom AND @AddTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'Deduction' AND ((t.TransactionDate BETWEEN @DedFrom AND @DedTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'Overtime' AND ((t.TransactionDate BETWEEN @OtFrom AND @OtTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'SalaryDays' AND ((t.TransactionDate BETWEEN @SalFrom AND @SalTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+    OR (t.TxType=N'LeaveEncashment' AND ((t.TransactionDate BETWEEN @LeaveFrom AND @LeaveTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+  )
 ORDER BY e.EmployeeNo, t.Id;
 """,
             command =>
@@ -400,6 +460,8 @@ ORDER BY e.EmployeeNo, t.Id;
                 HrmsDatabase.AddParameter(command, "@Y", year);
                 HrmsDatabase.AddParameter(command, "@M", month);
                 HrmsDatabase.AddParameter(command, "@RunId", (object?)runId ?? DBNull.Value);
+                AddPeriod(command, "Add", add); AddPeriod(command, "Ded", ded); AddPeriod(command, "Ot", ot);
+                AddPeriod(command, "Sal", sal); AddPeriod(command, "Leave", leave);
             },
             reader => new Transaction
             {
@@ -677,6 +739,12 @@ WHERE Id=@Id;
         Days = reader["Days"] is decimal dy ? dy : null,
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default
     };
+
+    private static void AddPeriod(System.Data.Common.DbCommand command, string prefix, AttendancePeriodPolicy.Period period)
+    {
+        HrmsDatabase.AddParameter(command, $"@{prefix}From", period.From.ToDateTime(TimeOnly.MinValue));
+        HrmsDatabase.AddParameter(command, $"@{prefix}To", period.To.ToDateTime(TimeOnly.MaxValue));
+    }
 
     private static void Add(System.Data.Common.DbCommand command, Transaction tx)
     {

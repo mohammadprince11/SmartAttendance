@@ -4,6 +4,7 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
 using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Integrations;
+using SmartAttendance.Web.Infrastructure.Notifications;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -427,9 +428,9 @@ WHERE r.Id = @Id;
             if (original.RunType == RunTypeReversal)
                 return (false, "لا يمكن إنشاء عكسٍ لمسير عكسي.", 0);
             var alreadyReversed = await HrmsDatabase.ScalarAsync<int>(dbContext,
-                "SELECT COUNT(*) FROM PayrollRuns WHERE OriginalRunId=@Original AND RunType=N'Reversal' AND Status IN (N'Locked',N'Issued',N'PayslipSent');",
+                "SELECT COUNT(*) FROM PayrollRuns WHERE OriginalRunId=@Original AND RunType=N'Reversal';",
                 command => HrmsDatabase.AddParameter(command, "@Original", originalRunId.Value));
-            if (alreadyReversed > 0) return (false, "للمسير الأصلي عكسٌ مقفل/صادر بالفعل.", 0);
+            if (alreadyReversed > 0) return (false, "للمسير الأصلي مسير عكسي موجود بالفعل.", 0);
         }
         else
         {
@@ -447,7 +448,20 @@ WHERE r.Id = @Id;
         // الدفعة كاملةً فلا يبقى Draft يتيمٌ بلا أعضاء يُفسَّر لاحقاً «كل الموظفين».
         // وتخصيص الرقم يقفل مدى (السنة،الشهر) بـUPDLOCK/HOLDLOCK فيتسلسل المُنشئون
         // المتزامنون ويستحيل رقمان متطابقان — كان COUNT+1 بلا قفلٍ سباقاً صريحاً.
-        await using var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await dbContext.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+
+        if (normalizedRunType == RunTypeReversal && originalRunId is > 0)
+        {
+            var duplicateReversal = await HrmsDatabase.ScalarAsync<int>(dbContext,
+                "SELECT COUNT(*) FROM PayrollRuns WITH (UPDLOCK,HOLDLOCK) WHERE OriginalRunId=@Original AND RunType=N'Reversal';",
+                command => HrmsDatabase.AddParameter(command, "@Original", originalRunId.Value));
+            if (duplicateReversal > 0)
+            {
+                await tx.RollbackAsync(cancellationToken);
+                return (false, "تم إنشاء مسير عكسي لهذا المسير الأصلي مسبقاً.", 0);
+            }
+        }
 
         var seq = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
@@ -540,6 +554,10 @@ SELECT SequenceNo FROM @allocated;
         var periodStart = new DateOnly(run.Year, run.Month, 1);
         var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
+        var terminationPeriod = runCompanyForLoans is > 0
+            ? (await AttendancePeriodPolicy.ResolveFromPolicyAsync(dbContext, run.Year, run.Month, SmartAttendance.Domain.Enums.PayrollCutoffType.Terminations, runCompanyForLoans.Value)).Period
+            : AttendancePeriodPolicy.Resolve(run.Year, run.Month, 1, DateTime.DaysInMonth(run.Year, run.Month));
+
         // العملة جزء من مدخلات المسير لا تنسيق عرض. نتحقق من كل أسعار النطاق قبل
         // أي أثر مالي (حتى قبل ترحيل الأقساط)، ثم نجمّد السعر المستخدم على كل سطر.
         var fxContext = runCompanyForLoans is > 0
@@ -561,18 +579,21 @@ SELECT SequenceNo FROM @allocated;
             """
 SELECT COUNT(*)
 FROM Employees e
-WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
+WHERE ISNULL(e.IsDeleted,0)=0
+  AND (ISNULL(e.IsActive,1)=1 OR (e.ServiceEndDate >= @TermFrom AND e.ServiceEndDate <= @TermTo))
   AND (@Company IS NULL OR e.CompanyId=@Company)
   AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId)
        OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId AND rs.EmployeeId=e.Id))
   AND NOT EXISTS (
       SELECT 1 FROM EmployeeMonthAttendance m
       WHERE m.EmployeeId=e.Id AND m.[Year]=@Year AND m.[Month]=@Month
-        AND m.Status IN (N'Approved',N'Locked'));
+        AND m.Status = N'Locked');
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyForLoans ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@TermFrom", terminationPeriod.From.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@TermTo", terminationPeriod.To.ToDateTime(TimeOnly.MaxValue));
                 HrmsDatabase.AddParameter(command, "@RunId", runId);
                 HrmsDatabase.AddParameter(command, "@Year", run.Year);
                 HrmsDatabase.AddParameter(command, "@Month", run.Month);
@@ -580,7 +601,7 @@ WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
         if (unapprovedAttendance > 0)
         {
             return (false,
-                $"تعذّر الاحتساب: {unapprovedAttendance} موظفاً ضمن الدفعة لا يملك اعتماد حضور شهرياً. اعتمد/اقفل الشهر من شاشة الحضور الشهري أولاً.");
+                $"تعذّر الاحتساب: {unapprovedAttendance} موظفاً ضمن الدفعة لا يملك حضوراً شهرياً مقفلاً. يجب إقفال الشهر من شاشة الحضور الشهري قبل احتساب الرواتب.");
         }
 
         Task<string> GetPayrollSetting(string key, string fallback) => runCompanyForLoans is > 0
@@ -595,26 +616,35 @@ WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
         // بلا سياسة WorkingDays نشطة ⟹ 0 = المقام القديم (أيام الدوام) بلا تغيير.
         // «ماكو شي ثابت، كلها سياسة» — والحضور نفسه يقرأ سياسة Attendance (21→20).
         var (workDaysPeriod, workDaysPolicyName) = await AttendancePeriodPolicy.ResolveFromPolicyAsync(
-            dbContext, run.Year, run.Month, SmartAttendance.Domain.Enums.PayrollCutoffType.WorkingDays);
+            dbContext, run.Year, run.Month, SmartAttendance.Domain.Enums.PayrollCutoffType.WorkingDays, runCompanyForLoans);
         linkPolicy = linkPolicy with
         {
             MonthlyDivisorDays = workDaysPolicyName is not null ? workDaysPeriod.DayCount : 0
         };
         var linkMode = linkPolicy.Mode;
 
+        async Task<AttendancePeriodPolicy.Period> ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType type)
+        {
+            if (runCompanyForLoans is not > 0)
+                return AttendancePeriodPolicy.Resolve(run.Year, run.Month, 1, DateTime.DaysInMonth(run.Year, run.Month));
+            return (await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                dbContext, run.Year, run.Month, type, runCompanyForLoans.Value)).Period;
+        }
+
+        var penaltyPeriod = await ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType.Penalties);
+        var additionsPeriod = await ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType.Additions);
+        var deductionsPeriod = await ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType.Deductions);
+        var overtimePeriod = await ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType.Overtime);
+        var salaryChangesPeriod = await ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType.SalaryChanges);
+        var leavesPeriod = await ResolvePayrollPeriodAsync(SmartAttendance.Domain.Enums.PayrollCutoffType.Leaves);
+
         // يوم قطع التعيين من سياسة الغلق «Hiring»: من يُعيَّن بعده يُرحَّل راتبه الأول
         // شهراً ويُحتسب بأثر رجعي من تاريخ مباشرته. null ⟹ بلا سياسة ⟹ بلا ترحيل (آمن).
         // يُطبَّق فقط مع مقامٍ تقويميّ (سياسة WorkingDays نشطة).
-        int? hiringCutoffDay = linkPolicy.MonthlyDivisorDays > 0
-            ? await (
-                from p in dbContext.PayrollCutoffPolicies.AsNoTracking()
-                join t in dbContext.PayrollCutoffPolicyTypes.AsNoTracking()
-                    on p.Id equals t.PayrollCutoffPolicyId
-                where p.IsActive && !p.IsDeleted && !t.IsDeleted
-                      && t.PolicyType == SmartAttendance.Domain.Enums.PayrollCutoffType.Hiring
-                      && p.DayOfMonth != null
-                orderby p.Id
-                select p.DayOfMonth).FirstOrDefaultAsync()
+        int? hiringCutoffDay = linkPolicy.MonthlyDivisorDays > 0 && runCompanyForLoans is > 0
+            ? await AttendancePeriodPolicy.ResolveDayOfMonthAsync(
+                dbContext, run.Year, run.Month,
+                SmartAttendance.Domain.Enums.PayrollCutoffType.Hiring, runCompanyForLoans.Value)
             : null;
 
         // إعداد ديناميكيّ يتحكّم به المستخدم: هل يُحتسب وعاء الضمان/الضريبة على الأساسي
@@ -669,15 +699,16 @@ WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
 
         var employees = await HrmsDatabase.QueryAsync(
             dbContext,
-            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName, e.HireDate, e.LastRehireDate FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1{companyFilter} ORDER BY e.EmployeeNo;",
-            command => { if (runCompanyId is > 0) HrmsDatabase.AddParameter(command, "@Company", runCompanyId.Value); },
+            $"SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName, e.HireDate, e.LastRehireDate, e.ServiceEndDate FROM Employees e WHERE ISNULL(e.IsDeleted,0)=0 AND (ISNULL(e.IsActive,1)=1 OR (e.ServiceEndDate >= @TermFrom AND e.ServiceEndDate <= @TermTo)){companyFilter} ORDER BY e.EmployeeNo;",
+            command => { if (runCompanyId is > 0) HrmsDatabase.AddParameter(command, "@Company", runCompanyId.Value); HrmsDatabase.AddParameter(command, "@TermFrom", terminationPeriod.From.ToDateTime(TimeOnly.MinValue)); HrmsDatabase.AddParameter(command, "@TermTo", terminationPeriod.To.ToDateTime(TimeOnly.MaxValue)); },
             reader => new
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 No = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 Name = HrmsDatabase.GetString(reader, "FullName"),
                 // البداية الفعّالة للاستحقاق: إعادة التعيين تسبق التعيين الأصلي إن وُجدت.
-                Start = HrmsDatabase.GetDateOnly(reader, "LastRehireDate") ?? HrmsDatabase.GetDateOnly(reader, "HireDate")
+                Start = HrmsDatabase.GetDateOnly(reader, "LastRehireDate") ?? HrmsDatabase.GetDateOnly(reader, "HireDate"),
+                End = HrmsDatabase.GetDateOnly(reader, "ServiceEndDate")
             });
 
         // نطاق التشغيل محفوظ مع الدفعة: إعادة الاحتساب بعد شهر تلتزم بنفس النطاق.
@@ -688,10 +719,12 @@ WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
         var candidates = employees.Where(e => PayrollRunScope.Includes(scopeSet, e.Id)).ToList();
         var financial = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT f.EmployeeId, ISNULL(f.BasicSalary,0) AS BasicSalary, ISNULL(f.StopSalaryCalc,0) AS StopSalaryCalc, f.TaxProfileId, f.GosiProfileId, f.SocialSecuritySalary, f.CurrentTaxSalary, f.TaxBaseMode, f.GosiBaseMode FROM EmployeeFinancialInfos f INNER JOIN Employees e ON e.Id=f.EmployeeId WHERE ISNULL(f.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1 AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=f.EmployeeId));",
+            "SELECT f.EmployeeId, ISNULL(f.BasicSalary,0) AS BasicSalary, ISNULL(f.StopSalaryCalc,0) AS StopSalaryCalc, f.TaxProfileId, f.GosiProfileId, f.SocialSecuritySalary, f.CurrentTaxSalary, f.TaxBaseMode, f.GosiBaseMode FROM EmployeeFinancialInfos f INNER JOIN Employees e ON e.Id=f.EmployeeId WHERE ISNULL(f.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND (ISNULL(e.IsActive,1)=1 OR (e.ServiceEndDate >= @TermFrom AND e.ServiceEndDate <= @TermTo)) AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=f.EmployeeId));",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@TermFrom", terminationPeriod.From.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@TermTo", terminationPeriod.To.ToDateTime(TimeOnly.MaxValue));
                 HrmsDatabase.AddParameter(command, "@RunId", runId);
             },
             reader => new
@@ -711,10 +744,12 @@ WHERE ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
 
         var allowances = (await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT a.EmployeeId, a.SalaryItemId, a.ItemName, ISNULL(a.Amount,0) AS Amount, a.FromDate, a.ToDate, ISNULL(a.EndAfterDate,0) AS EndAfterDate FROM EmployeeAllowances a INNER JOIN Employees e ON e.Id=a.EmployeeId WHERE ISNULL(a.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1 AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=a.EmployeeId));",
+            "SELECT a.EmployeeId, a.SalaryItemId, a.ItemName, ISNULL(a.Amount,0) AS Amount, a.FromDate, a.ToDate, ISNULL(a.EndAfterDate,0) AS EndAfterDate FROM EmployeeAllowances a INNER JOIN Employees e ON e.Id=a.EmployeeId WHERE ISNULL(a.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND (ISNULL(e.IsActive,1)=1 OR (e.ServiceEndDate >= @TermFrom AND e.ServiceEndDate <= @TermTo)) AND (@Company IS NULL OR e.CompanyId=@Company) AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId) OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId=@RunId AND s.EmployeeId=a.EmployeeId));",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyId ?? DBNull.Value);
+                HrmsDatabase.AddParameter(command, "@TermFrom", terminationPeriod.From.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@TermTo", terminationPeriod.To.ToDateTime(TimeOnly.MaxValue));
                 HrmsDatabase.AddParameter(command, "@RunId", runId);
             },
             reader => new
@@ -751,7 +786,8 @@ FROM EmployeeViolationCases v
 INNER JOIN Employees e ON e.Id = v.EmployeeId
 LEFT JOIN DisciplinaryPenaltyRules r ON r.Id = v.PenaltyRuleId
 LEFT JOIN SalaryItems s ON s.Id = r.SalaryItemId
-WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,1)=1
+WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
+  AND (ISNULL(e.IsActive,1)=1 OR (e.ServiceEndDate >= @TermFrom AND e.ServiceEndDate <= @TermTo))
   AND v.EventDate >= @From AND v.EventDate <= @To
   AND (@Company IS NULL OR e.CompanyId=@Company)
   AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers rs WHERE rs.RunId=@RunId)
@@ -759,8 +795,10 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
 """,
             command =>
             {
-                HrmsDatabase.AddParameter(command, "@From", periodStart.ToDateTime(TimeOnly.MinValue));
-                HrmsDatabase.AddParameter(command, "@To", periodEnd.ToDateTime(TimeOnly.MaxValue));
+                HrmsDatabase.AddParameter(command, "@From", penaltyPeriod.From.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@To", penaltyPeriod.To.ToDateTime(TimeOnly.MaxValue));
+                HrmsDatabase.AddParameter(command, "@TermFrom", terminationPeriod.From.ToDateTime(TimeOnly.MinValue));
+                HrmsDatabase.AddParameter(command, "@TermTo", terminationPeriod.To.ToDateTime(TimeOnly.MaxValue));
                 HrmsDatabase.AddParameter(command, "@Company", (object?)runCompanyId ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@RunId", runId);
             },
@@ -779,7 +817,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // أيام الفترة الفعلية.
-        var daysInPeriod = periodEnd.DayNumber - periodStart.DayNumber + 1;
+        var daysInPeriod = workDaysPeriod.DayCount;
 
         // سقف اقتطاع المخالفات الشهري من تهيئة اللائحة (صفر = بلا سقف).
         var maxDeductionPercent = decimal.TryParse(
@@ -790,15 +828,15 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             out var parsedCap) ? parsedCap : 0m;
 
         // حركات الدخل/الاقتطاع للفترة (شاشة «الحركات») — بنود إضافية/خصم بالقسيمة
-        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Income, runId))
+        var income = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Income, runId, additionsPeriod.From, additionsPeriod.To))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Deduction, runId))
+        var deductionTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Deduction, runId, deductionsPeriod.From, deductionsPeriod.To))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Overtime, runId))
+        var overtimeTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.Overtime, runId, overtimePeriod.From, overtimePeriod.To))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.SalaryDays, runId))
+        var salaryDaysTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.SalaryDays, runId, salaryChangesPeriod.From, salaryChangesPeriod.To))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
-        var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment, runId))
+        var leaveEncashTx = (await PayrollTransactionStore.ForPeriodAsync(dbContext, runScope, run.Year, run.Month, PayrollTransactionStore.LeaveEncashment, runId, leavesPeriod.From, leavesPeriod.To))
             .GroupBy(x => x.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
 
         // عناصر الراتب ذات الصيغة (غير النظامية النشطة) — تُقيَّم لكل موظف بمحرك الصيغ
@@ -841,6 +879,8 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
         var salaryDaysBasis = await GetPayrollSetting(PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
         var standardDailyHours = PayrollDivisorPolicy.DailyHours(
             await GetPayrollSetting(PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
+        var missingPunchPenaltyPercent = await MissingPunchPayrollPolicy.LoadPercentAsync(
+            dbContext, runCompanyForLoans);
 
         // القيم الثابتة المسمّاة تُقرأ مرّة للدفعة كلّها لا لكل موظف.
         var salaryConstants = formulaItems.Count > 0
@@ -848,7 +888,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             : new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
         // --- بناء السطور ---
+        await PayrollDeferredDeductionStore.EnsureAsync(dbContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await PayrollDeferredDeductionStore.ResetRunAsync(dbContext, runId);
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,
@@ -897,6 +939,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             months.TryGetValue(emp.Id, out var month);
             var workDays = month?.WorkDays ?? 0;
             var absentDays = month?.AbsentDays ?? 0;
+            var incompleteDays = month?.IncompleteDays ?? 0;
             var unpaidLeaveDays = month?.UnpaidLeaveDays ?? 0;
 
             // تنسيب التعيين: يُطبَّق فقط مع مقامٍ تقويميّ (سياسة WorkingDays). موجب ⟹
@@ -927,9 +970,17 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 }
             }
 
+            var postEmploymentUnpaidDays = 0;
+            if (linkPolicy.MonthlyDivisorDays > 0 && emp.End is { } end && end < workDaysPeriod.To)
+            {
+                var paidThrough = end < workDaysPeriod.From ? workDaysPeriod.From.AddDays(-1) : end;
+                postEmploymentUnpaidDays = Math.Min(linkPolicy.MonthlyDivisorDays,
+                    Math.Max(0, workDaysPeriod.To.DayNumber - paidThrough.DayNumber));
+            }
+
             var link = AttendanceSalaryLink.Evaluate(
                 linkPolicy, workDays, month?.PresentDays ?? 0, absentDays, month?.WorkedHours ?? 0m,
-                preHireUnpaidDays);
+                preHireUnpaidDays, postEmploymentUnpaidDays);
             if (!link.Include)
             {
                 skippedNoAttendance++;
@@ -1018,6 +1069,9 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
             // مقام أيام الراتب + أجرا الأوفرتايم والإجازة اليوميّان بوعاءيهما المهيَّأين.
             // الافتراضات تجعلهما = الأساسي ÷ 30 (÷ 8) حرفياً كسلوك المحرك القائم.
             var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
+            var missingPunchDailyBasic = PayrollRateBasis.DailyRate(basic, salaryDivisor);
+            var missingPunchPenalty = MissingPunchPayrollPolicy.Calculate(
+                missingPunchDailyBasic, incompleteDays, missingPunchPenaltyPercent);
             var overtimeHourlyRate = PayrollRateBasis.HourlyRate(
                 PayrollRateBasis.DailyRate(
                     PayrollEarningBase.Compose(overtimeBaseMode, basic, overtimeEligibleAllow), salaryDivisor),
@@ -1364,13 +1418,31 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0 AND ISNULL(e.IsActive,
                 });
             }
 
-            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct + unpaidLeaveDeduct + formulaDeductTotal;
+            if (missingPunchPenalty > 0m)
+            {
+                comps.Add(new Component
+                {
+                    ItemName = $"نسيان بصمة ({incompleteDays} يوم × {missingPunchPenaltyPercent:0.##}% من الأجر اليومي)",
+                    Amount = missingPunchPenalty,
+                    IsAddition = false,
+                    Kind = "MissingPunchPenalty"
+                });
+            }
+
+            var carryInDeductions = await PayrollDeferredDeductionStore.CarryInAsync(dbContext, emp.Id, runId);
+            if (carryInDeductions > 0)
+                comps.Add(new Component { ItemName = "اقتطاعات مُرحَّلة من مسير سابق", Amount = carryInDeductions, IsAddition = false, Kind = "DeferredDeduction" });
+
+            var otherDeductions = penaltyTotal + deductionTxTotal + salaryDaysDeduct + unpaidLeaveDeduct
+                + missingPunchPenalty + formulaDeductTotal + carryInDeductions;
+            decimal deferredDeductions = 0;
 
             // سقف الاقتطاع الشهري (إن فُعّل): على الاختيارية فقط لا الضريبة/الضمان. المُرحَّل
             // يُعلَن كسطر معلوماتي بالقسيمة كي يُحصَّل بشهرٍ لاحق لا أن يُبتلَع بصمت.
             if (caps.HasDeductionCap && otherDeductions > 0)
             {
                 var (appliedDeductions, deferred) = PayrollCapsPolicy.ApplyDeductionCap(caps, gross, otherDeductions);
+                deferredDeductions = deferred;
                 if (deferred > 0)
                 {
                     otherDeductions = appliedDeductions;
@@ -1446,6 +1518,9 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
                         HrmsDatabase.AddParameter(command, "@Kind", current.Kind);
                     });
             }
+
+            await PayrollDeferredDeductionStore.RecordResultAsync(
+                dbContext, runId, emp.Id, carryInDeductions, deferredDeductions);
 
             count++;
             totalGross += gross; totalNet += net; totalTax += tax; totalGosiCo += gosiCo;
@@ -1800,8 +1875,9 @@ ORDER BY e.EmployeeNo;
         return (true, "اعتمدت اللجنة الدفعة — صارت جاهزة للإصدار.");
     }
 
+    [Obsolete("Use PayrollPayslipDeliveryStore.SendRunAsync so status changes only after real delivery.")]
     public static Task<(bool, string)> SendPayslipsAsync(ApplicationDbContext dbContext, int runId) =>
-        TransitionAsync(dbContext, runId, from: "Issued", to: "PayslipSent", "PayslipSentAt", "أُرسلت القسائم.");
+        Task.FromResult<(bool, string)>((false, "الإرسال المباشر معطّل: استخدم مسار تسليم القسائم الفعلي."));
 
     public static Task<(bool, string)> ReopenAsync(ApplicationDbContext dbContext, int runId) =>
         TransitionAsync(dbContext, runId, from: "Calculated", to: "Draft", null, "أُعيدت للمسودة.");

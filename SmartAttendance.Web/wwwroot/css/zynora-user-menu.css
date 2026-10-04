@@ -1,7 +1,11 @@
-/* قائمة الحساب الموحّدة: تحاكي كثافة قائمة كيان مع هوية ZYNORA ووصول كامل. */
+﻿/* قائمة الحساب الموحّدة: تحاكي كثافة قائمة كيان مع هوية ZYNORA ووصول كامل. */
 .zy-user-menu {
     position: relative;
     flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
 }
 
 .zy-user-menu__trigger {
@@ -81,6 +85,7 @@
     inset-inline-end: 0;
     z-index: 1000;
     width: 244px;
+    margin: 0;
     overflow: hidden;
     border: 1px solid var(--zy-border);
     border-radius: var(--zy-radius-md);
@@ -88,11 +93,33 @@
     box-shadow: var(--zy-shadow-lg);
 }
 
-/* In LTR the account trigger sits beside the left sidebar. Open the panel
-   toward the content area so it never slips underneath the sidebar. */
 html[dir="ltr"] .zy-user-menu__panel {
     inset-inline-start: 0;
     inset-inline-end: auto;
+}
+
+@media (max-width: 980px) {
+    .zy-user-menu__panel {
+        position: static;
+        inset: auto;
+        width: min(286px, calc(100vw - 32px));
+        max-width: calc(100vw - 32px);
+        margin-block-start: var(--zy-space-2);
+    }
+
+    html[dir="rtl"] .zy-user-menu__panel,
+    html[dir="ltr"] .zy-user-menu__panel {
+        inset: auto;
+    }
+
+    .zynora-topbar:has(.zy-user-menu__trigger[aria-expanded="true"]),
+    .zynora-controls:has(.zy-user-menu__trigger[aria-expanded="true"]) {
+        align-items: flex-start !important;
+    }
+
+    .zynora-controls:has(.zy-user-menu__trigger[aria-expanded="true"]) .zy-bell-button {
+        align-self: flex-start !important;
+    }
 }
 
 .zy-user-menu__panel[hidden] {
