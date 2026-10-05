@@ -233,7 +233,7 @@
                 <button type="button" class="nxr-btn" data-nxr-doc-reset>إعادة تعيين</button>
             </div>
 
-            <div class="nxr-table-wrap nxr-documents-table-wrap">
+            <div class="nxr-table-wrap nxr-documents-table-wrap @(Model.Documents.Count == 0 ? "is-empty" : "")">
                 <table class="nxr-table nxr-documents-table" data-nxr-documents-table>
                     <thead>
                         <tr>
@@ -281,7 +281,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="8" class="nxr-empty">لا توجد مستندات مرفوعة حالياً.</td>
+                                <td colspan="8" class="nxr-empty"><div class="zy-hr-empty-state" role="status">لا توجد مستندات مرفوعة حالياً.</div></td>
                             </tr>
                         }
                     </tbody>

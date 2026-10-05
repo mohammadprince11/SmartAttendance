@@ -42,7 +42,7 @@
             </span>
         </div>
 
-        <form method="get" class="zyp-editor-grid zyu-410cf9349439">
+        <form method="get" class="zyp-editor-grid zy-hr-filter-form">
             <label>
                 الحالة
                 <select asp-for="StatusFilter">
@@ -52,10 +52,9 @@
                     <option value="All">الكل</option>
                 </select>
             </label>
-            <label class="zyu-110c1427da8c">
-                &nbsp;
+            <div class="zy-hr-filter-action">
                 <button type="submit" class="zyc-add-rule zyu-8ede280590c3">تطبيق</button>
-            </label>
+            </div>
         </form>
 
         @if (Model.Requests.Count == 0)

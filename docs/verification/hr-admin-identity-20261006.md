@@ -28,3 +28,22 @@ operation requiring explicit approval.
 
 Graphify could not run: its installed uv trampoline fails to canonicalize the
 script path. Source files were inspected directly; graph output was not refreshed.
+
+## Clipping and alignment follow-up
+
+The text-bearing zyp-move links now use their content width rather than the
+legacy 28px icon width. Employee picker containers allow the entire 44px
+controls to display, overriding shell sizing without changing picker behavior.
+Empty document rows retain table-cell/colspan layout and remove the legacy
+minimum-height dead space. Request status filters use a compact flex row;
+category creation has a separate RTL-aligned action footer.
+
+Validation: 30 additional full-shell browser fixtures across dark/light and
+390/900/1800 widths, with visibility checks after shell readiness and entrance
+animations; all pass. The 72 previous identity fixtures and 2682 unit tests
+also pass (30 skipped). Release build has no errors/warnings; configured NuGet
+sources report no vulnerable packages. No handlers, field attributes, database
+logic, production records or runtime settings changed.
+
+The Graphify CLI was retried but its launcher refers to a missing script under
+the user bin directory. The graph remains unrefreshed; source was verified directly.
