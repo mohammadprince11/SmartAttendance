@@ -83,6 +83,8 @@ SmartAttendance.Web/App_Data/AttendanceImports/
 # They may contain employee PII or reproducible interpreter artifacts and must never enter Git.
 SmartAttendance.Web/App_Data/ProtectedEmployeeFiles/
 SmartAttendance.Web/App_Data/ProtectedPeopleAssets/
+/App_Data/ProtectedEmployeeFiles/
+/App_Data/ProtectedPeopleAssets/
 **/__pycache__/
 *.pyc
 
