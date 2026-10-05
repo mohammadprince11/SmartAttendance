@@ -1,0 +1,189 @@
+/* Shared, page-scoped bridge for the nine HR administration views.
+   Important declarations in this layer supersede legacy unlayered overrides.
+   Never change native select/file hiding or the shared picker/dialog lifecycle. */
+@layer zynora-hr-admin {
+    .zy-hr-admin-page {
+        --nxhs-line: var(--border-default);
+        --nxhs-text: var(--text-default);
+        --nxhs-muted: var(--text-muted);
+        --nxhs-cyan: var(--brand-primary);
+        display: grid !important;
+        gap: 24px !important;
+        inline-size: 100% !important;
+        min-inline-size: 0 !important;
+        max-inline-size: 100% !important;
+        margin: 0 !important;
+        color: var(--text-default) !important;
+        font-family: var(--zy-dd-font, var(--font-family)) !important;
+    }
+    .zy-hr-admin-page *, .zy-hr-admin-page *::before, .zy-hr-admin-page *::after { box-sizing: border-box; }
+    .zy-hr-admin-page :is(.nxhs-titlebar, .nxhs-hero, .nxr-topline,
+        .nxhs-panel, .nxhs-card, .nxr-card, .nxr-document-rules-center, .nxr-doc-kpi) {
+        background: var(--surface-panel) !important;
+        background-image: none !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: 16px !important;
+        box-shadow: none !important;
+        padding: 24px !important;
+        margin: 0 !important;
+        min-inline-size: 0 !important;
+    }
+    .zy-hr-admin-page :is(.nxhs-titlebar, .nxhs-hero, .nxr-topline) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 16px !important;
+    }
+    .zy-hr-admin-page .nxhs-titlebar { flex-direction: column !important; align-items: start !important; }
+    .zy-hr-admin-page .nxhs-titlebar > a { color: var(--color-primary-text) !important; font-weight: 600 !important; text-decoration: none !important; }
+    .zy-hr-admin-page :is(h1, h2, h3, h4, strong, label) { color: var(--text-default) !important; }
+    .zy-hr-admin-page h1 { margin: 0 !important; font-size: var(--fs-h1, 28px) !important; font-weight: 700 !important; }
+    .zy-hr-admin-page :is(h2, h3) { font-size: 20px !important; font-weight: 700 !important; }
+    .zy-hr-admin-page :is(p, small, .zyp-hint, .zyp-conditions, .nxr-brand-mini, .nxr-field > label,
+        .nxr-doc-kpi > span, .nxr-file-picker-inner > span, .zydoc-cat) {
+        color: var(--text-muted) !important;
+        font-weight: 500 !important;
+        line-height: 1.7 !important;
+        overflow-wrap: anywhere !important;
+    }
+    .zy-hr-admin-page :is(.nxhs-panel > header, .nxr-panel-title, .nxr-documents-list-head, .nxr-document-rules-head) {
+        display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+        gap: 12px; border-block-end: 1px solid var(--border-default) !important;
+        padding-block-end: 16px !important; margin-block-end: 20px !important;
+    }
+    .zy-hr-admin-page .nxhs-panel > header { display: block; }
+    .zy-hr-admin-page .nxhs-panel > header > span { color: var(--brand-primary) !important; }
+    .zy-hr-admin-page :is(.zyp-editor-grid, .nxr-documents-filters) {
+        display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        align-items: end !important; gap: 16px !important; margin-block: 16px !important;
+    }
+    .zy-hr-admin-page :is(.zyp-editor-grid > label, .nxr-field) {
+        display: grid !important; gap: 8px !important; min-inline-size: 0 !important;
+        font-size: 13px !important; font-weight: 600 !important; inline-size: 100% !important;
+    }
+    .zy-hr-admin-page .zyep { min-inline-size: 0 !important; inline-size: 100% !important; }
+    .zy-hr-admin-page .zyp-editor-grid > .zyep { grid-column: 1 / -1; }
+    .zy-hr-admin-page .zyep-box {
+        display: grid !important; grid-template-columns: 80px minmax(0, 1fr) 44px !important;
+        gap: 8px !important; border: 0 !important; background: transparent !important;
+        min-inline-size: 0 !important; box-shadow: none !important;
+    }
+    .zy-hr-admin-page .zyep-open {
+        inline-size: 44px !important; block-size: 44px !important; border-radius: 10px !important;
+        background: var(--surface-raised) !important; color: var(--text-default) !important;
+        border: 1px solid var(--border-default) !important;
+    }
+    .zy-hr-admin-page .zyep-box :is(.zyep-code, .zyep-name) { min-width: 0 !important; margin: 0 !important; }
+    .zy-hr-admin-page :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+        min-inline-size: 0 !important; max-inline-size: 100% !important; inline-size: 100% !important;
+        border: 1px solid var(--zy-dd-border, var(--border-default)) !important; border-radius: 10px !important;
+        background-color: var(--zy-dd-field, var(--surface-input)) !important;
+        color: var(--text-default) !important; font-family: inherit !important;
+        font-size: 14px !important; font-weight: 500 !important;
+        padding: 10px 12px !important; box-shadow: none !important;
+    }
+    .zy-hr-admin-page :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), select) {
+        block-size: 44px !important; min-block-size: 44px !important;
+    }
+    .zy-hr-admin-page textarea { min-block-size: 112px !important; resize: vertical; line-height: 1.7 !important; }
+    .zy-hr-admin-page .zydoc-editor { min-block-size: 320px !important; }
+    .zy-hr-admin-page :is(input[type="checkbox"], input[type="radio"]) {
+        appearance: auto !important; inline-size: 20px !important; block-size: 20px !important;
+        min-width: 20px !important; max-width: 20px !important; min-height: 20px !important; max-height: 20px !important;
+        padding: 0 !important; accent-color: var(--brand-primary); vertical-align: middle;
+    }
+    .zy-hr-admin-page :is(.zyp-actions, .nxhs-actions, .nxr-actions) {
+        display: flex !important; gap: 8px !important; flex-wrap: wrap !important; align-items: center !important;
+    }
+    .zy-hr-admin-page :is(.zyp-actions, .nxhs-actions) { margin-block-start: 16px !important; }
+    .zy-hr-admin-page :is(.zyp-actions a, .zyp-actions button, .nxhs-actions a, .nxhs-actions button,
+        .zyc-add-rule, .zyc-add-group, .zyp-move, .nxr-btn, .zydoc-token) {
+        background: var(--surface-raised) !important; color: var(--text-default) !important;
+        border: 1px solid var(--border-default) !important; border-radius: 10px !important;
+        box-shadow: none !important; text-decoration: none !important; font: inherit !important;
+        font-size: 13px !important; font-weight: 600 !important; padding: 10px 16px !important;
+        min-block-size: 40px !important; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .zy-hr-admin-page :is(.nxhs-actions button[type="submit"], .nxr-btn.primary) {
+        background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important;
+        border-color: var(--color-primary-strong) !important;
+    }
+    .zy-hr-admin-page :is(.is-active, .zydoc-token:hover) {
+        color: var(--brand-primary) !important; border-color: var(--brand-primary) !important;
+        background: var(--color-primary-soft) !important;
+    }
+    .zy-hr-admin-page :is(a, button, input, select, textarea):focus-visible {
+        outline: 2px solid var(--brand-primary) !important; outline-offset: 3px !important;
+    }
+    .zy-hr-admin-page .zy-hr-table-scroll, .zy-hr-admin-page .nxr-table-wrap {
+        overflow-x: auto !important; max-inline-size: 100% !important; min-inline-size: 0 !important;
+        border: 1px solid var(--border-default) !important; border-radius: 12px !important; margin-block-start: 16px;
+    }
+    .zy-hr-admin-page :is(.zyp-table, .nxr-table) {
+        width: 100% !important; min-width: 640px !important; border-collapse: collapse !important;
+        background: var(--surface-panel) !important; color: var(--text-default) !important;
+        margin: 0 !important; font-size: 13px !important;
+    }
+    .zy-hr-admin-page :is(.zyp-table, .nxr-table) :is(th, td) {
+        padding: 14px 16px !important; text-align: start !important;
+        border: 0 !important; border-block-end: 1px solid var(--border-default) !important;
+        background: transparent !important; color: var(--text-default) !important; line-height: 1.65 !important;
+    }
+    .zy-hr-admin-page :is(.zyp-table, .nxr-table) th {
+        background: var(--surface-raised) !important; color: var(--text-muted) !important; font-weight: 600 !important;
+    }
+    .zy-hr-admin-page :is(.zyp-table, .nxr-table) tbody tr:hover { background: var(--surface-raised) !important; }
+    .zy-hr-admin-page :is(.zyp-count, .zyp-rank, .nxr-doc-type, .nxr-doc-status, .nxr-documents-count, .nxr-document-rules-count) {
+        display: inline-flex !important; gap: 6px; align-items: center;
+        padding: 5px 10px !important; border-radius: 8px !important;
+        background: var(--surface-raised) !important; border: 1px solid var(--border-default) !important;
+        color: var(--text-default) !important; font-size: 12px !important; font-weight: 600 !important;
+        white-space: nowrap;
+    }
+    .zy-hr-admin-page :is(.nxhs-alert, .nxr-success, .nxr-error) {
+        padding: 16px !important; margin: 0 !important; border-radius: 12px !important;
+        border: 1px solid var(--border-default) !important; background: var(--surface-raised) !important;
+        color: var(--text-default) !important;
+    }
+    .zy-hr-admin-page :is(.zy-alert-error, .nxr-error, .nxr-doc-status.expired) { border-color: var(--status-danger) !important; color: var(--status-danger) !important; }
+    .zy-hr-admin-page :is(.zy-alert-success, .nxr-success, .nxr-doc-status.valid) { border-color: var(--status-success) !important; color: var(--status-success) !important; }
+    .zy-hr-admin-page :is(.nxr-doc-status.expiring, .nxr-document-rules-count.warn) { border-color: var(--status-warning) !important; color: var(--status-warning) !important; }
+    .zy-hr-admin-page :is(.zyc-empty, .nxr-empty) { padding: 32px !important; color: var(--text-muted) !important; text-align: center !important; }
+    .zy-hr-admin-page .nxhs-cards { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 16px !important; }
+    .zy-hr-admin-page .nxhs-card { display: grid !important; align-content: start !important; gap: 12px !important; text-decoration: none !important; min-height: 140px !important; transition: border-color 150ms; }
+    .zy-hr-admin-page .nxhs-card strong { font-size: 17px !important; font-weight: 600 !important; }
+    .zy-hr-admin-page .nxhs-card:hover { border-color: var(--brand-primary) !important; }
+    .zy-hr-admin-page .nxhs-card::before, .zy-hr-admin-page .nxhs-card::after { content: none !important; }
+    .zy-hr-admin-page .nxr-documents-kpis { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 16px !important; margin: 0 !important; }
+    .zy-hr-admin-page .nxr-doc-kpi { padding: 16px !important; min-height: 100px !important; }
+    .zy-hr-admin-page .nxr-doc-kpi strong { font-size: 26px !important; }
+    .zy-hr-admin-page .nxr-document-layout { display: grid !important; grid-template-columns: 340px minmax(0, 1fr) !important; grid-template-areas: none !important; gap: 24px !important; }
+    .zy-hr-admin-page .nxr-documents-upload-panel { grid-area: auto !important; grid-column: 1 !important; position: static !important; max-width: 100% !important; }
+    .zy-hr-admin-page .nxr-documents-list-card { grid-area: auto !important; grid-column: 2 !important; }
+    .zy-hr-admin-page .nxr-document-rules-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; gap: 12px !important; }
+    .zy-hr-admin-page :is(.nxr-doc-rule-card, .nxr-file-picker, .nxr-file-name, .nxr-upload-zone-final, .zydoc-tokens, .zyc-group) {
+        background: var(--surface-raised) !important; border: 1px solid var(--border-default) !important;
+        border-radius: 12px !important; box-shadow: none !important; color: var(--text-default) !important;
+        background-image: none !important;
+    }
+    .zy-hr-admin-page .nxr-file-picker { padding: 20px !important; }
+    .zy-hr-admin-page .nxr-file-icon { color: var(--brand-primary) !important; background: var(--color-primary-soft) !important; }
+    .zy-hr-admin-page .nxr-file-picker-inner { min-inline-size: 0 !important; }
+    @media (max-width: 1100px) {
+        .zy-hr-admin-page .nxr-document-layout { grid-template-columns: minmax(0, 1fr) !important; }
+        .zy-hr-admin-page :is(.nxr-documents-upload-panel, .nxr-documents-list-card) { grid-column: 1 !important; }
+        .zy-hr-admin-page .nxr-documents-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 800px) {
+        .zy-hr-admin-page :is(.zyp-editor-grid, .nxr-documents-filters, .nxhs-cards) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 540px) {
+        .zy-hr-admin-page { gap: 16px !important; }
+        .zy-hr-admin-page :is(.nxhs-panel, .nxhs-titlebar, .nxhs-hero, .nxr-topline, .nxr-card, .nxr-document-rules-center) { padding: 16px !important; }
+        .zy-hr-admin-page :is(.zyp-editor-grid, .nxr-documents-filters, .nxhs-cards, .nxr-document-rules-grid) { grid-template-columns: minmax(0, 1fr) !important; }
+        .zy-hr-admin-page .nxr-documents-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        .zy-hr-admin-page .zyc-rule { grid-template-columns: minmax(0, 1fr) !important; }
+    }
+}

@@ -9,19 +9,20 @@
 <link rel="stylesheet" href="~/css/zynora-hr-settings-v16.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
-<section class="nxhs-page" dir="rtl">
-    <header class="nxhs-titlebar">
+<link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
+<section class="nxhs-page zy-hr-admin-page" dir="rtl">
+    <header class="nxhs-titlebar zy-page-header">
         <a asp-page="./Index">باني النماذج</a>
         <h1>متابعة النماذج</h1>
     </header>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+        <div class="nxhs-alert zy-alert-success" role="status">@TempData["SuccessMessage"]</div>
     }
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+        <div class="nxhs-alert zy-alert-error" role="alert">@TempData["ErrorMessage"]</div>
     }
 
     <div class="nxhs-panel zyp-copies">
@@ -68,58 +69,60 @@
         }
         else
         {
-            <table class="zyp-table">
-                <thead>
-                    <tr>
-                        <th>الموظف</th>
-                        <th>النموذج</th>
-                        <th>التاريخ</th>
-                        <th>الحالة</th>
-                        <th class="zyu-ad426e41547d"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in Model.Submissions)
-                    {
+            <div class="zy-table-wrap zy-hr-table-scroll">
+                <table class="zyp-table zy-table">
+                    <thead>
                         <tr>
-                            <td>
-                                <b>@row.EmployeeName</b>
-                                <div class="zyp-conditions">@row.EmployeeNo</div>
-                            </td>
-                            <td>@row.TemplateName</td>
-                            <td class="zyp-conditions">@row.SubmittedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
-                            <td class="zyp-conditions">
-                                @row.StatusText
-                                @if (!string.IsNullOrWhiteSpace(row.ReviewNote))
-                                {
-                                    <div>@row.ReviewNote</div>
-                                }
-                            </td>
-                            <td>
-                                <div class="zyp-actions zyu-f85c702c688c">
-                                    <a asp-page="./Submissions" asp-route-open="@row.Id"
-                                       asp-route-form="@Model.TemplateFilter" asp-route-statusFilter="@Model.StatusFilter">عرض الإجابات</a>
-                                </div>
-                                @* الاستبيان لا يُعتمد ولا يُرفض — يُقرأ. الاعتماد للطلبات وحدها. *@
-                                @if (row.IsPending && !row.IsSurvey && !row.UsesApprovalWorkflow)
-                                {
-                                    <form method="post" asp-page-handler="Review" class="zyu-69374f356aba">
-                                        <input type="hidden" name="id" value="@row.Id" />
-                                        <input name="note" placeholder="ملاحظة / سبب الرفض"
-                                               class="zyu-76918384ee38" />
-                                        <button type="submit" name="approve" value="true" class="zyp-move">اعتمد</button>
-                                        <button type="submit" name="approve" value="false" class="zyp-move">رفض</button>
-                                    </form>
-                                }
-                                else if (row.UsesApprovalWorkflow)
-                                {
-                                    <a asp-page="/Approvals/Index" asp-route-Search="@row.EmployeeNo">افتح في مركز الموافقات</a>
-                                }
-                            </td>
+                            <th>الموظف</th>
+                            <th>النموذج</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                            <th class="zyu-ad426e41547d"></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Submissions)
+                        {
+                            <tr>
+                                <td>
+                                    <b>@row.EmployeeName</b>
+                                    <div class="zyp-conditions">@row.EmployeeNo</div>
+                                </td>
+                                <td>@row.TemplateName</td>
+                                <td class="zyp-conditions">@row.SubmittedAt.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                                <td class="zyp-conditions">
+                                    @row.StatusText
+                                    @if (!string.IsNullOrWhiteSpace(row.ReviewNote))
+                                    {
+                                        <div>@row.ReviewNote</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="zyp-actions zyu-f85c702c688c">
+                                        <a asp-page="./Submissions" asp-route-open="@row.Id"
+                                           asp-route-form="@Model.TemplateFilter" asp-route-statusFilter="@Model.StatusFilter">عرض الإجابات</a>
+                                    </div>
+                                    @* الاستبيان لا يُعتمد ولا يُرفض — يُقرأ. الاعتماد للطلبات وحدها. *@
+                                    @if (row.IsPending && !row.IsSurvey && !row.UsesApprovalWorkflow)
+                                    {
+                                        <form method="post" asp-page-handler="Review" class="zyu-69374f356aba">
+                                            <input type="hidden" name="id" value="@row.Id" />
+                                            <input name="note" placeholder="ملاحظة / سبب الرفض"
+                                                   class="zyu-76918384ee38" />
+                                            <button type="submit" name="approve" value="true" class="zyp-move">اعتمد</button>
+                                            <button type="submit" name="approve" value="false" class="zyp-move">رفض</button>
+                                        </form>
+                                    }
+                                    else if (row.UsesApprovalWorkflow)
+                                    {
+                                        <a asp-page="/Approvals/Index" asp-route-Search="@row.EmployeeNo">افتح في مركز الموافقات</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 
@@ -135,20 +138,22 @@
                 </p>
             </header>
 
-            <table class="zyp-table">
-                <thead><tr><th>السؤال</th><th>الإجابة</th></tr></thead>
-                <tbody>
-                    @foreach (var answer in Model.Answers)
-                    {
-                        <tr>
-                            <td>@answer.FieldLabel</td>
-                            <td class="@(string.IsNullOrWhiteSpace(answer.Value) ? "zyp-conditions" : "")">
-                                @(string.IsNullOrWhiteSpace(answer.Value) ? "— لم يُجب" : answer.Value)
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="zy-table-wrap zy-hr-table-scroll">
+                <table class="zyp-table zy-table">
+                    <thead><tr><th>السؤال</th><th>الإجابة</th></tr></thead>
+                    <tbody>
+                        @foreach (var answer in Model.Answers)
+                        {
+                            <tr>
+                                <td>@answer.FieldLabel</td>
+                                <td class="@(string.IsNullOrWhiteSpace(answer.Value) ? "zyp-conditions" : "")">
+                                    @(string.IsNullOrWhiteSpace(answer.Value) ? "— لم يُجب" : answer.Value)
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     }
 
@@ -164,19 +169,21 @@
                 </p>
             </header>
 
-            <table class="zyp-table">
-                <thead><tr><th>السؤال</th><th>المتوسّط</th><th>عدد المجيبين</th></tr></thead>
-                <tbody>
-                    @foreach (var (label, stats) in Model.RatingAverages.OrderByDescending(entry => entry.Value.Average))
-                    {
-                        <tr>
-                            <td>@label</td>
-                            <td class="zyp-count"><b>@stats.Average</b></td>
-                            <td class="zyp-count">@stats.Count</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="zy-table-wrap zy-hr-table-scroll">
+                <table class="zyp-table zy-table">
+                    <thead><tr><th>السؤال</th><th>المتوسّط</th><th>عدد المجيبين</th></tr></thead>
+                    <tbody>
+                        @foreach (var (label, stats) in Model.RatingAverages.OrderByDescending(entry => entry.Value.Average))
+                        {
+                            <tr>
+                                <td>@label</td>
+                                <td class="zyp-count"><b>@stats.Average</b></td>
+                                <td class="zyp-count">@stats.Count</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     }
 </section>
