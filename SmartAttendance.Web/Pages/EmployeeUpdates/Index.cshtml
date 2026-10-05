@@ -36,7 +36,7 @@
                 SelectedId = Model.SelectedEmployeeId,
                 SelectedCode = Model.SelectedEmployeeId > 0 ? Model.SelectedEmployee.EmployeeNo : string.Empty,
                 SelectedName = Model.SelectedEmployeeId > 0 ? Model.SelectedEmployee.FullName : string.Empty,
-                SubmitOnSelect = true })" />
+                SubmitOnSelect = false })" />
         </form>
     </section>
 
@@ -429,6 +429,7 @@
 </div>
 
 <script src="~/js/zynora-employee-updates.js" asp-append-version="true"></script>
+<script src="~/js/zynora-employee-updates-selection.js" asp-append-version="true"></script>
     @* نظام التاريخ المخصّص أُزيل: المحرّك القانوني zynora-calendar-v18 (بـMutationObserver)
        يلتقط حقول type=date الديناميكية ويعرض منتقي .nxcal الموحّد — متحقَّق حياً. *@
 <script>

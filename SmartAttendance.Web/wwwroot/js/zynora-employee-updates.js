@@ -2,10 +2,8 @@
     const page = document.querySelector('.nxupd-page');
     if (!page) return;
 
-    document.querySelectorAll('.nxupd-field input, .nxupd-field select').forEach(input => {
-        input.addEventListener('change', () => {
-            input.closest('.nxupd-field')?.classList.add('is-changed');
-        });
+    page.addEventListener('change', event => {
+        event.target.closest('.nxupd-field')?.classList.add('is-changed');
     });
 })();
 
@@ -51,19 +49,20 @@
         pendingForm = null;
     }
 
-    document.querySelectorAll('form[data-nxupd-confirm]').forEach(form => {
-        form.addEventListener('submit', event => {
-            if (form.dataset.nxupdConfirmed === 'true') {
-                return;
-            }
-
+    document.addEventListener('submit', event => {
+        const form = event.target;
+        if (!form.matches('form[data-nxupd-confirm]')) return;
+        if (document.querySelector('.nxupd-content')?.inert) {
             event.preventDefault();
-            openModal(form);
-        });
+            return;
+        }
+        if (form.dataset.nxupdConfirmed === 'true') return;
+        event.preventDefault();
+        openModal(form);
     });
 
     confirmButton.addEventListener('click', () => {
-        if (!pendingForm) {
+        if (!pendingForm || !pendingForm.isConnected || document.querySelector('.nxupd-content')?.inert) {
             closeModal();
             return;
         }

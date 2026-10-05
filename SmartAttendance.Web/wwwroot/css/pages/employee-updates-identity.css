@@ -356,3 +356,7 @@
         .zy-employee-updates .nxupd-form-footer > :is(button, a) { inline-size: 100% !important; }
     }
 }
+.zy-employee-updates .nxupd-content[hidden],
+.zy-employee-updates .nxupd-selector-card > .nxupd-alert[hidden] {
+    display: none !important;
+}
