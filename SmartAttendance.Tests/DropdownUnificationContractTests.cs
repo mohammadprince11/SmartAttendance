@@ -33,7 +33,11 @@ public sealed class DropdownUnificationContractTests
     public void DropdownPalette_UsesIdentityTokensSharedByAllLayouts()
     {
         var source = ReadWeb("wwwroot", "css", "zynora-dropdown-contract.css");
-        Assert.Contains("--zy-dd-panel: var(--zy-dd-field)", source);
+        Assert.Contains("--zy-dd-field: #111b2a", source);
+        Assert.Contains("--zy-dd-panel: #0f1a29", source);
+        Assert.Contains("--zy-dd-option-active: #20374f", source);
+        Assert.Contains("@layer zynora-dropdown-contract {", source);
+        Assert.Contains(".nxr-search-dropdown .nxr-option", source);
         Assert.Contains("--zy-dd-text: var(--text-default)", source);
         Assert.Contains("--zy-dd-muted: var(--text-muted)", source);
         Assert.DoesNotContain("var(--color-text-primary", source);

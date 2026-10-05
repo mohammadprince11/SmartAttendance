@@ -10,11 +10,12 @@
     --zy-dd-height: 44px;
     --zy-dd-radius: 12px;
     --zy-dd-option-radius: 8px;
-    --zy-dd-field: var(--surface-input, #0b1a2d);
-    --zy-dd-panel: var(--zy-dd-field);
-    --zy-dd-option-active: color-mix(in srgb, var(--brand-primary) 35%, var(--zy-dd-field));
-    --zy-dd-border: color-mix(in srgb, var(--brand-primary) 70%, var(--zy-dd-field));
-    --zy-dd-border-focus: var(--brand-primary-bright);
+    /* Approved Employee Edit reference, 2026-10-05. One palette for all pages. */
+    --zy-dd-field: #111b2a;
+    --zy-dd-panel: #0f1a29;
+    --zy-dd-option-active: #20374f;
+    --zy-dd-border: #33506a;
+    --zy-dd-border-focus: #6f8da8;
     /* Use the identity contract present in ALL layouts, not --color-* aliases
        that differ between the administration and employee design systems. */
     --zy-dd-text: var(--text-default);
@@ -23,8 +24,12 @@
     --zy-dd-shadow: 0 18px 42px rgba(0, 0, 0, .36);
 }
 
-/* The generated select control. Repeating the component class is intentional:
-   older page bundles use !important and high-specificity selectors. */
+/* Important declarations in a named layer outrank unlayered legacy important
+   rules, even page rules containing IDs/:has(). Source order alone did not.
+   Keep behavioral rules (visibility, position, z-index, disabled state) in the
+   existing select system; this layer owns only the shared visual contract. */
+@layer zynora-dropdown-contract {
+/* The generated select control. */
 html body .nxcs-select.nxcs-select {
     min-height: var(--zy-dd-height) !important;
     height: var(--zy-dd-height) !important;
@@ -36,7 +41,8 @@ html body .nxcs-select.nxcs-select {
 html body .nxcs-select.nxcs-select,
 html body > .nxcs-panel.nxcs-panel,
 html body .nx-search-select,
-html body .nxex-csel {
+html body .nxex-csel,
+html body .nxr-searchable-wrapper {
     font-family: var(--zy-dd-font) !important;
 }
 
@@ -160,7 +166,8 @@ html body:has(#employee-edit-form) > .nxcs-panel.nxcs-panel .nxcs-option.nxcs-op
 
 /* Searchable setup variant: same shell and rows, with a search field inside. */
 html body .nx-search-select .nx-search-select__button,
-html body .nxex-csel .nxex-csel-trigger {
+html body .nxex-csel .nxex-csel-trigger,
+html body .nxr-searchable-wrapper .nxr-search-input {
     min-height: var(--zy-dd-height) !important;
     height: var(--zy-dd-height) !important;
     padding: 0 12px !important;
@@ -180,7 +187,8 @@ html body .nx-search-select .nx-search-select__button:hover,
 html body .nx-search-select .nx-search-select__button:focus-visible,
 html body .nxex-csel.open .nxex-csel-trigger,
 html body .nxex-csel .nxex-csel-trigger:hover,
-html body .nxex-csel .nxex-csel-trigger:focus-visible {
+html body .nxex-csel .nxex-csel-trigger:focus-visible,
+html body .nxr-searchable-wrapper .nxr-search-input:focus-visible {
     border-color: var(--zy-dd-border-focus) !important;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--zy-dd-border-focus) 20%, transparent) !important;
     outline: 0 !important;
@@ -200,7 +208,8 @@ html body .z360-time-suggestion-list {
 }
 
 html body .nx-search-select .nx-search-select__option,
-html body .nxex-csel .nxex-csel-opt {
+html body .nxex-csel .nxex-csel-opt,
+html body .nxr-search-dropdown .nxr-option {
     min-height: 38px !important;
     padding: 8px 10px !important;
     border: 0 !important;
@@ -217,7 +226,10 @@ html body .nx-search-select .nx-search-select__option:focus,
 html body .nx-search-select .nx-search-select__option.is-selected,
 html body .nxex-csel .nxex-csel-opt:hover,
 html body .nxex-csel .nxex-csel-opt:focus,
-html body .nxex-csel .nxex-csel-opt[aria-selected="true"] {
+html body .nxex-csel .nxex-csel-opt[aria-selected="true"],
+html body .nxr-search-dropdown .nxr-option:hover,
+html body .nxr-search-dropdown .nxr-option:focus,
+html body .nxr-search-dropdown .nxr-option[aria-selected="true"] {
     background: var(--zy-dd-option-active) !important;
     color: var(--zy-dd-text) !important;
     outline: 0 !important;
@@ -257,12 +269,15 @@ html body select[size]:not([size="1"]) option {
 
 html body select[multiple] option:checked,
 html body select[size]:not([size="1"]) option:checked {
-    background: var(--zy-dd-option-active) linear-gradient(var(--zy-dd-option-active), var(--zy-dd-option-active));
-    color: var(--zy-dd-text);
+    background: var(--zy-dd-option-active) linear-gradient(var(--zy-dd-option-active), var(--zy-dd-option-active)) !important;
+    color: var(--zy-dd-text) !important;
 }
+} /* zynora-dropdown-contract */
 
 /* Light theme keeps the same geometry and interaction contract. */
 html[data-theme="light"] {
+    --zy-dd-field: var(--surface-input);
+    --zy-dd-panel: var(--surface-input);
     --zy-dd-option-active: color-mix(in srgb, var(--brand-primary) 14%, var(--zy-dd-field));
     --zy-dd-border: color-mix(in srgb, var(--brand-primary) 45%, var(--zy-dd-field));
     --zy-dd-border-focus: var(--brand-primary);
