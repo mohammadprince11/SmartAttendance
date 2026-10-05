@@ -7,8 +7,9 @@
 
 <link rel="stylesheet" href="~/css/zynora-hr-settings-v16.css" asp-append-version="true" />
 
-<section class="nxhs-page" dir="rtl">
-    <header class="nxhs-hero">
+<link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
+<section class="nxhs-page zy-hr-admin-page" dir="rtl">
+    <header class="nxhs-hero zy-page-header">
         <div>
             <h1>إعدادات الموارد البشرية</h1>
             <p>مركز إعدادات السياسات التشغيلية للموارد البشرية: فترة التجربة، الإنذار، الخدمة الذاتية، أسباب الإيقاف، والإشعارات.</p>
@@ -16,52 +17,52 @@
     </header>
 
     <section class="nxhs-cards">
-        <a asp-page="./NoticePeriod" class="nxhs-card">
+        <a asp-page="./NoticePeriod" class="nxhs-card zy-card">
             <strong>فترة الإنذار</strong>
             <small>إعداد مدة الإنذار وإجراءات المغادرة قبل نهاية الإنذار.</small>
         </a>
 
-        <a asp-page="./SelfServiceSettings" class="nxhs-card">
+        <a asp-page="./SelfServiceSettings" class="nxhs-card zy-card">
             <strong>إعدادات الخدمة الذاتية</strong>
             <small>صلاحيات البوابة، الطلبات، الاقتراحات، ومديري الفرق.</small>
         </a>
 
-        <a asp-page="./TerminationReasons" class="nxhs-card">
+        <a asp-page="./TerminationReasons" class="nxhs-card zy-card">
             <strong>أسباب الإيقاف</strong>
             <small>تعريف أسباب الإيقاف ونسب الاستحقاق وحالة السبب.</small>
         </a>
 
-        <a asp-page="./NotificationCenter" class="nxhs-card">
+        <a asp-page="./NotificationCenter" class="nxhs-card zy-card">
             <strong>مركز الإشعارات</strong>
             <small>إدارة تنبيهات العقود، التجربة، الشكاوى، والوثائق.</small>
         </a>
 
-        <a asp-page="./Lookups" class="nxhs-card">
+        <a asp-page="./Lookups" class="nxhs-card zy-card">
             <strong>القوائم المرجعية</strong>
             <small>الديانات، أنواع الدوام، الدرجات، الكفلاء، وبقية التصنيفات.</small>
         </a>
 
-        <a href="/HrSettings/EmployeeCodeSchema" class="nxhs-card">
+        <a href="/HrSettings/EmployeeCodeSchema" class="nxhs-card zy-card">
             <strong>مخطط رمز الموظف</strong>
             <small>التوليد التلقائي لرمز الموظف: البادئة وعدد الأرقام والتسلسل.</small>
         </a>
 
-        <a href="/HrSettings/ApprovalTemplates" class="nxhs-card">
+        <a href="/HrSettings/ApprovalTemplates" class="nxhs-card zy-card">
             <strong>قوالب الموافقات</strong>
             <small>لجان الموافقة حسب نوع الطلب: شروط، تصعيد، مشاهدون، وإشعارات.</small>
         </a>
 
-        <a href="/HrSettings/RequestTypes" class="nxhs-card">
+        <a href="/HrSettings/RequestTypes" class="nxhs-card zy-card">
             <strong>مركز أنواع الطلبات</strong>
             <small>الكتالوج العام للطلبات وأثرها التنفيذي والأهلية والمرفقات.</small>
         </a>
 
-        <a href="/HrSettings/LeavePolicies" class="nxhs-card">
+        <a href="/HrSettings/LeavePolicies" class="nxhs-card zy-card">
             <strong>سياسات الإجازات والأرصدة</strong>
             <small>رصيد كل شركة، مصدر الخصم، الساعات، الاستحقاق، الترحيل، والتجاوز.</small>
         </a>
 
-        <a href="/HrSettings/PeopleAI" class="nxhs-card">
+        <a href="/HrSettings/PeopleAI" class="nxhs-card zy-card">
             <strong>People AI</strong>
             <small>إعدادات Smart Onboarding، كشف التكرار، المراجعة، وسياسات المستندات لكل شركة.</small>
         </a>

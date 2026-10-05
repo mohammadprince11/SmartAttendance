@@ -12,19 +12,20 @@
 <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
 
 
-<section class="nxhs-page" dir="rtl">
-    <header class="nxhs-titlebar">
+<link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
+<section class="nxhs-page zy-hr-admin-page" dir="rtl">
+    <header class="nxhs-titlebar zy-page-header">
         <a asp-page="/Employees/Index">الأشخاص</a>
         <h1>قوالب الوثائق</h1>
     </header>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
+        <div class="nxhs-alert zy-alert-success" role="status">@TempData["SuccessMessage"]</div>
     }
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="nxhs-alert">@TempData["ErrorMessage"]</div>
+        <div class="nxhs-alert zy-alert-error" role="alert">@TempData["ErrorMessage"]</div>
     }
 
     <div class="nxhs-panel zyp-copies">
@@ -52,62 +53,64 @@
         }
         else
         {
-            <table class="zyp-table">
-                <thead>
-                    <tr>
-                        <th>اسم القالب</th>
-                        <th>النوع</th>
-                        <th>الجمهور</th>
-                        <th>الرموز</th>
-                        <th>أُصدر منه</th>
-                        <th>الحالة</th>
-                        <th class="zyu-b26ad6f6279c"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var template in Model.Templates)
-                    {
-                        var issued = Model.GeneratedCounts.TryGetValue(template.Id, out var count) ? count : 0;
-                        <tr class="@(template.IsActive ? "" : "zyp-inactive")">
-                            <td>
-                                <b>@template.Name</b>
-                                @if (template.AllowEmployeeRequest)
-                                {
-                                    <div class="zyp-conditions">يطلبها الموظف بنفسه</div>
-                                }
-                            </td>
-                            <td class="zyp-conditions">
-                                @DocumentTemplateStore.KindLabel(template.Kind)
-                                @if (template.HasStamp)
-                                {
-                                    <span title="عليه ختم">🔏</span>
-                                }
-                            </td>
-                            <td class="zyp-conditions">@HrConditions.Describe(template.Conditions)</td>
-                            <td class="zyp-count">@template.Tokens.Count</td>
-                            <td class="zyp-count">@issued</td>
-                            <td class="zyp-conditions">@(template.IsActive ? "نشط" : "معطّل")</td>
-                            <td>
-                                <div class="zyp-actions">
-                                    @if (template.IsDocument)
-                                    {
-                                        <a asp-page="./Generate" asp-route-templateid="@template.Id">توليد</a>
-                                    }
-                                    <a asp-page="./Templates" asp-route-edit="@template.Id">تعديل</a>
-                                    <form method="post" asp-page-handler="Duplicate" class="zyu-6b8b63d565c4">
-                                        <input type="hidden" name="id" value="@template.Id" />
-                                        <button type="submit">انشئ نسخة</button>
-                                    </form>
-                                    <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
-                                        <input type="hidden" name="id" value="@template.Id" />
-                                        <button type="submit" data-zyconfirm="حذف القالب؟ الوثائق الصادرة تبقى.">حذف</button>
-                                    </form>
-                                </div>
-                            </td>
+            <div class="zy-table-wrap zy-hr-table-scroll">
+                <table class="zyp-table zy-table">
+                    <thead>
+                        <tr>
+                            <th>اسم القالب</th>
+                            <th>النوع</th>
+                            <th>الجمهور</th>
+                            <th>الرموز</th>
+                            <th>أُصدر منه</th>
+                            <th>الحالة</th>
+                            <th class="zyu-b26ad6f6279c"></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var template in Model.Templates)
+                        {
+                            var issued = Model.GeneratedCounts.TryGetValue(template.Id, out var count) ? count : 0;
+                            <tr class="@(template.IsActive ? "" : "zyp-inactive")">
+                                <td>
+                                    <b>@template.Name</b>
+                                    @if (template.AllowEmployeeRequest)
+                                    {
+                                        <div class="zyp-conditions">يطلبها الموظف بنفسه</div>
+                                    }
+                                </td>
+                                <td class="zyp-conditions">
+                                    @DocumentTemplateStore.KindLabel(template.Kind)
+                                    @if (template.HasStamp)
+                                    {
+                                        <span title="عليه ختم">🔏</span>
+                                    }
+                                </td>
+                                <td class="zyp-conditions">@HrConditions.Describe(template.Conditions)</td>
+                                <td class="zyp-count">@template.Tokens.Count</td>
+                                <td class="zyp-count">@issued</td>
+                                <td class="zyp-conditions">@(template.IsActive ? "نشط" : "معطّل")</td>
+                                <td>
+                                    <div class="zyp-actions">
+                                        @if (template.IsDocument)
+                                        {
+                                            <a asp-page="./Generate" asp-route-templateid="@template.Id">توليد</a>
+                                        }
+                                        <a asp-page="./Templates" asp-route-edit="@template.Id">تعديل</a>
+                                        <form method="post" asp-page-handler="Duplicate" class="zyu-6b8b63d565c4">
+                                            <input type="hidden" name="id" value="@template.Id" />
+                                            <button type="submit">انشئ نسخة</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="Delete" class="zyu-6b8b63d565c4">
+                                            <input type="hidden" name="id" value="@template.Id" />
+                                            <button type="submit" data-zyconfirm="حذف القالب؟ الوثائق الصادرة تبقى.">حذف</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
 
         @if (!editing)
