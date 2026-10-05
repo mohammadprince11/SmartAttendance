@@ -8,8 +8,9 @@ public sealed class LocalizedEntityValueConfiguration : IEntityTypeConfiguration
 {
     public void Configure(EntityTypeBuilder<LocalizedEntityValue> builder)
     {
-        // Created by the explicit, narrowly-scoped localization migration. The
-        // legacy model snapshot is intentionally not reconciled by this feature.
+        // Created by the explicit localization migration, registered in the
+        // controlled startup SQL migrator as 20260902-02-company-data-localization.
+        // The legacy EF model snapshot is intentionally not reconciled here.
         builder.ToTable("LocalizedEntityValues", table => table.ExcludeFromMigrations());
         builder.HasKey(x => x.Id);
         builder.Property(x => x.EntityType).HasMaxLength(80).IsRequired();

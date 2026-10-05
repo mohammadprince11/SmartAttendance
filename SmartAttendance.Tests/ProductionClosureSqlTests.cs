@@ -110,6 +110,160 @@ public sealed class ProductionClosureSqlTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Company_localization_tables_are_readable_after_fresh_startup()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        Assert.Equal(2, await RawIntAsync(db, """
+SELECT COUNT(*) FROM sys.tables
+WHERE schema_id = SCHEMA_ID(N'dbo') AND name IN (N'CompanyLanguages', N'LocalizedEntityValues');
+"""));
+        Assert.Empty(await db.CompanyLanguages.AsNoTracking().Where(row => row.CompanyId == _companyA).ToListAsync());
+        Assert.Empty(await db.LocalizedEntityValues.AsNoTracking().Where(row => row.CompanyId == _companyA).ToListAsync());
+        Assert.Equal(1, await RawIntAsync(db, """
+SELECT COUNT(*) FROM dbo.__SchemaMigrations WHERE MigrationId = N'20260902-02-company-data-localization';
+"""));
+    }
+
+    [SkippableFact]
+    public async Task Company_localization_replay_preserves_saved_languages_and_values()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        db.AddRange(
+            new CompanyLanguage { CompanyId = _companyA, CultureCode = "ar-IQ", NativeName = "العربية", EnglishName = "Arabic", Direction = "rtl", IsDefault = true },
+            new CompanyLanguage { CompanyId = _companyB, CultureCode = "ar-IQ", NativeName = "العربية", EnglishName = "Arabic", Direction = "rtl", IsDefault = true },
+            new LocalizedEntityValue { CompanyId = _companyA, EntityType = "Company", EntityId = 1, FieldName = "Name", CultureCode = "ar-IQ", Value = "شركة اختبار أ" },
+            new LocalizedEntityValue { CompanyId = _companyB, EntityType = "Company", EntityId = 1, FieldName = "Name", CultureCode = "ar-IQ", Value = "شركة اختبار ب" });
+        await db.SaveChangesAsync();
+        var migration = Assert.Single(SqlSchemaMigrator.Migrations,
+            item => item.Id == CompanyLocalizationMigrationTests.MigrationId);
+        await ExecuteAsync(db, migration.Sql);
+        await ExecuteAsync(db, migration.Sql);
+        db.ChangeTracker.Clear();
+
+        Assert.Equal(2, await db.CompanyLanguages.CountAsync());
+        Assert.Equal(2, await db.LocalizedEntityValues.CountAsync());
+        Assert.Equal("شركة اختبار أ", (await db.LocalizedEntityValues.SingleAsync(row => row.CompanyId == _companyA)).Value);
+        Assert.Equal("شركة اختبار ب", (await db.LocalizedEntityValues.SingleAsync(row => row.CompanyId == _companyB)).Value);
+        Assert.Equal(2, await db.Companies.CountAsync());
+        Assert.Equal(4, await RawIntAsync(db, """
+SELECT COUNT(*) FROM sys.indexes WHERE name IN
+(N'UX_CompanyLanguages_Company_Culture', N'UX_CompanyLanguages_OneDefault',
+ N'IX_LocalizedEntityValues_EntityCulture', N'UX_LocalizedEntityValues_FieldCulture');
+"""));
+
+        // Each company may have its own default; the same company may not have two.
+        db.CompanyLanguages.Add(new CompanyLanguage
+        {
+            CompanyId = _companyA, CultureCode = "en-US", NativeName = "English",
+            EnglishName = "English", Direction = "ltr", IsDefault = true
+        });
+        var duplicateDefault = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        var sqlError = Assert.IsType<SqlException>(duplicateDefault.InnerException);
+        Assert.Contains(sqlError.Number, new[] { 2601, 2627 });
+    }
+
+    [SkippableFact]
+    public async Task Company_localization_repairs_a_partial_install_without_changing_languages()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        db.CompanyLanguages.Add(new CompanyLanguage
+        {
+            CompanyId = _companyA, CultureCode = "ar-IQ", NativeName = "العربية",
+            EnglishName = "Arabic", Direction = "rtl", IsDefault = true
+        });
+        await db.SaveChangesAsync();
+
+        // This fixture owns a uniquely named disposable SQL database, not the app DB.
+        await ExecuteAsync(db, "DROP TABLE dbo.LocalizedEntityValues; DROP INDEX UX_CompanyLanguages_Company_Culture ON dbo.CompanyLanguages;");
+        var migration = Assert.Single(SqlSchemaMigrator.Migrations,
+            item => item.Id == CompanyLocalizationMigrationTests.MigrationId);
+        await ExecuteAsync(db, migration.Sql);
+        db.ChangeTracker.Clear();
+        Assert.Single(await db.CompanyLanguages.Where(row => row.CompanyId == _companyA).ToListAsync());
+        Assert.Empty(await db.LocalizedEntityValues.ToListAsync());
+        Assert.Equal(1, await RawIntAsync(db, """
+SELECT COUNT(*) FROM sys.indexes
+WHERE object_id = OBJECT_ID(N'dbo.CompanyLanguages') AND name = N'UX_CompanyLanguages_Company_Culture';
+"""));
+    }
+
+    [SkippableFact]
+    public async Task Employee_update_history_is_available_after_fresh_startup_migrations()
+    {
+        RequireSql();
+        await using var db = NewContext();
+
+        Assert.Equal(2, await RawIntAsync(db, """
+SELECT COUNT(*) FROM sys.tables
+WHERE schema_id = SCHEMA_ID(N'dbo')
+  AND name IN (N'EmployeeUpdateBatches', N'EmployeeUpdateChanges');
+"""));
+
+        // The profile timeline must be readable before anyone opens EmployeeUpdates.
+        var rows = await HrmsDatabase.QueryAsync(db, """
+SELECT RequestedAt, SectionName, Status, RequestedBy
+FROM dbo.EmployeeUpdateBatches WHERE EmployeeId = @EmployeeId;
+""", command => HrmsDatabase.AddParameter(command, "@EmployeeId", _employeeA),
+            reader => HrmsDatabase.GetString(reader, "SectionName"));
+        Assert.Empty(rows);
+        Assert.Equal(1, await RawIntAsync(db, """
+SELECT COUNT(*) FROM dbo.__SchemaMigrations
+WHERE MigrationId = N'20260902-01-employee-update-history';
+"""));
+    }
+
+    [SkippableFact]
+    public async Task Employee_update_history_upgrade_and_replay_preserve_existing_data()
+    {
+        RequireSql();
+        await using var db = NewContext();
+        var migration = Assert.Single(SqlSchemaMigrator.Migrations,
+            item => item.Id == "20260902-01-employee-update-history");
+
+        // Only this fixture's new disposable database is changed to the legacy shape.
+        await ExecuteAsync(db, """
+ALTER TABLE dbo.EmployeeUpdateBatches
+    DROP COLUMN EffectiveDate, IsRetroactive, AttachmentName, AttachmentPath;
+""");
+        var batchId = await HrmsDatabase.ScalarAsync<int>(db, """
+INSERT INTO dbo.EmployeeUpdateBatches
+    (EmployeeId, SectionKey, SectionName, RequestedBy, Note)
+VALUES (@EmployeeId, N'basic', N'Synthetic history', N'test', N'Preserve this note');
+SELECT CAST(SCOPE_IDENTITY() AS int);
+""", command => HrmsDatabase.AddParameter(command, "@EmployeeId", _employeeA));
+        await HrmsDatabase.ExecuteAsync(db, """
+INSERT INTO dbo.EmployeeUpdateChanges(BatchId, FieldKey, FieldLabel, OldValue, NewValue)
+VALUES (@BatchId, N'Name', N'Synthetic name', N'Before', N'After');
+""", command => HrmsDatabase.AddParameter(command, "@BatchId", batchId));
+
+        await ExecuteAsync(db, migration.Sql);
+        await HrmsDatabase.ExecuteAsync(db, """
+UPDATE dbo.EmployeeUpdateBatches
+SET EffectiveDate = '2099-01-01', IsRetroactive = 1,
+    AttachmentName = N'synthetic.txt', AttachmentPath = N'test-only/synthetic.txt'
+WHERE Id = @Id;
+""", command => HrmsDatabase.AddParameter(command, "@Id", batchId));
+        await ExecuteAsync(db, migration.Sql);
+        await ExecuteAsync(db, migration.Sql);
+
+        Assert.Equal(1, await RawIntAsync(db, """
+SELECT COUNT(*) FROM dbo.EmployeeUpdateBatches
+WHERE SectionName = N'Synthetic history' AND Status = N'Open'
+  AND Note = N'Preserve this note' AND RequestedBy = N'test'
+  AND EffectiveDate = '2099-01-01' AND IsRetroactive = 1
+  AND AttachmentName = N'synthetic.txt' AND AttachmentPath = N'test-only/synthetic.txt';
+"""));
+        Assert.Equal(1, await RawIntAsync(db, """
+SELECT COUNT(*) FROM dbo.EmployeeUpdateChanges
+WHERE OldValue = N'Before' AND NewValue = N'After';
+"""));
+        Assert.Equal(batchId, await RawIntAsync(db, "SELECT MIN(Id) FROM dbo.EmployeeUpdateBatches;"));
+    }
+
+    [SkippableFact]
     public async Task Attendance_import_duplicate_number_resolves_only_selected_company()
     {
         RequireSql();

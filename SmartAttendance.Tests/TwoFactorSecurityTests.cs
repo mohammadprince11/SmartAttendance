@@ -62,6 +62,10 @@ public sealed class TwoFactorSecurityTests
         var root = FindRepoRoot();
         var auth = File.ReadAllText(Path.Combine(
             root, "SmartAttendance.Web", "Controllers", "Api", "AuthController.cs"));
+        var webLogin = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Account", "Login.cshtml.cs"));
+        var webLoginView = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Account", "Login.cshtml"));
         var controller = File.ReadAllText(Path.Combine(
             root, "SmartAttendance.Web", "Controllers", "Api", "TwoFactorController.cs"));
         var mobileApi = File.ReadAllText(Path.Combine(
@@ -73,6 +77,11 @@ public sealed class TwoFactorSecurityTests
         Assert.Contains("string? RecoveryCode = null", auth, StringComparison.Ordinal);
         Assert.Contains("requiresTwoFactor = true", auth, StringComparison.Ordinal);
         Assert.Contains("AppLoginTwoFactorStore.ConsumeRecoveryCodeAsync", auth, StringComparison.Ordinal);
+        Assert.Contains("AppLoginTwoFactorStore.GetAsync", webLogin, StringComparison.Ordinal);
+        Assert.Contains("TotpSecurity.ValidateCode", webLogin, StringComparison.Ordinal);
+        Assert.Contains("AppLoginTwoFactorStore.ConsumeRecoveryCodeAsync", webLogin, StringComparison.Ordinal);
+        Assert.Contains("asp-for=\"TwoFactorCode\"", webLoginView, StringComparison.Ordinal);
+        Assert.Contains("asp-for=\"RecoveryCode\"", webLoginView, StringComparison.Ordinal);
         Assert.Contains("[Route(\"api/v1/auth/2fa\")]", controller, StringComparison.Ordinal);
         Assert.Contains("[HttpGet(\"status\")]", controller, StringComparison.Ordinal);
         Assert.Contains("[HttpPost(\"setup\")]", controller, StringComparison.Ordinal);
@@ -145,6 +154,27 @@ public sealed class TwoFactorSecurityTests
         Assert.Contains("PendingSecretProtected", migration.Sql, StringComparison.Ordinal);
         Assert.Contains("RecoveryCodeHashesJson", migration.Sql, StringComparison.Ordinal);
         Assert.Contains("ON DELETE CASCADE", migration.Sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EmployeeEngagementSchema_IsAppliedByControlledMigration()
+    {
+        var migration = Assert.Single(
+            SqlSchemaMigrator.Migrations,
+            item => item.Id == "20260929-01-employee-engagement-schema");
+
+        Assert.Contains("CREATE TABLE EmployeeFeedbackItems", migration.Sql, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE EmployeePolls", migration.Sql, StringComparison.Ordinal);
+
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "SmartAttendance.Web",
+            "Infrastructure",
+            "Hrms",
+            "EmployeeEngagementSchema.cs"));
+        var runtimeCheck = source[(source.IndexOf("public static Task EnsureAsync", StringComparison.Ordinal))..];
+        Assert.DoesNotContain("CREATE TABLE", runtimeCheck, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("controlled database migrator", runtimeCheck, StringComparison.Ordinal);
     }
 
     private static string FindRepoRoot()

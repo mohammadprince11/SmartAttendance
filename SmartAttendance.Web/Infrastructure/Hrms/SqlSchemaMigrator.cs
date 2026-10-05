@@ -3705,6 +3705,218 @@ BEGIN CATCH
     THROW;
 END CATCH;
 """),
+        // Profile timelines read update history before the EmployeeUpdates page
+        // is opened. Earlier conditional upgrades never created the base tables.
+        new(
+            "20260902-01-employee-update-history",
+            """
+-- Migration: 20260902-01-employee-update-history
+-- Additive repair for fresh databases and older employee-update tables.
+-- No existing employee, update, or compensation records are modified.
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(N'dbo.EmployeeUpdateBatches', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.EmployeeUpdateBatches
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmployeeUpdateBatches PRIMARY KEY,
+            EmployeeId int NOT NULL,
+            SectionKey nvarchar(80) NOT NULL,
+            SectionName nvarchar(150) NOT NULL,
+            Status nvarchar(40) NOT NULL CONSTRAINT DF_EmployeeUpdateBatches_Status DEFAULT(N'Open'),
+            RequestedBy nvarchar(150) NULL,
+            RequestedAt datetime2 NOT NULL CONSTRAINT DF_EmployeeUpdateBatches_RequestedAt DEFAULT(SYSUTCDATETIME()),
+            EffectiveDate date NULL,
+            IsRetroactive bit NULL,
+            LockedBy nvarchar(150) NULL,
+            LockedAt datetime2 NULL,
+            Note nvarchar(max) NULL,
+            AttachmentName nvarchar(260) NULL,
+            AttachmentPath nvarchar(500) NULL
+        );
+    END;
+    ELSE
+    BEGIN
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'EffectiveDate') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD EffectiveDate date NULL;
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'IsRetroactive') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD IsRetroactive bit NULL;
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'AttachmentName') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD AttachmentName nvarchar(260) NULL;
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'AttachmentPath') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD AttachmentPath nvarchar(500) NULL;
+    END;
+
+    IF OBJECT_ID(N'dbo.EmployeeUpdateChanges', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.EmployeeUpdateChanges
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmployeeUpdateChanges PRIMARY KEY,
+            BatchId int NOT NULL,
+            FieldKey nvarchar(100) NOT NULL,
+            FieldLabel nvarchar(150) NOT NULL,
+            OldValue nvarchar(max) NULL,
+            NewValue nvarchar(max) NULL
+        );
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.EmployeeUpdateBatches')
+          AND name = N'IX_EmployeeUpdateBatches_Employee_RequestedAt')
+        CREATE INDEX IX_EmployeeUpdateBatches_Employee_RequestedAt
+            ON dbo.EmployeeUpdateBatches(EmployeeId, RequestedAt DESC);
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.EmployeeUpdateChanges')
+          AND name = N'IX_EmployeeUpdateChanges_BatchId')
+        CREATE INDEX IX_EmployeeUpdateChanges_BatchId ON dbo.EmployeeUpdateChanges(BatchId);
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+        // CompanyLanguages and LocalizedEntityValues are intentionally excluded
+        // from the legacy EF snapshot. Their explicit migration must also run
+        // on the controlled startup path, before DataLanguages or employee reads.
+        new(
+            "20260902-02-company-data-localization",
+            """
+-- Migration: 20260902-02-company-data-localization
+-- Register the explicit localization schema in the controlled startup migration path.
+-- Compatible with the prior manual SQL/EF migration; no company or translation data is changed.
+SET XACT_ABORT ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(N'dbo.Companies', N'U') IS NULL
+        THROW 51000, 'Company localization requires the Companies table. Apply the base schema first.', 1;
+
+    IF OBJECT_ID(N'dbo.CompanyLanguages', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.CompanyLanguages
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyLanguages PRIMARY KEY,
+            CompanyId int NOT NULL,
+            CultureCode nvarchar(35) NOT NULL,
+            NativeName nvarchar(120) NOT NULL,
+            EnglishName nvarchar(120) NOT NULL,
+            Direction nvarchar(3) NOT NULL,
+            IsDefault bit NOT NULL,
+            IsRequired bit NOT NULL,
+            IsActive bit NOT NULL,
+            CreatedAt datetime2 NOT NULL,
+            UpdatedAt datetime2 NULL,
+            IsDeleted bit NOT NULL,
+            CreatedBy nvarchar(max) NULL,
+            UpdatedBy nvarchar(max) NULL,
+            CONSTRAINT FK_CompanyLanguages_Companies_CompanyId
+                FOREIGN KEY (CompanyId) REFERENCES dbo.Companies(Id) ON DELETE CASCADE,
+            CONSTRAINT CK_CompanyLanguages_Direction CHECK (Direction IN ('rtl', 'ltr'))
+        );
+    END;
+
+    IF OBJECT_ID(N'dbo.LocalizedEntityValues', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.LocalizedEntityValues
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_LocalizedEntityValues PRIMARY KEY,
+            CompanyId int NOT NULL,
+            EntityType nvarchar(80) NOT NULL,
+            EntityId int NOT NULL,
+            FieldName nvarchar(80) NOT NULL,
+            CultureCode nvarchar(35) NOT NULL,
+            Value nvarchar(4000) NOT NULL,
+            TranslationStatus nvarchar(20) NOT NULL,
+            CreatedAt datetime2 NOT NULL,
+            UpdatedAt datetime2 NULL,
+            IsDeleted bit NOT NULL,
+            CreatedBy nvarchar(max) NULL,
+            UpdatedBy nvarchar(max) NULL,
+            CONSTRAINT FK_LocalizedEntityValues_Companies_CompanyId
+                FOREIGN KEY (CompanyId) REFERENCES dbo.Companies(Id) ON DELETE CASCADE,
+            CONSTRAINT CK_LocalizedEntityValues_Status
+                CHECK (TranslationStatus IN ('Manual', 'Machine', 'Reviewed'))
+        );
+    END;
+
+    -- Check indexes separately so a partial manual installation can be completed.
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.CompanyLanguages')
+          AND name = N'UX_CompanyLanguages_Company_Culture')
+        CREATE UNIQUE INDEX UX_CompanyLanguages_Company_Culture
+            ON dbo.CompanyLanguages(CompanyId, CultureCode);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.CompanyLanguages')
+          AND name = N'UX_CompanyLanguages_OneDefault')
+        CREATE UNIQUE INDEX UX_CompanyLanguages_OneDefault
+            ON dbo.CompanyLanguages(CompanyId)
+            WHERE IsDefault = 1 AND IsActive = 1 AND IsDeleted = 0;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.LocalizedEntityValues')
+          AND name = N'IX_LocalizedEntityValues_EntityCulture')
+        CREATE INDEX IX_LocalizedEntityValues_EntityCulture
+            ON dbo.LocalizedEntityValues(CompanyId, EntityType, EntityId, CultureCode);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.LocalizedEntityValues')
+          AND name = N'UX_LocalizedEntityValues_FieldCulture')
+        CREATE UNIQUE INDEX UX_LocalizedEntityValues_FieldCulture
+            ON dbo.LocalizedEntityValues(CompanyId, EntityType, EntityId, FieldName, CultureCode);
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        new(
+            "20260929-01-employee-engagement-schema",
+            EmployeeEngagementSchema.MigrationSql),
+
+        new(
+            "20260929-02-approval-effect-jobs",
+            """
+IF OBJECT_ID('ApprovalEffectJobs', 'U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalEffectJobs
+    (
+        RequestId int NOT NULL PRIMARY KEY,
+        Actor nvarchar(150) NOT NULL,
+        IpAddress nvarchar(80) NULL,
+        Attempts int NOT NULL CONSTRAINT DF_ApprovalEffectJobs_Attempts DEFAULT(0),
+        NextAttemptAtUtc datetime2 NOT NULL CONSTRAINT DF_ApprovalEffectJobs_NextAttempt DEFAULT(SYSUTCDATETIME()),
+        LockedUntilUtc datetime2 NULL,
+        LastError nvarchar(1000) NULL,
+        CompletedAtUtc datetime2 NULL,
+        CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_ApprovalEffectJobs_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAtUtc datetime2 NOT NULL CONSTRAINT DF_ApprovalEffectJobs_Updated DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_ApprovalEffectJobs_SelfServiceRequests
+            FOREIGN KEY (RequestId) REFERENCES SelfServiceRequests(Id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IX_ApprovalEffectJobs_Pending
+        ON ApprovalEffectJobs (CompletedAtUtc, NextAttemptAtUtc, LockedUntilUtc);
+END;
+"""),
     };
 
     /// <summary>

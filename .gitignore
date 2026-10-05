@@ -110,6 +110,7 @@ ZynoraHandover/
 ruvector.db
 
 # Local development backups
+/local-runtime/
 LanguageCatalogBackup-*/
 LanguageCatalogFix-*/
 GlobalLanguageVisibility-*/
@@ -123,3 +124,11 @@ _design-backups/
 
 # Local Serena workspace state
 .serena/
+
+# Generated Graphify analysis is local tooling output, not product source.
+/graphify-out/
+/graphify-out/.graphify_learning.json
+/graphify-out/.vocab.txt
+/graphify-out/cache/last_query_stamp
+/graphify-out/memory/
+/graphify-out/reflections/

@@ -54,7 +54,10 @@ public sealed class MobileEmployeeExperienceNativeContractTests
             approvalsGetBlock,
             StringComparison.Ordinal);
 
-        Assert.Contains("DataChangeRequestStore.SetFieldDecisionsAsync", api, StringComparison.Ordinal);
+        Assert.Contains("body?.ApprovedFieldKeys", api, StringComparison.Ordinal);
+        Assert.Contains("ApprovalWorkflowEngine.ApproveAsync", api, StringComparison.Ordinal);
+        var workflow = Read("SmartAttendance.Web", "Infrastructure/Hrms/ApprovalWorkflowEngine.cs");
+        Assert.Contains("DataChangeRequestStore.SetFieldDecisionsAsync", workflow, StringComparison.Ordinal);
         Assert.Contains("ApplyApprovalEffectsAsync", api, StringComparison.Ordinal);
     }
 

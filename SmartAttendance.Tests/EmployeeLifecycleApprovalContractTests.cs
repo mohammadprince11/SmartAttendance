@@ -86,10 +86,9 @@ public sealed class EmployeeLifecycleApprovalContractTests
             "Approvals",
             "Index.cshtml.cs");
 
-        Assert.Contains(
-            "EmployeeLifecycleApprovalStore.ApplyIfLifecycleAsync",
-            approvals,
-            StringComparison.Ordinal);
+        Assert.Contains("ApprovalEffectJobStore.ApplyNowAsync", approvals, StringComparison.Ordinal);
+        var jobs = Read("SmartAttendance.Web", "Infrastructure", "Hrms", "ApprovalEffectJobStore.cs");
+        Assert.Contains("EmployeeLifecycleApprovalStore.ApplyIfLifecycleAsync", jobs, StringComparison.Ordinal);
     }
 
     [Fact]

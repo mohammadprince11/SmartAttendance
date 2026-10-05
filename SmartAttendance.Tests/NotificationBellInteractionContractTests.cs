@@ -40,7 +40,7 @@ public sealed class NotificationBellInteractionContractTests
     }
 
     [Fact]
-    public void Employee_portal_loads_notification_color_tokens_and_panel_uses_tokens()
+    public void Employee_portal_loads_notification_token_stylesheets_before_rendering_the_panel()
     {
         var root = FindRepositoryRoot();
         var layout = File.ReadAllText(Path.Combine(root,
@@ -49,8 +49,34 @@ public sealed class NotificationBellInteractionContractTests
             "SmartAttendance.Web/wwwroot/css/pages/default-fe42d97482.css"));
 
         Assert.Contains("~/css/zynora-migrated-color-tokens.css", layout, StringComparison.Ordinal);
-        Assert.Contains("var(--zy-migrated-color-57c5aa9398)", css, StringComparison.Ordinal);
+        const string designTokens = "~/css/zynora-design-system.css";
+        Assert.Contains(designTokens, layout, StringComparison.Ordinal);
+        Assert.True(layout.IndexOf(designTokens, StringComparison.Ordinal)
+            < layout.IndexOf("</head>", StringComparison.Ordinal));
         Assert.Contains("@media (max-width: 520px)", css, StringComparison.Ordinal);
+    }
+
+
+
+    [Theory]
+    [InlineData("surface", "var(--zy-migrated-color-57c5aa9398, #121a2b)")]
+    [InlineData("border", "var(--zy-migrated-color-b34d3e7911, rgba(255,255,255,.12))")]
+    [InlineData("shadow", "var(--zy-migrated-color-fd9af3c8e7, rgba(0,0,0,.52))")]
+    [InlineData("text", "var(--zy-migrated-color-3bd84bea55, #eaf6f8)")]
+    [InlineData("divider", "var(--zy-migrated-color-c201d2dab2, rgba(255,255,255,.09))")]
+    [InlineData("accent", "var(--zy-migrated-color-0f1cc78a41, #65d9e0)")]
+    [InlineData("muted", "var(--zy-migrated-color-6d65c193c8, #9fb3c7)")]
+    public void Employee_notification_palette_preserves_safe_defaults_in_shared_tokens(
+        string role, string expectedValue)
+    {
+        var root = FindRepositoryRoot();
+        var css = File.ReadAllText(Path.Combine(root,
+            "SmartAttendance.Web/wwwroot/css/pages/default-fe42d97482.css"));
+        var tokens = File.ReadAllText(Path.Combine(root,
+            "SmartAttendance.Web/wwwroot/css/zynora-design-system.css"));
+        var token = $"--color-employee-notification-{role}";
+        Assert.Contains($"var({token})", css, StringComparison.Ordinal);
+        Assert.Contains($"{token}: {expectedValue};", tokens, StringComparison.Ordinal);
     }
 
     [Fact]

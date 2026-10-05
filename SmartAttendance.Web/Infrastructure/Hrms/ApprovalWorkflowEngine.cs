@@ -685,7 +685,8 @@ SELECT @Result;
 
     public static async Task<ActionResult> ApproveAsync(
         ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note,
-        IEnumerable<string> actorRoles, int? actorEmployeeId)
+        IEnumerable<string> actorRoles, int? actorEmployeeId,
+        IEnumerable<string>? approvedFieldKeys = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         // الاعتماد يقدّم الطلب نحو أثرٍ ماليّ (قرض/بدل/زيادة) على موظف. المعرّف من
@@ -740,6 +741,11 @@ SELECT @Changed;
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
 
+        // Persist field decisions only after ownership, actor authorization and the
+        // step claim succeed, inside the same transaction as the durable effect.
+        if (approvedFieldKeys is not null)
+            await DataChangeRequestStore.SetFieldDecisionsAsync(dbContext, requestId, approvedFieldKeys);
+
         var refreshed=await GetFlowAsync(dbContext,requestId);
         if(refreshed!.CurrentSteps.Any(step=>step.StageOrder==current.StageOrder))
         {
@@ -777,6 +783,12 @@ WHERE Id = @Id;
 UPDATE FormSubmissions
 SET Status=N'Approved',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note
 WHERE RequestId=@Id;
+
+IF NOT EXISTS (SELECT 1 FROM ApprovalEffectJobs WHERE RequestId=@Id)
+    INSERT INTO ApprovalEffectJobs
+        (RequestId, Actor, Attempts, NextAttemptAtUtc, CreatedAtUtc, UpdatedAtUtc)
+    VALUES
+        (@Id, @Actor, 0, SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME());
 
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
 VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بعد اكتمال لجنة الموافقة', 'Employee', N'/EmployeePortal?tab=requests&requestId=' + CAST(@Id AS nvarchar(20)) + N'#employee-request-' + CAST(@Id AS nvarchar(20)));

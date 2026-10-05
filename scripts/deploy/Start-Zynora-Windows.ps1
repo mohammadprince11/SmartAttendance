@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Continue"
 
-$root = "C:\ZynoraPortal"
+$root = "C:\SmartAttendance\local-runtime\portal"
 $exe  = Join-Path $root "SmartAttendance.Web.exe"
 
 $logDir = Join-Path $root "logs"
@@ -78,15 +78,15 @@ $env:ASPNETCORE_ENVIRONMENT = "Production"
 $env:ASPNETCORE_URLS =
     "https://0.0.0.0:5443;http://0.0.0.0:5080"
 $env:PADDLE_PDX_CACHE_HOME =
-    "C:\ZynoraRuntime\PeopleAI\paddlex-cache"
+    "C:\SmartAttendance\local-runtime\ocr\PeopleAI\paddlex-cache"
 $env:PeopleAIWorker__Enabled = "true"
 $env:PeopleAIWorker__PythonExecutable =
-    "C:\ZynoraRuntime\PeopleAI\.venv\Scripts\python.exe"
+    "C:\SmartAttendance\local-runtime\ocr\PeopleAI\.venv\Scripts\python.exe"
 $env:PeopleAIWorker__ScriptPath = "PeopleAI/local_ocr_worker.py"
 $env:PeopleAIWorker__TempDirectory =
-    "C:\ZynoraRuntime\PeopleAI\tmp"
+    "C:\SmartAttendance\local-runtime\ocr\PeopleAI\tmp"
 $env:PeopleAIWorker__PaddleCacheDirectory =
-    "C:\ZynoraRuntime\PeopleAI\paddlex-cache"
+    "C:\SmartAttendance\local-runtime\ocr\PeopleAI\paddlex-cache"
 $env:PeopleAIWorker__StartupRetrySeconds = "5"
 
 
