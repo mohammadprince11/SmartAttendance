@@ -83,6 +83,23 @@ function Write-Warn { param([string] $Text) Write-Host "  [!]  $Text"    -Foregr
 function Stop-SiteProcesses {
     param([Parameter(Mandatory)][string] $SitePath)
 
+    # In the single-folder layout the watchdog lives next to portal/, outside
+    # SitePath. Its wscript task exits immediately, so stopping the task does
+    # not stop the detached PowerShell restart loop. Stop that exact script
+    # tree first or it can reopen locked binaries while robocopy is publishing.
+    $watchdogPath = Join-Path (Split-Path -Parent $SitePath) 'Start-Zynora-Windows.ps1'
+    $watchdogs = @(
+        Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.CommandLine -and
+                $_.CommandLine.IndexOf($watchdogPath, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            }
+    )
+    foreach ($watchdog in $watchdogs) {
+        Write-Host "  Stopping site watchdog tree PID $($watchdog.ProcessId)"
+        & (Join-Path $env:SystemRoot 'System32\taskkill.exe') /PID $watchdog.ProcessId /T /F | Out-Null
+    }
+
     Get-Process -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -and $_.Path.StartsWith($SitePath, [StringComparison]::OrdinalIgnoreCase) } |
         ForEach-Object { Write-Host "  قتل PID $($_.Id) ($($_.ProcessName))"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
@@ -471,7 +488,7 @@ $preserveDirs  = @(
     # excluding the exact destination path protects runtime branding files.
     (Join-Path $SitePath 'wwwroot\tenant-assets')
 )
-$preserveFiles = @('appsettings*.json', 'run-*.vbs', 'run-*.bat', 'Start-Zynora.ps1', '*.dev-backup', '*.pfx')
+$preserveFiles = @('appsettings*.json', 'run-*.vbs', 'run-*.bat', 'Start-Zynora*.ps1', 'Start-Zynora*.bat', '*.dev-backup', '*.pfx')
 
 robocopy $PublishDir $SitePath /MIR /XD $preserveDirs /XF $preserveFiles /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "فشل النسخ (robocopy=$LASTEXITCODE). ارجع: robocopy `"$backupDir`" `"$SitePath`" /MIR" }

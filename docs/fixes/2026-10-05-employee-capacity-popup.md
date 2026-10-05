@@ -18,3 +18,9 @@ Verification: boundary-policy unit tests; JavaScript interaction harness
 (`node scripts/tests/test-employee-capacity.cjs`); Release build and full test suite.
 Graphify update could not run because the installed uv launcher points to a
 missing script; current source was inspected directly instead.
+
+Deployment follow-up: stop the exact detached single-folder PowerShell watchdog
+tree before replacing binaries, and preserve both manual Start-Zynora launchers.
+The existing task's wscript action detaches the watchdog, so stopping the task
+alone does not stop its restart loop. Verified PowerShell syntax and stop order;
+the scoped watchdog stop was exercised during this deployment.
