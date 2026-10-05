@@ -11,12 +11,15 @@
     --zy-dd-radius: 12px;
     --zy-dd-option-radius: 8px;
     --zy-dd-field: var(--surface-input, #0b1a2d);
-    --zy-dd-panel: var(--surface-input, #0d1c2e);
-    --zy-dd-option-active: #203247;
-    --zy-dd-border: #36516c;
-    --zy-dd-border-focus: #6d91b2;
-    --zy-dd-text: var(--color-text-primary, #eef3f8);
-    --zy-dd-muted: var(--color-text-secondary, #91a4b7);
+    --zy-dd-panel: var(--zy-dd-field);
+    --zy-dd-option-active: color-mix(in srgb, var(--brand-primary) 35%, var(--zy-dd-field));
+    --zy-dd-border: color-mix(in srgb, var(--brand-primary) 70%, var(--zy-dd-field));
+    --zy-dd-border-focus: var(--brand-primary-bright);
+    /* Use the identity contract present in ALL layouts, not --color-* aliases
+       that differ between the administration and employee design systems. */
+    --zy-dd-text: var(--text-default);
+    --zy-dd-muted: var(--text-muted);
+    --zy-dd-font: "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
     --zy-dd-shadow: 0 18px 42px rgba(0, 0, 0, .36);
 }
 
@@ -27,6 +30,26 @@ html body .nxcs-select.nxcs-select {
     height: var(--zy-dd-height) !important;
     max-height: var(--zy-dd-height) !important;
     direction: inherit !important;
+}
+
+/* A popup is portalled to body: it must not inherit a different page font. */
+html body .nxcs-select.nxcs-select,
+html body > .nxcs-panel.nxcs-panel,
+html body .nx-search-select,
+html body .nxex-csel {
+    font-family: var(--zy-dd-font) !important;
+}
+
+html body > .nxcs-panel.nxcs-panel {
+    scrollbar-color: var(--zy-dd-border-focus) var(--zy-dd-panel) !important;
+}
+
+html body > .nxcs-panel.nxcs-panel::-webkit-scrollbar-track {
+    background: var(--zy-dd-panel) !important;
+}
+
+html body > .nxcs-panel.nxcs-panel::-webkit-scrollbar-thumb {
+    background: var(--zy-dd-border-focus) !important;
 }
 
 html body .nxcs-select.nxcs-select .nxcs-trigger.nxcs-trigger,
@@ -240,13 +263,9 @@ html body select[size]:not([size="1"]) option:checked {
 
 /* Light theme keeps the same geometry and interaction contract. */
 html[data-theme="light"] {
-    --zy-dd-field: #ffffff;
-    --zy-dd-panel: #ffffff;
-    --zy-dd-option-active: #e7eef5;
-    --zy-dd-border: #aebfce;
-    --zy-dd-border-focus: #557b9d;
-    --zy-dd-text: #15293b;
-    --zy-dd-muted: #647b8f;
+    --zy-dd-option-active: color-mix(in srgb, var(--brand-primary) 14%, var(--zy-dd-field));
+    --zy-dd-border: color-mix(in srgb, var(--brand-primary) 45%, var(--zy-dd-field));
+    --zy-dd-border-focus: var(--brand-primary);
     --zy-dd-shadow: 0 18px 42px rgba(28, 49, 68, .18);
 }
 
