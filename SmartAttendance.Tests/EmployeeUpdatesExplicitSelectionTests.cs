@@ -6,6 +6,20 @@ namespace SmartAttendance.Tests;
 
 public class EmployeeUpdatesExplicitSelectionTests
 {
+    [Theory]
+    [InlineData(null, false, 0)]
+    [InlineData(1, false, 0)]
+    [InlineData(500, false, 0)]
+    [InlineData(null, true, 0)]
+    [InlineData(-1, true, 0)]
+    [InlineData(0, true, 0)]
+    [InlineData(1, true, 1)]
+    [InlineData(500, true, 500)]
+    public void LegacyLinkOrNoChoice_IsEmpty_ExplicitPickerChoiceIsRetained(int? id, bool selected, int expected)
+    {
+        Assert.Equal(expected, SmartAttendance.Web.Pages.EmployeeUpdates.IndexModel.ResolveExplicitEmployeeSelection(id, selected));
+    }
+
     private static string Read(string file)
     {
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
@@ -49,5 +63,19 @@ public class EmployeeUpdatesExplicitSelectionTests
         var end = source.IndexOf("await LoadPageAsync", start, StringComparison.Ordinal);
         Assert.Contains("CanAccessEmployeeAsync(actor, employeeId.GetValueOrDefault())", source[start..end]);
         Assert.Contains("return Forbid();", source[start..end]);
+        Assert.Contains("ResolveExplicitEmployeeSelection(employeeId, employeeSelected)", source[start..end]);
+    }
+
+    [Fact]
+    public void PickerAndNavigationPreserveExplicitChoice_ButBareEmployeeIdDoesNot()
+    {
+        var view = Read("Index.cshtml");
+        Assert.Contains("name=\"employeeSelected\" value=\"true\"", view);
+        foreach (var line in view.Split('\n'))
+            if (line.Contains("asp-route-employeeId", StringComparison.Ordinal))
+                Assert.Contains("asp-route-employeeSelected=", line);
+        foreach (var line in Read("Index.cshtml.cs").Split('\n'))
+            if (line.Contains("RedirectToPage(new { employeeId", StringComparison.Ordinal))
+                Assert.Contains("employeeSelected = true", line);
     }
 }
