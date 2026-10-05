@@ -26,6 +26,7 @@ public static class RequestTypeStore
         public int Id { get; set; }
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
+        public string? CategoryNameEn { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? NameEn { get; set; }
         public int? AllowedDays { get; set; }        // عدد الأيام المسموح (null = بلا حد)
@@ -40,6 +41,7 @@ public static class RequestTypeStore
         public bool AttachmentRequired { get; set; }
         public string? AttachmentLabel { get; set; }
         public bool NeedsTime { get; set; }
+        public string? EffectCode { get; set; }
 
         /// <summary>شروط أهلية النوع بمحرّك الشروط العام؛ فارغة ⟹ متاح للجميع.</summary>
         public string ConditionsJson { get; set; } = string.Empty;
@@ -82,6 +84,7 @@ BEGIN
         AttachmentRequired bit NOT NULL DEFAULT(0),
         AttachmentLabel nvarchar(120) NULL,
         NeedsTime bit NOT NULL DEFAULT(0),
+        EffectCode nvarchar(40) NULL,
         IsActive bit NOT NULL DEFAULT(1),
         DisplayOrder int NOT NULL DEFAULT(0),
         -- شروط الأهلية بالمحرّك العام؛ تُضاف لقاعدة قائمة بهجرة `…-27`.
@@ -123,25 +126,25 @@ DECLARE @dp int=(SELECT Id FROM RequestCategories WHERE Name=N'المغادرا�
 DECLARE @ot int=(SELECT Id FROM RequestCategories WHERE Name=N'الأوفرتايم');
 
 IF @lv IS NOT NULL
-INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
-(@lv,N'إجازة سنوية','full',0,1,0,0,1),
-(@lv,N'إجازة مرضية','full',0,1,0,0,2);
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,EffectCode,DisplayOrder) VALUES
+(@lv,N'إجازة سنوية','full',0,1,0,0,N'LeaveAnnual',1),
+(@lv,N'إجازة مرضية','full',0,1,0,0,N'LeaveSick',2);
 
 IF @cs IS NOT NULL
-INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
-(@cs,N'مهمة عمل','full',0,0,0,0,1),
-(@cs,N'إجازة وفاة','full',0,0,0,0,2),
-(@cs,N'إجازة غير مدفوعة','unpaid',1,0,0,0,3);
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,EffectCode,DisplayOrder) VALUES
+(@cs,N'مهمة عمل','full',0,0,0,0,N'BusinessTrip',1),
+(@cs,N'إجازة وفاة','full',0,0,0,0,N'LeaveOther',2),
+(@cs,N'إجازة غير مدفوعة','unpaid',1,0,0,0,N'LeaveUnpaid',3);
 
 IF @dp IS NOT NULL
-INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
-(@dp,N'مغادرة شخصية','full',0,0,1,0,1),
-(@dp,N'مغادرة عمل','full',0,0,1,0,2),
-(@dp,N'مغادرة غير مدفوعة','unpaid',1,0,1,0,3);
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,EffectCode,DisplayOrder) VALUES
+(@dp,N'مغادرة شخصية','full',0,0,1,0,N'ExitPermission',1),
+(@dp,N'مغادرة عمل','full',0,0,1,0,N'ExitPermission',2),
+(@dp,N'مغادرة غير مدفوعة','unpaid',1,0,1,0,N'ExitPermission',3);
 
 IF @ot IS NOT NULL
-INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,DisplayOrder) VALUES
-(@ot,N'عمل إضافي','full',0,0,1,0,1);
+INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,NeedsTime,AttachmentRequired,EffectCode,DisplayOrder) VALUES
+(@ot,N'عمل إضافي','full',0,0,1,0,N'Overtime',1);
 """);
     }
 
@@ -166,7 +169,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         if (onlyActive) where.Add("t.IsActive=1");
         var clause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
         return HrmsDatabase.QueryAsync(db,
-            $@"SELECT t.*, c.Name AS CategoryName FROM RequestTypes t
+            $@"SELECT t.*, c.Name AS CategoryName, c.NameEn AS CategoryNameEn FROM RequestTypes t
                JOIN RequestCategories c ON c.Id=t.CategoryId {clause}
                ORDER BY t.CategoryId, t.DisplayOrder, t.Id",
             cmd => { if (categoryId.HasValue) HrmsDatabase.AddParameter(cmd, "@cat", categoryId.Value); },
@@ -176,7 +179,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
     public static async Task<ReqType?> GetTypeAsync(ApplicationDbContext db, int id)
     {
         var list = await HrmsDatabase.QueryAsync(db,
-            "SELECT t.*, c.Name AS CategoryName FROM RequestTypes t JOIN RequestCategories c ON c.Id=t.CategoryId WHERE t.Id=@id",
+            "SELECT t.*, c.Name AS CategoryName, c.NameEn AS CategoryNameEn FROM RequestTypes t JOIN RequestCategories c ON c.Id=t.CategoryId WHERE t.Id=@id",
             cmd => HrmsDatabase.AddParameter(cmd, "@id", id), Map);
         return list.FirstOrDefault();
     }
@@ -186,6 +189,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         Id = HrmsDatabase.GetInt(r, "Id"),
         CategoryId = HrmsDatabase.GetInt(r, "CategoryId"),
         CategoryName = HrmsDatabase.GetString(r, "CategoryName"),
+        CategoryNameEn = HrmsDatabase.GetString(r, "CategoryNameEn"),
         Name = HrmsDatabase.GetString(r, "Name"),
         NameEn = HrmsDatabase.GetString(r, "NameEn"),
         AllowedDays = HrmsDatabase.GetNullableInt(r, "AllowedDays"),
@@ -200,6 +204,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         AttachmentRequired = HrmsDatabase.GetBool(r, "AttachmentRequired"),
         AttachmentLabel = HrmsDatabase.GetString(r, "AttachmentLabel"),
         NeedsTime = HrmsDatabase.GetBool(r, "NeedsTime"),
+        EffectCode = HrmsDatabase.GetString(r, "EffectCode") is { Length: > 0 } ec ? ec : null,
         IsActive = HrmsDatabase.GetBool(r, "IsActive"),
         DisplayOrder = HrmsDatabase.GetInt(r, "DisplayOrder"),
         ConditionsJson = HrmsDatabase.GetString(r, "ConditionsJson") ?? string.Empty
@@ -228,13 +233,13 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
 
     public static async Task SaveTypeAsync(ApplicationDbContext db, ReqType t)
     {
-        const string cols = "CategoryId=@cat,Name=@n,NameEn=@e,AllowedDays=@days,Repeat=@rep,ServiceMonths=@sm,Gender=@g,PaidMode=@pm,DeductFromSalary=@ded,CountsInService=@cis,HasBalance=@bal,MaxPerRequest=@max,AttachmentRequired=@att,AttachmentLabel=@attl,NeedsTime=@time,IsActive=@a,DisplayOrder=@o,ConditionsJson=@cond";
+        const string cols = "CategoryId=@cat,Name=@n,NameEn=@e,AllowedDays=@days,Repeat=@rep,ServiceMonths=@sm,Gender=@g,PaidMode=@pm,DeductFromSalary=@ded,CountsInService=@cis,HasBalance=@bal,MaxPerRequest=@max,AttachmentRequired=@att,AttachmentLabel=@attl,NeedsTime=@time,EffectCode=@effect,IsActive=@a,DisplayOrder=@o,ConditionsJson=@cond";
         if (t.Id > 0)
             await HrmsDatabase.ExecuteAsync(db, $"UPDATE RequestTypes SET {cols} WHERE Id=@id",
                 cmd => { TypeParams(cmd, t); HrmsDatabase.AddParameter(cmd, "@id", t.Id); });
         else
             await HrmsDatabase.ExecuteAsync(db,
-                "INSERT INTO RequestTypes(CategoryId,Name,NameEn,AllowedDays,Repeat,ServiceMonths,Gender,PaidMode,DeductFromSalary,CountsInService,HasBalance,MaxPerRequest,AttachmentRequired,AttachmentLabel,NeedsTime,IsActive,DisplayOrder,ConditionsJson) VALUES(@cat,@n,@e,@days,@rep,@sm,@g,@pm,@ded,@cis,@bal,@max,@att,@attl,@time,@a,@o,@cond)",
+                "INSERT INTO RequestTypes(CategoryId,Name,NameEn,AllowedDays,Repeat,ServiceMonths,Gender,PaidMode,DeductFromSalary,CountsInService,HasBalance,MaxPerRequest,AttachmentRequired,AttachmentLabel,NeedsTime,EffectCode,IsActive,DisplayOrder,ConditionsJson) VALUES(@cat,@n,@e,@days,@rep,@sm,@g,@pm,@ded,@cis,@bal,@max,@att,@attl,@time,@effect,@a,@o,@cond)",
                 cmd => TypeParams(cmd, t));
     }
 
@@ -255,6 +260,7 @@ INSERT INTO RequestTypes(CategoryId,Name,PaidMode,DeductFromSalary,HasBalance,Ne
         HrmsDatabase.AddParameter(cmd, "@att", t.AttachmentRequired);
         HrmsDatabase.AddParameter(cmd, "@attl", (object?)t.AttachmentLabel ?? DBNull.Value);
         HrmsDatabase.AddParameter(cmd, "@time", t.NeedsTime);
+        HrmsDatabase.AddParameter(cmd, "@effect", (object?)RequestTypeEffectCatalog.Normalize(t.EffectCode) ?? DBNull.Value);
         HrmsDatabase.AddParameter(
             cmd, "@cond",
             string.IsNullOrWhiteSpace(t.ConditionsJson) ? DBNull.Value : t.ConditionsJson);

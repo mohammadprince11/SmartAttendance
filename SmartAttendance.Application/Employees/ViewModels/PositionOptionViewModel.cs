@@ -6,6 +6,8 @@ public class PositionOptionViewModel
 
     public int CompanyId { get; set; }
 
+    public int? DepartmentId { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }

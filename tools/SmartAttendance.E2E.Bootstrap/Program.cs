@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,45 @@ if (string.IsNullOrWhiteSpace(databaseName) ||
     !Regex.IsMatch(databaseName, "^SmartAttendance_E2E_[A-Za-z0-9_]+$"))
     throw new InvalidOperationException("ZYNORA_E2E_DATABASE_NAME must be a disposable SmartAttendance_E2E_* name.");
 
+if (string.IsNullOrWhiteSpace(
+        Environment.GetEnvironmentVariable(
+            "ZYNORA_BOOTSTRAP_ADMIN_PASSWORD")))
+{
+    Environment.SetEnvironmentVariable(
+        "ZYNORA_BOOTSTRAP_ADMIN_PASSWORD",
+        DisposableCredential(databaseName));
+}
+
+if (string.IsNullOrWhiteSpace(
+        Environment.GetEnvironmentVariable(
+            "ZYNORA_BOOTSTRAP_EMPLOYEE_PASSWORD")))
+{
+    Environment.SetEnvironmentVariable(
+        "ZYNORA_BOOTSTRAP_EMPLOYEE_PASSWORD",
+        DisposableEmployeeCredential(databaseName));
+}
+
 var masterConnection = Environment.GetEnvironmentVariable("SMARTATTENDANCE_SQL_TEST_MASTER");
 if (string.IsNullOrWhiteSpace(masterConnection) && OperatingSystem.IsWindows())
     masterConnection = @"Server=(localdb)\MSSQLLocalDB;Database=master;Integrated Security=true;TrustServerCertificate=true";
 if (string.IsNullOrWhiteSpace(masterConnection))
     throw new InvalidOperationException("SMARTATTENDANCE_SQL_TEST_MASTER is required on non-Windows hosts.");
+
+static string DisposableCredential(string value)
+{
+    var bytes = SHA256.HashData(
+        Encoding.UTF8.GetBytes(
+            "ZYNORA-E2E-DISPOSABLE:" + value));
+    return "E2E-" + Convert.ToHexString(bytes)[..24] + "-Aa1!";
+}
+
+static string DisposableEmployeeCredential(string value)
+{
+    var bytes = SHA256.HashData(
+        Encoding.UTF8.GetBytes(
+            "ZYNORA-E2E-EMPLOYEE-DISPOSABLE:" + value));
+    return "E2E-" + Convert.ToHexString(bytes)[..24] + "-Aa1!";
+}
 
 static string Identifier(string value) => "[" + value.Replace("]", "]]" ) + "]";
 
@@ -92,6 +128,7 @@ await EmployeeEngagementSchema.EnsureAsync(db);
 await PayrollTransactionStore.EnsureAsync(db);
 await PayrollRunStore.EnsureAsync(db);
 await HrmsDatabase.EnsureCreatedAsync(db);
+await ShiftTypeStore.EnsureAsync(db);
 await DayAttendanceStore.EnsureAsync(db);
 await EndOfServiceStore.EnsureAsync(db);
 await LoanStore.EnsureAsync(db);
@@ -117,15 +154,27 @@ db.AddRange(companyA, companyB, branchA, branchB, departmentA, departmentB);
 await db.SaveChangesAsync();
 var employeeA = new Employee
 {
-    EmployeeNo = "E2E-001", FullName = "Synthetic Employee A",
-    CompanyId = companyA.Id, BranchId = branchA.Id, DepartmentId = departmentA.Id,
-    HireDate = new DateOnly(2026, 1, 1), IsActive = true
+    EmployeeNo = "E2E-001",
+    FullName = "Synthetic Employee A",
+    FirstName = "Synthetic",
+    LastName = "Employee A",
+    CompanyId = companyA.Id,
+    BranchId = branchA.Id,
+    DepartmentId = departmentA.Id,
+    HireDate = new DateOnly(2026, 1, 1),
+    IsActive = true
 };
 var employeeB = new Employee
 {
-    EmployeeNo = "E2E-002", FullName = "Synthetic Employee B",
-    CompanyId = companyB.Id, BranchId = branchB.Id, DepartmentId = departmentB.Id,
-    HireDate = new DateOnly(2026, 1, 1), IsActive = true
+    EmployeeNo = "E2E-002",
+    FullName = "Synthetic Employee B",
+    FirstName = "Synthetic",
+    LastName = "Employee B",
+    CompanyId = companyB.Id,
+    BranchId = branchB.Id,
+    DepartmentId = departmentB.Id,
+    HireDate = new DateOnly(2026, 1, 1),
+    IsActive = true
 };
 db.AddRange(employeeA, employeeB);
 await db.SaveChangesAsync();

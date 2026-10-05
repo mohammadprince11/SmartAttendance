@@ -18,6 +18,13 @@ public static class HrPolicyOverrideStore
     public const string PolicyNotice = "NoticePeriod";
     public const string PolicyAttendanceSalaryLink = "AttendanceSalaryLink";
 
+    // مفاتيح حمولة فترة التجربة مستقلة عن أي Razor Page حتى يبقى المحرك صالحاً
+    // حتى لو أُزيلت أو أُعيد بناء واجهة إعداد السياسة.
+    public const string ProbationKeyDuration = "DurationValue";
+    public const string ProbationKeyUnit = "DurationUnit";
+    public const string ProbationKeyBasis = "StartBasis";
+    public const string ProbationKeyExtensionDays = "ExtensionDays";
+
     public static readonly IReadOnlyDictionary<string, string> PolicyLabels =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {

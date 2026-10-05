@@ -1,4 +1,6 @@
 using SmartAttendance.Application.Common.Security;
+using Microsoft.EntityFrameworkCore;
+using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Security;
 
@@ -110,15 +112,18 @@ public sealed class CompanyScopeProvider : ICompanyScopeProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEffectiveScopeService _effectiveScopeService;
+    private readonly ApplicationDbContext _dbContext;
 
     private CompanyScope? _cached;
 
     public CompanyScopeProvider(
         IHttpContextAccessor httpContextAccessor,
-        IEffectiveScopeService effectiveScopeService)
+        IEffectiveScopeService effectiveScopeService,
+        ApplicationDbContext dbContext)
     {
         _httpContextAccessor = httpContextAccessor;
         _effectiveScopeService = effectiveScopeService;
+        _dbContext = dbContext;
     }
 
     public async Task<CompanyScope> GetAsync(CancellationToken cancellationToken = default)
@@ -129,13 +134,29 @@ public sealed class CompanyScopeProvider : ICompanyScopeProvider
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is null) return _cached = CompanyScope.DeniedAll();
 
+        var tenantId = TenantContext.GetTenantId(httpContext.User);
+        if (tenantId is not > 0) return _cached = CompanyScope.DeniedAll();
+
+        var tenantCompanyIds = await _dbContext.Companies
+            .AsNoTracking()
+            .Where(company => company.TenantId == tenantId.Value && company.IsActive)
+            .Select(company => company.Id)
+            .ToListAsync(cancellationToken);
+
+        if (tenantCompanyIds.Count == 0)
+        {
+            return _cached = CompanyScope.DeniedAll();
+        }
+
+        var tenantCompanies = tenantCompanyIds.ToHashSet();
+
         var role = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
         var isAdmin = RoleRouteCatalog.IsAdmin(role);
         var systemUserId = PeopleAccessContext.GetSystemUserId(httpContext) ?? 0;
 
         // الأدمن يمرّ قبل اشتقاق هوية النظام: حسابه قد يسبق مزامنتها، وحجبها عنه
         // يقفل النظام على نفسه.
-        if (isAdmin) return _cached = CompanyScope.Unrestricted();
+        if (isAdmin) return _cached = CompanyScope.ForCompanies(tenantCompanies);
 
         if (systemUserId <= 0) return _cached = CompanyScope.DeniedAll();
 
@@ -143,11 +164,16 @@ public sealed class CompanyScopeProvider : ICompanyScopeProvider
             systemUserId, isAdmin: false, cancellationToken);
 
         if (scope.IsDeniedAll) return _cached = CompanyScope.DeniedAll();
-        if (scope.IsUnrestricted) return _cached = CompanyScope.Unrestricted();
+        if (scope.IsUnrestricted)
+        {
+            return _cached = CompanyScope.ForCompanies(tenantCompanies);
+        }
 
         // المرفوض يغلب المسموح — نفس ترتيب `PeopleDataScope.AllowsEmployee`.
         var denied = scope.DeniedCompanyIds.ToHashSet();
-        var allowed = scope.AllowedCompanyIds.Where(id => !denied.Contains(id)).ToList();
+        var allowed = scope.AllowedCompanyIds
+            .Where(id => tenantCompanies.Contains(id) && !denied.Contains(id))
+            .ToList();
 
         return _cached = allowed.Count == 0
             ? CompanyScope.DeniedAll()

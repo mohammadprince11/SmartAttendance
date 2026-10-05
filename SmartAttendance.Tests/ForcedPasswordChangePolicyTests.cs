@@ -50,4 +50,38 @@ public class ForcedPasswordChangePolicyTests
             SessionSecurityDecision.Valid,
             SessionSecurityValidator.Evaluate("stamp-1", "Employee", flagged));
     }
+
+    [Fact]
+    public void FirstTenantAdministrator_IsDirectedIntoSequentialCompanySetup()
+    {
+        var root = RepoRoot();
+        var passwordModel = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Account", "ChangePassword.cshtml.cs"));
+        var dashboardModel = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Index.cshtml.cs"));
+        var setupPage = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Setup", "Index.cshtml"));
+        var companyModel = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Pages", "Companies", "Create.cshtml.cs"));
+
+        Assert.Contains("wasForced && !User.IsInRole(\"Employee\")", passwordModel, StringComparison.Ordinal);
+        Assert.Contains("RedirectToPage(\"/Setup/Index\", new { onboarding = true })", passwordModel, StringComparison.Ordinal);
+        Assert.Contains("CompanyOptions.Count == 0", dashboardModel, StringComparison.Ordinal);
+        Assert.Contains("nx-setup-wizard__steps", setupPage, StringComparison.Ordinal);
+        Assert.Contains("لغات بيانات الشركة", setupPage, StringComparison.Ordinal);
+        Assert.Contains("مواقع العمل والفروع", setupPage, StringComparison.Ordinal);
+        Assert.Contains("المناصب الوظيفية", setupPage, StringComparison.Ordinal);
+        Assert.Contains("RedirectToPage(\"/Setup/Index\", new { onboarding = true })", companyModel, StringComparison.Ordinal);
+    }
+
+    private static string RepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SmartAttendance.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root not found.");
+    }
 }

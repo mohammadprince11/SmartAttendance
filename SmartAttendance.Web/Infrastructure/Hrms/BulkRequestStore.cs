@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Domain.Enums;
-using SmartAttendance.Domain.Leave;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
@@ -44,7 +43,8 @@ public static class BulkRequestStore
         Leave,
         ExitPermission,
         OutOfOffice,
-        ShiftChange
+        ShiftChange,
+        Overtime
     }
 
     /// <param name="RequestTypeCode">قيمة <c>SelfServiceRequests.RequestType</c> التي تقرؤها المحرّكات.</param>
@@ -60,34 +60,20 @@ public static class BulkRequestStore
     /// </summary>
     public static Effect ResolveEffect(RequestTypeStore.ReqType type)
     {
-        var name = (type.Name ?? string.Empty).Trim();
-        if (name.Length == 0) return NoEffect;
-
-        // المغادرات أولاً: «مغادرة غير مدفوعة» تحمل كلمة الإجازة بالضوابط لا بالاسم،
-        // والترتيب هنا يمنع ابتلاع الإجازة لها لو تغيّرت التسمية.
-        if (name.Contains("مغادرة") || name.Contains("خروج"))
-            return new Effect(EffectKind.ExitPermission, "ExitPermission");
-
-        if (name.Contains("مهمة عمل") || name.Contains("رحلة عمل"))
-            return new Effect(EffectKind.OutOfOffice, "BusinessTrip");
-
-        if (name.Contains("المنزل") || name.Contains("عن بعد") || name.Contains("عن بُعد"))
-            return new Effect(EffectKind.OutOfOffice, "WorkFromHome");
-
-        if (name.Contains("إجازة") || name.Contains("اجازة"))
+        var code = RequestTypeEffectCatalog.EffectiveCode(type);
+        return code switch
         {
-            var leaveType =
-                name.Contains("سنوي") ? LeaveType.Annual
-                : name.Contains("مرض") ? LeaveType.Sick
-                : string.Equals(type.PaidMode, "unpaid", StringComparison.OrdinalIgnoreCase) ? LeaveType.Unpaid
-                : LeaveType.Emergency;
-
-            return new Effect(EffectKind.Leave, "Leave", leaveType);
-        }
-
-        // الأوفرتايم وما شابهه: لا مستهلِك له بمحرّك الحضور — يُنتَج من البصمات لا من
-        // طلبٍ يُكتب على الموظف. تقديمه هنا كان سيكتب صفّاً لا يقرؤه أحد.
-        return NoEffect;
+            RequestTypeEffectCatalog.LeaveAnnual => new Effect(EffectKind.Leave, "Leave", LeaveType.Annual),
+            RequestTypeEffectCatalog.LeaveSick => new Effect(EffectKind.Leave, "Leave", LeaveType.Sick),
+            RequestTypeEffectCatalog.LeaveUnpaid => new Effect(EffectKind.Leave, "Leave", LeaveType.Unpaid),
+            RequestTypeEffectCatalog.LeaveOther => new Effect(EffectKind.Leave, "Leave", LeaveType.Emergency),
+            RequestTypeEffectCatalog.ExitPermission => new Effect(EffectKind.ExitPermission, "ExitPermission"),
+            RequestTypeEffectCatalog.BusinessTrip => new Effect(EffectKind.OutOfOffice, "BusinessTrip"),
+            RequestTypeEffectCatalog.WorkFromHome => new Effect(EffectKind.OutOfOffice, "WorkFromHome"),
+            RequestTypeEffectCatalog.ShiftChange => new Effect(EffectKind.ShiftChange, "ShiftChange"),
+            RequestTypeEffectCatalog.Overtime => new Effect(EffectKind.Overtime, "Overtime"),
+            _ => NoEffect
+        };
     }
 
     /// <summary>
@@ -148,13 +134,6 @@ public static class BulkRequestStore
         if (type?.AllowedDays is int allowed && days > allowed)
             return $"عدد الأيام ({days}) يتجاوز المسموح للنوع ({allowed} يوم)";
 
-        if (effect.Kind == EffectKind.Leave && effect.Leave is { } leaveType
-            && IraqiLeavePolicy.TrackedTypes.Contains(leaveType)
-            && days > candidate.RemainingBalance)
-        {
-            return $"الرصيد غير كافٍ (المتبقّي {candidate.RemainingBalance:0.#} · المطلوب {days})";
-        }
-
         return null;
     }
 
@@ -210,9 +189,11 @@ public static class BulkRequestStore
             effect = ResolveEffect(type);
             if (effect.Kind == EffectKind.None)
             {
-                return Fail(
-                    $"النوع «{type.Name}» بلا أثرٍ منفَّذ بمحرّك الحضور، فلا يُقدَّم من هنا " +
-                    "(الأوفرتايم مثلاً يُشتقّ من البصمات لا من طلبٍ يُكتب على الموظف).");
+                return Fail($"النوع «{type.Name}» غير مربوط بأثر تنفيذي. حدّد نوع الأثر من مركز أنواع الطلبات أولاً.");
+            }
+            if (effect.Kind == EffectKind.Overtime)
+            {
+                return Fail("العمل الإضافي يُقدَّم من مسار الطلبات الفردي لأن تنفيذه يحتاج وقت بداية ونهاية واعتماداً مالياً؛ لا يُنشأ جماعياً من اليومية.");
             }
         }
         else if (options.ShiftTypeId > 0)
@@ -297,17 +278,24 @@ public static class BulkRequestStore
                 }
             }
 
-            var remaining = 0m;
-            if (effect.Kind == EffectKind.Leave && effect.Leave is { } leaveType
-                && IraqiLeavePolicy.TrackedTypes.Contains(leaveType))
-            {
-                var balances = await LeaveBalanceCalculator.ForEmployeeAsync(
-                    db, employeeId, runs[0].From.Year);
-                remaining = balances.FirstOrDefault(b => b.Type == leaveType)?.Remaining ?? 0m;
-            }
-
-            var candidate = new Candidate(employeeId, name, runs, matches, overlap, remaining);
+            var candidate = new Candidate(employeeId, name, runs, matches, overlap, 0m);
             var reason = RejectionReason(type, effect, candidate);
+
+            if (reason is null && type is not null)
+            {
+                var slices = runs.Select(run =>
+                {
+                    var window = windows.TryGetValue((employeeId, run.From), out var w) ? w : default;
+                    return new CompanyLeavePolicyStore.RequestSlice(
+                        run.From, run.To,
+                        timed ? window.From : null,
+                        timed ? window.To : null);
+                }).ToList();
+
+                var policyCheck = await CompanyLeavePolicyStore.ValidateRequestSetAsync(
+                    db, employeeId, 0, type.Id, type.Name, slices, options.Reason, hasAttachment: false);
+                if (!policyCheck.Ok) reason = policyCheck.Message;
+            }
 
             if (reason is null) eligible.Add(candidate);
             else skips.Add(new Skipped(name, reason));
@@ -341,7 +329,7 @@ public static class BulkRequestStore
                         : default;
 
                     await InsertApprovedRequestAsync(
-                        db, candidate.EmployeeId, effect, options.ShiftTypeId,
+                        db, candidate.EmployeeId, type?.Id ?? 0, effect, options.ShiftTypeId,
                         run.From, run.To,
                         timed ? window.From : null, timed ? window.To : null,
                         days, requestReason, actor, label);
@@ -442,20 +430,20 @@ WHERE EmployeeId = @Employee
     }
 
     private static Task InsertApprovedRequestAsync(
-        ApplicationDbContext db, int employeeId, Effect effect, int shiftTypeId,
+        ApplicationDbContext db, int employeeId, int requestTypeId, Effect effect, int shiftTypeId,
         DateOnly from, DateOnly to, TimeSpan? startTime, TimeSpan? endTime,
         int days, string reason, string actor, string label) =>
         HrmsDatabase.ExecuteAsync(
             db,
             """
 INSERT INTO SelfServiceRequests
-    (EmployeeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason,
+    (EmployeeId, RequestTypeId, RequestType, RequestDate, FromDate, ToDate, StartTime, EndTime, Reason,
      Status, CurrentStep, CreatedBy, ReviewedBy, ReviewNote, HrStatus, HrReviewedBy,
      HrReviewedAt, UpdatedAt, DaysCount, ShiftTypeId, RequestSource)
 VALUES
-    (@Employee, @Type, CAST(GETDATE() AS date), @From, @To, @StartTime, @EndTime, @Reason,
+    (@Employee, @RequestTypeId, @Type, CAST(GETDATE() AS date), @From, @To, @StartTime, @EndTime, @Reason,
      N'Approved', N'Completed', @Actor, @Actor, @Note, N'Approved', @Actor,
-     SYSUTCDATETIME(), SYSUTCDATETIME(), @Days, @Shift, N'Admin');
+     SYSUTCDATETIME(), SYSUTCDATETIME(), @Days, @Shift, @RequestSource);
 
 DECLARE @RequestId int = SCOPE_IDENTITY();
 
@@ -466,7 +454,9 @@ VALUES (@RequestId, N'Submission', N'Submitted', @Actor, @Reason),
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Employee", employeeId);
+                HrmsDatabase.AddParameter(command, "@RequestTypeId", requestTypeId > 0 ? requestTypeId : (object)DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Type", effect.RequestTypeCode);
+                HrmsDatabase.AddParameter(command, "@RequestSource", RequestSourceCatalog.Admin);
                 HrmsDatabase.AddParameter(command, "@From", from.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@To", to.ToDateTime(TimeOnly.MinValue));
                 HrmsDatabase.AddParameter(command, "@StartTime", (object?)startTime ?? DBNull.Value);

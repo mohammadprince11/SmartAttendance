@@ -36,7 +36,10 @@ public sealed class TenantGuardRatchetTests
     {
         "CompanyScope", "EmployeeCompanyGuard", "ConfigTenantScope", "EffectiveScope",
         // إعداد عالمي لا يملك CompanyId: حارس الأدمن الصريح يعادل نطاقاً غير مقيّد.
-        "IsAdministrator()", "IsAdmin", "Authorize(Roles", "BackOfficeNotificationScope"
+        "IsAdministrator()", "IsAdmin", "Authorize(Roles", "BackOfficeNotificationScope",
+        // بوابة مالك المنصة عابرة لكل المستأجرين عمداً، ولا تستخدم نطاق شركة
+        // العميل. سياستها المنفصلة لا تُمنح لأي حساب داخل منظومة عميل.
+        "PlatformAuthenticationDefaults.Policy"
     };
 
     /// <summary>
@@ -46,7 +49,7 @@ public sealed class TenantGuardRatchetTests
     /// </summary>
     private static readonly string[] RouteGuardedPrefixes =
     {
-        "Employees/", "EmployeePermissions/", "EmployeePortal/", "MyProfile/"
+        "Employees/", "EmployeePortal/", "MyProfile/"
     };
 
     /// <summary>

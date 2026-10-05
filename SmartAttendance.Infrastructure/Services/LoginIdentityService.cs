@@ -21,7 +21,7 @@ public sealed class LoginIdentityService : ILoginIdentityService
     {
         var userName = request.UserName.Trim();
 
-        if (string.IsNullOrWhiteSpace(userName))
+        if (request.TenantId <= 0 || string.IsNullOrWhiteSpace(userName))
         {
             return null;
         }
@@ -33,14 +33,16 @@ public sealed class LoginIdentityService : ILoginIdentityService
             systemUser = await _dbContext.SystemUsers
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(
-                    x => x.EmployeeId == request.EmployeeId.Value,
+                    x => x.TenantId == request.TenantId &&
+                         x.EmployeeId == request.EmployeeId.Value,
                     cancellationToken);
         }
 
         systemUser ??= await _dbContext.SystemUsers
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                x => x.UserName == userName,
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                x => x.TenantId == request.TenantId &&
+                     x.UserName == userName,
                 cancellationToken);
 
         if (systemUser != null &&
@@ -57,6 +59,7 @@ public sealed class LoginIdentityService : ILoginIdentityService
         {
             systemUser = new SystemUser
             {
+                TenantId = request.TenantId,
                 EmployeeId = request.EmployeeId,
                 FullName = ResolveDisplayName(request.DisplayName, userName),
                 UserName = userName,

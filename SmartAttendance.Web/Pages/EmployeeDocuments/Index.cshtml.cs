@@ -47,6 +47,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int EmployeeId { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public string? DocumentType { get; set; }
+
     /// <summary>رمز موظف نموذج الرفع المحسوم واسمه — لتعبئة المنتقي ابتداءً.</summary>
     public string? InputEmployeeCode { get; set; }
 
@@ -64,10 +67,16 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-
         if (EmployeeId > 0)
         {
             Input.EmployeeId = EmployeeId;
+        }
+
+        var requestedDocumentType = (DocumentType ?? string.Empty).Trim();
+        if (requestedDocumentType is "ID" or "Contract" or "Passport" or "Visa" or
+            "Health Card" or "Certificate" or "Memo" or "Other")
+        {
+            Input.DocumentType = requestedDocumentType;
         }
 
         await LoadAsync();

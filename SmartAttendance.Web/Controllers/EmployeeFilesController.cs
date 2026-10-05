@@ -61,10 +61,18 @@ public sealed class EmployeeFilesController : ControllerBase
             return Forbid();
         }
 
+        // الرمز الموقّع يمنع العبث بالحمولة لكنه ليس تخويلاً بحد ذاته.
+        // اربط المفتاح بالموظف الموجود داخل الحمولة قبل قراءة أي ملف حتى لا يستطيع
+        // أي مسار داخلي خاطئ إنشاء token لموظف مع storage key يعود لموظف آخر.
+        if (!ProtectedFileStore.TryGetCategory(storageKey, employeeId, out var category))
+        {
+            await WriteAuditAsync("Employee File Scope Mismatch", employeeId, 0);
+            return NotFound();
+        }
+
         // صلاحية عرض ملف الموظف لا تكشف تلقائياً مرفقاته المالية. الرمز الموقّع
         // قد يُنسخ من جلسة مخوّلة، لذلك نفحص التصنيف عند كل تنزيل من الخادم.
-        if (ProtectedFileStore.TryGetCategory(storageKey, employeeId, out var category) &&
-            category.Equals("financial", StringComparison.OrdinalIgnoreCase) &&
+        if (category.Equals("financial", StringComparison.OrdinalIgnoreCase) &&
             !await CanViewCompensationAsync(employeeId))
         {
             await WriteAuditAsync("Employee Financial File Download Denied", employeeId, 0);
@@ -160,6 +168,97 @@ WHERE Id = @Id;
     /// مقروءة من موضعها القديم تحت wwwroot لكن <b>عبر هذه النقطة فقط</b> — الوصول
     /// المباشر لـ/uploads الحسّاسة لم يعد عاماً.
     /// </summary>
+    /// <summary>
+    /// Serves the current employee profile photo through an authenticated,
+    /// employee-scoped endpoint while raw runtime uploads remain non-public.
+    /// The requested legacy URL must exactly match Employees.PhotoPath.
+    /// </summary>
+    [HttpGet("/uploads/employee-photos/{fileName}")]
+    public async Task<IActionResult> EmployeePhoto(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return NotFound();
+        }
+
+        var safeFileName = Path.GetFileName(fileName);
+        if (!string.Equals(safeFileName, fileName, StringComparison.Ordinal))
+        {
+            return NotFound();
+        }
+
+        var extension = Path.GetExtension(safeFileName);
+        if (!extension.Equals(".png", StringComparison.OrdinalIgnoreCase) &&
+            !extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) &&
+            !extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) &&
+            !extension.Equals(".webp", StringComparison.OrdinalIgnoreCase))
+        {
+            return NotFound();
+        }
+
+        var stem = Path.GetFileNameWithoutExtension(safeFileName);
+        var parts = stem.Split(
+            '_',
+            StringSplitOptions.RemoveEmptyEntries |
+            StringSplitOptions.TrimEntries);
+
+        if (parts.Length < 3 ||
+            !parts[0].Equals("employee", StringComparison.OrdinalIgnoreCase) ||
+            !int.TryParse(parts[1], out var employeeId) ||
+            employeeId <= 0)
+        {
+            return NotFound();
+        }
+
+        if (!await CanAccessEmployeeAsync(employeeId))
+        {
+            return Forbid();
+        }
+
+        var expectedPath = $"/uploads/employee-photos/{safeFileName}";
+
+        var storedPath = await HrmsDatabase.ScalarAsync<string>(
+            _db,
+            """
+SELECT ISNULL(PhotoPath, '')
+FROM Employees
+WHERE Id = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId));
+
+        if (string.IsNullOrWhiteSpace(storedPath) ||
+            !string.Equals(
+                storedPath,
+                expectedPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return NotFound();
+        }
+
+        var physicalPath = ResolvePhysicalPath(
+            string.Empty,
+            storedPath);
+
+        if (physicalPath is null ||
+            !System.IO.File.Exists(physicalPath))
+        {
+            return NotFound();
+        }
+
+        Response.Headers["Cache-Control"] =
+            "no-store, no-cache, max-age=0";
+        Response.Headers["Pragma"] = "no-cache";
+
+        var stream = System.IO.File.OpenRead(physicalPath);
+
+        return File(
+            stream,
+            ProtectedFileStore.ContentTypeFor(extension));
+    }
     private string? ResolvePhysicalPath(string protectedKey, string storedPath)
     {
         if (!string.IsNullOrWhiteSpace(protectedKey))

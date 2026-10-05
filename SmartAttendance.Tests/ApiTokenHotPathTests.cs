@@ -15,14 +15,17 @@ namespace SmartAttendance.Tests;
 /// </summary>
 public class ApiTokenHotPathTests
 {
-    private static string RepoFile(params string[] parts)
+    private static string RepoPath(params string[] parts)
     {
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
             dir = dir.Parent;
         Assert.NotNull(dir);
-        return File.ReadAllText(Path.Combine(dir!.FullName, Path.Combine(parts)));
+        return Path.Combine(dir!.FullName, Path.Combine(parts));
     }
+
+    private static string RepoFile(params string[] parts) =>
+        File.ReadAllText(RepoPath(parts));
 
     /// <summary>🔴 الانحدار: جسم ValidateAsync يجب ألّا يستدعي EnsureAsync (لا DDL بالمسار الساخن).</summary>
     [Fact]
@@ -46,14 +49,22 @@ public class ApiTokenHotPathTests
     public void الإقلاع_يضمن_مخطط_ApiTokens()
     {
         var program = RepoFile("SmartAttendance.Web", "Program.cs");
-        Assert.Contains("ApiTokenStore.EnsureAsync", program);
+        var deployment = RepoFile(
+            "SmartAttendance.Web", "Infrastructure", "Hrms", "DatabaseDeployment.cs");
+
+        Assert.Contains("DatabaseDeployment", program);
+        Assert.Contains(".ApplyAsync(migrationDb)", program);
+        Assert.Contains("ApiTokenStore.EnsureAsync(db)", deployment);
     }
 
     [Fact]
     public void LoginSchema_IsStartupOwned_NotRequestOwned()
     {
         var program = RepoFile("SmartAttendance.Web", "Program.cs");
-        Assert.Contains("LoginDatabase.EnsureCreatedAsync(migrationDb)", program);
+        var deployment = RepoFile(
+            "SmartAttendance.Web", "Infrastructure", "Hrms", "DatabaseDeployment.cs");
+        Assert.Contains(".ApplyAsync(migrationDb)", program);
+        Assert.Contains("LoginDatabase.EnsureCreatedAsync(db)", deployment);
 
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
@@ -63,6 +74,9 @@ public class ApiTokenHotPathTests
         var web = Path.Combine(dir!.FullName, "SmartAttendance.Web");
         var offenders = Directory.GetFiles(web, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.EndsWith("Program.cs", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.EndsWith(
+                Path.Combine("Infrastructure", "Hrms", "DatabaseDeployment.cs"),
+                StringComparison.OrdinalIgnoreCase))
             .Where(path => File.ReadAllText(path).Contains(
                 "LoginDatabase.EnsureCreatedAsync", StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(web, path))
@@ -75,7 +89,10 @@ public class ApiTokenHotPathTests
     public void CoreHrmsSchema_IsStartupOwned_NotPageOrControllerOwned()
     {
         var program = RepoFile("SmartAttendance.Web", "Program.cs");
-        Assert.Contains("HrmsDatabase.EnsureCreatedAsync(migrationDb)", program);
+        var deployment = RepoFile(
+            "SmartAttendance.Web", "Infrastructure", "Hrms", "DatabaseDeployment.cs");
+        Assert.Contains(".ApplyAsync(migrationDb)", program);
+        Assert.Contains("HrmsDatabase.EnsureCreatedAsync(db)", deployment);
 
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "SmartAttendance.slnx")))
@@ -111,7 +128,8 @@ public class ApiTokenHotPathTests
         {
             Path.Combine(web, "Program.cs"),
             Path.Combine(web, "Infrastructure", "Security", "LoginDatabase.cs"),
-            Path.Combine(web, "Infrastructure", "Hrms", "HrmsDatabase.cs")
+            Path.Combine(web, "Infrastructure", "Hrms", "HrmsDatabase.cs"),
+            Path.Combine(web, "Infrastructure", "Hrms", "DatabaseDeployment.cs")
         };
         var offenders = Directory.GetFiles(web, "*.cs", SearchOption.AllDirectories)
             .Where(path => !allowedOwners.Contains(path, StringComparer.OrdinalIgnoreCase))
@@ -158,13 +176,16 @@ public class ApiTokenHotPathTests
     }
 
     [Fact]
-    public void EmployeeGroups_GlobalTable_RequiresUnrestrictedCompanyScope()
+    public void EmployeeGroups_LegacyPage_RemainsDecommissioned()
     {
-        var page = RepoFile(
-            "SmartAttendance.Web", "Pages", "HrSettings", "EmployeeGroups.cshtml.cs");
+        var page = RepoPath(
+            "SmartAttendance.Web",
+            "Pages",
+            "HrSettings",
+            "EmployeeGroups.cshtml.cs");
 
-        Assert.Contains("ICompanyScopeProvider", page);
-        Assert.Contains(".IsUnrestricted", page);
-        Assert.Contains("if (!await IsGlobalAdministratorAsync()) return Forbid();", page);
+        Assert.False(
+            File.Exists(page),
+            "EmployeeGroups is retained as schema data only; the legacy settings page must stay removed.");
     }
 }

@@ -18,8 +18,8 @@ public static class AccountSecurityStore
 
     public const string SecurityStampClaimType = "SecurityStamp";
 
-    private static string CacheKey(string username) =>
-        "account:security:" + username.Trim().ToLowerInvariant();
+    private static string CacheKey(int tenantId, string username) =>
+        $"account:security:{tenantId}:" + username.Trim().ToLowerInvariant();
 
     public static string CreateStamp() =>
         Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
@@ -28,35 +28,37 @@ public static class AccountSecurityStore
     public static async Task<AccountSecurityState> GetStateAsync(
         ApplicationDbContext dbContext,
         IMemoryCache cache,
+        int tenantId,
         string? username)
     {
-        if (string.IsNullOrWhiteSpace(username))
+        if (tenantId <= 0 || string.IsNullOrWhiteSpace(username))
         {
             return AccountSecurityState.Missing;
         }
 
-        var key = CacheKey(username);
+        var key = CacheKey(tenantId, username);
 
         if (cache.TryGetValue<AccountSecurityState>(key, out var cached) && cached is not null)
         {
             return cached;
         }
 
-        var state = await ReadStateAsync(dbContext, username);
+        var state = await ReadStateAsync(dbContext, tenantId, username);
         cache.Set(key, state, StateCacheLifetime);
         return state;
     }
 
-    public static void InvalidateCache(IMemoryCache cache, string? username)
+    public static void InvalidateCache(IMemoryCache cache, int tenantId, string? username)
     {
-        if (!string.IsNullOrWhiteSpace(username))
+        if (tenantId > 0 && !string.IsNullOrWhiteSpace(username))
         {
-            cache.Remove(CacheKey(username));
+            cache.Remove(CacheKey(tenantId, username));
         }
     }
 
     private static async Task<AccountSecurityState> ReadStateAsync(
         ApplicationDbContext dbContext,
+        int tenantId,
         string username)
     {
         var rows = await HrmsDatabase.QueryAsync(
@@ -69,9 +71,13 @@ SELECT TOP 1
     ISNULL(u.SecurityStamp, '') AS SecurityStamp,
     ISNULL(u.MustChangePassword, 0) AS MustChangePassword
 FROM AppLoginUsers u
-WHERE u.Username = @Username;
+WHERE u.TenantId = @TenantId AND u.Username = @Username;
 """,
-            command => HrmsDatabase.AddParameter(command, "@Username", username.Trim()),
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@TenantId", tenantId);
+                HrmsDatabase.AddParameter(command, "@Username", username.Trim());
+            },
             reader => new
             {
                 Role = HrmsDatabase.GetString(reader, "Role"),
@@ -153,13 +159,19 @@ WHERE Id = @Id AND (SecurityStamp IS NULL OR SecurityStamp = '');
     {
         var stamp = CreateStamp();
 
-        var usernames = await HrmsDatabase.QueryAsync(
+        var identities = await HrmsDatabase.QueryAsync(
             dbContext,
-            "SELECT TOP 1 Username FROM AppLoginUsers WHERE Id = @Id;",
+            "SELECT TOP 1 TenantId, Username FROM AppLoginUsers WHERE Id = @Id;",
             command => HrmsDatabase.AddParameter(command, "@Id", loginUserId),
-            reader => HrmsDatabase.GetString(reader, "Username"));
+            reader => new
+            {
+                TenantId = HrmsDatabase.GetInt(reader, "TenantId"),
+                Username = HrmsDatabase.GetString(reader, "Username")
+            });
 
-        var username = usernames.FirstOrDefault();
+        var loginIdentity = identities.FirstOrDefault();
+        var tenantId = loginIdentity?.TenantId ?? 0;
+        var username = loginIdentity?.Username;
 
         await HrmsDatabase.ExecuteAsync(
             dbContext,
@@ -173,6 +185,7 @@ IF OBJECT_ID('ApiTokens', 'U') IS NOT NULL
     UPDATE ApiTokens
     SET RevokedAt = SYSUTCDATETIME()
     WHERE RevokedAt IS NULL
+      AND TenantId = @TenantId
       AND Username = @Username;
 
 INSERT INTO AuditLogs
@@ -190,13 +203,14 @@ VALUES
             {
                 HrmsDatabase.AddParameter(command, "@Stamp", stamp);
                 HrmsDatabase.AddParameter(command, "@Id", loginUserId);
+                HrmsDatabase.AddParameter(command, "@TenantId", tenantId);
                 HrmsDatabase.AddParameter(command, "@Username", username ?? string.Empty);
                 HrmsDatabase.AddParameter(command, "@EntityId", loginUserId.ToString());
                 HrmsDatabase.AddParameter(command, "@Reason", reason);
                 HrmsDatabase.AddParameter(command, "@Actor", actor ?? "System");
             });
 
-        InvalidateCache(cache, username);
+        InvalidateCache(cache, tenantId, username);
         return stamp;
     }
 }

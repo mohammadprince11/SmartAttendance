@@ -56,21 +56,6 @@ public class IndexModel : PageModel
 
     public int InactiveEmployees { get; set; }
 
-    [BindProperty]
-    public CompanyInputModel CompanyInput { get; set; } = new();
-
-    [BindProperty]
-    public BranchInputModel BranchInput { get; set; } = new();
-
-    [BindProperty]
-    public DepartmentInputModel DepartmentInput { get; set; } = new();
-
-    [TempData]
-    public string? SuccessMessage { get; set; }
-
-    [TempData]
-    public string? ErrorMessage { get; set; }
-
     public async Task OnGetAsync()
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
@@ -199,152 +184,6 @@ public class IndexModel : PageModel
             .OrderByDescending(p => p.EmployeeCount)
             .ThenBy(p => p.Name)
             .ToList();
-    }
-
-    public async Task<IActionResult> OnPostCreateCompanyAsync()
-    {
-        // إنشاء شركةٍ جديدة = إنشاء حدّ استئجارٍ جديد؛ لا يُسمح به إلا لغير المقيَّد
-        // (الأدمن). دورٌ مقيَّد بشركات لا يخلق كياناً خارج نطاقه.
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        if (!scope.IsUnrestricted)
-        {
-            return NotFound();
-        }
-
-        if (string.IsNullOrWhiteSpace(CompanyInput.Name))
-        {
-            ErrorMessage = "اسم الشركة مطلوب.";
-            return RedirectToPage();
-        }
-
-        var code = NormalizeCode(CompanyInput.Code, CompanyInput.Name);
-
-        var exists = await _dbContext.Companies
-            .AnyAsync(x => x.Code == code || x.Name == CompanyInput.Name.Trim());
-
-        if (exists)
-        {
-            ErrorMessage = "الشركة موجودة مسبقاً بنفس الاسم أو الكود.";
-            return RedirectToPage();
-        }
-
-        var company = new Company
-        {
-            Name = CompanyInput.Name.Trim(),
-            Code = code,
-            IsActive = CompanyInput.IsActive
-        };
-
-        _dbContext.Companies.Add(company);
-        await _dbContext.SaveChangesAsync();
-
-        SuccessMessage = "تمت إضافة الشركة بنجاح.";
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnPostCreateBranchAsync()
-    {
-        if (BranchInput.CompanyId <= 0 || string.IsNullOrWhiteSpace(BranchInput.Name))
-        {
-            ErrorMessage = "بيانات الفرع غير مكتملة.";
-            return RedirectToPage();
-        }
-
-        // لا نعتمد CompanyId القادم من النموذج بلا فحص: الفرع لا يُضاف إلا لشركةٍ
-        // ضمن نطاق المستخدم، وإلا كان كتابةً عابرة للشركات.
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        if (!scope.Allows(BranchInput.CompanyId))
-        {
-            return NotFound();
-        }
-
-        var companyExists = await _dbContext.Companies
-            .AnyAsync(x => x.Id == BranchInput.CompanyId);
-
-        if (!companyExists)
-        {
-            ErrorMessage = "الشركة المحددة غير موجودة.";
-            return RedirectToPage();
-        }
-
-        var code = NormalizeCode(BranchInput.Code, BranchInput.Name);
-
-        var exists = await _dbContext.Branches
-            .AnyAsync(x => x.CompanyId == BranchInput.CompanyId && (x.Code == code || x.Name == BranchInput.Name.Trim()));
-
-        if (exists)
-        {
-            ErrorMessage = "الفرع موجود مسبقاً داخل نفس الشركة بنفس الاسم أو الكود.";
-            return RedirectToPage();
-        }
-
-        var branch = new Branch
-        {
-            CompanyId = BranchInput.CompanyId,
-            Name = BranchInput.Name.Trim(),
-            Code = code,
-            Address = string.IsNullOrWhiteSpace(BranchInput.Address) ? null : BranchInput.Address.Trim(),
-            IsActive = BranchInput.IsActive
-        };
-
-        _dbContext.Branches.Add(branch);
-        await _dbContext.SaveChangesAsync();
-
-        SuccessMessage = "تمت إضافة الفرع بنجاح.";
-        return RedirectToPage();
-    }
-
-    public async Task<IActionResult> OnPostCreateDepartmentAsync()
-    {
-        if (DepartmentInput.BranchId <= 0 || string.IsNullOrWhiteSpace(DepartmentInput.Name))
-        {
-            ErrorMessage = "بيانات القسم غير مكتملة.";
-            return RedirectToPage();
-        }
-
-        // القسم يُعلَّق على فرع؛ ونطاق الكتابة يُحسم من شركة ذلك الفرع لا من مدخل
-        // النموذج — فلا يُضاف قسمٌ لفرع شركةٍ خارج نطاق المستخدم.
-        var branchCompanyId = await _dbContext.Branches
-            .Where(x => x.Id == DepartmentInput.BranchId)
-            .Select(x => (int?)x.CompanyId)
-            .FirstOrDefaultAsync();
-
-        if (branchCompanyId is null)
-        {
-            ErrorMessage = "الفرع المحدد غير موجود.";
-            return RedirectToPage();
-        }
-
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        if (!scope.Allows(branchCompanyId.Value))
-        {
-            return NotFound();
-        }
-
-        var code = NormalizeCode(DepartmentInput.Code, DepartmentInput.Name);
-
-        var exists = await _dbContext.Departments
-            .AnyAsync(x => x.BranchId == DepartmentInput.BranchId && (x.Code == code || x.Name == DepartmentInput.Name.Trim()));
-
-        if (exists)
-        {
-            ErrorMessage = "القسم موجود مسبقاً داخل نفس الفرع بنفس الاسم أو الكود.";
-            return RedirectToPage();
-        }
-
-        var department = new Department
-        {
-            BranchId = DepartmentInput.BranchId,
-            Name = DepartmentInput.Name.Trim(),
-            Code = code,
-            IsActive = DepartmentInput.IsActive
-        };
-
-        _dbContext.Departments.Add(department);
-        await _dbContext.SaveChangesAsync();
-
-        SuccessMessage = "تمت إضافة القسم بنجاح.";
-        return RedirectToPage();
     }
 
     private async Task LoadAsync(CompanyScope scope)
@@ -618,60 +457,10 @@ public class IndexModel : PageModel
             e.CompanyId != null && allowed.Contains(e.CompanyId.Value));
     }
 
-    private static string NormalizeCode(string? code, string fallback)
-    {
-        if (!string.IsNullOrWhiteSpace(code))
-        {
-            return code.Trim();
-        }
-
-        var value = new string(fallback
-            .Where(char.IsLetterOrDigit)
-            .Take(12)
-            .ToArray());
-
-        return string.IsNullOrWhiteSpace(value)
-            ? Guid.NewGuid().ToString("N")[..8]
-            : value.ToUpperInvariant();
-    }
-
     private static bool Contains(string? value, string term)
     {
         return !string.IsNullOrWhiteSpace(value) &&
                value.Contains(term, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public class CompanyInputModel
-    {
-        public string Name { get; set; } = string.Empty;
-
-        public string? Code { get; set; }
-
-        public bool IsActive { get; set; } = true;
-    }
-
-    public class BranchInputModel
-    {
-        public int CompanyId { get; set; }
-
-        public string Name { get; set; } = string.Empty;
-
-        public string? Code { get; set; }
-
-        public string? Address { get; set; }
-
-        public bool IsActive { get; set; } = true;
-    }
-
-    public class DepartmentInputModel
-    {
-        public int BranchId { get; set; }
-
-        public string Name { get; set; } = string.Empty;
-
-        public string? Code { get; set; }
-
-        public bool IsActive { get; set; } = true;
     }
 
     public class CompanyViewModel

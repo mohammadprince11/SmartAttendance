@@ -408,6 +408,18 @@ END;
         return reader.IsDBNull(ordinal) ? null : Convert.ToInt32(reader.GetValue(ordinal));
     }
 
+    public static long GetLong(DbDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? 0L : Convert.ToInt64(reader.GetValue(ordinal));
+    }
+
+    public static long? GetNullableLong(DbDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? null : Convert.ToInt64(reader.GetValue(ordinal));
+    }
+
     public static decimal? GetNullableDecimal(DbDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);

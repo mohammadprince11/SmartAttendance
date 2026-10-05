@@ -1,0 +1,244 @@
+/* ZYNORA Employee Edit — final identity layer.
+   Loaded last on Employees/Edit to neutralize legacy style collisions. */
+
+.zynora-profile-theme-v2 {
+    --ze-id-bg: #071522;
+    --ze-id-surface: #0b1d2b;
+    --ze-id-surface-2: #0d2334;
+    --ze-id-input: var(--surface-input, var(--color-background, #0b1422));
+    --ze-id-input-hover: var(--color-surface, #0f1a2e);
+    --ze-id-border: rgba(74, 181, 204, .26);
+    --ze-id-border-strong: rgba(34, 211, 238, .58);
+    --ze-id-cyan: #22d3ee;
+    --ze-id-cyan-soft: rgba(34, 211, 238, .10);
+    --ze-id-gold: #d9b45d;
+    --ze-id-text: #f3f8fb;
+    --ze-id-muted: #9fb6c6;
+    --ze-id-label: #c9d9e3;
+    --ze-id-danger: #ff8e9d;
+}
+
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-hero,
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-summary,
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-card {
+    background: linear-gradient(180deg, var(--ze-id-surface-2), var(--ze-id-surface)) !important;
+    border: 1px solid rgba(34, 211, 238, .14) !important;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, .20) !important;
+}
+
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-hero h1,
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-card h2,
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-summary h2 {
+    color: var(--ze-id-text) !important;
+}
+
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-hero > div:first-child > span,
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-final-card-head > div > span {
+    color: var(--ze-id-gold) !important;
+    background: rgba(217, 180, 93, .07) !important;
+    border-color: rgba(217, 180, 93, .24) !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form label,
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-field label {
+    color: var(--ze-id-label) !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-field > span[data-valmsg-for],
+html:not([data-theme="light"]) #employee-edit-form .text-danger {
+    color: var(--ze-id-danger) !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-field input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-status-near-photo select,
+html:not([data-theme="light"]) #employee-edit-form .nxr-search-input,
+html:not([data-theme="light"]) #employee-edit-form textarea {
+    min-height: 44px !important;
+    background: var(--ze-id-input) !important;
+    color: var(--ze-id-text) !important;
+    border: 1px solid var(--ze-id-border) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form input[readonly] {
+    background: rgba(8, 26, 41, .62) !important;
+    color: var(--ze-id-muted) !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-field input:not([type="file"]):focus,
+html:not([data-theme="light"]) #employee-edit-form .nxr-search-input:focus,
+html:not([data-theme="light"]) #employee-edit-form textarea:focus {
+    background: var(--ze-id-input-hover) !important;
+    border-color: var(--ze-id-border-strong) !important;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10) !important;
+    outline: none !important;
+}
+
+/* Native select fallback: same identity even before/without enhancement. */
+html:not([data-theme="light"]) #employee-edit-form select:not(.nxcs-native) {
+    min-height: 44px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    color: var(--ze-id-text) !important;
+    border: 1px solid var(--ze-id-border) !important;
+    border-radius: 12px !important;
+    background-color: var(--ze-id-input) !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #8fb9c7 50%),
+        linear-gradient(135deg, #8fb9c7 50%, transparent 50%) !important;
+    background-position:
+        18px calc(50% - 2px),
+        12px calc(50% - 2px) !important;
+    background-size: 6px 6px, 6px 6px !important;
+    background-repeat: no-repeat !important;
+    padding-inline: 14px 34px !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form select:not(.nxcs-native):focus {
+    border-color: var(--ze-id-border-strong) !important;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10) !important;
+    outline: none !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form select option {
+    background: #0a1b2a;
+    color: var(--ze-id-text);
+}
+
+/* Canonical ZYNORA custom select. */
+#employee-edit-form .nxcs-select {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxcs-trigger {
+    width: 100% !important;
+    min-height: 44px !important;
+    padding: 0 13px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--ze-id-border) !important;
+    background: var(--ze-id-input) !important;
+    color: var(--ze-id-text) !important;
+    box-shadow: none !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxcs-trigger:hover {
+    background: var(--ze-id-input-hover) !important;
+    border-color: rgba(34, 211, 238, .38) !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxcs-select.is-open .nxcs-trigger,
+html:not([data-theme="light"]) #employee-edit-form .nxcs-trigger:focus-visible {
+    background: var(--ze-id-input-hover) !important;
+    border-color: var(--ze-id-border-strong) !important;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .10) !important;
+    outline: none !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxcs-value {
+    color: var(--ze-id-text) !important;
+    font-weight: 800 !important;
+}
+
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) > .nxcs-panel {
+    z-index: 30000 !important;
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(34, 211, 238, .24) !important;
+    background: var(--surface-input, var(--color-background, #0b1422)) !important;
+    background-image: none !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .48) !important;
+    scrollbar-color: rgba(34, 211, 238, .35) transparent;
+}
+
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) > .nxcs-panel .nxcs-option {
+    min-height: 40px !important;
+    padding: 9px 12px !important;
+    color: #d5e4ec !important;
+    background: transparent !important;
+    border-bottom: 1px solid rgba(148, 180, 199, .08) !important;
+}
+
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) > .nxcs-panel .nxcs-option:hover,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) > .nxcs-panel .nxcs-option.is-active,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) > .nxcs-panel .nxcs-option.is-selected {
+    color: #ffffff !important;
+    background: rgba(34, 211, 238, .11) !important;
+}
+
+/* Searchable direct-manager dropdown. */
+#employee-edit-form .nxr-edit-field,
+#employee-edit-form .nxr-searchable-wrapper,
+#employee-edit-form .nxr-edit-final-card {
+    overflow: visible !important;
+}
+
+#employee-edit-form .nxr-searchable-wrapper {
+    position: relative !important;
+    z-index: 20;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-search-dropdown {
+    inset-inline: 0 !important;
+    top: calc(100% + 6px) !important;
+    z-index: 30010 !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    padding: 6px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(34, 211, 238, .24) !important;
+    background: var(--surface-input, var(--color-background, #0b1422)) !important;
+    background-image: none !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .48) !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-option {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px !important;
+    border: 0 !important;
+    border-radius: 9px;
+    color: #d5e4ec !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-option:hover {
+    background: rgba(34, 211, 238, .11) !important;
+    color: #fff !important;
+}
+
+html:not([data-theme="light"]) #employee-edit-form .nxr-option-code {
+    background: rgba(34, 211, 238, .08) !important;
+    color: var(--ze-id-cyan) !important;
+    border: 1px solid rgba(34, 211, 238, .15);
+}
+
+/* Language / photo / signature sub-cards. */
+html:not([data-theme="light"]) #employee-edit-form fieldset,
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-photo-status-row,
+html:not([data-theme="light"]) #employee-edit-form .nxr-edit-signature-card {
+    background: rgba(5, 18, 30, .44) !important;
+    border-color: rgba(34, 211, 238, .12) !important;
+}
+
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-btn.primary {
+    background: linear-gradient(135deg, #19bed3, #2dd4bf) !important;
+    border-color: rgba(34, 211, 238, .55) !important;
+    color: #03202a !important;
+}
+
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-btn.secondary,
+html:not([data-theme="light"]) .zynora-profile-theme-v2 .nxr-edit-btn.ghost {
+    background: rgba(255, 255, 255, .035) !important;
+    border-color: rgba(148, 180, 199, .18) !important;
+    color: var(--ze-id-text) !important;
+}
+
+@media (max-width: 720px) {
+    html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) > .nxcs-panel {
+        max-height: min(320px, 48vh) !important;
+    }
+}

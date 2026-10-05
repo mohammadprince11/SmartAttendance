@@ -1,4 +1,6 @@
 using System.Globalization;
+using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.HrSettings;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -70,6 +72,63 @@ public static class PayrollDivisorPolicy
     /// <summary>المقام الفعّال: 30 للثابت، وأيام الفترة لنمط أيام الفترة.</summary>
     public static decimal Divisor(string? basis, int daysInPeriod) =>
         NormalizeBasis(basis) == BasisPeriodDays && daysInPeriod > 0 ? daysInPeriod : 30m;
+
+    public readonly record struct ResolvedBasis(
+        string Basis,
+        AttendancePeriodPolicy.Period Period,
+        decimal Divisor);
+
+    /// <summary>
+    /// يقرأ سياسة مقام أيام الراتب من نفس المصدر الذي يستخدمه Payroll Run.
+    /// الشركة المحددة تأخذ إعدادها Company Scoped، وإلا نرجع للإعداد العام.
+    /// </summary>
+    public static Task<string> LoadSalaryDaysBasisAsync(
+        ApplicationDbContext dbContext,
+        int? companyId) =>
+        companyId is > 0
+            ? HrSettingsStore.GetCompanyAsync(dbContext, companyId.Value, SalaryDaysBasisKey, BasisFixed30)
+            : HrSettingsStore.GetAsync(dbContext, SalaryDaysBasisKey, BasisFixed30);
+
+    /// <summary>
+    /// يحسم مقام الأجر اليومي لشهر مسير مسمّى من سياسة WorkingDays نفسها.
+    /// </summary>
+    public static async Task<ResolvedBasis> ResolveForPeriodAsync(
+        ApplicationDbContext dbContext,
+        int? companyId,
+        int year,
+        int month)
+    {
+        var basis = await LoadSalaryDaysBasisAsync(dbContext, companyId);
+        var period = companyId is > 0
+            ? (await AttendancePeriodPolicy.ResolveFromPolicyAsync(
+                dbContext, year, month,
+                SmartAttendance.Domain.Enums.PayrollCutoffType.WorkingDays,
+                companyId.Value)).Period
+            : AttendancePeriodPolicy.Resolve(year, month, 1, DateTime.DaysInMonth(year, month));
+
+        return new ResolvedBasis(
+            NormalizeBasis(basis),
+            period,
+            Divisor(basis, period.DayCount));
+    }
+
+    /// <summary>
+    /// يحسم فترة WorkingDays التي تحتوي التاريخ ثم يعيد مقام الأجر اليومي لها.
+    /// </summary>
+    public static async Task<ResolvedBasis> ResolveForDateAsync(
+        ApplicationDbContext dbContext,
+        int? companyId,
+        DateOnly date)
+    {
+        var label = companyId is > 0
+            ? await AttendancePeriodPolicy.ResolveLabelForDateAsync(
+                dbContext, date,
+                SmartAttendance.Domain.Enums.PayrollCutoffType.WorkingDays,
+                companyId.Value)
+            : (date.Year, date.Month);
+
+        return await ResolveForPeriodAsync(dbContext, companyId, label.Year, label.Month);
+    }
 
     /// <summary>الساعات المعيارية لليوم من الإعداد؛ القيمة التالفة/غير الموجبة ⟹ 8.</summary>
     public static decimal DailyHours(string? raw) =>

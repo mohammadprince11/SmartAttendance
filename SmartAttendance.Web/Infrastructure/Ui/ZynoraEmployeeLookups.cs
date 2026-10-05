@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace SmartAttendance.Web.Infrastructure.Ui;
@@ -10,6 +11,215 @@ namespace SmartAttendance.Web.Infrastructure.Ui;
 /// </summary>
 public static class ZynoraEmployeeLookups
 {
+    public sealed record EmployeeSelectOption(
+        string Value,
+        string Label);
+
+    public static IReadOnlyList<EmployeeSelectOption> PrimaryCountries { get; } =
+    [
+        new("Iraq", "العراق"),
+        new("Syria", "سوريا"),
+        new("Jordan", "الأردن"),
+        new("Lebanon", "لبنان"),
+        new("Saudi Arabia", "السعودية"),
+        new("United Arab Emirates", "الإمارات"),
+        new("Qatar", "قطر"),
+        new("Kuwait", "الكويت"),
+        new("Bahrain", "البحرين"),
+        new("Oman", "عمان"),
+        new("Egypt", "مصر"),
+        new("Turkey", "تركيا"),
+        new("Iran", "إيران"),
+        new("India", "الهند"),
+        new("Pakistan", "باكستان"),
+        new("Bangladesh", "بنغلادش"),
+        new("Philippines", "الفلبين"),
+        new("Nepal", "نيبال"),
+        new("Other", "أخرى")
+    ];
+
+    public static IReadOnlyList<EmployeeSelectOption> PrimaryNationalities { get; } =
+    [
+        new("Iraqi", "عراقي"),
+        new("Syrian", "سوري"),
+        new("Jordanian", "أردني"),
+        new("Lebanese", "لبناني"),
+        new("Saudi", "سعودي"),
+        new("Emirati", "إماراتي"),
+        new("Qatari", "قطري"),
+        new("Kuwaiti", "كويتي"),
+        new("Bahraini", "بحريني"),
+        new("Omani", "عماني"),
+        new("Egyptian", "مصري"),
+        new("Turkish", "تركي"),
+        new("Iranian", "إيراني"),
+        new("Indian", "هندي"),
+        new("Pakistani", "باكستاني"),
+        new("Bangladeshi", "بنغلادشي"),
+        new("Filipino", "فلبيني"),
+        new("Nepali", "نيبالي"),
+        new("Other", "أخرى")
+    ];
+
+    private static readonly IReadOnlyDictionary<string, string>
+        PrimaryNationalityByCountry =
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["Iraq"] = "Iraqi",
+                ["Syria"] = "Syrian",
+                ["Jordan"] = "Jordanian",
+                ["Lebanon"] = "Lebanese",
+                ["Saudi Arabia"] = "Saudi",
+                ["United Arab Emirates"] = "Emirati",
+                ["Qatar"] = "Qatari",
+                ["Kuwait"] = "Kuwaiti",
+                ["Bahrain"] = "Bahraini",
+                ["Oman"] = "Omani",
+                ["Egypt"] = "Egyptian",
+                ["Turkey"] = "Turkish",
+                ["Iran"] = "Iranian",
+                ["India"] = "Indian",
+                ["Pakistan"] = "Pakistani",
+                ["Bangladesh"] = "Bangladeshi",
+                ["Philippines"] = "Filipino",
+                ["Nepal"] = "Nepali",
+                ["Other"] = "Other"
+            };
+
+    private static readonly IReadOnlyDictionary<string, string>
+        IsoCodeToCountry = BuildIsoCodeToCountry();
+
+    public static bool IsKnownPrimaryCountry(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        PrimaryCountries.Any(x =>
+            x.Value.Equals(
+                value.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+    public static bool IsKnownPrimaryNationality(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        PrimaryNationalities.Any(x =>
+            x.Value.Equals(
+                value.Trim(),
+                StringComparison.OrdinalIgnoreCase));
+
+    public static string? NormalizePrimaryCountry(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+
+        var direct = PrimaryCountries.FirstOrDefault(x =>
+            x.Value.Equals(
+                trimmed,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (direct is not null)
+        {
+            return direct.Value;
+        }
+
+        var code = trimmed.ToUpperInvariant();
+
+        if (IsoCodeToCountry.TryGetValue(code, out var country))
+        {
+            var supported = PrimaryCountries.FirstOrDefault(x =>
+                x.Value.Equals(
+                    country,
+                    StringComparison.OrdinalIgnoreCase));
+
+            return supported?.Value ?? "Other";
+        }
+
+        return "Other";
+    }
+
+    public static string? NormalizePrimaryNationality(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+
+        var direct = PrimaryNationalities.FirstOrDefault(x =>
+            x.Value.Equals(
+                trimmed,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (direct is not null)
+        {
+            return direct.Value;
+        }
+
+        var country = NormalizePrimaryCountry(trimmed);
+        if (!string.IsNullOrWhiteSpace(country) &&
+            PrimaryNationalityByCountry.TryGetValue(
+                country,
+                out var nationality))
+        {
+            return nationality;
+        }
+
+        return "Other";
+    }
+
+    private static IReadOnlyDictionary<string, string>
+        BuildIsoCodeToCountry()
+    {
+        var map = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var culture in CultureInfo.GetCultures(
+                     CultureTypes.SpecificCultures))
+        {
+            try
+            {
+                var region = new RegionInfo(culture.Name);
+
+                map.TryAdd(
+                    region.TwoLetterISORegionName,
+                    region.EnglishName);
+                map.TryAdd(
+                    region.ThreeLetterISORegionName,
+                    region.EnglishName);
+            }
+            catch (ArgumentException)
+            {
+                // Ignore incomplete/custom cultures.
+            }
+        }
+
+        // Keep employee dropdown values authoritative for common aliases.
+        map["IRQ"] = "Iraq";
+        map["JOR"] = "Jordan";
+        map["SYR"] = "Syria";
+        map["LBN"] = "Lebanon";
+        map["SAU"] = "Saudi Arabia";
+        map["ARE"] = "United Arab Emirates";
+        map["QAT"] = "Qatar";
+        map["KWT"] = "Kuwait";
+        map["BHR"] = "Bahrain";
+        map["OMN"] = "Oman";
+        map["EGY"] = "Egypt";
+        map["TUR"] = "Turkey";
+        map["IRN"] = "Iran";
+        map["IND"] = "India";
+        map["PAK"] = "Pakistan";
+        map["BGD"] = "Bangladesh";
+        map["PHL"] = "Philippines";
+        map["NPL"] = "Nepal";
+        map["USA"] = "United States";
+        map["GBR"] = "United Kingdom";
+
+        return map;
+    }
+
     public static IReadOnlyList<string> Countries { get; } = new[]
     {
         "Afghanistan",

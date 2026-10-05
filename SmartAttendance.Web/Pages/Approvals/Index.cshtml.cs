@@ -36,6 +36,7 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)] public DateOnly? ReqTo { get; set; }
     [BindProperty(SupportsGet = true)] public DateOnly? ActFrom { get; set; }
     [BindProperty(SupportsGet = true)] public DateOnly? ActTo { get; set; }
+    [BindProperty(SupportsGet = true)] public int? RequestId { get; set; }
 
     [BindProperty] public string? Note { get; set; }
     [BindProperty] public List<int> Ids { get; set; } = new();
@@ -75,15 +76,13 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
+        var scope = await ScopeAsync();
         var result = await ApprovalWorkflowEngine.ApproveAsync(
-            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
-        // لا نكتب قرارات الحقول إلا بعد قبول المحرك لهوية صاحب الخطوة؛ وإلا أمكن
-        // لمستخدم يرى الشاشة أن يغيّر قرارات طلب ثم يترك اعتماده لشخص مخوّل.
-        if (result.Ok)
-            await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
+            _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId(), ApprovedFieldKeys);
         Message = result.Message;
         MessageIsError = !result.Ok;
-        if (result.FinalApproved) await ApplyEffectsAsync(id, await ScopeAsync());
+        if (result.FinalApproved && !await ApplyEffectsAsync(id, scope))
+            Message += " تم حفظ الأثر وسيعاد تنفيذه تلقائياً.";
         await LoadAsync();
         return Page();
     }
@@ -110,17 +109,23 @@ public class IndexModel : PageModel
     /// <summary>اعتماد مجمّع: يقدّم كل طلب محدَّد خطوةً واحدة، ويُفعّل الأثر لِمَن اكتملت لجنته.</summary>
     public async Task<IActionResult> OnPostBulkApproveAsync()
     {
-        int ok = 0, final = 0;
+        int ok = 0, final = 0, deferred = 0;
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
             var r = await ApprovalWorkflowEngine.ApproveAsync(
                 _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
-            if (r.FinalApproved) { await ApplyEffectsAsync(id, scope); final++; }
+            if (r.FinalApproved)
+            {
+                if (!await ApplyEffectsAsync(id, scope)) deferred++;
+                final++;
+            }
         }
         Message = ok == 0 ? "لم يُعتمد أي طلب (تحقق من الصلاحية/الخطوة)." :
-            $"تم اعتماد خطوة لـ {ok} طلب" + (final > 0 ? $"، منها {final} اكتملت لجنتها وفُعِّل أثرها." : ".");
+            $"تم اعتماد خطوة لـ {ok} طلب" +
+            (final > 0 ? $"، منها {final} اكتملت لجنتها." : ".") +
+            (deferred > 0 ? $" {deferred} أثر محفوظ لإعادة التنفيذ تلقائياً." : string.Empty);
         MessageIsError = ok == 0;
         await LoadAsync();
         return Page();
@@ -143,18 +148,20 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    private async Task ApplyEffectsAsync(int id, CompanyScope scope)
+    private async Task<bool> ApplyEffectsAsync(int id, CompanyScope scope)
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-        await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
-        await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, scope, id, ActorName(), ip);
-        await EmployeeLifecycleApprovalStore.ApplyIfLifecycleAsync(
-            _dbContext, scope, id, ActorName(), ip);
-
-        // مسار موحّد: يطبّق الأثر الحقيقي للإجازة/المغادرة/المناوبة/الأوفرتايم،
-        // ثم يعيد تحليل اليومية تلقائياً حسب سياسة إعدادات الحضور.
-        await ApprovedAttendanceRequestEffectStore.ApplyAsync(
-            _dbContext, scope, id, ActorName());
+        try
+        {
+            await ApprovalEffectJobStore.ApplyNowAsync(
+                _dbContext, id, scope, ActorName(), ip);
+            return true;
+        }
+        catch
+        {
+            // مهمة الأثر باقية في الصندوق الدائم، فلا نفقد الاعتماد أو نتيجته.
+            return false;
+        }
     }
 
     private string ActorName() => User?.Identity?.Name ?? "HR";
@@ -237,21 +244,27 @@ OUTER APPLY
       AND ar.AttendanceDate <= CAST(COALESCE(r.ToDate, r.FromDate, r.RequestDate, CAST(r.CreatedAt AS date)) AS date)
 ) punches
 WHERE {scopeFilter}
-  AND (@Source = 'All' OR r.RequestSource = @Source)
-  AND (@Status = 'All' OR r.Status = @Status)
-  AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
-  AND (@ReqType IS NULL OR r.RequestType = @ReqType)
-  AND (@DeptId IS NULL OR e.DepartmentId = @DeptId)
-  AND (@BranchId IS NULL OR e.BranchId = @BranchId)
-  AND (@Position IS NULL OR e.Position = @Position)
-  AND (@ReqFrom IS NULL OR CAST(r.CreatedAt AS date) >= @ReqFrom)
-  AND (@ReqTo   IS NULL OR CAST(r.CreatedAt AS date) <= @ReqTo)
-  AND (@ActFrom IS NULL OR CAST(r.UpdatedAt AS date) >= @ActFrom)
-  AND (@ActTo   IS NULL OR CAST(r.UpdatedAt AS date) <= @ActTo)
+  AND (
+      (@RequestId IS NOT NULL AND r.Id = @RequestId)
+      OR
+      (@RequestId IS NULL
+       AND (@Source = 'All' OR r.RequestSource = @Source)
+       AND (@Status = 'All' OR r.Status = @Status)
+       AND (@Search IS NULL OR e.FullName LIKE '%' + @Search + '%' OR e.EmployeeNo LIKE '%' + @Search + '%')
+       AND (@ReqType IS NULL OR r.RequestType = @ReqType)
+       AND (@DeptId IS NULL OR e.DepartmentId = @DeptId)
+       AND (@BranchId IS NULL OR e.BranchId = @BranchId)
+       AND (@Position IS NULL OR e.Position = @Position)
+       AND (@ReqFrom IS NULL OR CAST(r.CreatedAt AS date) >= @ReqFrom)
+       AND (@ReqTo   IS NULL OR CAST(r.CreatedAt AS date) <= @ReqTo)
+       AND (@ActFrom IS NULL OR CAST(r.UpdatedAt AS date) >= @ActFrom)
+       AND (@ActTo   IS NULL OR CAST(r.UpdatedAt AS date) <= @ActTo))
+  )
 ORDER BY r.CreatedAt DESC;
 """,
             command =>
             {
+                HrmsDatabase.AddParameter(command, "@RequestId", RequestId is > 0 ? RequestId.Value : DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@Status", Status);
                 HrmsDatabase.AddParameter(command, "@Source", Source);
                 HrmsDatabase.AddParameter(command, "@Search", NullIfEmpty(Search));

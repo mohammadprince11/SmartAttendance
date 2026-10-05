@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "مركز أنواع الطلبات";
     string Paid(string m) => m switch { "unpaid" => "غير مدفوعة", "half" => "نصف أجر", _ => "مدفوعة" };
+    string EffectLabel(string? code) => RequestTypeEffectCatalog.Options.FirstOrDefault(x => x.Code == code)?.Label ?? "غير مربوط";
 }
 <link rel="stylesheet" href="~/css/pages/requesttypes-2c36cbc9ab.css" asp-append-version="true" />
 
@@ -72,6 +73,7 @@
                                 @if (t.HasBalance){<span class="rtc-chip">رصيد</span>}
                                 @if (t.NeedsTime){<span class="rtc-chip">وقت</span>}
                                 @if (t.AttachmentRequired){<span class="rtc-chip">مرفق إلزامي</span>}
+                                <span class="rtc-chip">الأثر: @EffectLabel(t.EffectCode)</span>
                                 @* الشارة تعرض **الشرط المُنفَّذ فعلاً** لا حقل الجنس القديم:
                                    شارةٌ تقول «نساء» بينما لا ترشيح يجري هي كذبةٌ بالواجهة. *@
                                 @{ var typeConditions = HrConditions.Deserialize(t.ConditionsJson); }

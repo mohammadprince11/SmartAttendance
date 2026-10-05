@@ -1,0 +1,2738 @@
+﻿/* ZYNORA HR — People Dashboard Exact Visual Pass
+   DESIGN ONLY. No business logic, model, calculation or database behavior is changed. */
+
+.ppd-page{
+    --pd-bg:#07111f;
+    --pd-panel:#0d1b2c;
+    --pd-panel-2:#102239;
+    --pd-panel-3:#122943;
+    --pd-border:#203853;
+    --pd-border-soft:#17304a;
+    --pd-text:#f4f8ff;
+    --pd-muted:#94a8c3;
+    --pd-blue:#2684ff;
+    --pd-blue-2:#5ca6ff;
+    --pd-cyan:#55a7ff;
+    --pd-green:#2dd4a3;
+    --pd-pink:#f55c88;
+    --pd-purple:#9e7bf7;
+    --pd-orange:#ffb447;
+    --pd-shadow:0 12px 30px rgba(0,0,0,.16);
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    color:var(--pd-text);
+    font-family:inherit;
+}
+
+.ppd-page,
+.ppd-page *{box-sizing:border-box}
+
+.ppd-hero{
+    position:relative;
+    min-height:152px;
+    overflow:hidden;
+    border:1px solid var(--pd-border);
+    border-radius:18px;
+    background:
+        linear-gradient(90deg,rgba(13,43,75,.98) 0%,rgba(13,36,61,.88) 34%,rgba(10,28,48,.90) 64%,rgba(8,23,40,.98) 100%);
+    box-shadow:var(--pd-shadow);
+}
+.ppd-hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    opacity:.78;
+    background:
+      radial-gradient(1100px 230px at 36% 118%,rgba(42,106,170,.50),transparent 56%),
+      linear-gradient(158deg,transparent 0 37%,rgba(25,70,112,.82) 37.4% 40%,transparent 40.4%),
+      linear-gradient(145deg,transparent 0 46%,rgba(30,77,121,.70) 46.3% 50%,transparent 50.3%),
+      linear-gradient(165deg,transparent 0 55%,rgba(22,60,97,.82) 55.2% 59%,transparent 59.3%);
+    pointer-events:none;
+}
+.ppd-hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(90deg,rgba(4,13,24,.05),rgba(4,13,24,.28) 55%,rgba(4,13,24,.18));
+    pointer-events:none;
+}
+.ppd-hero-content{
+    position:relative;
+    z-index:2;
+    min-height:152px;
+    display:grid;
+    grid-template-columns:minmax(360px,1fr) auto 190px;
+    align-items:center;
+    gap:32px;
+    padding:24px 28px;
+}
+.ppd-title-block{grid-column:1}
+.ppd-welcome{
+    display:block;
+    margin-bottom:7px;
+    color:#63aaff;
+    font-size:11px;
+    font-weight:800;
+}
+.ppd-title-block h1{
+    margin:0;
+    font-size:31px;
+    line-height:1.15;
+    font-weight:950;
+    letter-spacing:-.02em;
+}
+.ppd-title-block p{
+    margin:10px 0 0;
+    color:#c4d1e2;
+    font-size:13px;
+    font-weight:600;
+}
+.ppd-hero-actions{
+    grid-column:2;
+    display:flex;
+    gap:14px;
+    align-items:center;
+    direction:ltr;
+}
+.ppd-period-box{
+    width:188px;
+    height:60px;
+    display:grid;
+    grid-template-columns:30px 1fr 16px;
+    align-items:center;
+    gap:9px;
+    padding:10px 13px;
+    border:1px solid #31506e;
+    border-radius:14px;
+    background:rgba(18,45,72,.72);
+    color:#fff;
+}
+.ppd-period-icon{
+    width:28px;height:28px;
+    display:grid;place-items:center;color:#d9e9fb;
+}
+.ppd-period-icon svg,
+.ppd-employees-btn svg,
+.ppd-kpi-icon svg{
+    width:100%;height:100%;
+    fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
+.ppd-period-copy{display:flex;flex-direction:column;direction:rtl;text-align:right}
+.ppd-period-copy small{color:#a9bad0;font-size:10px;font-weight:700}
+.ppd-period-copy strong{margin-top:3px;color:#fff;font-size:13px;font-weight:900}
+.ppd-chevron{font-size:18px;color:#bdd0e6}
+.ppd-employees-btn{
+    height:60px;
+    min-width:184px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:0 17px;
+    border-radius:14px;
+    background:linear-gradient(135deg,#056de8,#1286ff);
+    color:#fff;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:900;
+    box-shadow:0 12px 28px rgba(0,113,255,.27);
+    direction:rtl;
+}
+.ppd-employees-btn svg{width:23px;height:23px}
+.ppd-back-arrow{font-size:26px;font-weight:400;line-height:1}
+.ppd-hero-mantra{
+    grid-column:3;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    color:#eff6ff;
+    font-size:18px;
+    line-height:1.02;
+    font-weight:800;
+    text-shadow:0 2px 8px rgba(0,0,0,.28);
+    direction:ltr;
+}
+
+.ppd-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:14px;
+}
+.ppd-kpi{
+    --accent:var(--pd-blue);
+    position:relative;
+    min-height:118px;
+    display:grid;
+    grid-template-columns:48px minmax(0,1fr);
+    grid-template-rows:1fr auto;
+    gap:4px 14px;
+    padding:17px 18px 15px;
+    overflow:hidden;
+    border:1px solid var(--pd-border);
+    border-radius:17px;
+    background:linear-gradient(145deg,#0e1d30,#0b1828);
+    color:var(--pd-text);
+    text-decoration:none;
+    box-shadow:var(--pd-shadow);
+    transition:.18s ease;
+}
+.ppd-kpi:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 48%,var(--pd-border))}
+.ppd-kpi-icon{
+    grid-row:1;
+    align-self:start;
+    width:48px;height:48px;
+    display:grid;place-items:center;
+    padding:12px;
+    border-radius:14px;
+    background:color-mix(in srgb,var(--accent) 15%,transparent);
+    color:var(--accent);
+}
+.ppd-kpi-copy{grid-row:1;display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.ppd-kpi-copy small{color:#c5d2e1;font-size:11px;font-weight:800;white-space:nowrap}
+.ppd-kpi-copy b{margin-top:9px;font-size:28px;line-height:1;font-weight:950;direction:ltr}
+.ppd-kpi-copy em{margin-top:9px;color:#7990ab;font-size:9px;font-style:normal;font-weight:700}
+.ppd-trend{
+    grid-column:1 / -1;
+    justify-self:start;
+    color:#7289a5;
+    font-size:10px;
+    font-weight:800;
+    direction:ltr;
+}
+.ppd-trend.is-up{color:var(--pd-green)}
+.ppd-kpi-people{--accent:#2dd4a3}
+.ppd-kpi-new{--accent:#4f9aff}
+.ppd-kpi-ended{--accent:#ff5c74}
+.ppd-kpi-suspended{--accent:#ffad3d}
+.ppd-kpi-probation{--accent:#2684ff}
+
+.ppd-main-grid{
+    display:grid;
+    grid-template-columns:minmax(0,.43fr) minmax(0,.57fr);
+    grid-template-areas:"gender turnover";
+    gap:16px;
+    direction:ltr;
+}
+.ppd-gender-card{grid-area:gender;direction:rtl}
+.ppd-turnover-card{grid-area:turnover;direction:rtl}
+.ppd-card{
+    min-width:0;
+    border:1px solid var(--pd-border);
+    border-radius:17px;
+    background:linear-gradient(145deg,#0d1b2d,#0b1726);
+    box-shadow:var(--pd-shadow);
+}
+.ppd-card-head{
+    min-height:54px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    padding:0 20px;
+    border-bottom:1px solid var(--pd-border-soft);
+}
+.ppd-card-head h2{
+    margin:0;
+    color:#fff;
+    font-size:17px;
+    font-weight:950;
+}
+.ppd-title-icon{margin-inline-start:7px;color:#4b97ff;font-size:18px}
+.ppd-detail-link{
+    color:#4d9dff;
+    font-size:11px;
+    font-weight:800;
+    text-decoration:none;
+    border-bottom:1px solid rgba(77,157,255,.42);
+}
+.ppd-gender-card{min-height:286px}
+.ppd-gender-body{
+    min-height:180px;
+    display:grid;
+    grid-template-columns:1.05fr .95fr;
+    align-items:center;
+    gap:24px;
+    padding:20px 22px 10px;
+    direction:ltr;
+}
+.ppd-gender-donut{
+    --male:0;
+    --female:0;
+    width:160px;height:160px;
+    margin:auto;
+    display:grid;place-items:center;
+    border-radius:50%;
+    position:relative;
+    background:conic-gradient(#4e8fff 0 calc(var(--male)*1%),#a77cf7 0 calc((var(--male) + var(--female))*1%),#213249 0);
+}
+.ppd-gender-donut::after{
+    content:"";
+    position:absolute;
+    inset:27px;
+    border-radius:50%;
+    background:#0b1727;
+    box-shadow:inset 0 0 0 1px #1c3148;
+}
+.ppd-donut-core{position:relative;z-index:2;text-align:center;color:#fff;direction:rtl}
+.ppd-donut-core strong{display:block;font-size:25px;line-height:1;font-weight:950}
+.ppd-donut-core span{display:block;margin-top:7px;color:#d5e0ec;font-size:10px;font-weight:800}
+.ppd-gender-legend{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    direction:rtl;
+}
+.ppd-gender-legend>div{
+    display:grid;
+    grid-template-columns:1fr 28px 42px;
+    align-items:center;
+    gap:8px;
+    min-height:44px;
+    padding:0 12px;
+    border:1px solid #213954;
+    border-radius:12px;
+    background:#102238;
+    color:#d8e4f0;
+}
+.ppd-gender-legend span{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:750}
+.ppd-gender-legend i{width:9px;height:9px;border-radius:50%}
+.ppd-gender-legend i.male{background:#4e8fff}
+.ppd-gender-legend i.female{background:#f45d8a}
+.ppd-gender-legend b{font-size:13px;text-align:center;direction:ltr}
+.ppd-gender-legend em{
+    min-width:36px;
+    padding:3px 6px;
+    border-radius:999px;
+    background:#16304e;
+    color:#8fbaf0;
+    font-size:10px;
+    font-style:normal;
+    text-align:center;
+    direction:ltr;
+}
+.ppd-info-note{
+    margin:0 20px 14px;
+    padding:10px 12px;
+    border:1px solid #22476e;
+    border-radius:10px;
+    background:#12335a;
+    color:#d8e9fb;
+    font-size:10px;
+    font-weight:750;
+    text-align:center;
+}
+
+.ppd-turnover-card{min-height:286px}
+.ppd-turnover-layout{
+    min-height:224px;
+    display:grid;
+    grid-template-columns:1.08fr 170px .85fr;
+    align-items:center;
+    gap:24px;
+    padding:20px;
+    direction:ltr;
+}
+.ppd-turnover-summary{display:flex;flex-direction:column;gap:8px;direction:rtl}
+.ppd-turnover-summary>div{
+    min-height:45px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    padding:0 12px;
+    border:1px solid #1d3651;
+    border-radius:12px;
+    background:#0e2034;
+}
+.ppd-turnover-summary span{display:flex;align-items:center;gap:8px;color:#b7c6d8;font-size:10px;font-weight:750}
+.ppd-turnover-summary i{width:8px;height:8px;border-radius:50%}
+.ppd-turnover-summary i.blue{background:#4e8fff}
+.ppd-turnover-summary i.pink{background:#f45d8a}
+.ppd-turnover-summary i.muted{background:#667b95}
+.ppd-turnover-summary b{font-size:15px;font-weight:950;direction:ltr}
+.ppd-gauge{
+    --value:0;
+    position:relative;
+    width:160px;height:160px;
+    display:grid;place-items:center;
+    border-radius:50%;
+    background:conic-gradient(#4f91ff calc(var(--value)*1%),#26384f 0);
+}
+.ppd-gauge::after{
+    content:"";
+    position:absolute;
+    inset:19px;
+    border-radius:50%;
+    background:#0c1829;
+}
+.ppd-gauge-core{position:relative;z-index:2;text-align:center;direction:rtl}
+.ppd-gauge-core strong{display:block;color:#fff;font-size:26px;line-height:1;font-weight:950;direction:ltr}
+.ppd-gauge-core span{display:block;margin-top:7px;color:#bac9db;font-size:9px;font-weight:750}
+.ppd-stability{
+    min-height:155px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding-inline-start:22px;
+    border-inline-start:1px solid #2a415d;
+    text-align:center;
+    direction:rtl;
+}
+.ppd-stability-icon{
+    width:42px;height:42px;
+    display:grid;place-items:center;
+    margin-bottom:11px;
+    border-radius:12px;
+    background:#102a48;
+    color:#55a5ff;
+    font-size:21px;
+}
+.ppd-stability strong{font-size:13px;font-weight:900}
+.ppd-stability p{max-width:155px;margin:8px 0 0;color:#8298b4;font-size:9px;line-height:1.7;font-weight:650}
+
+.ppd-lower-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-areas:"age tenure";
+    gap:16px;
+    direction:ltr;
+}
+.ppd-age-card{grid-area:age;direction:rtl}
+.ppd-tenure-card{grid-area:tenure;direction:rtl}
+.ppd-chart-card{min-height:255px}
+.ppd-column-chart{
+    min-height:194px;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(70px,1fr));
+    align-items:end;
+    gap:12px;
+    padding:26px 22px 16px;
+    position:relative;
+    direction:ltr;
+}
+.ppd-column-chart::before,
+.ppd-column-chart::after{
+    content:"";
+    position:absolute;
+    left:22px;right:22px;
+    border-top:1px solid rgba(77,105,137,.28);
+}
+.ppd-column-chart::before{top:35%}
+.ppd-column-chart::after{top:66%}
+.ppd-chart-item{
+    position:relative;
+    z-index:2;
+    height:150px;
+    display:grid;
+    grid-template-rows:18px 1fr 32px;
+    align-items:end;
+    justify-items:center;
+    min-width:0;
+}
+.ppd-chart-value{
+    color:#eef6ff;
+    font-size:10px;
+    font-weight:900;
+    direction:ltr;
+}
+.ppd-chart-column{
+    --h:2%;
+    width:min(52px,66%);
+    height:var(--h);
+    max-height:100%;
+    min-height:2px;
+    align-self:end;
+    border-radius:5px 5px 0 0;
+    box-shadow:0 4px 12px rgba(0,0,0,.16);
+}
+.ppd-chart-column.age{background:linear-gradient(180deg,#5ca6ff,#2f7de4)}
+.ppd-chart-column.tenure{background:linear-gradient(180deg,#ffc966,#ffad32)}
+.ppd-chart-label{
+    align-self:end;
+    width:100%;
+    color:#c1cfdf;
+    font-size:9px;
+    line-height:1.25;
+    font-weight:700;
+    text-align:center;
+    direction:rtl;
+}
+.ppd-empty-chart{
+    grid-column:1/-1;
+    align-self:center;
+    justify-self:center;
+    color:#8ca1ba;
+    font-size:11px;
+    font-weight:700;
+}
+.ppd-footer{
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    padding:0 10px;
+    border-top:1px solid #172b40;
+    color:#7f95ae;
+    font-size:9px;
+    font-weight:650;
+    direction:ltr;
+}
+.ppd-footer span:first-child{direction:rtl}
+
+@media (max-width:1400px){
+    .ppd-hero-content{grid-template-columns:minmax(320px,1fr) auto}
+    .ppd-hero-mantra{display:none}
+    .ppd-kpi{padding-inline:14px}
+    .ppd-main-grid{grid-template-columns:.44fr .56fr}
+    .ppd-turnover-layout{grid-template-columns:1fr 150px .75fr;gap:16px}
+    .ppd-gauge{width:145px;height:145px}
+}
+@media (max-width:1100px){
+    .ppd-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .ppd-main-grid,.ppd-lower-grid{grid-template-columns:1fr;grid-template-areas:none}
+    .ppd-gender-card,.ppd-turnover-card,.ppd-age-card,.ppd-tenure-card{grid-area:auto}
+}
+@media (max-width:760px){
+    .ppd-page{gap:12px}
+    .ppd-hero-content{grid-template-columns:1fr;gap:18px;padding:20px}
+    .ppd-title-block,.ppd-hero-actions{grid-column:1}
+    .ppd-hero-actions{flex-direction:column;width:100%}
+    .ppd-period-box,.ppd-employees-btn{width:100%}
+    .ppd-kpi-grid{grid-template-columns:1fr}
+    .ppd-gender-body{grid-template-columns:1fr}
+    .ppd-turnover-layout{grid-template-columns:1fr}
+    .ppd-stability{border-inline-start:0;border-top:1px solid #2a415d;padding:18px 0 0}
+    .ppd-column-chart{grid-template-columns:repeat(5,minmax(54px,1fr));overflow-x:auto}
+    .ppd-footer{flex-direction:column;padding:12px;text-align:center}
+}
+
+
+/* =========================================================
+   ZYNORA People Dashboard — V3 clean structural pass
+   Design-only. Unique v3 selectors intentionally avoid legacy/global
+   card-header styling that caused nested "card inside card" visuals.
+   ========================================================= */
+
+.ppd-page{
+    gap:14px !important;
+}
+
+/* HERO — one title area + one date control only */
+.ppd-hero{
+    min-height:132px !important;
+    border-radius:18px !important;
+}
+
+.ppd-hero-content{
+    min-height:132px !important;
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto !important;
+    align-items:center !important;
+    gap:28px !important;
+    padding:22px 28px !important;
+}
+
+.ppd-title-block{
+    grid-column:1 !important;
+    min-width:0 !important;
+}
+
+.ppd-title-block h1{
+    font-size:29px !important;
+    line-height:1.12 !important;
+}
+
+.ppd-title-block p{
+    margin-top:8px !important;
+    font-size:12px !important;
+}
+
+.ppd-welcome{
+    margin-bottom:6px !important;
+}
+
+.ppd-v3-date-wrap{
+    grid-column:2 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+}
+
+.ppd-v3-date{
+    appearance:none;
+    border:1px solid #31506e !important;
+    width:auto !important;
+    min-width:158px !important;
+    height:48px !important;
+    display:grid !important;
+    grid-template-columns:24px auto 14px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 14px !important;
+    border-radius:12px !important;
+    background:#10253c !important;
+    color:#fff !important;
+    font-family:inherit !important;
+    cursor:default;
+    box-shadow:none !important;
+}
+
+.ppd-v3-date-icon{
+    width:24px !important;
+    height:24px !important;
+    display:grid !important;
+    place-items:center !important;
+    color:#d6e8fb !important;
+}
+
+.ppd-v3-date-icon svg{
+    width:24px !important;
+    height:24px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:1.8 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+}
+
+.ppd-v3-date strong{
+    font-size:12px !important;
+    line-height:1 !important;
+    font-weight:900 !important;
+    white-space:nowrap !important;
+}
+
+.ppd-v3-date-chevron{
+    color:#9eb2ca !important;
+    font-size:16px !important;
+    line-height:1 !important;
+}
+
+/* hard safety: these elements must never appear in V3 */
+.ppd-employees-btn,
+.ppd-hero-mantra,
+.ppd-period-copy{
+    display:none !important;
+}
+
+/* KPI row — slightly tighter and more balanced */
+.ppd-kpi-grid{
+    gap:12px !important;
+}
+
+.ppd-kpi{
+    min-height:104px !important;
+    padding:15px 16px 13px !important;
+    border-radius:15px !important;
+}
+
+.ppd-kpi-icon{
+    width:42px !important;
+    height:42px !important;
+    padding:10px !important;
+    border-radius:12px !important;
+}
+
+.ppd-kpi-copy small{
+    font-size:10px !important;
+}
+
+.ppd-kpi-copy b{
+    margin-top:7px !important;
+    font-size:25px !important;
+}
+
+.ppd-kpi-copy em{
+    margin-top:7px !important;
+    font-size:8.5px !important;
+}
+
+/* CARD itself is the only visual block. */
+.ppd-card{
+    overflow:hidden !important;
+    border-radius:16px !important;
+}
+
+/* Unique, plain title row — not a second rounded box */
+.ppd-v3-head{
+    min-height:54px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:14px !important;
+    margin:0 !important;
+    padding:0 20px !important;
+    border:0 !important;
+    border-bottom:1px solid #1b3149 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    outline:none !important;
+}
+
+.ppd-v3-head h2{
+    min-width:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    color:#f5f8fd !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+    font-size:15px !important;
+    line-height:1.25 !important;
+    font-weight:900 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+}
+
+/* New details button — compact filled/ghost hybrid, not underlined text */
+.ppd-v3-action{
+    flex:0 0 auto !important;
+    min-height:29px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:4px !important;
+    padding:5px 9px 5px 8px !important;
+    border:1px solid #2c5f8e !important;
+    border-radius:8px !important;
+    background:#0f2b47 !important;
+    color:#67b2ff !important;
+    text-decoration:none !important;
+    font-size:9.5px !important;
+    line-height:1 !important;
+    font-weight:850 !important;
+    box-shadow:none !important;
+    transition:background .15s ease,border-color .15s ease,color .15s ease !important;
+}
+
+.ppd-v3-action svg{
+    width:12px !important;
+    height:12px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:2.2 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+}
+
+.ppd-v3-action:hover{
+    background:#153a5f !important;
+    border-color:#4b8cc8 !important;
+    color:#e5f3ff !important;
+}
+
+/* Main cards — remove excessive empty space */
+.ppd-main-grid{
+    gap:14px !important;
+}
+
+.ppd-gender-card,
+.ppd-turnover-card{
+    min-height:254px !important;
+}
+
+.ppd-gender-body{
+    min-height:164px !important;
+    padding:16px 20px 8px !important;
+}
+
+.ppd-gender-donut{
+    width:142px !important;
+    height:142px !important;
+}
+
+.ppd-gender-donut::after{
+    inset:23px !important;
+}
+
+.ppd-turnover-layout{
+    min-height:198px !important;
+    padding:16px 20px !important;
+    gap:18px !important;
+}
+
+.ppd-gauge{
+    width:142px !important;
+    height:142px !important;
+}
+
+.ppd-stability{
+    min-height:136px !important;
+}
+
+/* Lower charts — tighter so sparse data doesn't leave a giant empty card */
+.ppd-lower-grid{
+    gap:14px !important;
+}
+
+.ppd-chart-card{
+    min-height:218px !important;
+}
+
+.ppd-column-chart{
+    min-height:160px !important;
+    padding:18px 20px 12px !important;
+}
+
+.ppd-chart-item{
+    height:120px !important;
+    grid-template-rows:16px 1fr 30px !important;
+}
+
+.ppd-chart-column{
+    width:min(46px,62%) !important;
+}
+
+/* Remove legacy nested header styling if any late stylesheet targets descendants */
+.ppd-card > .ppd-v3-head,
+.ppd-card > .ppd-v3-head h2,
+.ppd-card > .ppd-v3-head a{
+    box-shadow:none !important;
+}
+
+@media (max-width:1100px){
+    .ppd-v3-head h2{
+        white-space:normal !important;
+    }
+}
+
+@media (max-width:760px){
+    .ppd-hero-content{
+        grid-template-columns:1fr !important;
+        gap:14px !important;
+        padding:18px !important;
+    }
+
+    .ppd-title-block,
+    .ppd-v3-date-wrap{
+        grid-column:1 !important;
+    }
+
+    .ppd-v3-date-wrap{
+        justify-content:stretch !important;
+    }
+
+    .ppd-v3-date{
+        width:100% !important;
+    }
+
+    .ppd-v3-head{
+        padding:0 14px !important;
+    }
+}
+
+
+/* =========================================================
+   V4 — Period dropdown + balanced block geometry
+   UI only; no payroll/HR calculations or database logic changed.
+   ========================================================= */
+
+/* Header */
+.ppd-hero-content{
+    grid-template-columns:minmax(0,1fr) auto !important;
+}
+
+.ppd-v3-date-wrap,
+.ppd-v3-date{
+    display:none !important;
+}
+
+.ppd-v4-date-wrap{
+    grid-column:2 !important;
+    position:relative !important;
+    z-index:20 !important;
+    display:flex !important;
+    justify-content:flex-end !important;
+    align-items:center !important;
+}
+
+.ppd-v4-period{
+    position:relative !important;
+    width:172px !important;
+}
+
+.ppd-v4-period > summary{
+    list-style:none !important;
+}
+
+.ppd-v4-period > summary::-webkit-details-marker{
+    display:none !important;
+}
+
+.ppd-v4-period-summary{
+    width:172px !important;
+    height:48px !important;
+    display:grid !important;
+    grid-template-columns:24px minmax(0,1fr) 14px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 14px !important;
+    border:1px solid #31506e !important;
+    border-radius:12px !important;
+    background:#10253c !important;
+    color:#fff !important;
+    cursor:pointer !important;
+    user-select:none !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+.ppd-v4-period[open] .ppd-v4-period-summary{
+    border-color:#5aa9ef !important;
+    box-shadow:0 0 0 3px rgba(90,169,239,.12) !important;
+}
+
+.ppd-v4-date-icon{
+    width:24px !important;
+    height:24px !important;
+    display:grid !important;
+    place-items:center !important;
+    color:#d6e8fb !important;
+}
+
+.ppd-v4-date-icon svg{
+    width:24px !important;
+    height:24px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:1.8 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+}
+
+.ppd-v4-period-label{
+    font-size:12px !important;
+    line-height:1 !important;
+    font-weight:900 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+}
+
+.ppd-v4-chevron{
+    color:#9eb2ca !important;
+    font-size:16px !important;
+    line-height:1 !important;
+    transition:transform .16s ease !important;
+}
+
+.ppd-v4-period[open] .ppd-v4-chevron{
+    transform:rotate(180deg) !important;
+}
+
+.ppd-v4-period-menu{
+    position:absolute !important;
+    top:56px !important;
+    inset-inline-end:0 !important;
+    z-index:100 !important;
+    width:100% !important;
+    padding:6px !important;
+    border:1px solid #2b4c6d !important;
+    border-radius:12px !important;
+    background:#0d1d30 !important;
+    box-shadow:0 16px 36px rgba(0,0,0,.35) !important;
+}
+
+.ppd-v4-period-menu button{
+    width:100% !important;
+    min-height:36px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    padding:7px 10px !important;
+    border:0 !important;
+    border-radius:8px !important;
+    background:transparent !important;
+    color:#c8d6e6 !important;
+    font-family:inherit !important;
+    font-size:11px !important;
+    font-weight:750 !important;
+    cursor:pointer !important;
+    text-align:right !important;
+}
+
+.ppd-v4-period-menu button:hover{
+    background:#132b46 !important;
+    color:#fff !important;
+}
+
+.ppd-v4-period-menu button.is-active{
+    background:#12365b !important;
+    color:#64afff !important;
+}
+
+/* =========================================================
+   Balanced geometry
+   ========================================================= */
+
+.ppd-main-grid,
+.ppd-lower-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:14px !important;
+    align-items:stretch !important;
+}
+
+.ppd-main-grid{
+    grid-template-areas:"gender turnover" !important;
+}
+
+.ppd-lower-grid{
+    grid-template-areas:"age tenure" !important;
+}
+
+/* both cards in each row share identical frame height */
+.ppd-gender-card,
+.ppd-turnover-card{
+    height:286px !important;
+    min-height:286px !important;
+    max-height:286px !important;
+    display:flex !important;
+    flex-direction:column !important;
+}
+
+.ppd-age-card,
+.ppd-tenure-card{
+    height:248px !important;
+    min-height:248px !important;
+    max-height:248px !important;
+    display:flex !important;
+    flex-direction:column !important;
+}
+
+/* every card title bar uses the same exact vertical rhythm */
+.ppd-v3-head{
+    flex:0 0 56px !important;
+    min-height:56px !important;
+    height:56px !important;
+    max-height:56px !important;
+    padding:0 20px !important;
+}
+
+/* detail buttons identical everywhere */
+.ppd-v3-action{
+    width:78px !important;
+    min-width:78px !important;
+    height:30px !important;
+    min-height:30px !important;
+    padding:0 9px !important;
+}
+
+/* top-row content occupies the same remaining height */
+.ppd-gender-body{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    height:auto !important;
+    padding:14px 20px 8px !important;
+    align-items:center !important;
+}
+
+.ppd-turnover-layout{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    height:auto !important;
+    padding:14px 20px !important;
+    align-items:center !important;
+}
+
+/* note stays inside the gender card without changing the outer card height */
+.ppd-info-note{
+    flex:0 0 38px !important;
+    min-height:38px !important;
+    margin:0 20px 14px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+}
+
+/* charts get identical plotting boxes */
+.ppd-column-chart{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    height:auto !important;
+    padding:16px 20px 12px !important;
+}
+
+.ppd-chart-item{
+    height:128px !important;
+}
+
+/* stabilize inner visuals */
+.ppd-gender-donut,
+.ppd-gauge{
+    width:140px !important;
+    height:140px !important;
+}
+
+.ppd-gender-legend>div,
+.ppd-turnover-summary>div{
+    min-height:42px !important;
+    height:42px !important;
+}
+
+.ppd-stability{
+    min-height:132px !important;
+    height:132px !important;
+}
+
+/* KPI row also equal-height/equal-width */
+.ppd-kpi-grid{
+    grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+    align-items:stretch !important;
+}
+
+.ppd-kpi{
+    height:104px !important;
+    min-height:104px !important;
+    max-height:104px !important;
+}
+
+/* responsive */
+@media (max-width:1100px){
+    .ppd-main-grid,
+    .ppd-lower-grid{
+        grid-template-columns:1fr !important;
+        grid-template-areas:none !important;
+    }
+
+    .ppd-gender-card,
+    .ppd-turnover-card,
+    .ppd-age-card,
+    .ppd-tenure-card{
+        grid-area:auto !important;
+        height:auto !important;
+        max-height:none !important;
+        min-height:250px !important;
+    }
+
+    .ppd-kpi-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    }
+}
+
+@media (max-width:760px){
+    .ppd-v4-date-wrap{
+        grid-column:1 !important;
+        justify-content:stretch !important;
+    }
+
+    .ppd-v4-period,
+    .ppd-v4-period-summary{
+        width:100% !important;
+    }
+
+    .ppd-kpi-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+
+
+/* =========================================================
+   V5 — Dropdown visibility + KPI footer lift + remove footer
+   Design-only.
+   ========================================================= */
+
+/* The period menu was being clipped by the hero container. */
+.ppd-hero{
+    overflow:visible !important;
+    z-index:30 !important;
+}
+
+.ppd-hero::before,
+.ppd-hero::after{
+    border-radius:18px !important;
+    pointer-events:none !important;
+}
+
+.ppd-v4-date-wrap,
+.ppd-v4-period,
+.ppd-v4-period-menu{
+    z-index:50 !important;
+}
+
+.ppd-v4-period-menu{
+    top:54px !important;
+    max-height:210px !important;
+    overflow:auto !important;
+}
+
+/* Keep the KPI bottom indicator comfortably inside the card. */
+.ppd-kpi{
+    padding-bottom:18px !important;
+}
+
+.ppd-trend{
+    position:relative !important;
+    bottom:4px !important;
+    transform:none !important;
+    line-height:1 !important;
+    margin-top:0 !important;
+}
+
+/* No decorative/product footer on this dashboard. */
+.ppd-footer{
+    display:none !important;
+}
+
+
+/* =========================================================
+   V6 — Clean custom dropdown + fixed card alignment
+   - proper chevron icon
+   - consistent period menu
+   - one-click open/select behavior
+   - stabilize gender card header/layout
+   ========================================================= */
+
+/* Hide old period controls if any remain */
+.ppd-v3-date-wrap,
+.ppd-v4-date-wrap,
+.ppd-v3-date,
+.ppd-v4-period{
+    display:none !important;
+}
+
+.ppd-hero{
+    overflow:visible !important;
+    z-index:40 !important;
+}
+
+.ppd-v6-date-wrap{
+    grid-column:2 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    position:relative !important;
+    z-index:90 !important;
+}
+
+.ppd-v6-period{
+    position:relative !important;
+    width:188px !important;
+}
+
+.ppd-v6-trigger{
+    appearance:none !important;
+    width:188px !important;
+    height:52px !important;
+    display:grid !important;
+    grid-template-columns:18px 1fr 24px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 15px !important;
+    border:1px solid #335877 !important;
+    border-radius:14px !important;
+    background:#10253c !important;
+    color:#ffffff !important;
+    font-family:inherit !important;
+    cursor:pointer !important;
+    box-shadow:none !important;
+}
+
+.ppd-v6-period.is-open .ppd-v6-trigger{
+    border-color:#5aa9ef !important;
+    box-shadow:0 0 0 3px rgba(90,169,239,.12) !important;
+}
+
+.ppd-v6-label{
+    display:block !important;
+    font-size:12px !important;
+    line-height:1 !important;
+    font-weight:900 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+}
+
+.ppd-v6-chevron,
+.ppd-v6-calendar{
+    display:grid !important;
+    place-items:center !important;
+    color:#d8e8fa !important;
+}
+
+.ppd-v6-chevron svg{
+    width:16px !important;
+    height:16px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:2.2 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+    transition:transform .16s ease !important;
+}
+
+.ppd-v6-period.is-open .ppd-v6-chevron svg{
+    transform:rotate(180deg) !important;
+}
+
+.ppd-v6-calendar svg{
+    width:24px !important;
+    height:24px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:1.8 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+}
+
+.ppd-v6-menu{
+    position:absolute !important;
+    top:58px !important;
+    inset-inline-start:0 !important;
+    z-index:120 !important;
+    width:100% !important;
+    padding:6px !important;
+    border:1px solid #335877 !important;
+    border-radius:14px !important;
+    background:#0f1f33 !important;
+    box-shadow:0 18px 36px rgba(0,0,0,.35) !important;
+    overflow:hidden !important;
+}
+
+.ppd-v6-menu button{
+    width:100% !important;
+    min-height:44px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 12px !important;
+    border:0 !important;
+    border-radius:10px !important;
+    background:transparent !important;
+    color:#dce7f4 !important;
+    font-family:inherit !important;
+    font-size:11px !important;
+    font-weight:800 !important;
+    text-align:center !important;
+    cursor:pointer !important;
+}
+
+.ppd-v6-menu button + button{
+    margin-top:4px !important;
+}
+
+.ppd-v6-menu button:hover{
+    background:#142c46 !important;
+    color:#ffffff !important;
+}
+
+.ppd-v6-menu button.is-active{
+    background:#153a5f !important;
+    color:#64afff !important;
+    box-shadow:inset 0 0 0 1px #2c5f8f !important;
+}
+
+/* KPI footer indicators a bit higher */
+.ppd-trend{
+    bottom:8px !important;
+}
+
+/* Gender card de-overlap / kill any pseudo noise */
+.ppd-gender-card .ppd-v3-head h2::before,
+.ppd-gender-card .ppd-v3-head h2::after,
+.ppd-turnover-card .ppd-v3-head h2::before,
+.ppd-turnover-card .ppd-v3-head h2::after{
+    content:none !important;
+    display:none !important;
+}
+
+.ppd-gender-card,
+.ppd-turnover-card{
+    overflow:hidden !important;
+}
+
+.ppd-gender-body{
+    grid-template-columns:250px minmax(0,1fr) !important;
+    gap:26px !important;
+}
+
+.ppd-gender-donut{
+    justify-self:center !important;
+}
+
+.ppd-gender-legend{
+    min-width:0 !important;
+    overflow:hidden !important;
+}
+
+.ppd-gender-legend > div{
+    grid-template-columns:1fr 28px 44px !important;
+    min-width:0 !important;
+}
+
+.ppd-gender-legend span{
+    overflow:hidden !important;
+    white-space:nowrap !important;
+    text-overflow:ellipsis !important;
+}
+
+/* keep both lower cards aligned cleanly */
+.ppd-age-card,
+.ppd-tenure-card{
+    height:244px !important;
+    min-height:244px !important;
+    max-height:244px !important;
+}
+
+/* mobile */
+@media (max-width:760px){
+    .ppd-v6-date-wrap{
+        grid-column:1 !important;
+        justify-content:stretch !important;
+    }
+
+    .ppd-v6-period,
+    .ppd-v6-trigger{
+        width:100% !important;
+    }
+
+    .ppd-v6-menu{
+        width:100% !important;
+    }
+
+    .ppd-gender-body{
+        grid-template-columns:1fr !important;
+        gap:18px !important;
+    }
+}
+
+
+/* =========================================================
+   V7 — Minimal month list + remove details buttons + fix gender note overlap
+   ========================================================= */
+
+/* Headers now contain only titles */
+.ppd-v3-head{
+    justify-content:flex-start !important;
+    gap:0 !important;
+}
+
+/* Remove detail button remnants */
+.ppd-v3-action{
+    display:none !important;
+}
+
+/* Month dropdown menu: plain list on one shared menu surface, no item blocks */
+.ppd-v6-menu{
+    padding:8px 0 !important;
+    border-radius:14px !important;
+    overflow:hidden !important;
+}
+
+.ppd-v6-menu button{
+    min-height:42px !important;
+    margin:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    border-top:0 !important;
+    border-left:0 !important;
+    border-right:0 !important;
+    border-bottom:1px solid rgba(90,122,153,.24) !important;
+}
+
+.ppd-v6-menu button + button{
+    margin-top:0 !important;
+}
+
+.ppd-v6-menu button:last-child{
+    border-bottom:0 !important;
+}
+
+.ppd-v6-menu button:hover{
+    background:rgba(19,43,70,.9) !important;
+}
+
+.ppd-v6-menu button.is-active{
+    background:rgba(21,58,95,.95) !important;
+    color:#64afff !important;
+    box-shadow:none !important;
+}
+
+/* Gender card: stronger separation between donut area and note bar */
+.ppd-gender-card{
+    display:flex !important;
+    flex-direction:column !important;
+}
+
+.ppd-gender-body{
+    flex:1 1 auto !important;
+    grid-template-columns:230px minmax(0,1fr) !important;
+    gap:28px !important;
+    padding:18px 22px 10px !important;
+    align-items:center !important;
+}
+
+.ppd-gender-donut{
+    width:136px !important;
+    height:136px !important;
+}
+
+.ppd-gender-donut::after{
+    inset:22px !important;
+}
+
+.ppd-donut-core strong{
+    font-size:22px !important;
+}
+
+.ppd-donut-core span{
+    margin-top:6px !important;
+    font-size:10px !important;
+}
+
+.ppd-gender-legend{
+    gap:10px !important;
+}
+
+.ppd-info-note{
+    flex:0 0 auto !important;
+    min-height:40px !important;
+    margin:10px 22px 18px !important;
+    padding:10px 14px !important;
+    border-radius:12px !important;
+    background:#143862 !important;
+    color:#d8e9fb !important;
+    font-size:10px !important;
+    line-height:1.5 !important;
+}
+
+/* Keep lower cards balanced after title-only headers */
+.ppd-v3-head h2{
+    width:100% !important;
+}
+
+/* responsive */
+@media (max-width:760px){
+    .ppd-gender-body{
+        grid-template-columns:1fr !important;
+        gap:18px !important;
+    }
+
+    .ppd-info-note{
+        margin:10px 14px 16px !important;
+    }
+}
+
+
+/* =========================================================
+   V8 — fresh selectors, new stylesheet filename
+   This block intentionally uses unique selectors to avoid old cascade conflicts.
+   ========================================================= */
+
+/* Period picker */
+.ppd-page .ppd-v3-date-wrap,
+.ppd-page .ppd-v4-date-wrap,
+.ppd-page .ppd-v6-date-wrap,
+.ppd-page .ppd-v3-date,
+.ppd-page .ppd-v4-period,
+.ppd-page .ppd-v6-period{
+    display:none !important;
+}
+
+.ppd-page .ppd-hero{
+    overflow:visible !important;
+    position:relative !important;
+    z-index:40 !important;
+}
+
+.ppd-page .ppd-v8-date-wrap{
+    grid-column:2 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    position:relative !important;
+    z-index:100 !important;
+}
+
+.ppd-page .ppd-v8-period{
+    position:relative !important;
+    width:186px !important;
+}
+
+.ppd-page .ppd-v8-trigger{
+    width:186px !important;
+    height:50px !important;
+    display:grid !important;
+    grid-template-columns:18px minmax(0,1fr) 24px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 14px !important;
+    border:1px solid #345b7d !important;
+    border-radius:13px !important;
+    background:#10253c !important;
+    color:#fff !important;
+    font-family:inherit !important;
+    cursor:pointer !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-v8-period.is-open .ppd-v8-trigger{
+    border-color:#5aa9ef !important;
+    box-shadow:0 0 0 3px rgba(90,169,239,.12) !important;
+}
+
+.ppd-page .ppd-v8-label{
+    font-size:12px !important;
+    font-weight:900 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+}
+
+.ppd-page .ppd-v8-chevron,
+.ppd-page .ppd-v8-calendar{
+    display:grid !important;
+    place-items:center !important;
+    color:#d7e8fa !important;
+}
+
+.ppd-page .ppd-v8-chevron svg{
+    width:15px !important;
+    height:15px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:2 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+    transition:transform .15s ease !important;
+}
+
+.ppd-page .ppd-v8-period.is-open .ppd-v8-chevron svg{
+    transform:rotate(180deg) !important;
+}
+
+.ppd-page .ppd-v8-calendar svg{
+    width:23px !important;
+    height:23px !important;
+    fill:none !important;
+    stroke:currentColor !important;
+    stroke-width:1.8 !important;
+    stroke-linecap:round !important;
+    stroke-linejoin:round !important;
+}
+
+.ppd-page .ppd-v8-menu{
+    position:absolute !important;
+    top:56px !important;
+    inset-inline-start:0 !important;
+    z-index:200 !important;
+    width:100% !important;
+    padding:8px 0 !important;
+    border:1px solid #345b7d !important;
+    border-radius:13px !important;
+    background:#0f1f33 !important;
+    box-shadow:0 18px 40px rgba(0,0,0,.38) !important;
+    overflow:hidden !important;
+}
+
+.ppd-page .ppd-v8-menu button{
+    width:100% !important;
+    height:40px !important;
+    margin:0 !important;
+    padding:0 14px !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    color:#dce7f4 !important;
+    box-shadow:none !important;
+    font-family:inherit !important;
+    font-size:11px !important;
+    font-weight:800 !important;
+    text-align:center !important;
+    cursor:pointer !important;
+}
+
+.ppd-page .ppd-v8-menu button:hover{
+    background:rgba(18,48,78,.75) !important;
+    color:#fff !important;
+}
+
+.ppd-page .ppd-v8-menu button.is-active{
+    background:transparent !important;
+    color:#63adff !important;
+    font-weight:950 !important;
+}
+
+/* Never show details actions */
+.ppd-page .ppd-v3-action,
+.ppd-page .ppd-detail-link{
+    display:none !important;
+}
+
+/* Header title rows */
+.ppd-page .ppd-v3-head{
+    justify-content:flex-start !important;
+}
+
+/* Gender card — fresh structure */
+.ppd-page .ppd-v8-gender-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+    display:grid !important;
+    grid-template-rows:56px minmax(0,1fr) auto !important;
+    overflow:hidden !important;
+}
+
+.ppd-page .ppd-v8-card-head{
+    display:flex !important;
+    align-items:center !important;
+    min-height:56px !important;
+    height:56px !important;
+    padding:0 22px !important;
+    border-bottom:1px solid #1b3149 !important;
+    background:transparent !important;
+}
+
+.ppd-page .ppd-v8-card-head h2{
+    margin:0 !important;
+    padding:0 !important;
+    color:#f5f8fd !important;
+    font-size:15px !important;
+    line-height:1 !important;
+    font-weight:900 !important;
+}
+
+.ppd-page .ppd-v8-gender-content{
+    min-height:0 !important;
+    display:grid !important;
+    grid-template-columns:200px minmax(0,1fr) !important;
+    align-items:center !important;
+    gap:28px !important;
+    padding:14px 24px 8px !important;
+    direction:ltr !important;
+}
+
+.ppd-page .ppd-v8-donut{
+    --male:0;
+    --female:0;
+    width:124px !important;
+    height:124px !important;
+    justify-self:center !important;
+    position:relative !important;
+    display:grid !important;
+    place-items:center !important;
+    border-radius:50% !important;
+    background:conic-gradient(
+        #4e8fff 0 calc(var(--male) * 1%),
+        #a77cf7 0 calc((var(--male) + var(--female)) * 1%),
+        #213249 0
+    ) !important;
+}
+
+.ppd-page .ppd-v8-donut::after{
+    content:"" !important;
+    position:absolute !important;
+    inset:20px !important;
+    border-radius:50% !important;
+    background:#0b1727 !important;
+}
+
+.ppd-page .ppd-v8-donut-core{
+    position:relative !important;
+    z-index:2 !important;
+    text-align:center !important;
+    color:#fff !important;
+    direction:rtl !important;
+}
+
+.ppd-page .ppd-v8-donut-core strong{
+    display:block !important;
+    font-size:22px !important;
+    line-height:1 !important;
+    font-weight:950 !important;
+}
+
+.ppd-page .ppd-v8-donut-core span{
+    display:block !important;
+    margin-top:6px !important;
+    color:#d5e0ec !important;
+    font-size:9px !important;
+    font-weight:800 !important;
+}
+
+.ppd-page .ppd-v8-gender-legend{
+    min-width:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:10px !important;
+    direction:rtl !important;
+}
+
+.ppd-page .ppd-v8-gender-row{
+    height:42px !important;
+    min-height:42px !important;
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) 32px 48px !important;
+    align-items:center !important;
+    gap:10px !important;
+    padding:0 12px !important;
+    border:1px solid #213954 !important;
+    border-radius:11px !important;
+    background:#102238 !important;
+}
+
+.ppd-page .ppd-v8-gender-name{
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    min-width:0 !important;
+    color:#d8e4f0 !important;
+    font-size:10px !important;
+    font-weight:800 !important;
+    white-space:nowrap !important;
+}
+
+.ppd-page .ppd-v8-gender-name i{
+    width:8px !important;
+    height:8px !important;
+    flex:0 0 8px !important;
+    border-radius:50% !important;
+}
+
+.ppd-page .ppd-v8-gender-name i.male{background:#4e8fff !important;}
+.ppd-page .ppd-v8-gender-name i.female{background:#f45d8a !important;}
+
+.ppd-page .ppd-v8-gender-row strong{
+    font-size:12px !important;
+    text-align:center !important;
+    direction:ltr !important;
+}
+
+.ppd-page .ppd-v8-gender-row em{
+    padding:4px 6px !important;
+    border-radius:999px !important;
+    background:#16304e !important;
+    color:#8fbaf0 !important;
+    font-size:9px !important;
+    font-style:normal !important;
+    text-align:center !important;
+    direction:ltr !important;
+}
+
+.ppd-page .ppd-v8-gender-note{
+    height:36px !important;
+    min-height:36px !important;
+    margin:0 22px 16px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 14px !important;
+    border:1px solid #22476e !important;
+    border-radius:10px !important;
+    background:#143862 !important;
+    color:#d8e9fb !important;
+    font-size:9.5px !important;
+    line-height:1 !important;
+    font-weight:750 !important;
+    text-align:center !important;
+}
+
+/* Match turnover to the same height */
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+/* KPI bottom numbers / trend clear of lower edge */
+.ppd-page .ppd-kpi{
+    padding-bottom:20px !important;
+}
+
+.ppd-page .ppd-trend{
+    bottom:8px !important;
+    line-height:1.1 !important;
+}
+
+@media (max-width:760px){
+    .ppd-page .ppd-v8-date-wrap{
+        grid-column:1 !important;
+        justify-content:stretch !important;
+    }
+
+    .ppd-page .ppd-v8-period,
+    .ppd-page .ppd-v8-trigger{
+        width:100% !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+
+    .ppd-page .ppd-v8-gender-content{
+        grid-template-columns:1fr !important;
+        gap:16px !important;
+    }
+}
+
+
+/* =========================================================
+   V9 — Unified cards, separators and colors
+   Design-only.
+   ========================================================= */
+
+/* One visual language for all dashboard cards */
+.ppd-page .ppd-card{
+    background:#101c2d !important;
+    border:1px solid #22374f !important;
+    border-radius:16px !important;
+    box-shadow:none !important;
+    color:#f4f8ff !important;
+}
+
+/* NEW title row avoids global HEADER styling entirely */
+.ppd-page .ppd-v9-card-head{
+    width:auto !important;
+    height:56px !important;
+    min-height:56px !important;
+    max-height:56px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    margin:0 18px !important;
+    padding:0 4px !important;
+    border:0 !important;
+    border-bottom:1px solid #263b53 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    outline:none !important;
+}
+
+.ppd-page .ppd-v9-card-head::before,
+.ppd-page .ppd-v9-card-head::after{
+    content:none !important;
+    display:none !important;
+}
+
+.ppd-page .ppd-v9-card-head h2{
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:#f2f6fb !important;
+    font-size:15px !important;
+    line-height:1.2 !important;
+    font-weight:900 !important;
+}
+
+/* Remove old title containers completely if old CSS targets still survive */
+.ppd-page .ppd-v8-card-head,
+.ppd-page .ppd-v3-head{
+    display:none !important;
+}
+
+/* Same inner divider language used across all main cards */
+.ppd-page .ppd-gender-card,
+.ppd-page .ppd-turnover-card,
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    position:relative !important;
+    overflow:hidden !important;
+}
+
+/* Turnover/Gender content uses same panel tones */
+.ppd-page .ppd-v8-gender-row,
+.ppd-page .ppd-turnover-summary > div{
+    background:#0d2238 !important;
+    border:1px solid #1f3f5e !important;
+    color:#dce7f4 !important;
+}
+
+/* Same accent/border shade */
+.ppd-page .ppd-v8-gender-note{
+    background:#11365b !important;
+    border:1px solid #28527b !important;
+    color:#dcecff !important;
+}
+
+/* Unified chart grid lines */
+.ppd-page .ppd-column-chart::before,
+.ppd-page .ppd-column-chart::after{
+    border-top:1px solid #263b53 !important;
+    opacity:1 !important;
+}
+
+/* Add a baseline so all chart cards have the same visual structure */
+.ppd-page .ppd-column-chart{
+    border-bottom:0 !important;
+}
+
+.ppd-page .ppd-chart-item::before{
+    content:"" !important;
+    position:absolute !important;
+    left:-10px !important;
+    right:-10px !important;
+    bottom:30px !important;
+    height:1px !important;
+    background:#263b53 !important;
+    z-index:-1 !important;
+}
+
+/* Unify all dashboard borders/secondary tones */
+.ppd-page .ppd-kpi{
+    background:#0d1d30 !important;
+    border-color:#22374f !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-hero{
+    border-color:#22374f !important;
+}
+
+/* Turnover separator line uses the same border color as all blocks */
+.ppd-page .ppd-stability{
+    border-inline-start:1px solid #263b53 !important;
+}
+
+/* Donut rings / muted structural colors unified */
+.ppd-page .ppd-v8-donut,
+.ppd-page .ppd-gauge{
+    background-color:#213249 !important;
+}
+
+.ppd-page .ppd-v8-donut::after,
+.ppd-page .ppd-gauge::after{
+    background:#0b1727 !important;
+}
+
+/* Keep titles aligned at one level */
+.ppd-page .ppd-v9-card-head h2{
+    text-align:start !important;
+}
+
+/* Lower row stays exactly balanced */
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    height:244px !important;
+    min-height:244px !important;
+    max-height:244px !important;
+}
+
+/* top cards stay exactly balanced */
+.ppd-page .ppd-v8-gender-card,
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+/* Strip any global rounded block styling applied to headings */
+.ppd-page .ppd-v9-card-head > *,
+.ppd-page .ppd-v9-card-head h2,
+.ppd-page .ppd-v9-card-head span{
+    background-color:transparent !important;
+    background-image:none !important;
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+}
+
+/* Mobile */
+@media (max-width:760px){
+    .ppd-page .ppd-v9-card-head{
+        margin:0 14px !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card,
+    .ppd-page .ppd-age-card,
+    .ppd-page .ppd-tenure-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+}
+
+
+/* =========================================================
+   V10 — Remove nested title blocks completely
+   Titles live directly on the original card surface.
+   ========================================================= */
+
+.ppd-page .ppd-v9-card-head,
+.ppd-page .ppd-v8-card-head,
+.ppd-page .ppd-v3-head{
+    display:none !important;
+}
+
+/* Title is now a direct child of the original card — no inner box */
+.ppd-page .ppd-v10-title{
+    width:auto !important;
+    height:56px !important;
+    min-height:56px !important;
+    display:flex !important;
+    align-items:center !important;
+    margin:0 18px !important;
+    padding:0 4px !important;
+
+    border:0 !important;
+    border-bottom:1px solid #263b53 !important;
+    border-radius:0 !important;
+
+    background:transparent !important;
+    background-color:transparent !important;
+    background-image:none !important;
+
+    box-shadow:none !important;
+    outline:none !important;
+
+    color:#f2f6fb !important;
+    font-size:15px !important;
+    line-height:1.2 !important;
+    font-weight:900 !important;
+    text-align:start !important;
+}
+
+/* Prevent any global h2/title styling from recreating a block */
+.ppd-page .ppd-card > .ppd-v10-title,
+.ppd-page .ppd-card > h2.ppd-v10-title{
+    border-left:0 !important;
+    border-right:0 !important;
+    border-top:0 !important;
+    border-bottom:1px solid #263b53 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    background-color:transparent !important;
+    background-image:none !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-v10-title::before,
+.ppd-page .ppd-v10-title::after{
+    content:none !important;
+    display:none !important;
+}
+
+/* Keep original cards themselves unchanged and unified */
+.ppd-page .ppd-card{
+    background:#101c2d !important;
+    border:1px solid #22374f !important;
+    border-radius:16px !important;
+    box-shadow:none !important;
+    overflow:hidden !important;
+}
+
+/* Reconfirm equal geometry after removing header wrappers */
+.ppd-page .ppd-v8-gender-card,
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    height:244px !important;
+    min-height:244px !important;
+    max-height:244px !important;
+}
+
+/* Ensure content begins directly below the title separator */
+.ppd-page .ppd-v8-gender-content{
+    padding-top:14px !important;
+}
+
+.ppd-page .ppd-turnover-layout{
+    padding-top:14px !important;
+}
+
+.ppd-page .ppd-column-chart{
+    padding-top:16px !important;
+}
+
+@media (max-width:760px){
+    .ppd-page .ppd-v10-title{
+        margin:0 14px !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card,
+    .ppd-page .ppd-age-card,
+    .ppd-page .ppd-tenure-card{
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+}
+
+
+/* =========================================================
+   V11 — Hero uses the same visual family as dashboard cards
+   Navbar remains the distinct darker application shell.
+   ========================================================= */
+
+/* Hero becomes a content card, not a second navbar/header */
+.ppd-page .ppd-hero{
+    background:#101c2d !important;
+    background-color:#101c2d !important;
+    background-image:none !important;
+    border:1px solid #22374f !important;
+    border-radius:16px !important;
+    box-shadow:none !important;
+}
+
+/* Remove the large decorative blue geometry/gradient */
+.ppd-page .ppd-hero::before,
+.ppd-page .ppd-hero::after{
+    content:none !important;
+    display:none !important;
+}
+
+/* Keep hero text hierarchy but align colors with the cards */
+.ppd-page .ppd-welcome{
+    color:#64afff !important;
+}
+
+.ppd-page .ppd-title-block h1{
+    color:#f2f6fb !important;
+}
+
+.ppd-page .ppd-title-block p{
+    color:#9fb0c5 !important;
+}
+
+/* Date selector belongs to the card family too */
+.ppd-page .ppd-v8-trigger{
+    background:#0d2238 !important;
+    border-color:#2b4865 !important;
+    box-shadow:none !important;
+}
+
+.ppd-page .ppd-v8-period.is-open .ppd-v8-trigger{
+    border-color:#4f8fc8 !important;
+    box-shadow:0 0 0 3px rgba(79,143,200,.10) !important;
+}
+
+.ppd-page .ppd-v8-menu{
+    background:#0d1d30 !important;
+    border-color:#2b4865 !important;
+}
+
+/* Same surface language across hero, KPI cards and content cards */
+.ppd-page .ppd-kpi,
+.ppd-page .ppd-card,
+.ppd-page .ppd-hero{
+    border-color:#22374f !important;
+}
+
+/* Slightly tighter hero because it no longer needs to behave like a banner */
+.ppd-page .ppd-hero{
+    min-height:124px !important;
+}
+
+.ppd-page .ppd-hero-content{
+    min-height:124px !important;
+    padding-top:20px !important;
+    padding-bottom:20px !important;
+}
+
+
+/* =========================================================
+   V12 — Unified cycle/donut placement
+   Rule: cycle on the LEFT, details/data on the RIGHT.
+   Design-only.
+   ========================================================= */
+
+/* Gender: donut left / legend right */
+.ppd-page .ppd-v8-gender-content{
+    display:grid !important;
+    grid-template-columns:180px minmax(0,1fr) !important;
+    grid-template-areas:"donut legend" !important;
+    align-items:center !important;
+    gap:28px !important;
+    direction:ltr !important;
+    padding:16px 24px 10px !important;
+}
+
+.ppd-page .ppd-v8-donut{
+    grid-area:donut !important;
+    justify-self:center !important;
+    align-self:center !important;
+    margin:0 !important;
+}
+
+.ppd-page .ppd-v8-gender-legend{
+    grid-area:legend !important;
+    width:100% !important;
+    min-width:0 !important;
+    direction:rtl !important;
+}
+
+/* Turnover: gauge left / all data on the right */
+.ppd-page .ppd-turnover-layout{
+    display:grid !important;
+    grid-template-columns:180px minmax(0,1fr) minmax(190px,.78fr) !important;
+    grid-template-areas:"gauge summary stability" !important;
+    align-items:center !important;
+    gap:24px !important;
+    direction:ltr !important;
+    padding:16px 24px !important;
+}
+
+.ppd-page .ppd-gauge{
+    grid-area:gauge !important;
+    justify-self:center !important;
+    align-self:center !important;
+    margin:0 !important;
+}
+
+.ppd-page .ppd-turnover-summary{
+    grid-area:summary !important;
+    width:100% !important;
+    min-width:0 !important;
+    direction:rtl !important;
+}
+
+.ppd-page .ppd-stability{
+    grid-area:stability !important;
+    width:100% !important;
+    min-width:0 !important;
+    align-self:stretch !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding-inline-start:22px !important;
+    border-inline-start:1px solid #263b53 !important;
+    direction:rtl !important;
+}
+
+/* Exact visual alignment between the two cycles */
+.ppd-page .ppd-v8-donut,
+.ppd-page .ppd-gauge{
+    width:136px !important;
+    height:136px !important;
+}
+
+/* Make detail rows visually parallel across both cards */
+.ppd-page .ppd-v8-gender-row,
+.ppd-page .ppd-turnover-summary > div{
+    height:42px !important;
+    min-height:42px !important;
+    border-radius:10px !important;
+}
+
+/* Top row cards remain equal */
+.ppd-page .ppd-v8-gender-card,
+.ppd-page .ppd-turnover-card{
+    height:294px !important;
+    min-height:294px !important;
+    max-height:294px !important;
+}
+
+/* Mobile / narrow widths */
+@media (max-width:1100px){
+    .ppd-page .ppd-turnover-layout{
+        grid-template-columns:160px minmax(0,1fr) !important;
+        grid-template-areas:
+            "gauge summary"
+            "gauge stability" !important;
+        gap:14px 20px !important;
+    }
+
+    .ppd-page .ppd-stability{
+        border-inline-start:0 !important;
+        border-top:1px solid #263b53 !important;
+        padding:14px 0 0 !important;
+        min-height:90px !important;
+        height:auto !important;
+    }
+}
+
+@media (max-width:760px){
+    .ppd-page .ppd-v8-gender-content{
+        grid-template-columns:1fr !important;
+        grid-template-areas:
+            "donut"
+            "legend" !important;
+        gap:16px !important;
+    }
+
+    .ppd-page .ppd-turnover-layout{
+        grid-template-columns:1fr !important;
+        grid-template-areas:
+            "gauge"
+            "summary"
+            "stability" !important;
+        gap:16px !important;
+    }
+}
+
+
+/* =========================================================
+   V13 — Final spacing pass + quiet empty state + compact charts
+         + responsive account menu treatment
+   DESIGN ONLY
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   1) Gender + turnover: same left-cycle / right-details rhythm
+   --------------------------------------------------------- */
+
+.ppd-page .ppd-v8-gender-content{
+    grid-template-columns:160px minmax(0,1fr) !important;
+    grid-template-areas:"donut legend" !important;
+    gap:20px !important;
+    padding:14px 22px 8px !important;
+}
+
+.ppd-page .ppd-v8-donut{
+    grid-area:donut !important;
+    width:132px !important;
+    height:132px !important;
+    justify-self:center !important;
+}
+
+.ppd-page .ppd-v8-gender-legend{
+    grid-area:legend !important;
+    width:100% !important;
+    gap:8px !important;
+}
+
+/* Turnover now follows the same 2-column logic:
+   left = cycle, right = rows + status */
+.ppd-page .ppd-turnover-layout{
+    display:grid !important;
+    grid-template-columns:160px minmax(0,1fr) !important;
+    grid-template-rows:auto auto !important;
+    grid-template-areas:
+        "gauge summary"
+        "gauge stability" !important;
+    align-items:center !important;
+    gap:10px 20px !important;
+    padding:14px 22px 12px !important;
+}
+
+.ppd-page .ppd-gauge{
+    grid-area:gauge !important;
+    width:132px !important;
+    height:132px !important;
+    justify-self:center !important;
+    align-self:center !important;
+    margin:0 !important;
+}
+
+.ppd-page .ppd-turnover-summary{
+    grid-area:summary !important;
+    width:100% !important;
+    gap:7px !important;
+}
+
+.ppd-page .ppd-stability{
+    grid-area:stability !important;
+    width:100% !important;
+    min-height:58px !important;
+    height:auto !important;
+    align-self:start !important;
+    display:grid !important;
+    grid-template-columns:40px minmax(0,1fr) !important;
+    grid-template-rows:auto auto !important;
+    align-items:center !important;
+    column-gap:10px !important;
+    padding:10px 12px !important;
+    border:1px solid #1f3f5e !important;
+    border-radius:10px !important;
+    background:#0d2238 !important;
+    text-align:start !important;
+}
+
+.ppd-page .ppd-stability-icon{
+    grid-column:1 !important;
+    grid-row:1 / span 2 !important;
+    width:36px !important;
+    height:36px !important;
+    margin:0 !important;
+    border-radius:9px !important;
+}
+
+.ppd-page .ppd-stability strong{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    font-size:11px !important;
+    text-align:start !important;
+}
+
+.ppd-page .ppd-stability p{
+    grid-column:2 !important;
+    grid-row:2 !important;
+    max-width:none !important;
+    margin:3px 0 0 !important;
+    font-size:8.5px !important;
+    line-height:1.45 !important;
+    text-align:start !important;
+}
+
+/* Keep data rows parallel */
+.ppd-page .ppd-v8-gender-row,
+.ppd-page .ppd-turnover-summary > div{
+    height:40px !important;
+    min-height:40px !important;
+}
+
+/* ---------------------------------------------------------
+   2) Gender empty message: quieter, same family as detail rows
+   --------------------------------------------------------- */
+
+.ppd-page .ppd-v8-gender-note{
+    height:34px !important;
+    min-height:34px !important;
+    margin:4px 22px 14px !important;
+    padding:0 12px !important;
+    border:1px solid #1f3f5e !important;
+    border-radius:9px !important;
+    background:#0d2238 !important;
+    color:#8fa5be !important;
+    font-size:9px !important;
+    font-weight:700 !important;
+}
+
+/* ---------------------------------------------------------
+   3) Compact lower charts: remove excessive empty vertical space
+   --------------------------------------------------------- */
+
+.ppd-page .ppd-age-card,
+.ppd-page .ppd-tenure-card{
+    height:214px !important;
+    min-height:214px !important;
+    max-height:214px !important;
+}
+
+.ppd-page .ppd-column-chart{
+    min-height:0 !important;
+    height:158px !important;
+    padding:10px 18px 8px !important;
+    align-items:end !important;
+}
+
+.ppd-page .ppd-chart-item{
+    height:104px !important;
+    grid-template-rows:16px 1fr 28px !important;
+}
+
+.ppd-page .ppd-column-chart::before{
+    top:30% !important;
+}
+
+.ppd-page .ppd-column-chart::after{
+    top:61% !important;
+}
+
+.ppd-page .ppd-chart-column{
+    width:min(44px,60%) !important;
+}
+
+/* ---------------------------------------------------------
+   4) Narrow-screen account menu:
+      turn the loose dropdown into a deliberate floating sheet
+   --------------------------------------------------------- */
+
+@media (max-width:900px){
+
+    /* Dim content under the open menu so it no longer reads as accidental overlap. */
+    .zy-user-menu:has(.zy-user-menu__trigger[aria-expanded="true"])::before{
+        content:"" !important;
+        position:fixed !important;
+        inset:68px 0 0 0 !important;
+        z-index:3990 !important;
+        background:rgba(4,10,18,.52) !important;
+        backdrop-filter:blur(2px) !important;
+        pointer-events:none !important;
+    }
+
+    .zy-user-menu__panel{
+        position:fixed !important;
+        top:76px !important;
+        left:14px !important;
+        right:auto !important;
+        inset-inline-start:auto !important;
+        inset-inline-end:auto !important;
+        z-index:4000 !important;
+
+        width:min(286px,calc(100vw - 28px)) !important;
+        max-height:calc(100vh - 90px) !important;
+        overflow:auto !important;
+
+        border:1px solid #2a4059 !important;
+        border-radius:14px !important;
+        background:#101c2d !important;
+        box-shadow:0 22px 50px rgba(0,0,0,.42) !important;
+    }
+
+    /* Keep the topbar trigger visually attached to the sheet. */
+    .zy-user-menu__trigger[aria-expanded="true"]{
+        background:#13243a !important;
+        box-shadow:0 0 0 2px rgba(76,151,220,.18) !important;
+    }
+
+    /* Hero becomes single-column at narrow width; the period selector
+       moves under the title rather than sitting directly below account controls. */
+    .ppd-page .ppd-hero-content{
+        grid-template-columns:1fr !important;
+        gap:14px !important;
+    }
+
+    .ppd-page .ppd-title-block,
+    .ppd-page .ppd-v8-date-wrap{
+        grid-column:1 !important;
+    }
+
+    .ppd-page .ppd-v8-date-wrap{
+        justify-content:flex-start !important;
+    }
+
+    .ppd-page .ppd-main-grid,
+    .ppd-page .ppd-lower-grid{
+        grid-template-columns:1fr !important;
+        grid-template-areas:none !important;
+    }
+
+    .ppd-page .ppd-v8-gender-card,
+    .ppd-page .ppd-turnover-card,
+    .ppd-page .ppd-age-card,
+    .ppd-page .ppd-tenure-card{
+        grid-area:auto !important;
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+    }
+}
+
+@media (max-width:620px){
+
+    .ppd-page .ppd-v8-gender-content{
+        grid-template-columns:1fr !important;
+        grid-template-areas:
+            "donut"
+            "legend" !important;
+        gap:14px !important;
+    }
+
+    .ppd-page .ppd-turnover-layout{
+        grid-template-columns:1fr !important;
+        grid-template-areas:
+            "gauge"
+            "summary"
+            "stability" !important;
+        gap:14px !important;
+    }
+
+    .ppd-page .ppd-stability{
+        grid-template-columns:36px minmax(0,1fr) !important;
+    }
+}
+
+
+/* =========================================================
+   V14 — REAL responsive account-menu flow fix
+   On narrow screens the menu participates in topbar layout,
+   so opening it PUSHES page content down instead of covering it.
+   ========================================================= */
+
+@media (max-width:980px){
+
+    /* Cancel the prior overlay treatment completely. */
+    .zy-user-menu:has(.zy-user-menu__trigger[aria-expanded="true"])::before{
+        content:none !important;
+        display:none !important;
+    }
+
+    /* Topbar must grow naturally when the menu is open. */
+    .zynora-topbar{
+        overflow:visible !important;
+        height:auto !important;
+        min-height:auto !important;
+        align-items:flex-start !important;
+    }
+
+    .zynora-topbar-left{
+        display:flex !important;
+        align-items:flex-start !important;
+        flex-wrap:wrap !important;
+        gap:8px !important;
+        overflow:visible !important;
+    }
+
+    /* The account component becomes a vertical normal-flow stack. */
+    .zy-user-menu{
+        position:relative !important;
+        display:flex !important;
+        flex-direction:column !important;
+        align-items:flex-start !important;
+        flex:0 0 auto !important;
+        overflow:visible !important;
+    }
+
+    /* This is the key fix: NOT absolute/fixed anymore. */
+    .zy-user-menu__panel{
+        position:static !important;
+
+        top:auto !important;
+        right:auto !important;
+        bottom:auto !important;
+        left:auto !important;
+
+        inset:auto !important;
+        inset-block-start:auto !important;
+        inset-block-end:auto !important;
+        inset-inline-start:auto !important;
+        inset-inline-end:auto !important;
+
+        width:min(286px,calc(100vw - 32px)) !important;
+        max-width:calc(100vw - 32px) !important;
+        max-height:none !important;
+
+        margin:8px 0 0 !important;
+        overflow:hidden !important;
+
+        border:1px solid #2a4059 !important;
+        border-radius:14px !important;
+        background:#101c2d !important;
+        box-shadow:0 12px 28px rgba(0,0,0,.26) !important;
+
+        transform:none !important;
+        translate:none !important;
+    }
+
+    html[dir="rtl"] .zy-user-menu__panel,
+    html[dir="ltr"] .zy-user-menu__panel{
+        inset:auto !important;
+        right:auto !important;
+        left:auto !important;
+    }
+
+    /* Keep notification button aligned with the account trigger,
+       rather than vertically centering beside the expanded panel. */
+    .zy-bell-button{
+        align-self:flex-start !important;
+    }
+
+    /* No dim layer: content physically moves below the expanded topbar. */
+    body::before,
+    body::after{
+        pointer-events:none;
+    }
+}
+
+/* Very narrow screens: panel can occupy almost the full row cleanly. */
+@media (max-width:620px){
+    .zy-user-menu{
+        max-width:calc(100vw - 78px) !important;
+    }
+
+    .zy-user-menu__panel{
+        width:min(286px,calc(100vw - 28px)) !important;
+        max-width:calc(100vw - 28px) !important;
+    }
+}

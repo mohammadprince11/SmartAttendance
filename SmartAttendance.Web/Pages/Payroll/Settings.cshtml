@@ -182,6 +182,33 @@
         </form>
     </div>
 
+    @* ----- سياسة نهاية الخدمة ----- *@
+    <div class="ps-sec">
+        <h2>سياسة نهاية الخدمة</h2>
+        <p class="zyu-ba951531a5ea">
+            معدل المكافأة يُحفظ حسب الشركة، لكن أهلية الموظف والمضاعف يحددان صراحةً بكل تسوية.
+            الحساب التلقائي معطّل افتراضياً حتى تعتمد الشركة سياستها.
+        </p>
+        <form method="post" asp-page-handler="SaveEndOfServicePolicy"
+              asp-route-company-id="@Model.CompanyId" class="zyu-d8a13058d9f8">
+            <label class="zyu-1332d1129261">
+                <b>الحساب التلقائي</b>
+                <select name="eosAutoCalculationEnabled" class="zyu-b7e63b9b8145">
+                    <option value="false" selected="@(!Model.EndOfServiceCalculationPolicy.AutoCalculationEnabled)">معطّل — المكافأة تُدخل يدوياً</option>
+                    <option value="true" selected="@(Model.EndOfServiceCalculationPolicy.AutoCalculationEnabled)">مفعّل حسب سياسة الشركة</option>
+                </select>
+            </label>
+            <label class="zyu-1332d1129261">
+                <b>أسابيع المكافأة لكل سنة خدمة</b>
+                <input type="number" name="eosWeeksPerYear" min="0.01" max="52" step="0.01"
+                       value="@Model.EndOfServiceCalculationPolicy.WeeksPerYear.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                       class="zyu-91269935bd91" />
+                <span class="zyu-234ef25e545e">القيمة المرجعية للمادة 45 = أسبوعان/سنة؛ فعّلها بعد اعتماد سياسة الشركة.</span>
+            </label>
+            <button type="submit" class="zy-btn zy-btn--primary ps-btn">حفظ سياسة نهاية الخدمة</button>
+        </form>
+    </div>
+
     @* ----- السنة المالية (نظير «السنة المالية» بكيان) ----- *@
     <div class="ps-sec">
         <h2>السنة المالية</h2>

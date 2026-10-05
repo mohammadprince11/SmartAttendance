@@ -105,6 +105,27 @@ public sealed class PayrollAdjustmentRunContractTests
         Assert.Contains("RunTypeRetroactive => \"ISNULL(t.IsRetroactive,0)=1\"", source);
     }
 
+    [Fact]
+    public void Adjustment_lock_uses_run_period_and_lock_transition_is_atomic()
+    {
+        var root = FindRoot();
+        var runStore = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs"));
+        var txStore = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollTransactionStore.cs"));
+
+        Assert.Contains("فشل قفل الحركات يجب أن", runStore);
+        Assert.Contains("await using var transaction = await dbContext.Database.BeginTransactionAsync();", runStore);
+        Assert.Contains("ISNULL(r.RunType,N'Regular')<>N'Regular'", txStore);
+        Assert.Contains("AND t.[Year]=@Y AND t.[Month]=@M", txStore);
+        Assert.Contains("ISNULL(r.RunType,N'Regular')=N'Regular' AND", txStore);
+
+        var migrator = File.ReadAllText(Path.Combine(
+            root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs"));
+        Assert.Contains("20260920-11-payroll-reversal-idempotency", migrator);
+        Assert.Contains("UX_PayrollRuns_Reversal_OriginalRun", migrator);
+    }
+
     private static string FindRoot()
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());

@@ -1,0 +1,127 @@
+@page "/Platform"
+@model SmartAttendance.Web.Pages.Platform.IndexModel
+@{
+    Layout = "_PlatformLayout";
+    ViewData["Title"] = "المنظومات والتراخيص";
+}
+
+<section class="platform-pagehead">
+    <div>
+        <span class="platform-eyebrow">ZYNORA CONTROL CENTER</span>
+        <h1>المنظومات والتراخيص</h1>
+        <p>عرض مركزي لكل العملاء دون الدخول إلى بيانات موظفيهم.</p>
+    </div>
+    <a class="platform-button platform-button--primary" asp-page="/Platform/Tenants/Create">منظومة جديدة +</a>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+    <div class="platform-alert platform-alert--success">@Model.Message</div>
+}
+
+<section class="platform-kpis platform-kpis--5" aria-label="ملخص المنصة">
+    <article><span>إجمالي المنظومات</span><strong>@Model.Tenants.Count</strong></article>
+    <article><span>المنظومات المتاحة</span><strong>@Model.ActiveCount</strong></article>
+    <article><span>المنظومات المؤرشفة</span><strong>@Model.ArchivedCount</strong></article>
+    <article><span>إجمالي الموظفين</span><strong>@Model.TotalEmployees</strong></article>
+    <article><span>تنتهي خلال 30 يوماً</span><strong>@Model.ExpiringSoonCount</strong></article>
+</section>
+
+@if (Model.ExpiringTenants.Count > 0)
+{
+    <section class="platform-card platform-expiry-panel" aria-label="اشتراكات قريبة الانتهاء">
+        <header class="platform-card__header">
+            <div><h2>اشتراكات تحتاج متابعة</h2><p>منظومات فعالة ينتهي اشتراكها خلال الثلاثين يوماً القادمة.</p></div>
+        </header>
+        <div class="platform-expiry-list">
+            @foreach (var tenant in Model.ExpiringTenants)
+            {
+                var days = SmartAttendance.Web.Pages.Platform.IndexModel.DaysUntilExpiry(tenant);
+                <a asp-page="/Platform/Tenants/Details" asp-route-id="@tenant.Id">
+                    <span><strong>@tenant.Name</strong><small>الكود @tenant.Code — @tenant.ExpiresAtUtc?.ToString("yyyy/MM/dd")</small></span>
+                    <span class="platform-expiry-badge @(days <= 7 ? "platform-expiry-badge--urgent" : null)">@days يوم</span>
+                </a>
+            }
+        </div>
+    </section>
+}
+
+<section class="platform-card platform-table-card">
+    <header class="platform-card__header">
+        <div>
+            <h2>سجل المنظومات</h2>
+            <p>الكود لا يتكرر ولا يُعاد استخدامه بعد إنشاء المنظومة.</p>
+        </div>
+    </header>
+
+    <form method="get" class="platform-search" role="search">
+        <label for="platform-tenant-search">البحث عن منظومة أو شركة</label>
+        <div class="platform-search__controls">
+            <input id="platform-tenant-search"
+                   type="search"
+                   name="q"
+                   value="@Model.Search"
+                   maxlength="100"
+                   autocomplete="off"
+                   placeholder="اسم العميل، اسم الشركة أو الكود" />
+            <button class="platform-button platform-button--primary" type="submit">بحث</button>
+            @if (Model.HasSearch)
+            {
+                <a class="platform-button platform-button--ghost" asp-page="/Platform/Index">مسح البحث</a>
+            }
+        </div>
+        @if (Model.HasSearch)
+        {
+            <p class="platform-search__result">عدد النتائج: <strong>@Model.Tenants.Count</strong></p>
+        }
+    </form>
+
+    <div class="platform-table-wrap">
+        <table class="platform-table">
+            <thead>
+                <tr>
+                    <th>الكود</th>
+                    <th>العميل</th>
+                    <th>الاستخدام</th>
+                    <th>انتهاء اللايسنس</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Tenants.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="platform-table__empty">
+                            لا توجد منظومة أو شركة مطابقة لعبارة البحث.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var tenant in Model.Tenants)
+                    {
+                        <tr>
+                            <td><span class="platform-code">@tenant.Code</span></td>
+                            <td>
+                                <strong>@tenant.Name</strong>
+                                <small>@tenant.CompanyCount شركة</small>
+                            </td>
+                            <td>
+                                <span>@tenant.EmployeeCount / @tenant.MaxEmployees موظف</span>
+                                <small>@tenant.DeviceCount / @tenant.MaxDevices جهاز</small>
+                            </td>
+                            <td>@(tenant.ExpiresAtUtc?.ToString("yyyy/MM/dd") ?? "دائم")</td>
+                            <td>
+                                <span class="platform-status @(!tenant.IsDeleted && tenant.IsActive ? "platform-status--active" : "platform-status--blocked")">
+                                    @(tenant.IsDeleted ? "مؤرشفة" : tenant.IsActive ? tenant.EffectiveStatus : "موقوفة")
+                                </span>
+                            </td>
+                            <td><a class="platform-link" asp-page="/Platform/Tenants/Details" asp-route-id="@tenant.Id">إدارة</a></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

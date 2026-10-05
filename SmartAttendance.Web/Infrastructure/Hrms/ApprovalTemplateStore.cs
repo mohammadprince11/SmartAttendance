@@ -442,13 +442,11 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
                 if(requestId is not >0) amountOk=false;
                 else
                 {
-                    var amount=(await HrmsDatabase.QueryAsync(dbContext,"""
-DECLARE @Amount decimal(18,2)=NULL;
-IF OBJECT_ID('FinancialRequestDetails','U') IS NOT NULL
- EXEC sp_executesql N'SELECT @Out=Amount FROM FinancialRequestDetails WHERE RequestId=@RequestId',N'@RequestId int,@Out decimal(18,2) OUTPUT',@RequestId=@Id,@Out=@Amount OUTPUT;
-SELECT @Amount;
-""",command=>HrmsDatabase.AddParameter(command,"@Id",requestId.Value),reader=>reader.IsDBNull(0)?(decimal?)null:reader.GetDecimal(0))).Single();
-                    amountOk=amount.HasValue&&(!template.CondMinAmount.HasValue||amount>=template.CondMinAmount)&&(!template.CondMaxAmount.HasValue||amount<=template.CondMaxAmount);
+                    var requestValue = await ResolveNumericRequestValueAsync(
+                        dbContext, requestType, requestId.Value);
+                    amountOk=requestValue.HasValue
+                        && (!template.CondMinAmount.HasValue||requestValue>=template.CondMinAmount)
+                        && (!template.CondMaxAmount.HasValue||requestValue<=template.CondMaxAmount);
                 }
             }
             var changedFieldOk=true;
@@ -466,6 +464,35 @@ SELECT @Found;
             if (branchOk && departmentOk && workTypeOk&&amountOk&&changedFieldOk) return template;
         }
         return null;
+    }
+
+    public static async Task<decimal?> ResolveNumericRequestValueAsync(
+        ApplicationDbContext dbContext,
+        string requestType,
+        int requestId)
+    {
+        if (requestId <= 0) return null;
+
+        if (requestType.Equals("LeaveRequest", StringComparison.OrdinalIgnoreCase)
+            || requestType.Equals("ExitPermission", StringComparison.OrdinalIgnoreCase))
+        {
+            return await HrmsDatabase.ScalarAsync<decimal?>(
+                dbContext,
+                "SELECT CAST(DaysCount AS decimal(18,2)) FROM SelfServiceRequests WHERE Id=@Id;",
+                command => HrmsDatabase.AddParameter(command, "@Id", requestId));
+        }
+
+        return (await HrmsDatabase.QueryAsync(
+            dbContext,
+            """
+DECLARE @Amount decimal(18,2)=NULL;
+IF OBJECT_ID('FinancialRequestDetails','U') IS NOT NULL
+ EXEC sp_executesql N'SELECT @Out=Amount FROM FinancialRequestDetails WHERE RequestId=@RequestId',
+ N'@RequestId int,@Out decimal(18,2) OUTPUT',@RequestId=@Id,@Out=@Amount OUTPUT;
+SELECT @Amount;
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", requestId),
+            reader => reader.IsDBNull(0) ? (decimal?)null : reader.GetDecimal(0))).Single();
     }
 
     private static TemplateRow ReadTemplate(System.Data.Common.DbDataReader reader) => new()

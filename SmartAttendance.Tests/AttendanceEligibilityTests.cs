@@ -151,4 +151,34 @@ public class AttendanceEligibilityTests
         Assert.False(PeriodRuleStore.IsDayDerivedMetric("AbsentDays"));
         Assert.Contains(PeriodRuleStore.Metrics, m => m.Key == "ConsecutiveAbsentDays");
     }
+
+    [Theory]
+    [InlineData("09:30", false)]
+    [InlineData("09:31", true)]
+    [InlineData("10:00", true)]
+    [InlineData("09:29", false)]
+    public void CheckInAfter0930Rule_MatchesStrictlyAfterCutoff(string checkIn, bool shouldMatch)
+    {
+        var rule = new ShiftRuleStore.ShiftRule
+        {
+            ConditionField = "CheckIn",
+            Comparison = "After",
+            ValueKind = "Time",
+            ValueTime = "09:30",
+            ValueAnchor = "Same",
+            ActionType = "Violation"
+        };
+        var date = new DateOnly(2026, 9, 20);
+        var day = new DayAttendanceStore.DayRow
+        {
+            WorkDate = date,
+            DayKind = "Work",
+            CheckIn = date.ToDateTime(TimeOnly.Parse(checkIn)),
+            Status = "Late"
+        };
+
+        var result = ShiftRuleStore.Evaluate(rule, day, shiftDay: null);
+
+        Assert.Equal(shouldMatch, result is not null);
+    }
 }

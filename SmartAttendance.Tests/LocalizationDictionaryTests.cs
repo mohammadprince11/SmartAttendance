@@ -146,7 +146,8 @@ public sealed class LocalizationDictionaryTests
         Assert.Contains("asp-page-handler=\"Save\"", page, StringComparison.Ordinal);
         Assert.Contains("asp-page-handler=\"AutoTranslate\"", page, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Settings/Dictionary\"", settings, StringComparison.Ordinal);
-        Assert.Contains("asp-page=\"/Settings/Dictionary\"", layout, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"/Settings/Index\"", layout, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page=\"/Settings/Dictionary\"", layout, StringComparison.Ordinal);
         Assert.Contains("AddSingleton<ILocalizationDictionaryService, LocalizationDictionaryService>", program, StringComparison.Ordinal);
         Assert.Contains("AddHttpClient<IAutomaticTextTranslator, AzureAutomaticTextTranslator>", program, StringComparison.Ordinal);
         Assert.Contains("UseMiddleware<DynamicDictionaryCultureMiddleware>", program, StringComparison.Ordinal);

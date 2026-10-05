@@ -2776,6 +2776,1147 @@ BEGIN CATCH
     THROW;
 END CATCH;
 """),
+
+        // Company-scoped leave balance policy + durable catalog identity on requests.
+        new(
+            "20260917-02-company-leave-policies",
+            """
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestTypeId') IS NULL
+        ALTER TABLE SelfServiceRequests ADD RequestTypeId int NULL;
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('SelfServiceRequests') AND name='IX_SelfServiceRequests_RequestTypeId')
+        CREATE INDEX IX_SelfServiceRequests_RequestTypeId ON SelfServiceRequests(RequestTypeId,EmployeeId,Status,FromDate);
+END;
+
+IF OBJECT_ID('CompanyLeavePolicies','U') IS NULL
+BEGIN
+    CREATE TABLE CompanyLeavePolicies
+    (
+        Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyLeavePolicies PRIMARY KEY,
+        CompanyId int NOT NULL,
+        RequestTypeId int NOT NULL,
+        RequiresBalance bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_RequiresBalance DEFAULT(0),
+        EntitlementDays decimal(9,4) NULL,
+        AllowNegative bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_AllowNegative DEFAULT(0),
+        BalanceSourceRequestTypeId int NULL,
+        HoursPerDay decimal(5,2) NOT NULL CONSTRAINT DF_CompanyLeavePolicies_HoursPerDay DEFAULT(8),
+        CreatedAt datetime2 NOT NULL CONSTRAINT DF_CompanyLeavePolicies_CreatedAt DEFAULT(SYSUTCDATETIME()),
+        CreatedBy nvarchar(150) NULL,
+        UpdatedAt datetime2 NULL,
+        UpdatedBy nvarchar(150) NULL
+    );
+    CREATE UNIQUE INDEX UX_CompanyLeavePolicies_CompanyType
+        ON CompanyLeavePolicies(CompanyId,RequestTypeId);
+    CREATE INDEX IX_CompanyLeavePolicies_BalanceSource
+        ON CompanyLeavePolicies(CompanyId,BalanceSourceRequestTypeId);
+END;
+"""),
+
+        // Reconcile stale RequestSource constraints from older databases.
+        // Existing rows are normalized before the canonical constraint is recreated.
+        new(
+            "20260917-03-request-source-constraint-reconcile",
+            """
+IF OBJECT_ID('SelfServiceRequests','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('SelfServiceRequests','RequestSource') IS NULL
+        ALTER TABLE SelfServiceRequests ADD RequestSource nvarchar(20) NOT NULL
+            CONSTRAINT DF_SelfServiceRequests_RequestSource_Reconcile3 DEFAULT(N'Legacy');
+
+    UPDATE SelfServiceRequests
+    SET RequestSource = N'Legacy'
+    WHERE RequestSource IS NULL
+       OR RequestSource NOT IN (N'SelfService', N'Admin', N'Legacy');
+
+    IF EXISTS (
+        SELECT 1 FROM sys.check_constraints
+        WHERE parent_object_id = OBJECT_ID('SelfServiceRequests')
+          AND name = 'CK_SelfServiceRequests_RequestSource')
+        ALTER TABLE SelfServiceRequests DROP CONSTRAINT CK_SelfServiceRequests_RequestSource;
+
+    ALTER TABLE SelfServiceRequests WITH CHECK ADD CONSTRAINT CK_SelfServiceRequests_RequestSource
+        CHECK (RequestSource IN (N'SelfService', N'Admin', N'Legacy'));
+    ALTER TABLE SelfServiceRequests CHECK CONSTRAINT CK_SelfServiceRequests_RequestSource;
+END;
+"""),
+
+        // Stable request effects + company-specific leave policy engine.
+        new(
+            "20260917-04-company-leave-policy-engine",
+            """
+IF OBJECT_ID('RequestTypes','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('RequestTypes','EffectCode') IS NULL
+        ALTER TABLE RequestTypes ADD EffectCode nvarchar(40) NULL;
+
+    -- SQL Server compiles the batch before the ALTER above executes; use dynamic SQL
+    -- for statements that reference the newly-added EffectCode column.
+    EXEC sp_executesql N'UPDATE RequestTypes SET EffectCode =
+        CASE
+            WHEN Name LIKE N''%سنوي%'' THEN N''LeaveAnnual''
+            WHEN Name LIKE N''%مرض%'' THEN N''LeaveSick''
+            WHEN (Name LIKE N''%إجازة%'' OR Name LIKE N''%اجازة%'') AND PaidMode=N''unpaid'' THEN N''LeaveUnpaid''
+            WHEN Name LIKE N''%إجازة%'' OR Name LIKE N''%اجازة%'' THEN N''LeaveOther''
+            WHEN Name LIKE N''%مغادرة%'' OR Name LIKE N''%خروج%'' THEN N''ExitPermission''
+            WHEN Name LIKE N''%مهمة عمل%'' OR Name LIKE N''%رحلة عمل%'' THEN N''BusinessTrip''
+            WHEN Name LIKE N''%المنزل%'' OR Name LIKE N''%عن بعد%'' OR Name LIKE N''%عن بُعد%'' THEN N''WorkFromHome''
+            WHEN Name LIKE N''%إضافي%'' OR NameEn LIKE N''%Overtime%'' THEN N''Overtime''
+            WHEN Name LIKE N''%مناوبة%'' OR NameEn LIKE N''%Shift%'' THEN N''ShiftChange''
+            ELSE EffectCode
+        END
+    WHERE EffectCode IS NULL OR LTRIM(RTRIM(EffectCode))=N'''';';
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('RequestTypes') AND name='CK_RequestTypes_EffectCode')
+        ALTER TABLE RequestTypes DROP CONSTRAINT CK_RequestTypes_EffectCode;
+    EXEC sp_executesql N'ALTER TABLE RequestTypes WITH CHECK ADD CONSTRAINT CK_RequestTypes_EffectCode CHECK
+    (EffectCode IS NULL OR EffectCode IN
+        (N''LeaveAnnual'',N''LeaveSick'',N''LeaveUnpaid'',N''LeaveOther'',N''ExitPermission'',N''BusinessTrip'',N''WorkFromHome'',N''Overtime'',N''ShiftChange''));';
+END;
+
+IF OBJECT_ID('CompanyLeavePolicies','U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('CompanyLeavePolicies','EntitlementDays') IS NOT NULL
+       AND COL_LENGTH('CompanyLeavePolicies','EntitlementAmount') IS NULL
+        EXEC sys.sp_rename N'dbo.CompanyLeavePolicies.EntitlementDays', N'EntitlementAmount', N'COLUMN';
+
+    IF COL_LENGTH('CompanyLeavePolicies','HoursPerDay') IS NOT NULL
+       AND COL_LENGTH('CompanyLeavePolicies','HoursPerDayOverride') IS NULL
+        EXEC sys.sp_rename N'dbo.CompanyLeavePolicies.HoursPerDay', N'HoursPerDayOverride', N'COLUMN';
+
+    IF COL_LENGTH('CompanyLeavePolicies','BalanceUnit') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD BalanceUnit nvarchar(10) NOT NULL CONSTRAINT DF_CompanyLeavePolicies_BalanceUnit DEFAULT(N'Days');
+    IF COL_LENGTH('CompanyLeavePolicies','NegativeLimitAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD NegativeLimitAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','MaxPerRequestAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD MaxPerRequestAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','MaxPerYearAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD MaxPerYearAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','MinimumNoticeDays') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD MinimumNoticeDays int NOT NULL CONSTRAINT DF_CompanyLeavePolicies_MinNotice DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','EligibilityDays') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD EligibilityDays int NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Eligibility DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','CarryForwardEnabled') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD CarryForwardEnabled bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_CarryForward DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','CarryForwardMaxAmount') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD CarryForwardMaxAmount decimal(9,4) NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','CarryForwardExpiryMonths') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD CarryForwardExpiryMonths int NULL;
+    IF COL_LENGTH('CompanyLeavePolicies','AccrualMethod') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD AccrualMethod nvarchar(20) NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Accrual DEFAULT(N'FullUpfront');
+    IF COL_LENGTH('CompanyLeavePolicies','ProrateOnHire') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD ProrateOnHire bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_ProrateHire DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','AllowRetroactive') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD AllowRetroactive bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Retro DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','ReasonRequired') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD ReasonRequired bit NOT NULL CONSTRAINT DF_CompanyLeavePolicies_Reason DEFAULT(0);
+    IF COL_LENGTH('CompanyLeavePolicies','AttachmentRequiredOverride') IS NULL
+        ALTER TABLE CompanyLeavePolicies ADD AttachmentRequiredOverride bit NULL;
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('CompanyLeavePolicies') AND name='CK_CompanyLeavePolicies_BalanceUnit')
+        ALTER TABLE CompanyLeavePolicies DROP CONSTRAINT CK_CompanyLeavePolicies_BalanceUnit;
+    EXEC sp_executesql N'ALTER TABLE CompanyLeavePolicies WITH CHECK ADD CONSTRAINT CK_CompanyLeavePolicies_BalanceUnit
+        CHECK(BalanceUnit IN(N''Days'',N''Hours''));';
+
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('CompanyLeavePolicies') AND name='CK_CompanyLeavePolicies_AccrualMethod')
+        ALTER TABLE CompanyLeavePolicies DROP CONSTRAINT CK_CompanyLeavePolicies_AccrualMethod;
+    EXEC sp_executesql N'ALTER TABLE CompanyLeavePolicies WITH CHECK ADD CONSTRAINT CK_CompanyLeavePolicies_AccrualMethod
+        CHECK(AccrualMethod IN(N''FullUpfront'',N''Monthly'',N''Daily''));';
+END;
+"""),
+
+        // People AI production closure: move the existing idempotent schema
+        // bootstrap under the controlled migration ledger. The SQL remains
+        // additive/upgrade-safe and is now auditable in __SchemaMigrations.
+        new(
+            PeopleAiSchema.FoundationMigrationId,
+            PeopleAiSchema.FoundationMigrationSql),
+
+        new(
+            PeopleAiSchema.DocumentProcessingContractMigrationId,
+            PeopleAiSchema.DocumentProcessingContractMigrationSql),
+
+        new(
+            PeopleAiSchema.CvIntelligenceMigrationId,
+            PeopleAiSchema.CvIntelligenceMigrationSql),
+
+        new(
+            "20260920-04-attendance-period-late-allowance",
+            """
+IF OBJECT_ID('PeriodRules', 'U') IS NOT NULL
+   AND COL_LENGTH('PeriodRules', 'AllowanceMinutes') IS NULL
+    ALTER TABLE PeriodRules ADD AllowanceMinutes int NOT NULL
+        CONSTRAINT DF_PeriodRules_AllowanceMinutes DEFAULT(0);
+"""),
+
+        new(
+            "20260920-05-attendance-late-compensation",
+            """
+IF OBJECT_ID('ShiftTypes', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('ShiftTypes','LateCompensationEnabled') IS NULL
+        ALTER TABLE ShiftTypes ADD LateCompensationEnabled bit NOT NULL CONSTRAINT DF_ST_LCE DEFAULT(0);
+    IF COL_LENGTH('ShiftTypes','LateCompensationEligibleUntil') IS NULL
+        ALTER TABLE ShiftTypes ADD LateCompensationEligibleUntil nvarchar(5) NULL;
+    IF COL_LENGTH('ShiftTypes','LateCompensationEndLimit') IS NULL
+        ALTER TABLE ShiftTypes ADD LateCompensationEndLimit nvarchar(5) NULL;
+END;
+"""),
+
+        new(
+            "20260920-06-attendance-policy-overrides",
+            """
+IF OBJECT_ID('AttendancePolicyOverrides', 'U') IS NULL
+BEGIN
+    CREATE TABLE AttendancePolicyOverrides
+    (
+        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        EmployeeId int NOT NULL,
+        WorkDate date NOT NULL,
+        PolicyKey nvarchar(80) NOT NULL,
+        OverrideStatus nvarchar(20) NOT NULL,
+        Reason nvarchar(300) NOT NULL CONSTRAINT DF_AttendancePolicyOverrides_Reason DEFAULT(N''),
+        GeneratedAt datetime2 NOT NULL CONSTRAINT DF_AttendancePolicyOverrides_GeneratedAt DEFAULT(SYSUTCDATETIME())
+    );
+    CREATE UNIQUE INDEX UX_AttendancePolicyOverrides_EmployeeDatePolicy
+        ON AttendancePolicyOverrides (EmployeeId, WorkDate, PolicyKey);
+    CREATE INDEX IX_AttendancePolicyOverrides_WorkDate
+        ON AttendancePolicyOverrides (WorkDate, EmployeeId);
+END;
+"""),
+
+        new(
+            "20260920-07-payroll-end-of-service-audit-snapshot",
+            """
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','GratuityCalculationMode') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityCalculationMode nvarchar(20) NOT NULL
+            CONSTRAINT DF_EOS_GratuityCalculationMode DEFAULT(N'Legacy');
+    IF COL_LENGTH('EmployeeEndOfService','GratuityEligible') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityEligible bit NOT NULL
+            CONSTRAINT DF_EOS_GratuityEligible DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityWeeksPerYear') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityWeeksPerYear decimal(9,4) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GratuityMultiplier') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityMultiplier decimal(9,4) NOT NULL
+            CONSTRAINT DF_EOS_GratuityMultiplier DEFAULT(1);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityBasisAmount') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityBasisAmount decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GratuityBasisAmount DEFAULT(0);
+
+    EXEC sp_executesql N'
+        UPDATE EmployeeEndOfService
+        SET GratuityEligible = CASE WHEN GratuityAmount > 0 THEN 1 ELSE 0 END,
+            GratuityBasisAmount = CASE WHEN GratuityBasisAmount = 0 THEN LastBasic ELSE GratuityBasisAmount END
+        WHERE GratuityCalculationMode = N''Legacy'';';
+END;
+"""),
+
+        new(
+            "20260920-08-payroll-eos-offcycle-link",
+            """
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollTransactionId int NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedAt') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedAt datetime2 NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedBy') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedBy nvarchar(150) NULL;
+
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NOT NULL
+       AND NOT EXISTS (
+            SELECT 1 FROM sys.indexes
+            WHERE object_id=OBJECT_ID('EmployeeEndOfService')
+              AND name='UX_EmployeeEndOfService_PayrollTransactionId')
+        EXEC sp_executesql N'
+            CREATE UNIQUE INDEX UX_EmployeeEndOfService_PayrollTransactionId
+                ON EmployeeEndOfService(PayrollTransactionId)
+                WHERE PayrollTransactionId IS NOT NULL;';
+END;
+"""),
+
+        new(
+            "20260920-09-payroll-loan-idempotency",
+            """
+IF OBJECT_ID('EmployeeLoans', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeLoans','RequestKey') IS NULL
+        ALTER TABLE EmployeeLoans ADD RequestKey nvarchar(64) NULL;
+
+    IF COL_LENGTH('EmployeeLoans','RequestKey') IS NOT NULL
+       AND NOT EXISTS (
+            SELECT 1 FROM sys.indexes
+            WHERE object_id=OBJECT_ID('EmployeeLoans')
+              AND name='UX_EmployeeLoans_RequestKey')
+        EXEC sp_executesql N'
+            CREATE UNIQUE INDEX UX_EmployeeLoans_RequestKey
+                ON EmployeeLoans(RequestKey)
+                WHERE RequestKey IS NOT NULL;';
+END;
+"""),
+
+        new(
+            "20260920-10-payroll-eos-termination-differences",
+            """
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','TaxWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TaxWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TaxDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','TaxDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_TaxDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GosiWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GosiDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_GosiDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TerminationDifferenceNet') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TerminationDifferenceNet decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TerminationDifferenceNet DEFAULT(0);
+END;
+"""),
+
+        new(
+            "20260920-11-payroll-reversal-idempotency",
+            """
+IF OBJECT_ID('PayrollRuns', 'U') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns','OriginalRunId') IS NOT NULL
+   AND COL_LENGTH('PayrollRuns','RunType') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT OriginalRunId
+        FROM PayrollRuns
+        WHERE OriginalRunId IS NOT NULL AND RunType=N'Reversal'
+        GROUP BY OriginalRunId
+        HAVING COUNT(*) > 1)
+        THROW 51000, 'Duplicate payroll reversal rows must be remediated before enabling the unique reversal guard.', 1;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id=OBJECT_ID('PayrollRuns')
+          AND name='UX_PayrollRuns_Reversal_OriginalRun')
+        EXEC sp_executesql N'
+            CREATE UNIQUE INDEX UX_PayrollRuns_Reversal_OriginalRun
+                ON PayrollRuns(OriginalRunId)
+                WHERE OriginalRunId IS NOT NULL AND RunType=N''Reversal'';';
+END;
+"""),
+
+        new(
+            "20260925-01-app-login-two-factor",
+            """
+IF OBJECT_ID('AppLoginUsers', 'U') IS NOT NULL
+   AND OBJECT_ID('AppLoginTwoFactor', 'U') IS NULL
+BEGIN
+    CREATE TABLE AppLoginTwoFactor (
+        LoginUserId int NOT NULL PRIMARY KEY,
+        IsEnabled bit NOT NULL CONSTRAINT DF_AppLoginTwoFactor_IsEnabled DEFAULT(0),
+        ActiveSecretProtected nvarchar(max) NULL,
+        PendingSecretProtected nvarchar(max) NULL,
+        RecoveryCodeHashesJson nvarchar(max) NULL,
+        EnabledAtUtc datetime2 NULL,
+        UpdatedAtUtc datetime2 NOT NULL CONSTRAINT DF_AppLoginTwoFactor_UpdatedAtUtc DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_AppLoginTwoFactor_AppLoginUsers
+            FOREIGN KEY (LoginUserId) REFERENCES AppLoginUsers(Id) ON DELETE CASCADE
+    );
+END;
+"""),
+
+        // فصل العملاء المستقلين: كود منظومة من أربعة أرقام يحدد المستأجر قبل
+        // اسم المستخدم. كل البيانات الحالية تُنسب بأمان إلى المستأجر الافتراضي
+        // 0001، ثم تصبح أسماء الدخول وأكواد الشركات فريدة داخل المستأجر فقط.
+        new(
+            "20261001-01-tenant-code-login",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.Tenants', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.Tenants
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY,
+            Code varchar(4) NOT NULL,
+            Name nvarchar(200) NOT NULL,
+            IsActive bit NOT NULL CONSTRAINT DF_Tenants_IsActive DEFAULT(1),
+            CreatedAt datetime2 NOT NULL,
+            UpdatedAt datetime2 NULL,
+            IsDeleted bit NOT NULL CONSTRAINT DF_Tenants_IsDeleted DEFAULT(0),
+            CONSTRAINT CK_Tenants_Code_FourDigits
+                CHECK (LEN(Code) = 4 AND Code NOT LIKE '%[^0-9]%')
+        );
+        CREATE UNIQUE INDEX IX_Tenants_Code ON dbo.Tenants(Code);
+    END;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Tenants WHERE Code = '0001')
+    BEGIN
+        INSERT INTO dbo.Tenants
+            (Code, Name, IsActive, CreatedAt, UpdatedAt, IsDeleted)
+        VALUES
+            ('0001', N'المنظومة الافتراضية', 1, SYSUTCDATETIME(), NULL, 0);
+    END;
+
+    DECLARE @DefaultTenantId int =
+        (SELECT TOP (1) Id FROM dbo.Tenants WHERE Code = '0001');
+
+    IF OBJECT_ID('dbo.Companies', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.Companies', 'TenantId') IS NULL
+            ALTER TABLE dbo.Companies ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.Companies SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.Companies')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.Companies ALTER COLUMN TenantId int NOT NULL;
+
+        IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Companies') AND name = 'IX_Companies_Code')
+            DROP INDEX IX_Companies_Code ON dbo.Companies;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Companies') AND name = 'IX_Companies_TenantId_Code')
+            CREATE UNIQUE INDEX IX_Companies_TenantId_Code ON dbo.Companies(TenantId, Code);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Companies_Tenants_TenantId')
+            ALTER TABLE dbo.Companies WITH CHECK ADD CONSTRAINT FK_Companies_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    IF OBJECT_ID('dbo.SystemUsers', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.SystemUsers', 'TenantId') IS NULL
+            ALTER TABLE dbo.SystemUsers ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.SystemUsers SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.SystemUsers')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.SystemUsers ALTER COLUMN TenantId int NOT NULL;
+
+        IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.SystemUsers') AND name = 'IX_SystemUsers_UserName')
+            DROP INDEX IX_SystemUsers_UserName ON dbo.SystemUsers;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.SystemUsers') AND name = 'IX_SystemUsers_TenantId_UserName')
+            CREATE UNIQUE INDEX IX_SystemUsers_TenantId_UserName ON dbo.SystemUsers(TenantId, UserName);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_SystemUsers_Tenants_TenantId')
+            ALTER TABLE dbo.SystemUsers WITH CHECK ADD CONSTRAINT FK_SystemUsers_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    IF OBJECT_ID('dbo.AppLoginUsers', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.AppLoginUsers', 'TenantId') IS NULL
+            ALTER TABLE dbo.AppLoginUsers ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.AppLoginUsers SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.AppLoginUsers')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.AppLoginUsers ALTER COLUMN TenantId int NOT NULL;
+
+        IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.AppLoginUsers') AND name = 'IX_AppLoginUsers_Username')
+            DROP INDEX IX_AppLoginUsers_Username ON dbo.AppLoginUsers;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.AppLoginUsers') AND name = 'IX_AppLoginUsers_TenantId_Username')
+            CREATE UNIQUE INDEX IX_AppLoginUsers_TenantId_Username ON dbo.AppLoginUsers(TenantId, Username);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_AppLoginUsers_Tenants_TenantId')
+            ALTER TABLE dbo.AppLoginUsers WITH CHECK ADD CONSTRAINT FK_AppLoginUsers_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    IF OBJECT_ID('dbo.ApiTokens', 'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH('dbo.ApiTokens', 'TenantId') IS NULL
+            ALTER TABLE dbo.ApiTokens ADD TenantId int NULL;
+
+        EXEC sp_executesql
+            N'UPDATE dbo.ApiTokens SET TenantId = @TenantId WHERE TenantId IS NULL;',
+            N'@TenantId int', @TenantId = @DefaultTenantId;
+
+        IF EXISTS
+        (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID('dbo.ApiTokens')
+              AND name = 'TenantId' AND is_nullable = 1
+        )
+            ALTER TABLE dbo.ApiTokens ALTER COLUMN TenantId int NOT NULL;
+
+        IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_ApiTokens_Tenants_TenantId')
+            ALTER TABLE dbo.ApiTokens WITH CHECK ADD CONSTRAINT FK_ApiTokens_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id);
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // بوابة مالك ZYNORA مستقلة عن حسابات العملاء: ملاك المنصة، لايسنس واحد
+        // لكل منظومة، وسجل تدقيق لا يمكن لمدير العميل الوصول إليه.
+        new(
+            "20261001-02-platform-portal-licenses",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.PlatformOwners', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.PlatformOwners
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PlatformOwners PRIMARY KEY,
+            Username nvarchar(100) NOT NULL,
+            NormalizedUsername nvarchar(100) NOT NULL,
+            DisplayName nvarchar(160) NOT NULL,
+            PasswordHash nvarchar(200) NOT NULL,
+            PasswordSalt nvarchar(200) NOT NULL,
+            IsActive bit NOT NULL CONSTRAINT DF_PlatformOwners_IsActive DEFAULT(1),
+            LastLoginAtUtc datetime2 NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_PlatformOwners_CreatedAtUtc DEFAULT(SYSUTCDATETIME()),
+            UpdatedAtUtc datetime2 NULL
+        );
+        CREATE UNIQUE INDEX UX_PlatformOwners_NormalizedUsername
+            ON dbo.PlatformOwners(NormalizedUsername);
+    END;
+
+    IF OBJECT_ID('dbo.TenantLicenses', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.TenantLicenses
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_TenantLicenses PRIMARY KEY,
+            TenantId int NOT NULL,
+            PlanCode nvarchar(60) NOT NULL,
+            Status nvarchar(20) NOT NULL,
+            StartsAtUtc datetime2 NOT NULL,
+            ExpiresAtUtc datetime2 NULL,
+            GraceEndsAtUtc datetime2 NULL,
+            MaxCompanies int NOT NULL,
+            MaxEmployees int NOT NULL,
+            MaxDevices int NOT NULL,
+            EnabledModulesCsv nvarchar(1000) NOT NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_TenantLicenses_CreatedAtUtc DEFAULT(SYSUTCDATETIME()),
+            UpdatedAtUtc datetime2 NULL,
+            Version rowversion NOT NULL,
+            CONSTRAINT FK_TenantLicenses_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+            CONSTRAINT CK_TenantLicenses_Status
+                CHECK (Status IN (N'Trial', N'Active', N'Suspended', N'Expired', N'Cancelled')),
+            CONSTRAINT CK_TenantLicenses_Limits
+                CHECK (MaxCompanies > 0 AND MaxEmployees > 0 AND MaxDevices >= 0),
+            CONSTRAINT CK_TenantLicenses_Dates
+                CHECK ((ExpiresAtUtc IS NULL OR ExpiresAtUtc >= StartsAtUtc)
+                   AND (GraceEndsAtUtc IS NULL OR ExpiresAtUtc IS NOT NULL AND GraceEndsAtUtc >= ExpiresAtUtc))
+        );
+        CREATE UNIQUE INDEX UX_TenantLicenses_TenantId ON dbo.TenantLicenses(TenantId);
+    END;
+
+    IF OBJECT_ID('dbo.PlatformAuditEvents', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.PlatformAuditEvents
+        (
+            Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_PlatformAuditEvents PRIMARY KEY,
+            ActorUsername nvarchar(100) NOT NULL,
+            ActionCode nvarchar(80) NOT NULL,
+            TargetType nvarchar(80) NOT NULL,
+            TargetKey nvarchar(120) NULL,
+            Details nvarchar(1000) NULL,
+            IpAddress nvarchar(80) NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_PlatformAuditEvents_CreatedAtUtc DEFAULT(SYSUTCDATETIME())
+        );
+        CREATE INDEX IX_PlatformAuditEvents_CreatedAtUtc
+            ON dbo.PlatformAuditEvents(CreatedAtUtc DESC);
+    END;
+
+    INSERT INTO dbo.TenantLicenses
+        (TenantId, PlanCode, Status, StartsAtUtc, ExpiresAtUtc, GraceEndsAtUtc,
+         MaxCompanies, MaxEmployees, MaxDevices, EnabledModulesCsv, CreatedAtUtc)
+    SELECT t.Id, N'Legacy', N'Active', t.CreatedAt, NULL, NULL,
+           100, 100000, 10000,
+           N'Attendance,CoreHR,Mobile,Payroll,PeopleAI,Performance,SelfService',
+           SYSUTCDATETIME()
+    FROM dbo.Tenants t
+    WHERE NOT EXISTS
+    (
+        SELECT 1 FROM dbo.TenantLicenses license WHERE license.TenantId = t.Id
+    );
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // حدود اللايسنس تُفرض داخل SQL أيضاً، لا في زر الواجهة وحده. بهذا تمر
+        // صفحات الإنشاء والاستيراد والـAPI والحفظ المباشر من بوابة واحدة ذرّية.
+        // applock بمعاملة الكتابة يمنع عمليتين متزامنتين من اجتياز count ثم تجاوز الحد.
+        new(
+            "20261001-03-license-capacity-guards",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.TenantLicenses', 'U') IS NULL
+        THROW 51040, 'TenantLicenses is missing. Apply the platform license migration first.', 1;
+
+    EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TR_LicenseCapacity_Companies
+ON dbo.Companies
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    DECLARE @lockResult int;
+    EXEC @lockResult = sys.sp_getapplock
+        @Resource = N''ZYNORA.LicenseCapacity'',
+        @LockMode = N''Exclusive'',
+        @LockOwner = N''Transaction'',
+        @LockTimeout = 15000;
+    IF @lockResult < 0 THROW 51040, ''Could not acquire the license capacity lock.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM (SELECT DISTINCT TenantId FROM inserted) affected
+        LEFT JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        WHERE license.TenantId IS NULL
+    )
+        THROW 51040, ''A tenant license is required before creating company data.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM (SELECT DISTINCT TenantId FROM inserted) affected
+        INNER JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        CROSS APPLY
+        (
+            SELECT COUNT_BIG(*) AS UsedCount
+            FROM dbo.Companies company
+            WHERE company.TenantId = affected.TenantId AND company.IsDeleted = 0
+        ) usage
+        WHERE usage.UsedCount > license.MaxCompanies
+    )
+        THROW 51041, ''The licensed company limit has been reached.'', 1;
+END;');
+
+    EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TR_LicenseCapacity_Employees
+ON dbo.Employees
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    DECLARE @lockResult int;
+    EXEC @lockResult = sys.sp_getapplock
+        @Resource = N''ZYNORA.LicenseCapacity'',
+        @LockMode = N''Exclusive'',
+        @LockOwner = N''Transaction'',
+        @LockTimeout = 15000;
+    IF @lockResult < 0 THROW 51040, ''Could not acquire the license capacity lock.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted employee
+            LEFT JOIN dbo.Branches branch ON branch.Id = employee.BranchId
+            INNER JOIN dbo.Companies company
+                ON company.Id = COALESCE(employee.CompanyId, branch.CompanyId)
+        ) affected
+        LEFT JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        WHERE license.TenantId IS NULL
+    )
+        THROW 51040, ''A tenant license is required before creating employee data.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted employee
+            LEFT JOIN dbo.Branches branch ON branch.Id = employee.BranchId
+            INNER JOIN dbo.Companies company
+                ON company.Id = COALESCE(employee.CompanyId, branch.CompanyId)
+        ) affected
+        INNER JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        CROSS APPLY
+        (
+            SELECT COUNT_BIG(*) AS UsedCount
+            FROM dbo.Employees currentEmployee
+            LEFT JOIN dbo.Branches currentBranch ON currentBranch.Id = currentEmployee.BranchId
+            INNER JOIN dbo.Companies currentCompany
+                ON currentCompany.Id = COALESCE(currentEmployee.CompanyId, currentBranch.CompanyId)
+            WHERE currentCompany.TenantId = affected.TenantId
+              AND currentEmployee.IsDeleted = 0
+        ) usage
+        WHERE usage.UsedCount > license.MaxEmployees
+    )
+        THROW 51042, ''The licensed employee limit has been reached.'', 1;
+END;');
+
+    EXEC(N'
+CREATE OR ALTER TRIGGER dbo.TR_LicenseCapacity_Devices
+ON dbo.Devices
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+    DECLARE @lockResult int;
+    EXEC @lockResult = sys.sp_getapplock
+        @Resource = N''ZYNORA.LicenseCapacity'',
+        @LockMode = N''Exclusive'',
+        @LockOwner = N''Transaction'',
+        @LockTimeout = 15000;
+    IF @lockResult < 0 THROW 51040, ''Could not acquire the license capacity lock.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted device
+            INNER JOIN dbo.Branches branch ON branch.Id = device.BranchId
+            INNER JOIN dbo.Companies company ON company.Id = branch.CompanyId
+        ) affected
+        LEFT JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        WHERE license.TenantId IS NULL
+    )
+        THROW 51040, ''A tenant license is required before creating device data.'', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM
+        (
+            SELECT DISTINCT company.TenantId
+            FROM inserted device
+            INNER JOIN dbo.Branches branch ON branch.Id = device.BranchId
+            INNER JOIN dbo.Companies company ON company.Id = branch.CompanyId
+        ) affected
+        INNER JOIN dbo.TenantLicenses license ON license.TenantId = affected.TenantId
+        CROSS APPLY
+        (
+            SELECT COUNT_BIG(*) AS UsedCount
+            FROM dbo.Devices currentDevice
+            INNER JOIN dbo.Branches currentBranch ON currentBranch.Id = currentDevice.BranchId
+            INNER JOIN dbo.Companies currentCompany ON currentCompany.Id = currentBranch.CompanyId
+            WHERE currentCompany.TenantId = affected.TenantId
+              AND currentDevice.IsDeleted = 0
+              AND currentBranch.IsDeleted = 0
+        ) usage
+        WHERE usage.UsedCount > license.MaxDevices
+    )
+        THROW 51043, ''The licensed device limit has been reached.'', 1;
+END;');
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // سجل الاشتراكات والفواتير الخاص بمالك المنصة. التجديد لا يغيّر اللايسنس
+        // إلا داخل المعاملة نفسها التي تنشئ الفاتورة، ومفتاح idempotency يمنع
+        // تمديد الاشتراك مرتين عند إعادة إرسال الطلب.
+        new(
+            "20261001-04-platform-subscription-invoices",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.TenantLicenses', 'U') IS NULL
+        THROW 51050, 'TenantLicenses is missing. Apply the platform license migration first.', 1;
+
+    IF OBJECT_ID('dbo.PlatformSubscriptionInvoices', 'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.PlatformSubscriptionInvoices
+        (
+            Id bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_PlatformSubscriptionInvoices PRIMARY KEY,
+            TenantId int NOT NULL,
+            InvoiceNumber nvarchar(80) NOT NULL,
+            IdempotencyKey uniqueidentifier NOT NULL,
+            PeriodStartsAtUtc datetime2 NOT NULL,
+            PeriodEndsAtUtc datetime2 NOT NULL,
+            Months int NOT NULL,
+            GraceDays int NOT NULL,
+            Amount decimal(18,2) NOT NULL,
+            Currency nvarchar(3) NOT NULL,
+            PaymentMethod nvarchar(30) NOT NULL,
+            PaymentReference nvarchar(120) NULL,
+            Notes nvarchar(500) NULL,
+            Status nvarchar(20) NOT NULL,
+            PaidAtUtc datetime2 NOT NULL,
+            CreatedBy nvarchar(100) NOT NULL,
+            CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_PlatformSubscriptionInvoices_CreatedAtUtc DEFAULT(SYSUTCDATETIME()),
+            CONSTRAINT FK_PlatformSubscriptionInvoices_Tenants_TenantId
+                FOREIGN KEY (TenantId) REFERENCES dbo.Tenants(Id),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Period
+                CHECK (PeriodEndsAtUtc > PeriodStartsAtUtc),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Months
+                CHECK (Months BETWEEN 1 AND 60 AND GraceDays BETWEEN 0 AND 90),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Amount
+                CHECK (Amount >= 0),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Currency
+                CHECK (Currency IN (N'IQD', N'USD')),
+            CONSTRAINT CK_PlatformSubscriptionInvoices_Status
+                CHECK (Status IN (N'Paid', N'Voided'))
+        );
+
+        CREATE UNIQUE INDEX UX_PlatformSubscriptionInvoices_InvoiceNumber
+            ON dbo.PlatformSubscriptionInvoices(InvoiceNumber);
+        CREATE UNIQUE INDEX UX_PlatformSubscriptionInvoices_IdempotencyKey
+            ON dbo.PlatformSubscriptionInvoices(IdempotencyKey);
+        CREATE INDEX IX_PlatformSubscriptionInvoices_TenantDate
+            ON dbo.PlatformSubscriptionInvoices(TenantId, CreatedAtUtc DESC);
+    END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // ملف العميل التجاري الخاص بمالك المنصة. الحقول اختيارية للمستأجرين
+        // التاريخيين، بينما تفرض صفحة الإنشاء القيم التشغيلية على العملاء الجدد.
+        new(
+            "20261001-05-tenant-customer-profile",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.Tenants', 'U') IS NULL
+        THROW 51060, 'Tenants is missing. Apply the tenant-code migration first.', 1;
+
+    IF COL_LENGTH('dbo.Tenants', 'LegalName') IS NULL
+        ALTER TABLE dbo.Tenants ADD LegalName nvarchar(240) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ContactName') IS NULL
+        ALTER TABLE dbo.Tenants ADD ContactName nvarchar(160) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ContactEmail') IS NULL
+        ALTER TABLE dbo.Tenants ADD ContactEmail nvarchar(254) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ContactPhone') IS NULL
+        ALTER TABLE dbo.Tenants ADD ContactPhone nvarchar(40) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'Country') IS NULL
+        ALTER TABLE dbo.Tenants ADD Country nvarchar(100) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'Address') IS NULL
+        ALTER TABLE dbo.Tenants ADD Address nvarchar(500) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'TaxNumber') IS NULL
+        ALTER TABLE dbo.Tenants ADD TaxNumber nvarchar(80) NULL;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        // العمليات النهائية لصفحة المستأجر: نطاقات فريدة قابلة للتحقق، دورة إلغاء
+        // الفاتورة اليدوية، وأرشفة قابلة للاستعادة من دون حذف البيانات أو إعادة
+        // استخدام كود المستأجر.
+        new(
+            "20261001-06-platform-tenant-operations",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+BEGIN TRY
+    IF OBJECT_ID('dbo.Tenants', 'U') IS NULL
+        THROW 51070, 'Tenants is missing. Apply the tenant-code migration first.', 1;
+    IF OBJECT_ID('dbo.PlatformSubscriptionInvoices', 'U') IS NULL
+        THROW 51071, 'PlatformSubscriptionInvoices is missing. Apply the subscription migration first.', 1;
+
+    IF COL_LENGTH('dbo.Tenants', 'PortalSubdomain') IS NULL
+        ALTER TABLE dbo.Tenants ADD PortalSubdomain nvarchar(63) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'CustomDomain') IS NULL
+        ALTER TABLE dbo.Tenants ADD CustomDomain nvarchar(253) NULL;
+    IF COL_LENGTH('dbo.Tenants', 'DomainStatus') IS NULL
+        ALTER TABLE dbo.Tenants ADD DomainStatus nvarchar(20) NOT NULL
+            CONSTRAINT DF_Tenants_DomainStatus DEFAULT(N'NotConfigured');
+    IF COL_LENGTH('dbo.Tenants', 'ArchivedAtUtc') IS NULL
+        ALTER TABLE dbo.Tenants ADD ArchivedAtUtc datetime2 NULL;
+    IF COL_LENGTH('dbo.Tenants', 'ArchivedBy') IS NULL
+        ALTER TABLE dbo.Tenants ADD ArchivedBy nvarchar(100) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Tenants_DomainStatus')
+        EXEC sp_executesql N'ALTER TABLE dbo.Tenants ADD CONSTRAINT CK_Tenants_DomainStatus
+            CHECK (DomainStatus IN (N''NotConfigured'', N''Pending'', N''Verified'', N''Failed''));';
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Tenants') AND name = N'UX_Tenants_PortalSubdomain')
+        EXEC sp_executesql N'CREATE UNIQUE INDEX UX_Tenants_PortalSubdomain ON dbo.Tenants(PortalSubdomain)
+            WHERE PortalSubdomain IS NOT NULL;';
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Tenants') AND name = N'UX_Tenants_CustomDomain')
+        EXEC sp_executesql N'CREATE UNIQUE INDEX UX_Tenants_CustomDomain ON dbo.Tenants(CustomDomain)
+            WHERE CustomDomain IS NOT NULL;';
+
+    IF COL_LENGTH('dbo.PlatformSubscriptionInvoices', 'VoidedAtUtc') IS NULL
+        ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidedAtUtc datetime2 NULL;
+    IF COL_LENGTH('dbo.PlatformSubscriptionInvoices', 'VoidedBy') IS NULL
+        ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidedBy nvarchar(100) NULL;
+    IF COL_LENGTH('dbo.PlatformSubscriptionInvoices', 'VoidReason') IS NULL
+        ALTER TABLE dbo.PlatformSubscriptionInvoices ADD VoidReason nvarchar(500) NULL;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+        // Profile timelines read update history before the EmployeeUpdates page
+        // is opened. Earlier conditional upgrades never created the base tables.
+        new(
+            "20260902-01-employee-update-history",
+            """
+-- Migration: 20260902-01-employee-update-history
+-- Additive repair for fresh databases and older employee-update tables.
+-- No existing employee, update, or compensation records are modified.
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(N'dbo.EmployeeUpdateBatches', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.EmployeeUpdateBatches
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmployeeUpdateBatches PRIMARY KEY,
+            EmployeeId int NOT NULL,
+            SectionKey nvarchar(80) NOT NULL,
+            SectionName nvarchar(150) NOT NULL,
+            Status nvarchar(40) NOT NULL CONSTRAINT DF_EmployeeUpdateBatches_Status DEFAULT(N'Open'),
+            RequestedBy nvarchar(150) NULL,
+            RequestedAt datetime2 NOT NULL CONSTRAINT DF_EmployeeUpdateBatches_RequestedAt DEFAULT(SYSUTCDATETIME()),
+            EffectiveDate date NULL,
+            IsRetroactive bit NULL,
+            LockedBy nvarchar(150) NULL,
+            LockedAt datetime2 NULL,
+            Note nvarchar(max) NULL,
+            AttachmentName nvarchar(260) NULL,
+            AttachmentPath nvarchar(500) NULL
+        );
+    END;
+    ELSE
+    BEGIN
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'EffectiveDate') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD EffectiveDate date NULL;
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'IsRetroactive') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD IsRetroactive bit NULL;
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'AttachmentName') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD AttachmentName nvarchar(260) NULL;
+        IF COL_LENGTH('dbo.EmployeeUpdateBatches', 'AttachmentPath') IS NULL
+            ALTER TABLE dbo.EmployeeUpdateBatches ADD AttachmentPath nvarchar(500) NULL;
+    END;
+
+    IF OBJECT_ID(N'dbo.EmployeeUpdateChanges', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.EmployeeUpdateChanges
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmployeeUpdateChanges PRIMARY KEY,
+            BatchId int NOT NULL,
+            FieldKey nvarchar(100) NOT NULL,
+            FieldLabel nvarchar(150) NOT NULL,
+            OldValue nvarchar(max) NULL,
+            NewValue nvarchar(max) NULL
+        );
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.EmployeeUpdateBatches')
+          AND name = N'IX_EmployeeUpdateBatches_Employee_RequestedAt')
+        CREATE INDEX IX_EmployeeUpdateBatches_Employee_RequestedAt
+            ON dbo.EmployeeUpdateBatches(EmployeeId, RequestedAt DESC);
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.EmployeeUpdateChanges')
+          AND name = N'IX_EmployeeUpdateChanges_BatchId')
+        CREATE INDEX IX_EmployeeUpdateChanges_BatchId ON dbo.EmployeeUpdateChanges(BatchId);
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+        // CompanyLanguages and LocalizedEntityValues are intentionally excluded
+        // from the legacy EF snapshot. Their explicit migration must also run
+        // on the controlled startup path, before DataLanguages or employee reads.
+        new(
+            "20260902-02-company-data-localization",
+            """
+-- Migration: 20260902-02-company-data-localization
+-- Register the explicit localization schema in the controlled startup migration path.
+-- Compatible with the prior manual SQL/EF migration; no company or translation data is changed.
+SET XACT_ABORT ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    IF OBJECT_ID(N'dbo.Companies', N'U') IS NULL
+        THROW 51000, 'Company localization requires the Companies table. Apply the base schema first.', 1;
+
+    IF OBJECT_ID(N'dbo.CompanyLanguages', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.CompanyLanguages
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CompanyLanguages PRIMARY KEY,
+            CompanyId int NOT NULL,
+            CultureCode nvarchar(35) NOT NULL,
+            NativeName nvarchar(120) NOT NULL,
+            EnglishName nvarchar(120) NOT NULL,
+            Direction nvarchar(3) NOT NULL,
+            IsDefault bit NOT NULL,
+            IsRequired bit NOT NULL,
+            IsActive bit NOT NULL,
+            CreatedAt datetime2 NOT NULL,
+            UpdatedAt datetime2 NULL,
+            IsDeleted bit NOT NULL,
+            CreatedBy nvarchar(max) NULL,
+            UpdatedBy nvarchar(max) NULL,
+            CONSTRAINT FK_CompanyLanguages_Companies_CompanyId
+                FOREIGN KEY (CompanyId) REFERENCES dbo.Companies(Id) ON DELETE CASCADE,
+            CONSTRAINT CK_CompanyLanguages_Direction CHECK (Direction IN ('rtl', 'ltr'))
+        );
+    END;
+
+    IF OBJECT_ID(N'dbo.LocalizedEntityValues', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.LocalizedEntityValues
+        (
+            Id int IDENTITY(1,1) NOT NULL CONSTRAINT PK_LocalizedEntityValues PRIMARY KEY,
+            CompanyId int NOT NULL,
+            EntityType nvarchar(80) NOT NULL,
+            EntityId int NOT NULL,
+            FieldName nvarchar(80) NOT NULL,
+            CultureCode nvarchar(35) NOT NULL,
+            Value nvarchar(4000) NOT NULL,
+            TranslationStatus nvarchar(20) NOT NULL,
+            CreatedAt datetime2 NOT NULL,
+            UpdatedAt datetime2 NULL,
+            IsDeleted bit NOT NULL,
+            CreatedBy nvarchar(max) NULL,
+            UpdatedBy nvarchar(max) NULL,
+            CONSTRAINT FK_LocalizedEntityValues_Companies_CompanyId
+                FOREIGN KEY (CompanyId) REFERENCES dbo.Companies(Id) ON DELETE CASCADE,
+            CONSTRAINT CK_LocalizedEntityValues_Status
+                CHECK (TranslationStatus IN ('Manual', 'Machine', 'Reviewed'))
+        );
+    END;
+
+    -- Check indexes separately so a partial manual installation can be completed.
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.CompanyLanguages')
+          AND name = N'UX_CompanyLanguages_Company_Culture')
+        CREATE UNIQUE INDEX UX_CompanyLanguages_Company_Culture
+            ON dbo.CompanyLanguages(CompanyId, CultureCode);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.CompanyLanguages')
+          AND name = N'UX_CompanyLanguages_OneDefault')
+        CREATE UNIQUE INDEX UX_CompanyLanguages_OneDefault
+            ON dbo.CompanyLanguages(CompanyId)
+            WHERE IsDefault = 1 AND IsActive = 1 AND IsDeleted = 0;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.LocalizedEntityValues')
+          AND name = N'IX_LocalizedEntityValues_EntityCulture')
+        CREATE INDEX IX_LocalizedEntityValues_EntityCulture
+            ON dbo.LocalizedEntityValues(CompanyId, EntityType, EntityId, CultureCode);
+
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes
+        WHERE object_id = OBJECT_ID(N'dbo.LocalizedEntityValues')
+          AND name = N'UX_LocalizedEntityValues_FieldCulture')
+        CREATE UNIQUE INDEX UX_LocalizedEntityValues_FieldCulture
+            ON dbo.LocalizedEntityValues(CompanyId, EntityType, EntityId, FieldName, CultureCode);
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+"""),
+
+        new(
+            "20260929-01-employee-engagement-schema",
+            EmployeeEngagementSchema.MigrationSql),
+
+        new(
+            "20260929-02-approval-effect-jobs",
+            """
+IF OBJECT_ID('ApprovalEffectJobs', 'U') IS NULL
+BEGIN
+    CREATE TABLE ApprovalEffectJobs
+    (
+        RequestId int NOT NULL PRIMARY KEY,
+        Actor nvarchar(150) NOT NULL,
+        IpAddress nvarchar(80) NULL,
+        Attempts int NOT NULL CONSTRAINT DF_ApprovalEffectJobs_Attempts DEFAULT(0),
+        NextAttemptAtUtc datetime2 NOT NULL CONSTRAINT DF_ApprovalEffectJobs_NextAttempt DEFAULT(SYSUTCDATETIME()),
+        LockedUntilUtc datetime2 NULL,
+        LastError nvarchar(1000) NULL,
+        CompletedAtUtc datetime2 NULL,
+        CreatedAtUtc datetime2 NOT NULL CONSTRAINT DF_ApprovalEffectJobs_Created DEFAULT(SYSUTCDATETIME()),
+        UpdatedAtUtc datetime2 NOT NULL CONSTRAINT DF_ApprovalEffectJobs_Updated DEFAULT(SYSUTCDATETIME()),
+        CONSTRAINT FK_ApprovalEffectJobs_SelfServiceRequests
+            FOREIGN KEY (RequestId) REFERENCES SelfServiceRequests(Id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IX_ApprovalEffectJobs_Pending
+        ON ApprovalEffectJobs (CompletedAtUtc, NextAttemptAtUtc, LockedUntilUtc);
+END;
+"""),
     };
 
     /// <summary>

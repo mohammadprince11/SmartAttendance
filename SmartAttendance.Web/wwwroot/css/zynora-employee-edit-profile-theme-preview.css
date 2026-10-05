@@ -1243,3 +1243,213 @@ html:not([data-theme="light"])
         grid-template-columns: 1fr;
     }
 }
+/* ZYNORA_EDIT_IDENTITY_ALIGNMENT_SP19_START
+   Employees/Edit must visually belong to the same identity as Employees/Profile.
+   This final layer intentionally overrides the old Edit-only cyan/gold palette,
+   while preserving the existing layout and all business behavior.
+*/
+
+.zynora-profile-theme-v2 {
+    --ze-system-bg: var(--color-background, #0b1422);
+    --ze-system-surface: var(--color-surface, #0f1a2e);
+    --ze-system-surface-raised: var(--surface-raised, #132239);
+    --ze-system-input: var(--surface-input, var(--color-background, #0b1422));
+    --ze-system-border: var(--color-border, #22304a);
+    --ze-system-border-strong: var(--color-border-strong, #314561);
+    --ze-system-text: var(--color-text-primary, #f3f7fb);
+    --ze-system-muted: var(--color-text-secondary, #9aadc0);
+    --ze-system-primary: var(--brand-primary, var(--color-primary, #18aee8));
+    --ze-system-accent: var(--brand-accent, #d4b36a);
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-hero,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-summary,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-card {
+    border: 1px solid var(--ze-system-border) !important;
+    background:
+        radial-gradient(circle at 88% 8%,
+            color-mix(in srgb, var(--ze-system-primary) 10%, transparent),
+            transparent 34%),
+        var(--ze-system-surface) !important;
+    box-shadow: 0 10px 26px rgba(0,0,0,.16) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-hero {
+    background:
+        radial-gradient(circle at 88% 8%,
+            color-mix(in srgb, var(--ze-system-primary) 13%, transparent),
+            transparent 36%),
+        linear-gradient(135deg, #0b2035, #0a192b) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-hero > div:first-child > span,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-card-head > div > span,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-card-head span {
+    color: var(--ze-system-muted) !important;
+    background: color-mix(in srgb, var(--ze-system-primary) 5%, transparent) !important;
+    border-color: var(--ze-system-border) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-hero h1,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-summary h2,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-card-head h2,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-photo-info strong {
+    color: var(--ze-system-text) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-hero p,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-card-head p,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-photo-info span,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-photo-info small {
+    color: var(--ze-system-muted) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-summary p span {
+    background: var(--ze-system-bg) !important;
+    border-color: var(--ze-system-border) !important;
+    color: var(--ze-system-muted) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-summary p strong {
+    color: var(--ze-system-text) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-summary img,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-photo-box {
+    border-color: color-mix(in srgb, var(--ze-system-primary) 55%, var(--ze-system-border)) !important;
+    box-shadow: 0 10px 24px rgba(8,20,38,.18) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-card-head,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-signature-end-section {
+    border-color: var(--ze-system-border) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-photo-status-row,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-final-actions,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-signature-end-section .nxr-edit-signature-card,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-language-card {
+    border-color: var(--ze-system-border) !important;
+    background: color-mix(in srgb, var(--ze-system-bg) 68%, transparent) !important;
+    box-shadow: none !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form label,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field label,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-status-near-photo > label {
+    color: var(--ze-system-muted) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field select,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field textarea,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-search-input,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxos__button,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcs-trigger,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__button,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-status-near-photo select {
+    background: var(--ze-system-input) !important;
+    background-color: var(--ze-system-input) !important;
+    border-color: var(--ze-system-border-strong) !important;
+    color: var(--ze-system-text) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form input::placeholder,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form textarea::placeholder {
+    color: var(--ze-system-muted) !important;
+    opacity: .75 !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field input:not([type="file"]):focus,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field select:focus,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-edit-field textarea:focus,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxr-search-input:focus,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxos__button:focus,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcs-trigger:focus,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__button:focus {
+    border-color: var(--ze-system-primary) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ze-system-primary) 15%, transparent) !important;
+}
+
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxcs-panel,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxos__menu,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxr-search-dropdown,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxcal__panel {
+    background: var(--ze-system-surface) !important;
+    border-color: var(--ze-system-border) !important;
+    box-shadow: 0 18px 42px rgba(0,0,0,.28) !important;
+}
+
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxcs-option,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxos__option,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxr-option {
+    color: var(--ze-system-text) !important;
+    border-color: var(--ze-system-border) !important;
+}
+
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxcs-option:hover,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxcs-option.is-selected,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxos__option:hover,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxos__option.is-hovered,
+html:not([data-theme="light"]) body:has(.zynora-profile-theme-v2) .nxr-option:hover {
+    background: color-mix(in srgb, var(--ze-system-primary) 10%, var(--ze-system-surface)) !important;
+    border-color: color-mix(in srgb, var(--ze-system-primary) 30%, var(--ze-system-border)) !important;
+    color: var(--ze-system-text) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__nav,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__period-button,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__day,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__action {
+    background: var(--ze-system-surface-raised) !important;
+    border-color: var(--ze-system-border) !important;
+    color: var(--ze-system-text) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form .nxcal__day.is-selected {
+    background: var(--ze-system-primary) !important;
+    border-color: var(--ze-system-primary) !important;
+    color: var(--text-on-primary, #ffffff) !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-btn.primary,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 #employee-edit-form button[type="submit"]:not(.danger) {
+    background: var(--ze-system-primary) !important;
+    border-color: var(--ze-system-primary) !important;
+    color: var(--text-on-primary, #ffffff) !important;
+    box-shadow: none !important;
+}
+
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-btn.secondary,
+html:not([data-theme="light"]) body .zynora-profile-theme-v2 .nxr-edit-btn.ghost {
+    background: var(--ze-system-surface-raised) !important;
+    border-color: var(--ze-system-border) !important;
+    color: var(--ze-system-text) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-final-hero,
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-final-summary,
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-final-card {
+    background: var(--ze-system-surface) !important;
+    border-color: var(--ze-system-border) !important;
+    color: var(--ze-system-text) !important;
+    box-shadow: 0 8px 20px rgba(8,20,38,.055) !important;
+}
+
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-field label,
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-status-near-photo > label {
+    color: var(--ze-system-muted) !important;
+}
+
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-field select,
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-edit-field textarea,
+html[data-theme="light"] body .zynora-profile-theme-v2 .nxr-search-input {
+    background: var(--ze-system-input) !important;
+    border-color: var(--ze-system-border) !important;
+    color: var(--ze-system-text) !important;
+}
+
+/* ZYNORA_EDIT_IDENTITY_ALIGNMENT_SP19_END */

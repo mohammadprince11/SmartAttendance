@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Domain.Entities;
+using SmartAttendance.Domain.Enums;
 using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Notifications;
@@ -46,6 +47,38 @@ public static class EmployeeNotificationStore
             .ToListAsync(ct);
 
         return new InboxView(unread, items);
+    }
+
+    /// <summary>ينشئ إشعار دورة طلب لموظف واحد فوق صندوق الإشعارات الحالي.</summary>
+    public static async Task<int> CreateRequestWorkflowAsync(
+        ApplicationDbContext db, int employeeId, string title, string message, string url,
+        CancellationToken ct = default)
+    {
+        if (employeeId <= 0 || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
+        {
+            return 0;
+        }
+
+        var now = DateTime.UtcNow;
+        var notification = new UserNotification
+        {
+            NotificationType = UserNotificationType.RequestWorkflow,
+            TitleAr = title.Trim(),
+            MessageAr = message.Trim(),
+            Url = string.IsNullOrWhiteSpace(url) ? null : url.Trim(),
+            CreatedAtUtc = now,
+            CreatedAt = now
+        };
+        notification.Recipients.Add(new UserNotificationRecipient
+        {
+            EmployeeId = employeeId,
+            IsRead = false,
+            CreatedAt = now
+        });
+
+        db.Set<UserNotification>().Add(notification);
+        await db.SaveChangesAsync(ct);
+        return notification.Id;
     }
 
     /// <summary>يعلّم إشعاراً واحداً مقروءاً لهذا الموظف فقط. يعيد عدد الصفوف المتأثرة.</summary>

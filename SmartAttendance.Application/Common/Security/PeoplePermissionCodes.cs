@@ -36,6 +36,13 @@ public static class PeoplePermissionCodes
     public const string ViewCompensation = "People.ViewCompensation";
     public const string EditCompensation = "People.EditCompensation";
 
+    // People AI is assistive only. Processing and search are explicit grants;
+    // original-document verification remains a normal HR business permission.
+    public const string AiUse = "People.AI.Use";
+    public const string AiProcessDocuments = "People.AI.ProcessDocuments";
+    public const string AiSearch = "People.AI.Search";
+    public const string VerifyOriginalDocument = "People.VerifyOriginalDocument";
+
     public static IReadOnlyList<PermissionDefinition> Definitions { get; } =
         new List<PermissionDefinition>
         {
@@ -56,7 +63,11 @@ public static class PeoplePermissionCodes
             new("People", AdministrativeDelete, "حذف إداريّ", "حذف سجل شخص باطل بلا تاريخ تشغيليّ (لا يُغني عن إنهاء الخدمة).", 235),
             new("People", ManagePermissions, "إدارة صلاحيات الأشخاص", "إدارة صلاحيات مستخدمي منظومة الأشخاص.", 240),
             new("People", ViewCompensation, "عرض التعويض", "عرض الراتب الأساسي والبدلات والبيانات المالية للموظف.", 250),
-            new("People", EditCompensation, "تعديل التعويض", "تعديل الراتب الأساسي والبدلات والبيانات المالية للموظف.", 260)
+            new("People", EditCompensation, "تعديل التعويض", "تعديل الراتب الأساسي والبدلات والبيانات المالية للموظف.", 260),
+            new("People AI", AiUse, "استخدام مساعد الأشخاص", "استخدام ميزات People AI المسموح بها دون منح صلاحيات بيانات إضافية.", 300),
+            new("People AI", AiProcessDocuments, "معالجة المستندات الذكية", "رفع ومعالجة ومراجعة استخراج بيانات مستندات الموظفين.", 310),
+            new("People AI", AiSearch, "البحث الذكي في الأشخاص", "استخدام البحث باللغة الطبيعية ضمن نطاق البيانات المسموح.", 320),
+            new("People", VerifyOriginalDocument, "التحقق من أصل المستند", "تأكيد الاطلاع الفعلي على أصل مستند الموظف والتحقق منه.", 330)
         };
 
     public static IReadOnlySet<string> All { get; } =

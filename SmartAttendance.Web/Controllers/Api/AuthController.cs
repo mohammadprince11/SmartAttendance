@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Application.Common.Security;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Api;
+using SmartAttendance.Web.Infrastructure.Platform;
 using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Controllers.Api;
@@ -20,25 +23,54 @@ public sealed class AuthController : ControllerBase
 
     private readonly ApplicationDbContext _db;
     private readonly ILoginIdentityService _identity;
+    private readonly IMemoryCache _cache;
+    private readonly IDataProtector _twoFactorProtector;
 
-    public AuthController(ApplicationDbContext db, ILoginIdentityService identity)
+    public AuthController(
+        ApplicationDbContext db,
+        ILoginIdentityService identity,
+        IMemoryCache cache,
+        IDataProtectionProvider dataProtection)
     {
         _db = db;
         _identity = identity;
+        _cache = cache;
+        _twoFactorProtector = dataProtection.CreateProtector("ZYNORA.Auth.Totp.v1");
     }
 
-    public sealed record LoginRequest(string Username, string Password);
+    public sealed record LoginRequest(
+        string TenantCode,
+        string Username,
+        string Password,
+        string? TwoFactorCode = null,
+        string? RecoveryCode = null);
+    public sealed record ChangePasswordRequest(
+        string CurrentPassword,
+        string NewPassword,
+        string ConfirmPassword);
 
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest body)
     {
-        if (body is null || string.IsNullOrWhiteSpace(body.Username) || string.IsNullOrWhiteSpace(body.Password))
-            return BadRequest(new { message = "اسم المستخدم وكلمة المرور مطلوبة." });
+        if (body is null ||
+            !TenantContext.IsValidCode(body.TenantCode?.Trim()) ||
+            string.IsNullOrWhiteSpace(body.Username) ||
+            string.IsNullOrWhiteSpace(body.Password))
+            return BadRequest(new { message = "كود المنظومة واسم المستخدم وكلمة المرور مطلوبة." });
 
         var utcNow = DateTime.UtcNow;
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-        var user = await LoginDatabase.GetByUsernameAsync(_db, body.Username.Trim());
+        var tenant = await TenantContext.ResolveAsync(
+            _db,
+            body.TenantCode,
+            HttpContext.RequestAborted);
+        var user = tenant is null
+            ? null
+            : await LoginDatabase.GetByUsernameAsync(
+                _db,
+                tenant.Id,
+                body.Username.Trim());
 
         // رسالة موحّدة عند أي فشل (لا نكشف السبب)
         const string generic = "بيانات الدخول غير صحيحة أو الحساب غير متاح.";
@@ -64,6 +96,64 @@ public sealed class AuthController : ControllerBase
             await LoginDatabase.UpgradePasswordHashAsync(_db, user, body.Password, ip);
         }
 
+        var twoFactor = await AppLoginTwoFactorStore.GetAsync(
+            _db,
+            user.Id,
+            HttpContext.RequestAborted);
+
+        if (twoFactor.IsEnabled)
+        {
+            var suppliedFactor =
+                !string.IsNullOrWhiteSpace(body.TwoFactorCode) ||
+                !string.IsNullOrWhiteSpace(body.RecoveryCode);
+            var factorValid = false;
+
+            if (!string.IsNullOrWhiteSpace(twoFactor.ActiveSecretProtected) &&
+                !string.IsNullOrWhiteSpace(body.TwoFactorCode))
+            {
+                try
+                {
+                    var secret = _twoFactorProtector.Unprotect(twoFactor.ActiveSecretProtected);
+                    factorValid = TotpSecurity.ValidateCode(secret, body.TwoFactorCode);
+                }
+                catch
+                {
+                    return StatusCode(500, new { message = "تعذر التحقق من المصادقة الثنائية حالياً." });
+                }
+            }
+
+            if (!factorValid && !string.IsNullOrWhiteSpace(body.RecoveryCode))
+            {
+                factorValid = await AppLoginTwoFactorStore.ConsumeRecoveryCodeAsync(
+                    _db,
+                    user.Id,
+                    body.RecoveryCode,
+                    HttpContext.RequestAborted);
+            }
+
+            if (!factorValid)
+            {
+                if (suppliedFactor)
+                    await LoginDatabase.RecordFailedLoginAsync(_db, user, ip, utcNow);
+
+                return Unauthorized(new
+                {
+                    message = suppliedFactor
+                        ? "رمز المصادقة الثنائية غير صحيح أو منتهي."
+                        : "أدخل رمز المصادقة الثنائية للمتابعة.",
+                    requiresTwoFactor = true
+                });
+            }
+        }
+
+        if (!await TenantModuleAccess.IsEnabledAsync(_db, tenant!.Id, "Mobile"))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "تطبيق الموظف غير مفعّل ضمن لايسنس هذه المنظومة."
+            });
+        }
+
         var displayName = string.IsNullOrWhiteSpace(user.EmployeeName) ? user.Username : user.EmployeeName;
 
         int? systemUserId;
@@ -71,6 +161,7 @@ public sealed class AuthController : ControllerBase
         {
             systemUserId = await _identity.EnsureSystemUserAsync(new LoginIdentityRequest
             {
+                TenantId = tenant!.Id,
                 EmployeeId = user.EmployeeId,
                 UserName = user.Username,
                 DisplayName = displayName,
@@ -96,6 +187,8 @@ public sealed class AuthController : ControllerBase
 
         var token = await ApiTokenStore.IssueAsync(_db, new ApiTokenStore.TokenIdentity
         {
+            TenantId = tenant!.Id,
+            TenantCode = tenant.Code,
             SystemUserId = systemUserId.Value,
             EmployeeId = user.EmployeeId,
             Username = user.Username,
@@ -113,8 +206,70 @@ public sealed class AuthController : ControllerBase
                 username = user.Username,
                 displayName,
                 role = user.Role,
-                employeeId = user.EmployeeId
+                employeeId = user.EmployeeId,
+                tenantCode = tenant.Code
             }
+        });
+    }
+
+    [HttpPost("change-password")]
+    [Authorize(AuthenticationSchemes = ApiTokenAuthHandler.SchemeName)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body)
+    {
+        if (body is null ||
+            string.IsNullOrWhiteSpace(body.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(body.NewPassword) ||
+            string.IsNullOrWhiteSpace(body.ConfirmPassword))
+            return BadRequest(new { message = "جميع الحقول مطلوبة." });
+
+        if (body.NewPassword.Length < 8)
+            return BadRequest(new { message = "كلمة المرور الجديدة يجب ألا تقل عن 8 محارف." });
+
+        if (!string.Equals(body.NewPassword, body.ConfirmPassword, StringComparison.Ordinal))
+            return BadRequest(new { message = "كلمة المرور الجديدة وتأكيدها غير متطابقين." });
+
+        if (string.Equals(body.NewPassword, body.CurrentPassword, StringComparison.Ordinal))
+            return BadRequest(new { message = "كلمة المرور الجديدة يجب أن تختلف عن الحالية." });
+
+        var username = User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(username))
+            return Unauthorized(new { message = "انتهت الجلسة. سجل الدخول من جديد." });
+
+        var user = await LoginDatabase.GetByUsernameAsync(
+            _db,
+            TenantContext.GetTenantId(User) ?? 0,
+            username.Trim());
+        if (user is null || !user.IsActive)
+            return Unauthorized(new { message = "الحساب غير متاح." });
+
+        if (!SimplePasswordHasher.Verify(
+                body.CurrentPassword,
+                user.PasswordSalt,
+                user.PasswordHash))
+            return BadRequest(new { message = "كلمة المرور الحالية غير صحيحة." });
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        await LoginDatabase.UpgradePasswordHashAsync(
+            _db,
+            user,
+            body.NewPassword,
+            ip);
+
+        await AccountSecurityStore.BumpStampAsync(
+            _db,
+            _cache,
+            user.Id,
+            "Password changed from mobile app",
+            user.Username);
+
+        var header = Request.Headers.Authorization.ToString();
+        if (header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            await ApiTokenStore.RevokeAsync(_db, header["Bearer ".Length..].Trim());
+
+        return Ok(new
+        {
+            message = "تم تغيير كلمة المرور. سجل الدخول من جديد.",
+            requiresLogin = true
         });
     }
 

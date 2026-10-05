@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Application.Common.Security;
@@ -12,6 +13,8 @@ namespace SmartAttendance.Web.Pages.Account;
 [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 public class LoginModel : PageModel
 {
+    private const string TenantCodeCookieName = "ZYNORA.TenantCode";
+
     private const string GenericLoginError =
         "بيانات الدخول غير صحيحة أو الحساب غير متاح مؤقتاً.";
 
@@ -23,14 +26,20 @@ public class LoginModel : PageModel
 
     private readonly ApplicationDbContext _dbContext;
     private readonly ILoginIdentityService _loginIdentityService;
+    private readonly IDataProtector _twoFactorProtector;
 
     public LoginModel(
         ApplicationDbContext dbContext,
-        ILoginIdentityService loginIdentityService)
+        ILoginIdentityService loginIdentityService,
+        IDataProtectionProvider dataProtection)
     {
         _dbContext = dbContext;
         _loginIdentityService = loginIdentityService;
+        _twoFactorProtector = dataProtection.CreateProtector("ZYNORA.Auth.Totp.v1");
     }
+
+    [BindProperty]
+    public string TenantCode { get; set; } = string.Empty;
 
     [BindProperty]
     public string Username { get; set; } = string.Empty;
@@ -41,6 +50,14 @@ public class LoginModel : PageModel
     [BindProperty]
     public bool RememberMe { get; set; }
 
+    [BindProperty]
+    public string? TwoFactorCode { get; set; }
+
+    [BindProperty]
+    public string? RecoveryCode { get; set; }
+
+    public bool RequiresTwoFactor { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
 
@@ -49,25 +66,39 @@ public class LoginModel : PageModel
     public async Task OnGetAsync()
     {
         ApplyNoStoreHeaders();
+
+        if (Request.Cookies.TryGetValue(TenantCodeCookieName, out var savedTenantCode) &&
+            TenantContext.IsValidCode(savedTenantCode))
+        {
+            TenantCode = savedTenantCode;
+        }
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
         ApplyNoStoreHeaders();
 
-        if (string.IsNullOrWhiteSpace(Username) ||
+        if (!TenantContext.IsValidCode(TenantCode?.Trim()) ||
+            string.IsNullOrWhiteSpace(Username) ||
             string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "اسم المستخدم وكلمة المرور مطلوبة.";
+            ErrorMessage = "كود المنظومة واسم المستخدم وكلمة المرور مطلوبة.";
             return Page();
         }
 
+        var tenant = await TenantContext.ResolveAsync(
+            _dbContext,
+            TenantCode,
+            HttpContext.RequestAborted);
         var normalizedUsername = Username.Trim();
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
         var utcNow = DateTime.UtcNow;
-        var user = await LoginDatabase.GetByUsernameAsync(
-            _dbContext,
-            normalizedUsername);
+        var user = tenant is null
+            ? null
+            : await LoginDatabase.GetByUsernameAsync(
+                _dbContext,
+                tenant.Id,
+                normalizedUsername);
 
         if (user == null)
         {
@@ -136,6 +167,61 @@ public class LoginModel : PageModel
                 ipAddress);
         }
 
+        var twoFactor = await AppLoginTwoFactorStore.GetAsync(
+            _dbContext,
+            user.Id,
+            HttpContext.RequestAborted);
+
+        if (twoFactor.IsEnabled)
+        {
+            RequiresTwoFactor = true;
+            var suppliedFactor =
+                !string.IsNullOrWhiteSpace(TwoFactorCode) ||
+                !string.IsNullOrWhiteSpace(RecoveryCode);
+            var factorValid = false;
+
+            if (!string.IsNullOrWhiteSpace(twoFactor.ActiveSecretProtected) &&
+                !string.IsNullOrWhiteSpace(TwoFactorCode))
+            {
+                try
+                {
+                    var secret = _twoFactorProtector.Unprotect(twoFactor.ActiveSecretProtected);
+                    factorValid = TotpSecurity.ValidateCode(secret, TwoFactorCode);
+                }
+                catch
+                {
+                    ErrorMessage = "تعذر التحقق من المصادقة الثنائية حالياً.";
+                    return Page();
+                }
+            }
+
+            if (!factorValid && !string.IsNullOrWhiteSpace(RecoveryCode))
+            {
+                factorValid = await AppLoginTwoFactorStore.ConsumeRecoveryCodeAsync(
+                    _dbContext,
+                    user.Id,
+                    RecoveryCode,
+                    HttpContext.RequestAborted);
+            }
+
+            if (!factorValid)
+            {
+                if (suppliedFactor)
+                {
+                    await LoginDatabase.RecordFailedLoginAsync(
+                        _dbContext,
+                        user,
+                        ipAddress,
+                        utcNow);
+                }
+
+                ErrorMessage = suppliedFactor
+                    ? "رمز المصادقة الثنائية غير صحيح أو منتهي."
+                    : "أدخل رمز المصادقة الثنائية أو رمز الاسترداد للمتابعة.";
+                return Page();
+            }
+        }
+
         var displayName = !string.IsNullOrWhiteSpace(user.EmployeeName)
             ? user.EmployeeName
             : user.Username;
@@ -147,6 +233,7 @@ public class LoginModel : PageModel
             systemUserId = await _loginIdentityService.EnsureSystemUserAsync(
                 new LoginIdentityRequest
                 {
+                    TenantId = tenant!.Id,
                     EmployeeId = user.EmployeeId,
                     UserName = user.Username,
                     DisplayName = displayName,
@@ -199,6 +286,8 @@ public class LoginModel : PageModel
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Role, user.Role),
             new("DisplayName", displayName),
+            new(TenantContext.TenantIdClaimType, tenant!.Id.ToString()),
+            new(TenantContext.TenantCodeClaimType, tenant.Code),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
             new("SessionIssuedUtc", issuedUtc.ToString("O")),
@@ -228,6 +317,18 @@ public class LoginModel : PageModel
             CookieAuthenticationDefaults.AuthenticationScheme,
             principal,
             authProperties);
+
+        Response.Cookies.Append(
+            TenantCodeCookieName,
+            tenant.Code,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps,
+                Expires = DateTimeOffset.UtcNow.AddYears(1)
+            });
 
         DeleteLegacyIdentityCookies();
 

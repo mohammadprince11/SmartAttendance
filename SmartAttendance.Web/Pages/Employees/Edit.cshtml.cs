@@ -58,6 +58,15 @@ public class EditModel : PageModel
     public EmployeeEditViewModel Employee { get; set; } = new();
 
     [BindProperty]
+    public decimal? BasicSalary { get; set; }
+
+    public bool CanEditCompensation { get; set; }
+
+    public bool EmployeeNoLockedByPayroll { get; set; }
+
+    public string CurrentCompanyName { get; set; } = string.Empty;
+
+    [BindProperty]
     public List<EmployeeNameTranslationInput> EmployeeNameTranslations { get; set; } = [];
 
     [BindProperty]
@@ -72,6 +81,17 @@ public class EditModel : PageModel
 
     [BindProperty]
     public int? DirectManagerId { get; set; }
+
+    [BindProperty]
+    [System.ComponentModel.DataAnnotations.StringLength(150)]
+    public string? FamilyNumber { get; set; }
+
+    [BindProperty]
+    public long FamilyIdentityDocumentId { get; set; }
+
+    private sealed record FamilyIdentityValue(
+        long Id,
+        string FamilyNumber);
 
     public class ManagerOption { 
         public int Id { get; set; } 
@@ -116,12 +136,103 @@ public class EditModel : PageModel
             PositionOptions,
             HttpContext.RequestAborted);
     }
+    private async Task<bool> HasPayrollHistoryAsync(int employeeId)
+    {
+        if (employeeId <= 0)
+        {
+            return false;
+        }
+
+        var exists = await HrmsDatabase.ScalarAsync<int>(
+            _dbContext,
+            """
+            IF OBJECT_ID(N'dbo.PayrollRunLines', N'U') IS NULL
+            BEGIN
+                SELECT 0;
+                RETURN;
+            END;
+
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM dbo.PayrollRunLines
+                    WHERE EmployeeId = @EmployeeId
+                )
+                    THEN 1
+                ELSE 0
+            END;
+            """,
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId));
+
+        return exists == 1;
+    }
+
     private async Task LoadLookupsAsync()
     {
         ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
         WorkTypeOptions = await HrLookups.ValuesAsync(_dbContext, "worktypes");
         GradeOptions = await HrLookups.ValuesAsync(_dbContext, "grades");
         SponsorOptions = await HrLookups.ValuesAsync(_dbContext, "sponsors");
+    }
+
+    private async Task LoadFamilyNumberAsync(int employeeId)
+    {
+        var rows = await HrmsDatabase.QueryAsync(
+            _dbContext,
+            """
+SELECT TOP 1
+       Id,
+       FamilyNumber
+FROM dbo.EmployeeIdentityDocuments
+WHERE EmployeeId = @EmployeeId
+  AND DocumentType = N'NationalId'
+  AND IsCurrent = 1
+ORDER BY
+    CASE
+        WHEN NULLIF(LTRIM(RTRIM(FamilyNumber)), '') IS NOT NULL
+            THEN 0
+        ELSE 1
+    END,
+    CASE
+        WHEN SourceOnboardingDocumentId IS NOT NULL
+            THEN 0
+        ELSE 1
+    END,
+    Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId),
+            reader => new FamilyIdentityValue(
+                HrmsDatabase.GetLong(reader, "Id"),
+                HrmsDatabase.GetString(reader, "FamilyNumber")));
+
+        var identity = rows.FirstOrDefault();
+        FamilyIdentityDocumentId = identity?.Id ?? 0;
+        FamilyNumber = string.IsNullOrWhiteSpace(
+                identity?.FamilyNumber)
+            ? null
+            : identity.FamilyNumber.Trim();
+    }
+
+    private async Task<bool> SaveFamilyNumberAsync(int employeeId)
+    {
+        var saved = await PeopleIdentityBootstrap.SetFamilyNumberAsync(
+            _dbContext,
+            employeeId,
+            FamilyNumber,
+            FamilyIdentityDocumentId);
+
+        if (saved)
+        {
+            await LoadFamilyNumberAsync(employeeId);
+        }
+
+        return saved;
     }
 
     public async Task<IActionResult> OnGetAsync(int id)
@@ -141,7 +252,16 @@ public class EditModel : PageModel
         if (employee == null) return NotFound();
 
         Employee = employee;
+        EmployeeNoLockedByPayroll = await HasPayrollHistoryAsync(Employee.Id);
+        CanEditCompensation = await CanEditCompensationAsync(Employee.Id);
+        if (CanEditCompensation)
+        {
+            BasicSalary = await LoadBasicSalaryAsync(Employee.Id);
+        }
+
+        CurrentCompanyName = await ResolveEmployeeCompanyNameAsync(Employee.BranchId);
         PrefillQuadNameFromFullName();
+        await LoadFamilyNumberAsync(Employee.Id);
         var companyId = await ResolveEmployeeCompanyIdAsync(Employee.BranchId);
         await LoadEmployeeNameTranslationsAsync(companyId, false);
 
@@ -167,6 +287,36 @@ public class EditModel : PageModel
             return Forbid();
         }
 
+        CanEditCompensation = await CanEditCompensationAsync(Employee.Id);
+        EmployeeNoLockedByPayroll = await HasPayrollHistoryAsync(Employee.Id);
+        CurrentCompanyName = await ResolveEmployeeCompanyNameAsync(Employee.BranchId);
+
+        if (EmployeeNoLockedByPayroll)
+        {
+            var storedEmployeeNo = await _dbContext.Employees
+                .AsNoTracking()
+                .Where(employee => employee.Id == Employee.Id)
+                .Select(employee => employee.EmployeeNo)
+                .SingleOrDefaultAsync();
+
+            if (storedEmployeeNo is null)
+            {
+                return NotFound();
+            }
+
+            if (!string.Equals(
+                    storedEmployeeNo.Trim(),
+                    Employee.EmployeeNo?.Trim(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                Employee.EmployeeNo = storedEmployeeNo;
+                ModelState.Remove("Employee.EmployeeNo");
+                ModelState.AddModelError(
+                    "Employee.EmployeeNo",
+                    "لا يمكن تغيير كود الموظف بعد دخوله في دورة راتب.");
+            }
+        }
+
         Branches = await _employeeService.GetBranchesForDropdownAsync();
         Departments = await _employeeService.GetDepartmentsForDropdownAsync();
         PositionOptions = await _employeeService.GetPositionsForDropdownAsync();
@@ -189,8 +339,34 @@ public class EditModel : PageModel
         await LoadEmployeeNameTranslationsAsync(companyId, true);
         await ValidateAndMapEmployeeNamesAsync(companyId);
 
+        // حالة التوظيف مشتقة من Check «فعال» ولا تُدخل كنص مستقل.
+        Employee.EmploymentStatus = Employee.IsActive ? "Active" : "Inactive";
+        ModelState.Remove("Employee.EmploymentStatus");
+
         // التحكم بالحقول: فرض الإلزامية المركزية بالسيرفر.
         EmployeeFieldControl.ValidateRequired(Employee, RequiredFieldKeys, ModelState, "Employee");
+
+        if (RequiredFieldKeys.Contains("FamilyNumber") &&
+            string.IsNullOrWhiteSpace(FamilyNumber))
+        {
+            ModelState.AddModelError(
+                nameof(FamilyNumber),
+                "حقل «الرقم العائلي» مطلوب.");
+        }
+
+        if (BasicSalary is < 0)
+        {
+            ModelState.AddModelError(
+                nameof(BasicSalary),
+                "الراتب الأساسي لا يمكن أن يكون سالباً.");
+        }
+
+        if (BasicSalary.HasValue && !CanEditCompensation)
+        {
+            ModelState.AddModelError(
+                nameof(BasicSalary),
+                "لا تملك صلاحية إدخال أو تعديل الراتب الأساسي.");
+        }
 
         if (!ModelState.IsValid) return Page();
 
@@ -278,7 +454,16 @@ public class EditModel : PageModel
                 return Page();
             }
 
+            if (!await SaveFamilyNumberAsync(Employee.Id))
+            {
+                await transaction.RollbackAsync();
+                ErrorMessage =
+                    "تعذر حفظ الرقم العائلي لعدم وجود سجل بطاقة وطنية صالح لهذا الموظف.";
+                return Page();
+            }
+
             await EmployeeProfileDynamicFields.SaveAsync(_dbContext, Employee.Id, Request.Form);
+            await SaveBasicSalaryAsync(Employee.Id);
 
             await _dataLocalization.SaveValuesAsync(
                 companyId,
@@ -311,6 +496,91 @@ public class EditModel : PageModel
         return RedirectToPage("./Profile", new { id = Employee.Id });
     }
 
+    // SP20_EDIT_COMPENSATION_PARITY
+    private async Task<bool> CanEditCompensationAsync(int employeeId)
+    {
+        var systemUserId = PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0;
+        var role = PeopleAccessContext.GetRole(HttpContext);
+
+        return await _permissionAuthorizationService.CanAccessEmployeeAsync(
+            systemUserId,
+            PeoplePermissionCodes.EditCompensation,
+            employeeId,
+            PeopleCompatibilityAccess.IsAllowed(
+                role,
+                PeoplePermissionCodes.EditCompensation),
+            HttpContext.RequestAborted);
+    }
+
+    private async Task<decimal?> LoadBasicSalaryAsync(int employeeId)
+    {
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        return await HrmsDatabase.ScalarAsync<decimal?>(
+            _dbContext,
+            """
+SELECT TOP 1 BasicSalary
+FROM dbo.EmployeeFinancialInfos
+WHERE EmployeeId = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0
+ORDER BY Id DESC;
+""",
+            command => HrmsDatabase.AddParameter(
+                command,
+                "@EmployeeId",
+                employeeId));
+    }
+
+    private async Task SaveBasicSalaryAsync(int employeeId)
+    {
+        if (!BasicSalary.HasValue ||
+            !CanEditCompensation ||
+            employeeId <= 0)
+        {
+            return;
+        }
+
+        await EmployeeFinancialInfoSchema.EnsureAsync(_dbContext);
+
+        await HrmsDatabase.ExecuteAsync(
+            _dbContext,
+            """
+UPDATE dbo.EmployeeFinancialInfos
+SET BasicSalary = @BasicSalary,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE EmployeeId = @EmployeeId
+  AND ISNULL(IsDeleted, 0) = 0;
+
+IF @@ROWCOUNT = 0
+BEGIN
+    INSERT INTO dbo.EmployeeFinancialInfos
+        (EmployeeId, BasicSalary, CreatedAt, IsDeleted)
+    VALUES
+        (@EmployeeId, @BasicSalary, SYSUTCDATETIME(), 0);
+END;
+""",
+            command =>
+            {
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@EmployeeId",
+                    employeeId);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@BasicSalary",
+                    BasicSalary.Value);
+            });
+    }
+
+    private async Task<string> ResolveEmployeeCompanyNameAsync(int branchId)
+    {
+        return await _dbContext.Branches
+            .AsNoTracking()
+            .Where(item => item.Id == branchId && !item.IsDeleted)
+            .Select(item => item.Company.Name)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted)
+            ?? string.Empty;
+    }
     private async Task<int> ResolveEmployeeCompanyIdAsync(int branchId) =>
         await _dbContext.Branches.AsNoTracking()
             .Where(item => item.Id == branchId && !item.IsDeleted)
@@ -324,12 +594,10 @@ public class EditModel : PageModel
             ? EmployeeNameTranslations.ToDictionary(item => item.CultureCode, StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, EmployeeNameTranslationInput>(StringComparer.OrdinalIgnoreCase);
         var languages = await _dataLocalization.GetLanguagesAsync(companyId, HttpContext.RequestAborted);
-        var stored = preservePostedValues
-            ? []
-            : await _dbContext.LocalizedEntityValues.AsNoTracking()
-                .Where(item => item.CompanyId == companyId && item.EntityType == "Employee" &&
-                    item.EntityId == Employee.Id && !item.IsDeleted)
-                .ToListAsync(HttpContext.RequestAborted);
+        var stored = await _dbContext.LocalizedEntityValues.AsNoTracking()
+            .Where(item => item.CompanyId == companyId && item.EntityType == "Employee" &&
+                item.EntityId == Employee.Id && !item.IsDeleted)
+            .ToListAsync(HttpContext.RequestAborted);
 
         string? Stored(string culture, string field) => stored.FirstOrDefault(item =>
             item.CultureCode == culture && item.FieldName == field)?.Value;
@@ -345,10 +613,34 @@ public class EditModel : PageModel
                 Direction = language.Direction,
                 IsDefault = language.IsDefault,
                 IsRequired = language.IsRequired,
-                FirstName = submitted?.FirstName ?? Stored(language.CultureCode, "FirstName") ?? (language.IsDefault ? Employee.FirstName : null),
-                SecondName = submitted?.SecondName ?? Stored(language.CultureCode, "SecondName") ?? (language.IsDefault ? Employee.SecondName : null),
-                ThirdName = submitted?.ThirdName ?? Stored(language.CultureCode, "ThirdName") ?? (language.IsDefault ? Employee.ThirdName : null),
-                LastName = submitted?.LastName ?? Stored(language.CultureCode, "LastName") ?? (language.IsDefault ? Employee.LastName : null)
+                FirstName = submitted?.FirstName
+                    ?? Stored(language.CultureCode, "FirstName")
+                    ?? (language.IsDefault
+                        ? Employee.FirstName
+                        : language.CultureCode.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+                            ? Employee.FirstNameEn
+                            : null),
+                SecondName = submitted?.SecondName
+                    ?? Stored(language.CultureCode, "SecondName")
+                    ?? (language.IsDefault
+                        ? Employee.SecondName
+                        : language.CultureCode.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+                            ? Employee.SecondNameEn
+                            : null),
+                ThirdName = submitted?.ThirdName
+                    ?? Stored(language.CultureCode, "ThirdName")
+                    ?? (language.IsDefault
+                        ? Employee.ThirdName
+                        : language.CultureCode.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+                            ? Employee.ThirdNameEn
+                            : null),
+                LastName = submitted?.LastName
+                    ?? Stored(language.CultureCode, "LastName")
+                    ?? (language.IsDefault
+                        ? Employee.LastName
+                        : language.CultureCode.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+                            ? Employee.LastNameEn
+                            : null)
             };
         }).ToList();
     }
@@ -360,11 +652,49 @@ public class EditModel : PageModel
             new LocalizedFieldValue(item.CultureCode, "FirstName", item.FirstName),
             new LocalizedFieldValue(item.CultureCode, "LastName", item.LastName)
         }).ToList();
+
         var errors = await _dataLocalization.ValidateRequiredValuesAsync(
-            companyId, new[] { "FirstName", "LastName" }, values, HttpContext.RequestAborted);
-        foreach (var error in errors) ModelState.AddModelError(nameof(EmployeeNameTranslations), error);
-        var primary = EmployeeNameTranslations.FirstOrDefault(item => item.IsDefault) ?? EmployeeNameTranslations.FirstOrDefault();
-        if (primary is null) return;
+            companyId,
+            new[] { "FirstName", "LastName" },
+            values,
+            HttpContext.RequestAborted);
+
+        foreach (var error in errors)
+        {
+            ModelState.AddModelError(nameof(EmployeeNameTranslations), error);
+        }
+
+        var languages = await _dataLocalization.GetLanguagesAsync(
+            companyId,
+            HttpContext.RequestAborted);
+
+        var primaryCulture = languages
+            .FirstOrDefault(language => language.IsDefault)
+            ?.CultureCode
+            ?? languages.FirstOrDefault()?.CultureCode;
+
+        if (string.IsNullOrWhiteSpace(primaryCulture))
+        {
+            ModelState.AddModelError(
+                nameof(EmployeeNameTranslations),
+                "تعذر تحديد اللغة الأساسية لاسم الموظف.");
+            return;
+        }
+
+        var primary = EmployeeNameTranslations.FirstOrDefault(item =>
+            string.Equals(
+                item.CultureCode,
+                primaryCulture,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (primary is null)
+        {
+            ModelState.AddModelError(
+                nameof(EmployeeNameTranslations),
+                "بيانات اللغة الأساسية لاسم الموظف غير متوفرة.");
+            return;
+        }
+
         Employee.FirstName = primary.FirstName?.Trim();
         Employee.SecondName = primary.SecondName?.Trim();
         Employee.ThirdName = primary.ThirdName?.Trim();

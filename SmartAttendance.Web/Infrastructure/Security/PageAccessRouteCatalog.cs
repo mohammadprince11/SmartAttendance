@@ -13,8 +13,6 @@ public static class PageAccessRouteCatalog
         new("/branding", "Setup.Branding"), new("/auditlogs", "Setup.AuditLogs"),
         new("/employees/peopledashboard", "People.Dashboard"),
         new("/employees/profile", "People.Profile"), new("/employees/edit", "People.Profile"),
-        new("/employees/evaluations", "People.Evaluations"),
-        new("/employees/temporaryheads", "People.TemporaryHeads"),
         new("/employees/financialinfo", "Payroll.FinancialInfo"),
         new("/contracts", "People.Contracts"), new("/forms", "People.Forms"),
         new("/acknowledgments", "People.Acknowledgments"),
@@ -30,24 +28,15 @@ public static class PageAccessRouteCatalog
 
         new("/companies", "Setup.Company"), new("/branches", "Setup.Branches"),
         new("/departments", "Setup.Departments"), new("/positions", "Setup.Positions"),
-        new("/useraccess", "Identity.Users"), new("/employeepermissions", "Identity.Permissions"),
-        new("/accessroles", "Identity.AccessRoles"),
-
-        new("/disciplinaryrules", "HrSettings.Disciplinary"),
-        new("/employeeprofilesettings", "HrSettings.ProfileFields"),
+        new("/useraccess", "Identity.Users"), new("/accesscontrol", "Identity.AccessControl"),
+new("/disciplinaryrules", "HrSettings.Disciplinary"),
         new("/hrsettings/approvaltemplates", "HrSettings.ApprovalTemplates"),
-        new("/hrsettings/entityfields", "HrSettings.EntityFields"),
-        new("/hrsettings/employeegroups", "HrSettings.EmployeeGroups"),
         new("/hrsettings/lookups", "HrSettings.Lookups"),
-        new("/hrsettings/violationconfiguration", "HrSettings.ViolationConfiguration"),
-        new("/hrsettings/formulas", "HrSettings.Formulas"),
-        new("/hrsettings/probationperiod", "HrSettings.ProbationPeriod"),
         new("/hrsettings/noticeperiod", "HrSettings.NoticePeriod"),
         new("/hrsettings/selfservicesettings", "HrSettings.SelfService"),
         new("/hrsettings/terminationreasons", "HrSettings.TerminationReasons"),
         new("/hrsettings/notificationcenter", "HrSettings.Notifications"),
         new("/hrsettings/employeecodeschema", "HrSettings.EmployeeCodeSchema"),
-        new("/hrsettings/fieldcontrol", "HrSettings.FieldControl"),
 
         new("/attendanceoperations", "Attendance.Operations"),
         new("/attendancerecords", "Attendance.Records"),
@@ -91,7 +80,6 @@ public static class PageAccessRouteCatalog
         new("/payroll/salarysheet", "Payroll.SalarySheet"),
         new("/payroll/financialrequests", "Payroll.FinancialRequests"),
         new("/payroll/loans", "Payroll.Loans"), new("/payroll/salaryscale", "Payroll.SalaryScale"),
-        new("/payroll/terminationsettlement", "Payroll.TerminationSettlement")
     }.OrderByDescending(route => route.Prefix.Length).ToList();
 
     public static string? ResolvePageCode(string? path, string? handler = null)

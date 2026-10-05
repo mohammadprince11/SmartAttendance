@@ -11,5 +11,8 @@ public enum EmployeeRecordType
     Asset = 6,
     Address = 7,
     EmergencyContact = 8,
-    Residency = 9
+    Residency = 9,
+    Skill = 10,
+    Language = 11,
+    ProfessionalSummary = 12
 }

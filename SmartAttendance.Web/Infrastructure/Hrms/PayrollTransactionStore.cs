@@ -312,11 +312,15 @@ WHERE ISNULL(t.Status, N'Approved') = N'Approved'
   AND (NOT EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run)
        OR EXISTS (SELECT 1 FROM PayrollRunScopeMembers s WHERE s.RunId = @Run AND s.EmployeeId = t.EmployeeId))
   AND (
-       (t.TxType=N'Income' AND ((t.TransactionDate BETWEEN @AddFrom AND @AddTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
-    OR (t.TxType=N'Deduction' AND ((t.TransactionDate BETWEEN @DedFrom AND @DedTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
-    OR (t.TxType=N'Overtime' AND ((t.TransactionDate BETWEEN @OtFrom AND @OtTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
-    OR (t.TxType=N'SalaryDays' AND ((t.TransactionDate BETWEEN @SalFrom AND @SalTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
-    OR (t.TxType=N'LeaveEncashment' AND ((t.TransactionDate BETWEEN @LeaveFrom AND @LeaveTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+       (ISNULL(r.RunType,N'Regular')<>N'Regular'
+        AND t.[Year]=@Y AND t.[Month]=@M)
+    OR (ISNULL(r.RunType,N'Regular')=N'Regular' AND (
+           (t.TxType=N'Income' AND ((t.TransactionDate BETWEEN @AddFrom AND @AddTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+        OR (t.TxType=N'Deduction' AND ((t.TransactionDate BETWEEN @DedFrom AND @DedTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+        OR (t.TxType=N'Overtime' AND ((t.TransactionDate BETWEEN @OtFrom AND @OtTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+        OR (t.TxType=N'SalaryDays' AND ((t.TransactionDate BETWEEN @SalFrom AND @SalTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+        OR (t.TxType=N'LeaveEncashment' AND ((t.TransactionDate BETWEEN @LeaveFrom AND @LeaveTo) OR (t.TransactionDate IS NULL AND t.[Year]=@Y AND t.[Month]=@M)))
+       ))
   );
 """,
             command =>

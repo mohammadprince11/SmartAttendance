@@ -1,0 +1,138 @@
+﻿@page "/HrSettings/LeavePolicies"
+@model SmartAttendance.Web.Pages.HrSettings.LeavePoliciesModel
+@{
+    ViewData["Title"] = "سياسات الإجازات والأرصدة";
+    string AttachmentMode(bool? value) => value == true ? "Required" : value == false ? "Optional" : "Inherit";
+}
+<link rel="stylesheet" href="~/css/pages/leave-policies.css" asp-append-version="true" />
+
+<section class="lp-page" dir="rtl">
+    <header class="lp-head">
+        <div>
+            <h1>سياسات الإجازات والأرصدة</h1>
+            <p>إعداد مستقل لكل شركة. نوع الطلب يبقى في الكتالوج العام، أما الرصيد ومصدر الخصم والاستحقاق فتُحسم هنا.</p>
+        </div>
+        <a href="/HrSettings" class="lp-back">→ الإعدادات</a>
+    </header>
+
+    <form method="get" class="lp-company">
+        <label>الشركة
+            <select name="CompanyId" onchange="this.form.submit()">
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(Model.CompanyId == company.Id)">@company.Name</option>
+                }
+            </select>
+        </label>
+    </form>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="lp-status">@Model.StatusMessage</div>
+    }
+
+    @if (Model.CompanyId is not > 0)
+    {
+        <div class="lp-empty">لا توجد شركة متاحة ضمن نطاق صلاحيتك.</div>
+    }
+    else if (Model.Policies.Count == 0)
+    {
+        <div class="lp-empty">لا توجد أنواع إجازات أو مغادرات فعّالة. عرّفها أولاً من مركز أنواع الطلبات.</div>
+    }
+    else
+    {
+        <div class="lp-note">
+            <strong>مثال:</strong> لجعل «مغادرة شخصية» تخصم من رصيد السنوية: فعّل «يحتاج رصيداً» واختر «إجازة سنوية» كمصدر الرصيد.
+            ساعات اليوم = 0 تعني: شفت الموظف أولاً، ثم ساعات الشركة المعيارية.
+        </div>
+
+        <div class="lp-list">
+        @foreach (var p in Model.Policies)
+        {
+            <form method="post" asp-page-handler="Save" class="lp-card">
+                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                <input type="hidden" name="requestTypeId" value="@p.RequestTypeId" />
+
+                <div class="lp-card-head">
+                    <div>
+                        <h2>@p.RequestTypeName</h2>
+                        <span>@p.CategoryName</span>
+                    </div>
+                    <span class="lp-state">@(p.IsConfigured ? "مهيأة للشركة" : "افتراضي توافق")</span>
+                </div>
+
+                <div class="lp-grid">
+                    <label class="lp-check"><input type="checkbox" name="requiresBalance" value="true" checked="@p.RequiresBalance" /> يحتاج رصيداً</label>
+                    <label>الاستحقاق
+                        <input type="number" step="0.0001" min="0" name="entitlementAmount" value="@p.EntitlementAmount" placeholder="بدون رصيد مستقل" />
+                    </label>
+                    <label>وحدة الرصيد
+                        <select name="balanceUnit">
+                            <option value="Days" selected="@(p.BalanceUnit == "Days")">أيام</option>
+                            <option value="Hours" selected="@(p.BalanceUnit == "Hours")">ساعات</option>
+                        </select>
+                    </label>
+                    <label>مصدر الخصم
+                        <select name="balanceSourceRequestTypeId">
+                            <option value="0" selected="@(p.BalanceSourceRequestTypeId is null)">نفس رصيد النوع</option>
+                            @foreach (var source in Model.Policies.Where(x => x.RequestTypeId != p.RequestTypeId))
+                            {
+                                <option value="@source.RequestTypeId" selected="@(p.BalanceSourceRequestTypeId == source.RequestTypeId)">@source.RequestTypeName</option>
+                            }
+                        </select>
+                    </label>
+                    <label>ساعات اليوم (Override)
+                        <input type="number" step="0.01" min="0" max="24" name="hoursPerDayOverride" value="@p.HoursPerDayOverride" />
+                        <small>0 = شفت الموظف ← إعداد الشركة</small>
+                    </label>
+                    <label>حد الطلب الواحد
+                        <input type="number" step="0.0001" min="0" name="maxPerRequestAmount" value="@p.MaxPerRequestAmount" />
+                    </label>
+                    <label>الحد السنوي للاستخدام
+                        <input type="number" step="0.0001" min="0" name="maxPerYearAmount" value="@p.MaxPerYearAmount" />
+                    </label>
+                    <label>الإشعار المسبق (يوم)
+                        <input type="number" min="0" name="minimumNoticeDays" value="@p.MinimumNoticeDays" />
+                    </label>
+                    <label>الخدمة قبل الاستحقاق (يوم)
+                        <input type="number" min="0" name="eligibilityDays" value="@p.EligibilityDays" />
+                    </label>
+                    <label>طريقة الاستحقاق
+                        <select name="accrualMethod">
+                            <option value="FullUpfront" selected="@(p.AccrualMethod == "FullUpfront")">كامل الرصيد مقدماً</option>
+                            <option value="Monthly" selected="@(p.AccrualMethod == "Monthly")">تراكمي شهري</option>
+                            <option value="Daily" selected="@(p.AccrualMethod == "Daily")">تراكمي يومي</option>
+                        </select>
+                    </label>
+                    <label>المرفق في هذه الشركة
+                        <select name="attachmentMode">
+                            <option value="Inherit" selected="@(AttachmentMode(p.AttachmentRequiredOverride) == "Inherit")">يرث إعداد نوع الطلب</option>
+                            <option value="Required" selected="@(AttachmentMode(p.AttachmentRequiredOverride) == "Required")">إلزامي</option>
+                            <option value="Optional" selected="@(AttachmentMode(p.AttachmentRequiredOverride) == "Optional")">غير إلزامي</option>
+                        </select>
+                    </label>
+                    <label>سقف الترحيل
+                        <input type="number" step="0.0001" min="0" name="carryForwardMaxAmount" value="@p.CarryForwardMaxAmount" />
+                    </label>
+                    <label>انتهاء المرحّل بعد (شهر)
+                        <input type="number" min="0" name="carryForwardExpiryMonths" value="@p.CarryForwardExpiryMonths" />
+                    </label>
+                    <label>حد الرصيد السالب
+                        <input type="number" step="0.0001" min="0" name="negativeLimitAmount" value="@p.NegativeLimitAmount" />
+                    </label>
+                </div>
+
+                <div class="lp-flags">
+                    <label><input type="checkbox" name="allowNegative" value="true" checked="@p.AllowNegative" /> يسمح بتجاوز الرصيد</label>
+                    <label><input type="checkbox" name="prorateOnHire" value="true" checked="@p.ProrateOnHire" /> تنسيب رصيد الموظف الجديد</label>
+                    <label><input type="checkbox" name="carryForwardEnabled" value="true" checked="@p.CarryForwardEnabled" /> ترحيل المتبقي للسنة التالية</label>
+                    <label><input type="checkbox" name="allowRetroactive" value="true" checked="@p.AllowRetroactive" /> يسمح بأثر رجعي</label>
+                    <label><input type="checkbox" name="reasonRequired" value="true" checked="@p.ReasonRequired" /> السبب إلزامي</label>
+                </div>
+
+                <div class="lp-actions"><button type="submit">حفظ سياسة @p.RequestTypeName</button></div>
+            </form>
+        }
+        </div>
+    }
+</section>

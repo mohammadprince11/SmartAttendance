@@ -81,4 +81,16 @@ public class AttendanceTruthSourceTests
         // التحليل بعد، وهو أسوأ من العطل الذي عولج.
         Assert.Contains("DayAttendanceStore.EnsureAsync", source);
     }
+
+    [Fact]
+    public void ProgramDoesNotRegisterLegacyAttendanceEngines()
+    {
+        var program = File.ReadAllText(Path.Combine(WebRoot(), "Program.cs"));
+
+        Assert.DoesNotContain("AddScoped<IAttendanceProcessingService, AttendanceProcessingService>", program);
+        Assert.DoesNotContain("AddScoped<IAttendanceReportService, AttendanceReportService>", program);
+
+        var operations = File.ReadAllText(Path.Combine(WebRoot(), "Pages", "AttendanceOperations", "Index.cshtml.cs"));
+        Assert.Contains("DayAttendanceStore.ListRangeAsync", operations);
+    }
 }

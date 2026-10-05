@@ -196,6 +196,76 @@ public class DayAttendanceDeriveTests
 
     // ===== الدالة المساعدة مباشرةً =====
 
+    [Fact]
+    public void LateCompensation_FullCompensation_ClearsLateness()
+    {
+        var shift = Shift();
+        shift.LateCompensationEnabled = true;
+        shift.LateCompensationEligibleUntil = "09:30";
+        shift.LateCompensationEndLimit = "17:00";
+
+        var row = DayAttendanceStore.Derive(
+            shift, Day("08:30", "16:30"), "Work", At("09:00"), At("17:00"));
+
+        Assert.Equal(0, row.LateHours);
+        Assert.Equal("Present", row.Status);
+        Assert.Equal(8m, row.WorkedHours);
+    }
+
+    [Fact]
+    public void LateCompensation_PartialCompensation_LeavesUncoveredMinutes()
+    {
+        var shift = Shift();
+        shift.LateCompensationEnabled = true;
+        shift.LateCompensationEligibleUntil = "09:30";
+        shift.LateCompensationEndLimit = "17:00";
+
+        var row = DayAttendanceStore.Derive(
+            shift, Day("08:30", "16:30"), "Work", At("09:15"), At("17:00"));
+
+        Assert.Equal(0.25m, row.LateHours);
+        Assert.Equal("Late", row.Status);
+    }
+
+    [Fact]
+    public void LateCompensation_ArrivalAfterEligibility_DoesNotCompensate()
+    {
+        var shift = Shift();
+        shift.LateCompensationEnabled = true;
+        shift.LateCompensationEligibleUntil = "09:30";
+        shift.LateCompensationEndLimit = "17:00";
+
+        var row = DayAttendanceStore.Derive(
+            shift, Day("08:30", "16:30"), "Work", At("09:31"), At("17:00"));
+
+        Assert.Equal(1.02m, row.LateHours);
+        Assert.Equal("Late", row.Status);
+    }
+
+    [Fact]
+    public void LateCompensation_CheckOutAfterEndLimit_DoesNotIncreaseCredit()
+    {
+        var shift = Shift();
+        shift.LateCompensationEnabled = true;
+        shift.LateCompensationEligibleUntil = "09:30";
+        shift.LateCompensationEndLimit = "17:00";
+
+        var row = DayAttendanceStore.Derive(
+            shift, Day("08:30", "16:30"), "Work", At("09:15"), At("18:00"));
+
+        Assert.Equal(0.25m, row.LateHours);
+    }
+
+    [Fact]
+    public void LateCompensation_Disabled_PreservesLegacyLateness()
+    {
+        var row = DayAttendanceStore.Derive(
+            Shift(), Day("08:30", "16:30"), "Work", At("09:00"), At("17:00"));
+
+        Assert.Equal(0.5m, row.LateHours);
+        Assert.Equal("Late", row.Status);
+    }
+
     [Theory]
     [InlineData(0, 15, "Subtract", 0)]
     [InlineData(-10, 15, "Subtract", 0)]     // حضور مبكر

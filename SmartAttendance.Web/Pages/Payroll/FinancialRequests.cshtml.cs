@@ -113,10 +113,20 @@ public class FinancialRequestsModel : PageModel
 
         if (result.FinalApproved)
         {
-            var applied = await FinancialRequestStore.ApplyIfFinancialAsync(
-                _db, await _companyScope.GetAsync(HttpContext.RequestAborted), id, CurrentUser,
-                HttpContext.Connection.RemoteIpAddress?.ToString());
-            if (applied) message = "تم الاعتماد النهائي وتفعيل الأثر المالي (قرض/بدل/زيادة حسب النوع).";
+            try
+            {
+                await ApprovalEffectJobStore.ApplyNowAsync(
+                    _db,
+                    id,
+                    await _companyScope.GetAsync(HttpContext.RequestAborted),
+                    CurrentUser,
+                    HttpContext.Connection.RemoteIpAddress?.ToString());
+                message = "تم الاعتماد النهائي وتفعيل الأثر المالي (قرض/بدل/زيادة حسب النوع).";
+            }
+            catch
+            {
+                message = "تم الاعتماد النهائي وحُفظ الأثر المالي لإعادة التنفيذ تلقائياً.";
+            }
         }
 
         TempData["SuccessMessage"] = message;

@@ -123,6 +123,11 @@ public class IndexModel : PageModel
             OvertimeRateHoliday = ParseRate(form["OvertimeRateHoliday"]),
             OvertimeRateLeave = ParseRate(form["OvertimeRateLeave"]),
             LatenessGraceMinutes = int.TryParse(form["LatenessGraceMinutes"], out var lgm) ? Math.Max(0, lgm) : 0,
+            LateCompensationEnabled = form["LateCompensationEnabled"] == "true",
+            LateCompensationEligibleUntil = string.IsNullOrWhiteSpace(form["LateCompensationEligibleUntil"])
+                ? null : form["LateCompensationEligibleUntil"].ToString(),
+            LateCompensationEndLimit = string.IsNullOrWhiteSpace(form["LateCompensationEndLimit"])
+                ? null : form["LateCompensationEndLimit"].ToString(),
             EarlyLeaveGraceMinutes = int.TryParse(form["EarlyLeaveGraceMinutes"], out var elg) ? Math.Max(0, elg) : 0,
             GraceExceededPolicy = form["GraceExceededPolicy"] == "Full" ? "Full" : "Subtract",
             TimeLimitFrom = string.IsNullOrWhiteSpace(form["TimeLimitFrom"]) ? null : form["TimeLimitFrom"].ToString(),

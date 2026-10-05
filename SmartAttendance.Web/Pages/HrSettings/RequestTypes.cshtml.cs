@@ -51,7 +51,7 @@ public class RequestTypesModel : PageModel
         int? allowedDays, string repeat, int serviceMonths, string gender,
         string paidMode, bool deductFromSalary, bool countsInService, bool hasBalance,
         int? maxPerRequest, bool attachmentRequired, string? attachmentLabel,
-        bool needsTime, bool active, int order, string? conditions = null)
+        bool needsTime, string? effectCode, bool active, int order, string? conditions = null)
     {
         await RequestTypeStore.EnsureAsync(_db);
         if (categoryId <= 0 || string.IsNullOrWhiteSpace(name))
@@ -75,6 +75,7 @@ public class RequestTypesModel : PageModel
             AttachmentRequired = attachmentRequired,
             AttachmentLabel = attachmentLabel?.Trim(),
             NeedsTime = needsTime,
+            EffectCode = RequestTypeEffectCatalog.Normalize(effectCode),
             // الشروط تمرّ بالمحرّك ذهاباً وإياباً: JSON ملفّق أو معيار محذوف يُنظَّف
             // هنا بدل أن يُخزَّن ثم يُتجاهَل بصمت وقت العرض بالبوابة.
             ConditionsJson = HrConditions.Serialize(HrConditions.Deserialize(conditions)),

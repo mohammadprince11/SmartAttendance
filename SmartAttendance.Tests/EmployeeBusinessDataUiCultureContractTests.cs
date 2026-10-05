@@ -69,6 +69,98 @@ public sealed class EmployeeBusinessDataUiCultureContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EmployeeEdit_PreservesDefaultLanguageAndPassportIndependently()
+    {
+        var root = FindRoot();
+
+        var edit = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Web",
+            "Pages",
+            "Employees",
+            "Edit.cshtml.cs"));
+
+        var service = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Infrastructure",
+            "Services",
+            "EmployeeService.cs"));
+
+        Assert.Contains(
+            "var primaryCulture = languages",
+            edit,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "var stored = await _dbContext.LocalizedEntityValues.AsNoTracking()",
+            edit,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "var stored = preservePostedValues",
+            edit,
+            StringComparison.Ordinal);
+
+        Assert.True(
+            service.Split(
+                "employee.PassportNo = Trimmed(model.PassportNo);",
+                StringSplitOptions.None).Length - 1 >= 2,
+            "PassportNo must be persisted in both create and update paths.");
+    }
+
+    [Fact]
+    public void SalaryInputs_UseInvariantRawValueBeforeThousandsFormatting()
+    {
+        var root = FindRoot();
+
+        var create = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Web",
+            "Pages",
+            "Employees",
+            "Create.cshtml"));
+
+        var edit = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Web",
+            "Pages",
+            "Employees",
+            "Edit.cshtml"));
+
+        var onboarding = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Web",
+            "Pages",
+            "Employees",
+            "SmartOnboardingReview.cshtml"));
+
+        var script = File.ReadAllText(Path.Combine(
+            root,
+            "SmartAttendance.Web",
+            "wwwroot",
+            "js",
+            "zynora-salary-input.js"));
+
+        foreach (var page in new[] { create, edit, onboarding })
+        {
+            Assert.Contains(
+                "data-zynora-salary-raw",
+                page,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "CultureInfo.InvariantCulture",
+                page,
+                StringComparison.Ordinal);
+        }
+
+        Assert.Contains(
+            "getAttribute(\"data-zynora-salary-raw\")",
+            script,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRoot()
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());

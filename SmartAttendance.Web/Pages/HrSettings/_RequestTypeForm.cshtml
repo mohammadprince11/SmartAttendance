@@ -39,6 +39,17 @@
             </select>
         </label>
 
+        <label>الأثر التنفيذي
+            <select name="effectCode">
+                <option value="">بدون أثر تنفيذي</option>
+                @foreach (var option in SmartAttendance.Web.Infrastructure.Hrms.RequestTypeEffectCatalog.Options)
+                {
+                    <option value="@option.Code" selected="@(t.EffectCode==option.Code)">@option.Label</option>
+                }
+            </select>
+            <small>هوية ثابتة للمحرك؛ تغيير اسم الطلب لاحقاً لا يغيّر طريقة تنفيذه.</small>
+        </label>
+
         <label>تسمية المرفق<input type="text" name="attachmentLabel" value="@t.AttachmentLabel" placeholder="مثال: عقد الزواج" /></label>
         <label>الترتيب<input type="number" name="order" value="@t.DisplayOrder" min="0" /></label>
     </div>

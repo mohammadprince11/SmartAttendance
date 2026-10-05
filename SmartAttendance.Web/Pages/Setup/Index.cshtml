@@ -55,13 +55,104 @@
         <div asp-validation-summary="ModelOnly" class="nx-setup-alert-danger"></div>
     }
 
+    @if (Model.Onboarding)
+    {
+        <section class="nx-setup-wizard" aria-labelledby="setup-wizard-title">
+            <div class="nx-setup-wizard__head">
+                <div>
+                    <span>التأسيس الأولي</span>
+                    <h2 id="setup-wizard-title">ابدأ منظومتك بخطوات مرتبة</h2>
+                    <p>نفّذ الخطوات بالتسلسل. يمكنك الرجوع إلى هذه الصفحة في أي وقت من الإعدادات.</p>
+                </div>
+                <strong>6 خطوات</strong>
+            </div>
+
+            <ol class="nx-setup-wizard__steps">
+                <li class="@(hasCompanies ? "is-complete" : "is-current")">
+                    <b>1</b>
+                    <div><strong>إنشاء الشركة الأساسية</strong><small>اسم الشركة وبيانات التواصل الرسمية.</small></div>
+                    @if (hasCompanies)
+                    {
+                        <span class="nx-setup-wizard__state">مكتملة</span>
+                    }
+                    else
+                    {
+                        <a asp-page="/Companies/Create" asp-route-onboarding="true">ابدأ</a>
+                    }
+                </li>
+                <li class="@(!hasCompanies ? "is-locked" : "")">
+                    <b>2</b>
+                    <div><strong>لغات بيانات الشركة</strong><small>حدد اللغة الأساسية واللغات الإضافية.</small></div>
+                    @if (hasCompanies)
+                    {
+                        <a asp-page="/Settings/DataLanguages"
+                           asp-route-companyId="@setup?.CompanyId"
+                           asp-route-onboarding="true">فتح</a>
+                    }
+                    else
+                    {
+                        <span class="nx-setup-wizard__state">بعد الشركة</span>
+                    }
+                </li>
+                <li class="@(workLocationCount > 0 ? "is-complete" : !hasCompanies ? "is-locked" : "")">
+                    <b>3</b>
+                    <div><strong>مواقع العمل والفروع</strong><small>أضف المقر الرئيسي والفروع التابعة.</small></div>
+                    @if (hasCompanies)
+                    {
+                        <a href="#work-locations">@(workLocationCount > 0 ? "مراجعة" : "إضافة")</a>
+                    }
+                    else
+                    {
+                        <span class="nx-setup-wizard__state">بعد الشركة</span>
+                    }
+                </li>
+                <li class="@(departmentCount > 0 ? "is-complete" : !hasCompanies ? "is-locked" : "")">
+                    <b>4</b>
+                    <div><strong>الأقسام</strong><small>ابنِ الهيكل الإداري الأساسي.</small></div>
+                    @if (hasCompanies)
+                    {
+                        <a href="#departments">@(departmentCount > 0 ? "مراجعة" : "إضافة")</a>
+                    }
+                    else
+                    {
+                        <span class="nx-setup-wizard__state">بعد الشركة</span>
+                    }
+                </li>
+                <li class="@(!hasCompanies ? "is-locked" : "")">
+                    <b>5</b>
+                    <div><strong>المناصب الوظيفية</strong><small>عرّف المناصب واربطها بالأقسام.</small></div>
+                    @if (hasCompanies)
+                    {
+                        <a asp-page="/Positions/Index" asp-route-companyId="@setup?.CompanyId">فتح</a>
+                    }
+                    else
+                    {
+                        <span class="nx-setup-wizard__state">بعد الشركة</span>
+                    }
+                </li>
+                <li class="@(!hasCompanies ? "is-locked" : "")">
+                    <b>6</b>
+                    <div><strong>أنواع الدوام</strong><small>أضف أوقات الدوام الأساسية قبل إدخال الموظفين.</small></div>
+                    @if (hasCompanies)
+                    {
+                        <a asp-page="/ShiftTypes/Index">فتح</a>
+                    }
+                    else
+                    {
+                        <span class="nx-setup-wizard__state">بعد الشركة</span>
+                    }
+                </li>
+            </ol>
+        </section>
+    }
+
     @if (!hasCompanies)
     {
         <section class="zynora-setup-card nx-company-empty">
             <div class="nx-company-empty-mark">N</div>
             <h2>&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0634;&#x0631;&#x0643;&#x0629; &#x0628;&#x0639;&#x062F;</h2>
             <p>&#x0623;&#x0636;&#x0641; &#x0627;&#x0644;&#x0634;&#x0631;&#x0643;&#x0629; &#x0627;&#x0644;&#x0623;&#x0648;&#x0644;&#x0649;&#x060C; &#x062B;&#x0645; &#x0627;&#x0631;&#x062C;&#x0639; &#x0644;&#x0625;&#x0643;&#x0645;&#x0627;&#x0644; &#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0627;&#x0644;&#x0634;&#x0639;&#x0627;&#x0631; &#x0648;&#x0627;&#x0644;&#x0628;&#x0644;&#x062F; &#x0648;&#x0633;&#x064A;&#x0627;&#x0633;&#x0627;&#x062A; &#x0627;&#x0644;&#x063A;&#x0644;&#x0642;.</p>
-            <a asp-page="/Companies/Create" class="nx-setup-btn nx-setup-btn-primary">&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0634;&#x0631;&#x0643;&#x0629;</a>
+            <a asp-page="/Companies/Create" asp-route-onboarding="@Model.Onboarding" class="nx-setup-btn nx-setup-btn-primary">&#x0625;&#x0636;&#x0627;&#x0641;&#x0629; &#x0634;&#x0631;&#x0643;&#x0629;</a>
         </section>
     }
     else if (setup != null)

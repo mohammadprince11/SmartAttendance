@@ -66,7 +66,8 @@ public class LoansModel : PageModel
             StartMonth = int.TryParse(form["StartMonth"], out var sm) ? sm : DateTime.Today.Month,
             Reason = NullIfEmpty(form["Reason"]),
             Note = NullIfEmpty(form["Note"]),
-            Status = form["Status"].ToString() is { Length: > 0 } st ? st : LoanStore.Pending
+            RequestKey = NullIfEmpty(form["RequestKey"]),
+            Status = LoanStore.Pending
         };
 
         if (loan.EmployeeId <= 0 || loan.Amount <= 0)
@@ -103,6 +104,11 @@ public class LoansModel : PageModel
         catch (UnauthorizedAccessException)
         {
             TempData["SuccessMessage"] = "الموظف أو القرض خارج نطاق صلاحيتك.";
+            return RedirectToPage();
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["SuccessMessage"] = ex.Message;
             return RedirectToPage();
         }
         TempData["SuccessMessage"] = loan.Id > 0 ? "تم تحديث القرض." : "تم إنشاء القرض.";

@@ -32,12 +32,17 @@ public class SystemUserConfiguration : IEntityTypeConfiguration<SystemUser>
         builder.Property(x => x.Notes)
             .HasMaxLength(500);
 
+        builder.HasOne(x => x.Tenant)
+            .WithMany(x => x.SystemUsers)
+            .HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(x => x.Employee)
             .WithMany()
             .HasForeignKey(x => x.EmployeeId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(x => x.UserName)
+        builder.HasIndex(x => new { x.TenantId, x.UserName })
             .IsUnique();
 
         builder.HasIndex(x => x.Email);

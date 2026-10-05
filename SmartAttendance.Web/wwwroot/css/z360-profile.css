@@ -1,4 +1,4 @@
-/* ZYNORA HR — Employee 360 clean rebuild
+﻿/* ZYNORA HR — Employee 360 clean rebuild
    One isolated visual system for /Employees/Profile.
    No legacy profile selector overrides. */
 
@@ -453,18 +453,21 @@ html[data-theme="dark"] .z360-hero {
     box-shadow: var(--z360-shadow-soft);
 }
 
-.z360-card-head {
+.z360-summary-title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    min-height: 40px;
-    margin-bottom: 4px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--z360-border);
+    min-height: 32px;
+    margin-bottom: 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
-.z360-card-head h3 {
+.z360-summary-title-row h3 {
     margin: 0;
     color: var(--z360-text);
     font-size: 16px;
@@ -530,6 +533,100 @@ html[data-theme="dark"] .z360-hero {
     font-size: 12px;
 }
 
+.z360-issue-list {
+    display: grid;
+}
+
+.z360-issue-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 10px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--z360-border);
+}
+
+.z360-issue-line:last-child {
+    border-bottom: 0;
+}
+
+.z360-issue-copy {
+    min-width: 0;
+}
+
+.z360-issue-title {
+    display: block;
+    color: var(--z360-text);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.z360-issue-copy small {
+    display: block;
+    margin-top: 2px;
+    color: var(--z360-muted);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.z360-issue-state {
+    color: var(--z360-warning);
+    font-size: 11px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.z360-issue-critical .z360-issue-state { color: var(--z360-danger); }
+.z360-issue-info .z360-issue-state { color: var(--z360-info); }
+
+.z360-issue-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 3px;
+}
+
+.z360-issue-action {
+    appearance: none;
+    display: inline-flex;
+    min-height: 28px;
+    padding: 4px 9px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--z360-teal) 34%, var(--z360-border));
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--z360-teal) 8%, var(--z360-surface));
+    color: var(--z360-teal);
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.z360-issue-action:hover,
+.z360-issue-action:focus-visible {
+    border-color: var(--z360-teal);
+    background: color-mix(in srgb, var(--z360-teal) 13%, var(--z360-surface));
+    color: var(--z360-teal);
+}
+
+.z360-issue-empty {
+    display: grid;
+    gap: 3px;
+    padding: 12px 0;
+}
+
+.z360-issue-empty strong {
+    color: var(--z360-success);
+    font-size: 12px;
+}
+
+.z360-issue-empty span {
+    color: var(--z360-muted);
+    font-size: 10px;
+}
+
 /* Requirements */
 .z360-requirements {
     padding: 16px;
@@ -565,9 +662,9 @@ html[data-theme="dark"] .z360-hero {
     align-items: center;
     min-height: 28px;
     padding: 5px 10px;
-    border: 1px solid rgba(231, 165, 29, .36);
+    border: 1px solid color-mix(in srgb, var(--z360-warning) 36%, var(--z360-border));
     border-radius: 999px;
-    background: rgba(231, 165, 29, .08);
+    background: color-mix(in srgb, var(--z360-warning) 8%, var(--z360-surface));
     color: var(--z360-warning);
     font-size: 11px;
     font-weight: 800;
@@ -580,28 +677,108 @@ html[data-theme="dark"] .z360-hero {
 }
 
 .z360-requirement {
-    min-height: 84px;
-    padding: 12px;
+    position: relative;
+    display: flex;
+    min-height: 136px;
+    padding: 13px;
+    flex-direction: column;
     border: 1px solid var(--z360-border);
     border-inline-start: 3px solid var(--z360-warning);
     border-radius: 10px;
     background: var(--z360-surface-soft);
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
 
-.z360-requirement-danger { border-inline-start-color: var(--z360-danger); }
+.z360-requirement:hover,
+.z360-requirement:focus-visible {
+    outline: 0;
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--z360-teal) 6%, var(--z360-surface-soft));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--z360-teal) 38%, transparent), var(--z360-shadow-soft);
+}
 
-.z360-requirement strong {
+.z360-requirement-critical { border-inline-start-color: var(--z360-danger); }
+.z360-requirement-warning { border-inline-start-color: var(--z360-warning); }
+.z360-requirement-info { border-inline-start-color: var(--z360-info); }
+
+.z360-requirement-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 9px;
+}
+
+.z360-requirement-severity,
+.z360-requirement-count {
+    display: inline-flex;
+    min-height: 22px;
+    padding: 2px 7px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--z360-border);
+    border-radius: 999px;
+    color: var(--z360-muted);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.z360-requirement-critical .z360-requirement-severity {
+    border-color: color-mix(in srgb, var(--z360-danger) 36%, var(--z360-border));
+    background: color-mix(in srgb, var(--z360-danger) 8%, var(--z360-surface));
+    color: var(--z360-danger);
+}
+
+.z360-requirement-warning .z360-requirement-severity {
+    border-color: color-mix(in srgb, var(--z360-warning) 36%, var(--z360-border));
+    background: color-mix(in srgb, var(--z360-warning) 8%, var(--z360-surface));
+    color: var(--z360-warning);
+}
+
+.z360-requirement-copy {
+    flex: 1;
+}
+
+.z360-requirement-copy strong {
     display: block;
     margin-bottom: 4px;
     color: var(--z360-text);
     font-size: 13px;
 }
 
-.z360-requirement span {
+.z360-requirement-copy > span {
     display: block;
     color: var(--z360-muted);
     font-size: 12px;
     line-height: 1.55;
+}
+
+.z360-requirement-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    color: var(--z360-teal);
+    font-size: 11px;
+    font-weight: 800;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.z360-requirement:hover .z360-requirement-hint,
+.z360-requirement:focus-visible .z360-requirement-hint {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (hover: none) {
+    .z360-requirement-hint {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 /* Detail area */
@@ -720,6 +897,87 @@ html[data-theme="dark"] .z360-hero {
     background: var(--z360-surface);
     color: var(--z360-text);
 }
+
+
+.z360-attendance-filter {
+    --z360-attendance-label-slot: 20px;
+    display: grid;
+    grid-template-columns: minmax(190px, 220px) minmax(190px, 220px) max-content max-content;
+    align-items: start;
+    justify-content: start;
+    gap: 10px;
+}
+
+.z360-attendance-filter > label {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: var(--z360-attendance-label-slot) 42px;
+    align-content: start;
+}
+
+.z360-attendance-filter > label > span {
+    display: flex;
+    align-items: flex-start;
+    line-height: var(--z360-attendance-label-slot);
+}
+
+.z360-attendance-filter > label input,
+.z360-attendance-filter > .z360-action {
+    box-sizing: border-box;
+    height: 42px;
+    min-height: 42px;
+}
+
+.z360-attendance-filter > label input {
+    width: 100%;
+}
+
+.z360-attendance-filter > .z360-action {
+    align-self: start;
+    margin-top: var(--z360-attendance-label-slot);
+    white-space: nowrap;
+    padding-inline: 16px;
+}
+
+.z360-cutoff-note {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin: -3px 2px 12px;
+    color: var(--z360-muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.z360-cutoff-note strong {
+    color: var(--z360-text);
+    font-weight: 800;
+}
+
+.z360-cutoff-note.is-policy::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--z360-teal);
+}
+
+@media (max-width: 900px) {
+    .z360-attendance-filter {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .z360-attendance-filter > .z360-action {
+        width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .z360-attendance-filter {
+        grid-template-columns: 1fr;
+    }
+}
+
 
 .z360-mini-kpis {
     display: grid;
@@ -878,10 +1136,11 @@ html[data-theme="dark"] .z360-hero {
 
 .z360-file-card {
     min-width: 0;
-    padding: 12px;
-    border: 1px solid var(--z360-border);
-    border-radius: 10px;
-    background: var(--z360-surface-soft);
+    padding: 8px 10px 14px;
+    border: 0;
+    border-block-end: 1px solid var(--z360-border);
+    border-radius: 0;
+    background: transparent;
 }
 
 .z360-file-card-head {
@@ -1928,4 +2187,70 @@ body.z360-day-modal-open {
         grid-column: 1 / -1;
         width: 100%;
     }
+}
+
+/* ملفات الموظف: الأقسام الفرعية جزء من البلوك الرئيسي، وليست Cards مستقلة.
+   يتغلب عمداً على عقد zynora-refresh العام الذي يفرض Card على أي *-card. */
+.zy-ui-contract #profile-files .z360-file-card {
+    border: 0 !important;
+    border-block-end: 1px solid var(--z360-border) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.zy-ui-contract #profile-files .z360-file-card-head {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Employee profile activity pagination */
+.z360-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--z360-border);
+}
+
+.z360-pagination-info {
+    color: var(--z360-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.z360-pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.z360-page-link {
+    display: inline-grid;
+    place-items: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--z360-border);
+    border-radius: 8px;
+    background: var(--z360-surface-raised);
+    color: var(--z360-text);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.z360-page-link:hover {
+    border-color: color-mix(in srgb, var(--brand-primary) 42%, var(--z360-border));
+    color: var(--z360-teal);
+}
+
+.z360-page-link.is-active {
+    border-color: var(--z360-teal);
+    background: color-mix(in srgb, var(--brand-primary) 16%, var(--z360-surface));
+    color: var(--z360-teal);
 }

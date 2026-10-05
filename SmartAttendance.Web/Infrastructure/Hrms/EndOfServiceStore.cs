@@ -4,39 +4,76 @@ using SmartAttendance.Web.Infrastructure.Security;
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 /// <summary>
-/// تسويات نهاية الخدمة (مطابقة كيان «نهاية الخدمة / STB») — تحسب مكافأة نهاية الخدمة
-/// بشرائح سنوات الخدمة (EndOfServiceRule.Tiers) على آخر راتب أساسي، مضافاً إليها بدل
-/// رصيد الإجازات ومستحقات أخرى، ناقصاً الاقتطاعات = صافي التسوية. نمط self-healing.
-/// ⚠️ الشرائح الافتراضية تقريبية «تحتاج تأكيد محاسب/قانون العمل العراقي».
+/// تسويات نهاية الخدمة (نهاية الخدمة / STB). مبلغ المكافأة لا يعتمد أي شرائح
+/// قانونية مخمّنة داخل الكود؛ معدل الأسابيع لكل سنة يأتي صراحةً من سياسة الشركة،
+/// والأهلية/المضاعف يحددهما سياق التسوية.
 /// </summary>
 public static class EndOfServiceStore
 {
-    /// <summary>شرائح المكافأة الافتراضية: أشهر لكل سنة خدمة ضمن مدى السنوات (نمط EndOfServiceRule.Tiers).</summary>
-    private static readonly (decimal From, decimal To, decimal MonthsPerYear)[] DefaultTiers =
+    /// <summary>
+    /// يحسب مكافأة نهاية الخدمة من معدل أسابيع/سنة صريح. لا تفترض هذه الدالة
+    /// الأهلية القانونية؛ المستدعي يقرر الأهلية والمضاعف قبل الحساب.
+    /// </summary>
+    public static (decimal Gratuity, string Breakdown) ComputeGratuity(
+        decimal years,
+        decimal monthlyBasis,
+        decimal weeksPerYear,
+        decimal multiplier = 1m)
     {
-        (0m, 5m, 0.5m),      // أول 5 سنوات: نصف شهر عن كل سنة
-        (5m, 9999m, 1.0m),   // ما بعد 5 سنوات: شهر عن كل سنة
-    };
+        var amount = EndOfServicePolicy.Compute(
+            years, monthlyBasis, weeksPerYear, multiplier);
 
-    /// <summary>مكافأة نهاية الخدمة بالشرائح على آخر أساسي شهري + وصف نصّي للتفصيل.</summary>
-    public static (decimal Gratuity, string Breakdown) ComputeGratuity(decimal years, decimal monthlyBasic)
-    {
-        decimal total = 0;
-        var parts = new List<string>();
-        foreach (var t in DefaultTiers)
-        {
-            if (years <= t.From) continue;
-            var yearsInTier = Math.Min(years, t.To) - t.From;
-            if (yearsInTier <= 0) continue;
-            var amt = Math.Round(yearsInTier * t.MonthsPerYear * monthlyBasic, 2);
-            total += amt;
-            parts.Add($"{yearsInTier:0.##}س × {t.MonthsPerYear:0.##} شهر");
-        }
-        return (Math.Round(total, 2), parts.Count > 0 ? string.Join(" + ", parts) : "—");
+        if (amount <= 0m)
+            return (0m, "—");
+
+        return (
+            amount,
+            $"{years:0.##}س × {weeksPerYear:0.##} أسبوع/سنة × {multiplier:0.##}");
     }
 
     public static decimal YearsOfService(DateOnly start, DateOnly end)
         => end <= start ? 0 : Math.Round((decimal)(end.ToDateTime(TimeOnly.MinValue) - start.ToDateTime(TimeOnly.MinValue)).TotalDays / 365.25m, 2);
+
+    public readonly record struct PayrollPosting(string TxType, decimal Amount);
+
+    public static PayrollPosting? ToPayrollPosting(decimal netSettlement) =>
+        netSettlement switch
+        {
+            > 0m => new PayrollPosting(PayrollTransactionStore.Income, Math.Abs(netSettlement)),
+            < 0m => new PayrollPosting(PayrollTransactionStore.Deduction, Math.Abs(netSettlement)),
+            _ => null
+        };
+
+    public static Task<(int Year, int Month)> ResolvePayrollPeriodAsync(
+        ApplicationDbContext dbContext,
+        int companyId,
+        DateOnly lastWorkingDate) =>
+        AttendancePeriodPolicy.ResolveLabelForDateAsync(
+            dbContext,
+            lastWorkingDate,
+            SmartAttendance.Domain.Enums.PayrollCutoffType.Terminations,
+            companyId);
+
+    public sealed record ApprovalResult(
+        bool Ok,
+        bool PostedToPayroll,
+        int? PayrollTransactionId,
+        int? PayrollYear,
+        int? PayrollMonth,
+        string Message);
+
+    private sealed record ApprovalRow(
+        int EmployeeId,
+        int CompanyId,
+        string ReferenceNo,
+        DateOnly? LastWorkingDate,
+        decimal NetSettlement,
+        string Status,
+        int? PayrollTransactionId,
+        decimal TaxWithheldSnapshot,
+        bool TaxDifferenceIncluded,
+        decimal GosiWithheldSnapshot,
+        bool GosiDifferenceIncluded);
 
     public sealed class Settlement
     {
@@ -52,11 +89,26 @@ public static class EndOfServiceStore
         public decimal LastBasic { get; set; }
         public string? Reason { get; set; }
         public decimal GratuityAmount { get; set; }
+        public string GratuityCalculationMode { get; set; } = "Legacy";
+        public bool GratuityEligible { get; set; }
+        public decimal? GratuityWeeksPerYear { get; set; }
+        public decimal GratuityMultiplier { get; set; } = 1m;
+        public decimal GratuityBasisAmount { get; set; }
         public decimal LeaveBalanceDays { get; set; }
         public decimal LeaveEncashment { get; set; }
         public decimal OtherDues { get; set; }
         public decimal Deductions { get; set; }
+        public decimal TaxWithheldSnapshot { get; set; }
+        public decimal? TaxDueReviewed { get; set; }
+        public bool TaxDifferenceIncluded { get; set; }
+        public decimal GosiWithheldSnapshot { get; set; }
+        public decimal? GosiDueReviewed { get; set; }
+        public bool GosiDifferenceIncluded { get; set; }
+        public decimal TerminationDifferenceNet { get; set; }
         public decimal NetSettlement { get; set; }
+        public int? PayrollTransactionId { get; set; }
+        public DateTime? PayrollPostedAt { get; set; }
+        public string? PayrollPostedBy { get; set; }
         public string? Note { get; set; }
         public string Status { get; set; } = "Draft";
         public DateTime? ApprovedAt { get; set; }
@@ -84,11 +136,26 @@ BEGIN
         LastBasic decimal(18,2) NOT NULL DEFAULT(0),
         Reason nvarchar(200) NULL,
         GratuityAmount decimal(18,2) NOT NULL DEFAULT(0),
+        GratuityCalculationMode nvarchar(20) NOT NULL DEFAULT(N'Legacy'),
+        GratuityEligible bit NOT NULL DEFAULT(0),
+        GratuityWeeksPerYear decimal(9,4) NULL,
+        GratuityMultiplier decimal(9,4) NOT NULL DEFAULT(1),
+        GratuityBasisAmount decimal(18,2) NOT NULL DEFAULT(0),
         LeaveBalanceDays decimal(9,2) NOT NULL DEFAULT(0),
         LeaveEncashment decimal(18,2) NOT NULL DEFAULT(0),
         OtherDues decimal(18,2) NOT NULL DEFAULT(0),
         Deductions decimal(18,2) NOT NULL DEFAULT(0),
+        TaxWithheldSnapshot decimal(18,2) NOT NULL DEFAULT(0),
+        TaxDueReviewed decimal(18,2) NULL,
+        TaxDifferenceIncluded bit NOT NULL DEFAULT(0),
+        GosiWithheldSnapshot decimal(18,2) NOT NULL DEFAULT(0),
+        GosiDueReviewed decimal(18,2) NULL,
+        GosiDifferenceIncluded bit NOT NULL DEFAULT(0),
+        TerminationDifferenceNet decimal(18,2) NOT NULL DEFAULT(0),
         NetSettlement decimal(18,2) NOT NULL DEFAULT(0),
+        PayrollTransactionId int NULL,
+        PayrollPostedAt datetime2 NULL,
+        PayrollPostedBy nvarchar(150) NULL,
         Note nvarchar(500) NULL,
         Status nvarchar(30) NOT NULL DEFAULT(N'Draft'),
         ApprovedAt datetime2 NULL,
@@ -98,12 +165,61 @@ BEGIN
     );
     CREATE INDEX IX_EmployeeEndOfService_Employee ON EmployeeEndOfService (EmployeeId);
 END;
+
+IF OBJECT_ID('EmployeeEndOfService', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('EmployeeEndOfService','GratuityCalculationMode') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityCalculationMode nvarchar(20) NOT NULL
+            CONSTRAINT DF_EOS_GratuityCalculationMode DEFAULT(N'Legacy');
+    IF COL_LENGTH('EmployeeEndOfService','GratuityEligible') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityEligible bit NOT NULL
+            CONSTRAINT DF_EOS_GratuityEligible DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityWeeksPerYear') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityWeeksPerYear decimal(9,4) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GratuityMultiplier') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityMultiplier decimal(9,4) NOT NULL
+            CONSTRAINT DF_EOS_GratuityMultiplier DEFAULT(1);
+    IF COL_LENGTH('EmployeeEndOfService','GratuityBasisAmount') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GratuityBasisAmount decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GratuityBasisAmount DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TaxWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TaxWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TaxDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','TaxDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TaxDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_TaxDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiWithheldSnapshot') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiWithheldSnapshot decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_GosiWithheldSnapshot DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','GosiDueReviewed') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDueReviewed decimal(18,2) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','GosiDifferenceIncluded') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD GosiDifferenceIncluded bit NOT NULL
+            CONSTRAINT DF_EOS_GosiDifferenceIncluded DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','TerminationDifferenceNet') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD TerminationDifferenceNet decimal(18,2) NOT NULL
+            CONSTRAINT DF_EOS_TerminationDifferenceNet DEFAULT(0);
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollTransactionId int NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedAt') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedAt datetime2 NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollPostedBy') IS NULL
+        ALTER TABLE EmployeeEndOfService ADD PayrollPostedBy nvarchar(150) NULL;
+    IF COL_LENGTH('EmployeeEndOfService','PayrollTransactionId') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('EmployeeEndOfService') AND name='UX_EmployeeEndOfService_PayrollTransactionId')
+        CREATE UNIQUE INDEX UX_EmployeeEndOfService_PayrollTransactionId
+            ON EmployeeEndOfService(PayrollTransactionId)
+            WHERE PayrollTransactionId IS NOT NULL;
+END;
 """);
     }
 
     public sealed class EmployeeInfo
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
         public string No { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public decimal Basic { get; set; }
@@ -119,7 +235,7 @@ END;
         return await HrmsDatabase.QueryAsync(
             dbContext,
             $"""
-SELECT e.Id, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
+SELECT e.Id, ISNULL(e.CompanyId, 0) AS CompanyId, ISNULL(e.EmployeeNo, N'') AS EmployeeNo, ISNULL(e.FullName, N'') AS FullName,
        ISNULL(f.BasicSalary, 0) AS BasicSalary, COALESCE(e.HireDate, e.JoiningDate) AS HireDate
 FROM Employees e
 LEFT JOIN EmployeeFinancialInfos f ON f.EmployeeId = e.Id AND ISNULL(f.IsDeleted,0) = 0
@@ -130,6 +246,7 @@ ORDER BY e.FullName;
             reader => new EmployeeInfo
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 No = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 Name = HrmsDatabase.GetString(reader, "FullName"),
                 Basic = reader["BasicSalary"] is decimal b ? b : 0,
@@ -212,23 +329,163 @@ ORDER BY s.CreatedAt DESC;
         });
     }
 
-    public static async Task<bool> ApproveAsync(ApplicationDbContext dbContext, CompanyScope scope, int id, string userName)
+    public static async Task<ApprovalResult> ApproveAsync(
+        ApplicationDbContext dbContext,
+        CompanyScope scope,
+        int id,
+        string userName)
     {
         ArgumentNullException.ThrowIfNull(scope);
+        if (scope.IsDeniedAll)
+            return new(false, false, null, null, null, "لا صلاحية على هذه التسوية.");
+
         await EnsureAsync(dbContext);
-        if (!await EmployeeCompanyGuard.CanAccessOwnedRowAsync(
-                dbContext, EmployeeCompanyGuard.Tables.EmployeeEndOfService, "Id", id, scope))
-            return false;
-        if (await IsApprovedAsync(dbContext, id)) return false;
+        await PayrollTransactionStore.EnsureAsync(dbContext);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var rows = await HrmsDatabase.QueryAsync(
+            dbContext,
+            $"""
+SELECT TOP (1)
+       s.EmployeeId,
+       ISNULL(e.CompanyId,0) AS CompanyId,
+       ISNULL(s.ReferenceNo,N'') AS ReferenceNo,
+       s.LastWorkingDate,
+       ISNULL(s.NetSettlement,0) AS NetSettlement,
+       ISNULL(s.Status,N'Draft') AS Status,
+       s.PayrollTransactionId,
+       ISNULL(s.TaxWithheldSnapshot,0) AS TaxWithheldSnapshot,
+       ISNULL(s.TaxDifferenceIncluded,0) AS TaxDifferenceIncluded,
+       ISNULL(s.GosiWithheldSnapshot,0) AS GosiWithheldSnapshot,
+       ISNULL(s.GosiDifferenceIncluded,0) AS GosiDifferenceIncluded
+FROM EmployeeEndOfService s WITH (UPDLOCK, HOLDLOCK)
+INNER JOIN Employees e ON e.Id=s.EmployeeId
+WHERE s.Id=@Id
+  AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
+            command => HrmsDatabase.AddParameter(command, "@Id", id),
+            reader => new ApprovalRow(
+                HrmsDatabase.GetInt(reader, "EmployeeId"),
+                HrmsDatabase.GetInt(reader, "CompanyId"),
+                HrmsDatabase.GetString(reader, "ReferenceNo"),
+                HrmsDatabase.GetDateOnly(reader, "LastWorkingDate"),
+                reader["NetSettlement"] is decimal net ? net : 0m,
+                HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } status ? status : "Draft",
+                HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId"),
+                reader["TaxWithheldSnapshot"] is decimal taxWithheld ? taxWithheld : 0m,
+                HrmsDatabase.GetBool(reader, "TaxDifferenceIncluded"),
+                reader["GosiWithheldSnapshot"] is decimal gosiWithheld ? gosiWithheld : 0m,
+                HrmsDatabase.GetBool(reader, "GosiDifferenceIncluded")));
+
+        var row = rows.FirstOrDefault();
+        if (row is null)
+            return new(false, false, null, null, null, "التسوية غير موجودة أو خارج نطاق الصلاحية.");
+
+        if (string.Equals(row.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            var message = row.PayrollTransactionId is > 0
+                ? "التسوية معتمدة ومُرحّلة مسبقاً إلى حركات OffCycle — لم تُنشأ حركة جديدة."
+                : "التسوية معتمدة مسبقاً. لم يُنشأ ترحيل تلقائي لسجل تاريخي بلا رابط كي لا يتكرر الصرف.";
+            return new(false, row.PayrollTransactionId is > 0, row.PayrollTransactionId, null, null, message);
+        }
+
+        if (row.LastWorkingDate is not { } lastWorkingDate)
+            return new(false, false, null, null, null, "لا يمكن اعتماد التسوية بلا آخر يوم عمل.");
+
+        if (row.TaxDifferenceIncluded || row.GosiDifferenceIncluded)
+        {
+            var currentWithholding = await TerminationSettlementStore.LoadYearAsync(
+                dbContext, scope, row.EmployeeId, lastWorkingDate.Year);
+
+            if (row.TaxDifferenceIncluded && currentWithholding.Tax != row.TaxWithheldSnapshot)
+                return new(false, false, null, null, null,
+                    "تغيّر Tax Withheld في Payroll بعد حفظ التسوية. افتح التسوية واحفظها من جديد قبل الاعتماد.");
+
+            if (row.GosiDifferenceIncluded && currentWithholding.Gosi != row.GosiWithheldSnapshot)
+                return new(false, false, null, null, null,
+                    "تغيّر GOSI Withheld في Payroll بعد حفظ التسوية. افتح التسوية واحفظها من جديد قبل الاعتماد.");
+        }
+
+        var posting = ToPayrollPosting(row.NetSettlement);
+        int? payrollTransactionId = null;
+        int? payrollYear = null;
+        int? payrollMonth = null;
+
+        if (posting is { } explicitPosting)
+        {
+            var payrollPeriod = await ResolvePayrollPeriodAsync(
+                dbContext, row.CompanyId, lastWorkingDate);
+            payrollYear = payrollPeriod.Year;
+            payrollMonth = payrollPeriod.Month;
+
+            var reference = string.IsNullOrWhiteSpace(row.ReferenceNo)
+                ? $"EOS-{id}"
+                : row.ReferenceNo.Trim();
+
+            payrollTransactionId = await PayrollTransactionStore.SaveAsync(
+                dbContext,
+                scope,
+                new PayrollTransactionStore.Transaction
+                {
+                    EmployeeId = row.EmployeeId,
+                    Year = payrollPeriod.Year,
+                    Month = payrollPeriod.Month,
+                    ItemName = "تسوية نهاية الخدمة",
+                    Amount = explicitPosting.Amount,
+                    TxType = explicitPosting.TxType,
+                    Taxable = false,
+                    PaymentType = "OutSalary",
+                    TransactionDate = lastWorkingDate,
+                    EffectiveDate = lastWorkingDate,
+                    IsRetroactive = false,
+                    ReferenceNo = reference,
+                    Source = "EndOfService",
+                    Status = "Approved",
+                    Note = $"تسوية نهاية الخدمة {reference}"
+                },
+                userName);
+        }
+
         await HrmsDatabase.ExecuteAsync(
             dbContext,
-            "UPDATE EmployeeEndOfService SET Status = N'Approved', ApprovedAt = SYSUTCDATETIME(), ApprovedBy = @By WHERE Id = @Id;",
+            """
+UPDATE EmployeeEndOfService
+SET Status=N'Approved',
+    ApprovedAt=SYSUTCDATETIME(),
+    ApprovedBy=@By,
+    PayrollTransactionId=@PayrollTransactionId,
+    PayrollPostedAt=CASE WHEN @PayrollTransactionId IS NULL THEN NULL ELSE SYSUTCDATETIME() END,
+    PayrollPostedBy=CASE WHEN @PayrollTransactionId IS NULL THEN NULL ELSE @By END
+WHERE Id=@Id AND ISNULL(Status,N'Draft')<>N'Approved';
+""",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Id", id);
                 HrmsDatabase.AddParameter(command, "@By", userName);
+                HrmsDatabase.AddParameter(
+                    command,
+                    "@PayrollTransactionId",
+                    (object?)payrollTransactionId ?? DBNull.Value);
             });
-        return true;
+
+        await transaction.CommitAsync();
+
+        return payrollTransactionId is > 0
+            ? new(
+                true,
+                true,
+                payrollTransactionId,
+                payrollYear,
+                payrollMonth,
+                $"اعتُمدت التسوية ورُحّلت مرة واحدة إلى قائمة OffCycle للفترة {payrollMonth:00}/{payrollYear}.")
+            : new(
+                true,
+                false,
+                null,
+                payrollYear,
+                payrollMonth,
+                "اعتُمدت التسوية. صافي التسوية صفر، لذلك لم تُنشأ حركة دفع.");
     }
 
     public static async Task DeleteAsync(ApplicationDbContext dbContext, CompanyScope scope, int id)
@@ -255,17 +512,33 @@ ORDER BY s.CreatedAt DESC;
     private const string InsertSql = """
 INSERT INTO EmployeeEndOfService
  (EmployeeId, ServiceStartDate, LastWorkingDate, YearsService, LastBasic, Reason, GratuityAmount,
-  LeaveBalanceDays, LeaveEncashment, OtherDues, Deductions, NetSettlement, Note, Status, ReferenceNo, CreatedBy)
+  GratuityCalculationMode, GratuityEligible, GratuityWeeksPerYear, GratuityMultiplier, GratuityBasisAmount,
+  LeaveBalanceDays, LeaveEncashment, OtherDues, Deductions,
+  TaxWithheldSnapshot, TaxDueReviewed, TaxDifferenceIncluded,
+  GosiWithheldSnapshot, GosiDueReviewed, GosiDifferenceIncluded, TerminationDifferenceNet,
+  NetSettlement, Note, Status, ReferenceNo, CreatedBy)
 VALUES
  (@Emp, @Start, @End, @Years, @Basic, @Reason, @Gratuity,
-  @LeaveDays, @LeaveEnc, @OtherDues, @Deductions, @Net, @Note, @Status, @Ref, @By);
+  @GratuityMode, @GratuityEligible, @GratuityWeeks, @GratuityMultiplier, @GratuityBasis,
+  @LeaveDays, @LeaveEnc, @OtherDues, @Deductions,
+  @TaxWithheld, @TaxDue, @TaxIncluded,
+  @GosiWithheld, @GosiDue, @GosiIncluded, @TerminationDifferenceNet,
+  @Net, @Note, @Status, @Ref, @By);
 """;
 
     private const string UpdateSql = """
 UPDATE EmployeeEndOfService SET
   EmployeeId=@Emp, ServiceStartDate=@Start, LastWorkingDate=@End, YearsService=@Years, LastBasic=@Basic,
-  Reason=@Reason, GratuityAmount=@Gratuity, LeaveBalanceDays=@LeaveDays, LeaveEncashment=@LeaveEnc,
-  OtherDues=@OtherDues, Deductions=@Deductions, NetSettlement=@Net, Note=@Note, Status=@Status
+  Reason=@Reason, GratuityAmount=@Gratuity,
+  GratuityCalculationMode=@GratuityMode, GratuityEligible=@GratuityEligible,
+  GratuityWeeksPerYear=@GratuityWeeks, GratuityMultiplier=@GratuityMultiplier,
+  GratuityBasisAmount=@GratuityBasis,
+  LeaveBalanceDays=@LeaveDays, LeaveEncashment=@LeaveEnc,
+  OtherDues=@OtherDues, Deductions=@Deductions,
+  TaxWithheldSnapshot=@TaxWithheld, TaxDueReviewed=@TaxDue, TaxDifferenceIncluded=@TaxIncluded,
+  GosiWithheldSnapshot=@GosiWithheld, GosiDueReviewed=@GosiDue, GosiDifferenceIncluded=@GosiIncluded,
+  TerminationDifferenceNet=@TerminationDifferenceNet,
+  NetSettlement=@Net, Note=@Note, Status=@Status
 WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
 """;
 
@@ -283,11 +556,26 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         LastBasic = reader["LastBasic"] is decimal lb ? lb : 0,
         Reason = HrmsDatabase.GetString(reader, "Reason") is { Length: > 0 } rs ? rs : null,
         GratuityAmount = reader["GratuityAmount"] is decimal ga ? ga : 0,
+        GratuityCalculationMode = HrmsDatabase.GetString(reader, "GratuityCalculationMode") is { Length: > 0 } gm ? gm : "Legacy",
+        GratuityEligible = HrmsDatabase.GetBool(reader, "GratuityEligible"),
+        GratuityWeeksPerYear = reader["GratuityWeeksPerYear"] is decimal gw ? gw : null,
+        GratuityMultiplier = reader["GratuityMultiplier"] is decimal gmult ? gmult : 1m,
+        GratuityBasisAmount = reader["GratuityBasisAmount"] is decimal gb ? gb : 0m,
         LeaveBalanceDays = reader["LeaveBalanceDays"] is decimal ld ? ld : 0,
         LeaveEncashment = reader["LeaveEncashment"] is decimal le ? le : 0,
         OtherDues = reader["OtherDues"] is decimal od ? od : 0,
         Deductions = reader["Deductions"] is decimal dd ? dd : 0,
+        TaxWithheldSnapshot = reader["TaxWithheldSnapshot"] is decimal tw ? tw : 0,
+        TaxDueReviewed = reader["TaxDueReviewed"] is decimal td ? td : null,
+        TaxDifferenceIncluded = HrmsDatabase.GetBool(reader, "TaxDifferenceIncluded"),
+        GosiWithheldSnapshot = reader["GosiWithheldSnapshot"] is decimal gwh ? gwh : 0,
+        GosiDueReviewed = reader["GosiDueReviewed"] is decimal gd ? gd : null,
+        GosiDifferenceIncluded = HrmsDatabase.GetBool(reader, "GosiDifferenceIncluded"),
+        TerminationDifferenceNet = reader["TerminationDifferenceNet"] is decimal dn ? dn : 0,
         NetSettlement = reader["NetSettlement"] is decimal ns ? ns : 0,
+        PayrollTransactionId = HrmsDatabase.GetNullableInt(reader, "PayrollTransactionId"),
+        PayrollPostedAt = HrmsDatabase.GetDateTime(reader, "PayrollPostedAt"),
+        PayrollPostedBy = HrmsDatabase.GetString(reader, "PayrollPostedBy") is { Length: > 0 } ppb ? ppb : null,
         Note = HrmsDatabase.GetString(reader, "Note") is { Length: > 0 } n ? n : null,
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Draft",
         ApprovedAt = HrmsDatabase.GetDateTime(reader, "ApprovedAt"),
@@ -304,10 +592,25 @@ WHERE Id=@Id AND ISNULL(Status, N'Draft') <> N'Approved';
         HrmsDatabase.AddParameter(command, "@Basic", s.LastBasic);
         HrmsDatabase.AddParameter(command, "@Reason", (object?)s.Reason ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Gratuity", s.GratuityAmount);
+        HrmsDatabase.AddParameter(command, "@GratuityMode",
+            string.IsNullOrWhiteSpace(s.GratuityCalculationMode) ? "Legacy" : s.GratuityCalculationMode);
+        HrmsDatabase.AddParameter(command, "@GratuityEligible", s.GratuityEligible ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@GratuityWeeks",
+            (object?)s.GratuityWeeksPerYear ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@GratuityMultiplier",
+            s.GratuityMultiplier > 0m ? s.GratuityMultiplier : 1m);
+        HrmsDatabase.AddParameter(command, "@GratuityBasis", Math.Max(0m, s.GratuityBasisAmount));
         HrmsDatabase.AddParameter(command, "@LeaveDays", s.LeaveBalanceDays);
         HrmsDatabase.AddParameter(command, "@LeaveEnc", s.LeaveEncashment);
         HrmsDatabase.AddParameter(command, "@OtherDues", s.OtherDues);
         HrmsDatabase.AddParameter(command, "@Deductions", s.Deductions);
+        HrmsDatabase.AddParameter(command, "@TaxWithheld", Math.Max(0m, s.TaxWithheldSnapshot));
+        HrmsDatabase.AddParameter(command, "@TaxDue", (object?)s.TaxDueReviewed ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@TaxIncluded", s.TaxDifferenceIncluded ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@GosiWithheld", Math.Max(0m, s.GosiWithheldSnapshot));
+        HrmsDatabase.AddParameter(command, "@GosiDue", (object?)s.GosiDueReviewed ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@GosiIncluded", s.GosiDifferenceIncluded ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@TerminationDifferenceNet", s.TerminationDifferenceNet);
         HrmsDatabase.AddParameter(command, "@Net", s.NetSettlement);
         HrmsDatabase.AddParameter(command, "@Note", (object?)s.Note ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(s.Status) ? "Draft" : s.Status);

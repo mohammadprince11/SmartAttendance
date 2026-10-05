@@ -104,7 +104,7 @@ public class AdministrativeDeletePolicyTests
             "SelfServiceRequests",                      // طلبات مالية
             "EmployeeDocuments",                        // مستندات
             "EmployeeViolationCases",                   // إنذارات/مخالفات
-            "EmployeeEndOfService",                     // إنهاء خدمة
+            "EmployeeEndServices",                      // إنهاء خدمة
         };
         foreach (var table in required)
             Assert.Contains(table, EmployeeOperationalHistoryGuard.OperationalTables);

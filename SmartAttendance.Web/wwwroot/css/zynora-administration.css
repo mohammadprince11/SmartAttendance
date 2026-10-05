@@ -18,17 +18,23 @@
     backdrop-filter: blur(16px);
 }
 
-.zy-settings-jump a {
+.zy-settings-jump button {
     padding: 7px 13px;
     color: var(--color-text-secondary);
+    background: transparent;
+    border: 0;
     border-radius: 9px;
     font-size: var(--fs-small);
     font-weight: 800;
-    text-decoration: none;
+    font-family: inherit;
+    cursor: pointer;
 }
 
-.zy-settings-jump a:hover { color: var(--color-primary-text); background: var(--color-primary-soft); }
-.zy-settings-section { scroll-margin-top: 135px; margin-bottom: 28px; }
+.zy-settings-jump button:hover,
+.zy-settings-jump button[aria-selected="true"] { color: var(--color-primary-text); background: var(--color-primary-soft); }
+.zy-settings-jump button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.zy-settings-section { margin-bottom: 28px; }
+.zy-settings-section[hidden] { display: none !important; }
 .zy-settings-section__head { display: flex; align-items: center; gap: 12px; margin-bottom: 11px; }
 .zy-settings-section__head h2 { margin: 0 0 3px; font-size: var(--fs-section); }
 .zy-settings-section__head p { margin: 0; color: var(--color-text-secondary); font-size: var(--fs-small); }

@@ -19,6 +19,8 @@ public interface IEmployeeService
 
     Task<bool> CreateAsync(EmployeeCreateViewModel model);
 
+    Task<int?> CreateAndGetIdAsync(EmployeeCreateViewModel model);
+
     Task<bool> UpdateAsync(EmployeeEditViewModel model);
 
     Task<bool> DeleteAsync(int id);

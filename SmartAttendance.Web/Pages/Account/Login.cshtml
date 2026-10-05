@@ -83,8 +83,23 @@
             <input asp-for="ReturnUrl" type="hidden" />
 
             <div class="login-field">
+                <label asp-for="TenantCode">@T["كود المنظومة"]</label>
+                <input asp-for="TenantCode"
+                       inputmode="numeric"
+                       pattern="[0-9]{4}"
+                       maxlength="4"
+                       autocomplete="organization"
+                       placeholder="0001"
+                       aria-describedby="tenant-code-help"
+                       autofocus />
+                <small id="tenant-code-help" class="login-field__help">
+                    @T["الكود التعريفي المكوّن من 4 أرقام والمسلّم من إدارة ZYNORA."]
+                </small>
+            </div>
+
+            <div class="login-field">
                 <label asp-for="Username">@T["اسم المستخدم"]</label>
-                <input asp-for="Username" autocomplete="username" autofocus />
+                <input asp-for="Username" autocomplete="username" />
             </div>
 
             <div class="login-field">
@@ -113,6 +128,19 @@
                     </button>
                 </div>
             </div>
+
+            @if (Model.RequiresTwoFactor)
+            {
+                <div class="login-field">
+                    <label asp-for="TwoFactorCode">@T["رمز المصادقة الثنائية"]</label>
+                    <input asp-for="TwoFactorCode" inputmode="numeric"
+                           autocomplete="one-time-code" maxlength="6" />
+                </div>
+                <div class="login-field">
+                    <label asp-for="RecoveryCode">@T["رمز الاسترداد"]</label>
+                    <input asp-for="RecoveryCode" autocomplete="off" />
+                </div>
+            }
 
             <label class="login-check">
                 <input asp-for="RememberMe" />

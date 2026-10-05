@@ -132,6 +132,7 @@
         <h2 id="lnTitle">قرض / سُلفة جديدة</h2>
         <form method="post" asp-page-handler="Save" enctype="multipart/form-data" id="lnForm">
             <input type="hidden" name="Id" id="f_Id" value="0" />
+            <input type="hidden" name="RequestKey" id="f_RequestKey" value="" />
             <div class="ln-grid">
                 <label class="ln-field full">الموظف
                     <div class="empk-field">
@@ -173,7 +174,6 @@
                 <label class="ln-field full">مرفق (اختياري)
                     <input name="attachment" type="file" accept="image/*,application/pdf" />
                 </label>
-                <input type="hidden" name="Status" id="f_Status" value="Pending" />
             </div>
             <div class="ln-modal-actions">
                 <button type="button" class="ln-btn ghost" onclick="lnClose()">إلغاء</button>
@@ -218,7 +218,10 @@
             var f = document.getElementById("lnForm");
             f.reset();
             document.getElementById("f_Id").value = id || 0;
-            document.getElementById("f_Status").value = "Pending";
+            document.getElementById("f_RequestKey").value = id ? "" :
+                (window.crypto && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
             document.getElementById("lnTitle").textContent = id ? "تعديل القرض" : "قرض / سُلفة جديدة";
             lnEmpPicker.set(null);
             if (id) {
@@ -232,7 +235,6 @@
                     document.getElementById("f_SYear").value = l.StartYear;
                     document.getElementById("f_Reason").value = l.Reason || "";
                     document.getElementById("f_Note").value = l.Note || "";
-                    document.getElementById("f_Status").value = l.Status;
                 }
             }
             lnCalc();

@@ -2,6 +2,8 @@ namespace SmartAttendance.Application.Common.Security;
 
 public sealed class LoginIdentityRequest
 {
+    public int TenantId { get; init; }
+
     public int? EmployeeId { get; init; }
 
     public string UserName { get; init; } = string.Empty;

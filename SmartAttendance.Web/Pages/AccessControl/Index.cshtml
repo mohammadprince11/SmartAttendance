@@ -1,0 +1,555 @@
+@page
+@model SmartAttendance.Web.Pages.AccessControl.IndexModel
+@using SmartAttendance.Web.Infrastructure.Security
+@{
+    ViewData["Title"] = "مركز التحكم بالصلاحيات";
+    var editing = Model.EditingRole;
+    var roleTypeLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        [AccessRoleStore.TypePages] = "الصفحات والإجراءات",
+        [AccessRoleStore.TypeData] = "نطاق البيانات",
+        [AccessRoleStore.TypeSensitiveFields] = "الحقول الحساسة",
+        [AccessRoleStore.TypeSelfService] = "الخدمة الذاتية",
+        [AccessRoleStore.TypeReports] = "التقارير",
+    };
+    var selectedUser = Model.Users.FirstOrDefault(u => u.Id == Model.UserId);
+    var selectedRoleIds = selectedUser is not null && Model.UserRoles.TryGetValue(selectedUser.Id, out var ids)
+        ? ids.ToHashSet()
+        : new HashSet<int>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/access-control.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script src="~/js/access-control-bulk-select.js" asp-append-version="true" defer></script>
+}
+
+<div class="ac-shell">
+    <div class="zy-breadcrumb"><span>زينورا</span><span>/</span><span>الإعدادات</span><span>/</span><b>مركز التحكم بالصلاحيات</b></div>
+    <header class="zy-page-header ac-page-head">
+        <div>
+            <h1>مركز التحكم بالصلاحيات</h1>
+            <div class="zy-desc">مصدر موحد لإدارة الأدوار، إسناد المستخدمين، نطاق البيانات والحقول الحساسة وفحص الوصول الفعلي.</div>
+        </div>
+        <div class="zy-spacer"></div>
+        <span class="zy-badge zy-badge--info">RBAC · Access Control</span>
+    </header>
+
+    @if (TempData["AccessControlMessage"] is string message)
+    {
+        <div class="ac-alert ac-alert--success">@message</div>
+    }
+    @if (TempData["AccessControlError"] is string error)
+    {
+        <div class="ac-alert ac-alert--danger">@error</div>
+    }
+
+    <section class="ac-stats" aria-label="ملخص الصلاحيات">
+        <div class="ac-stat"><span>الأدوار</span><strong>@Model.TotalRoleCount</strong><small>@Model.ActiveRoleCount فعّال</small></div>
+        <div class="ac-stat"><span>المستخدمون</span><strong>@Model.UserCount</strong><small>حسابات فعّالة</small></div>
+        <div class="ac-stat"><span>مع إسناد</span><strong>@Model.AssignedUserCount</strong><small>لديهم Role مخصص</small></div>
+        <div class="ac-stat"><span>نموذج الوصول</span><strong>RBAC</strong><small>Role → Permission → Scope</small></div>
+    </section>
+
+    <nav class="ac-tabs" aria-label="أقسام مركز الصلاحيات">
+        @foreach (var tab in SmartAttendance.Web.Pages.AccessControl.IndexModel.Modes)
+        {
+            <a asp-page="./Index" asp-route-Mode="@tab.Key"
+               class="@(Model.Mode == tab.Key ? "is-active" : null)">@tab.Label</a>
+        }
+    </nav>
+
+    @if (Model.Mode == "Roles")
+    {
+        <div class="ac-subtabs">
+            @foreach (var kind in SmartAttendance.Web.Pages.AccessControl.IndexModel.RoleKinds)
+            {
+                <a asp-page="./Index" asp-route-Mode="Roles" asp-route-Type="@kind.Key"
+                   class="@(Model.CurrentRoleType == kind.Key ? "is-active" : null)">@kind.Label</a>
+            }
+        </div>
+    }
+
+    @if (Model.Mode is "Roles" or "DataScope" or "FieldSecurity")
+    {
+        <div class="ac-workspace">
+            <section class="ac-role-list">
+                <div class="ac-section-head">
+                    <div>
+                        <h2>@roleTypeLabels[Model.CurrentRoleType]</h2>
+                        <p>الأدوار قابلة لإعادة الاستخدام؛ الإسناد للمستخدم يتم من تبويب مستقل.</p>
+                    </div>
+                    <a asp-page="./Index" asp-route-Mode="@Model.Mode" asp-route-Type="@Model.CurrentRoleType"
+                       class="zy-btn zy-btn--primary">+ دور جديد</a>
+                </div>
+
+                @if (Model.Roles.Count == 0)
+                {
+                    <div class="ac-empty">لا توجد أدوار من هذا النوع حتى الآن.</div>
+                }
+                else
+                {
+                    <div class="ac-role-cards">
+                        @foreach (var role in Model.Roles)
+                        {
+                            <article class="ac-role-card @(role.IsActive ? null : "is-disabled")">
+                                <div class="ac-role-card__top">
+                                    <div>
+                                        <strong>@role.NameAr</strong>
+                                        @if (!string.IsNullOrWhiteSpace(role.NameEn))
+                                        {
+                                            <small>@role.NameEn</small>
+                                        }
+                                    </div>
+                                    <span class="ac-status @(role.IsActive ? "is-on" : "is-off")">
+                                        @(role.IsActive ? "فعّال" : "موقوف")
+                                    </span>
+                                </div>
+                                <p>@(string.IsNullOrWhiteSpace(role.Note) ? "بدون ملاحظات" : role.Note)</p>
+                                <div class="ac-role-card__meta"><span>@role.AffectedUsers مستخدم</span><span>#@role.Id</span></div>
+                                <div class="ac-role-card__actions">
+                                    <a asp-page="./Index" asp-route-Mode="@Model.Mode" asp-route-Type="@Model.CurrentRoleType"
+                                       asp-route-EditId="@role.Id" class="zy-btn zy-btn--secondary">تعديل</a>
+                                    <form method="post" asp-page-handler="ToggleRole">
+                                        <input type="hidden" name="id" value="@role.Id" />
+                                        <button class="zy-btn zy-btn--secondary" type="submit">@(role.IsActive ? "إيقاف" : "تفعيل")</button>
+                                    </form>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <aside class="ac-editor">
+                <div class="ac-section-head">
+                    <div>
+                        <h2>@(editing is null ? "إنشاء دور" : "تعديل الدور")</h2>
+                        <p>@roleTypeLabels[Model.CurrentRoleType]</p>
+                    </div>
+                </div>
+
+                <form method="post" asp-page-handler="SaveRole" class="ac-form">
+                    <input type="hidden" name="Id" value="@(editing?.Id ?? 0)" />
+                    <input type="hidden" name="RoleType" value="@Model.CurrentRoleType" />
+
+                    <label class="ac-field">
+                        <span>اسم الدور *</span>
+                        <input name="NameAr" value="@editing?.NameAr" maxlength="150" required />
+                    </label>
+                    <label class="ac-field">
+                        <span>الاسم الإنجليزي</span>
+                        <input name="NameEn" value="@editing?.NameEn" maxlength="150" dir="ltr" />
+                    </label>
+                    <label class="ac-field">
+                        <span>ملاحظة</span>
+                        <textarea name="Note" rows="3" maxlength="500">@editing?.Note</textarea>
+                    </label>
+                    <label class="ac-switch-row">
+                        <input type="checkbox" name="IsActive" value="true" checked="@(editing?.IsActive ?? true)" />
+                        <span><b>الدور فعّال</b><small>الدور الموقوف لا يؤثر على الوصول.</small></span>
+                    </label>
+
+                    @if (Model.CurrentRoleType == AccessRoleStore.TypePages)
+                    {
+                        <div class="ac-grants">
+                            <div class="ac-grants__head">
+                                <b>صلاحيات الصفحات والإجراءات</b>
+                                <small>اختر ما يستطيع هذا الدور عرضه أو تنفيذه.</small>
+                            </div>
+                            @foreach (var module in Model.Catalog)
+                            {
+                                <details class="ac-module" open="@(module.Key is "People" or "Dashboard")">
+                                    <summary><span>@module.Label</span><small>@module.Pages.Count صفحة</small></summary>
+                                    <div class="ac-permission-table" data-ac-permission-table>
+                                        <div class="ac-permission-row ac-permission-row--head">
+                                            <label class="ac-bulk-cell ac-bulk-cell--page" title="تحديد أو إلغاء كل صلاحيات هذا القسم">
+                                                <input type="checkbox" class="js-ac-module-all" />
+                                                <span>الصفحة</span>
+                                                <small>تحديد الكل</small>
+                                            </label>
+                                            @foreach (var action in PageCatalog.Actions)
+                                            {
+                                                <label class="ac-bulk-cell" title="تحديد أو إلغاء @PageCatalog.ActionLabels[action] لكل صفحات هذا القسم">
+                                                    <input type="checkbox" class="js-ac-column-all" data-action="@action" />
+                                                    <span>@PageCatalog.ActionLabels[action]</span>
+                                                </label>
+                                            }
+                                        </div>
+                                        @foreach (var catalogPage in module.Pages)
+                                        {
+                                            <div class="ac-permission-row" data-ac-permission-row>
+                                                <label class="ac-page-name ac-page-name--selectable" title="تحديد أو إلغاء كل صلاحيات هذه الصفحة">
+                                                    <input type="checkbox" class="js-ac-row-all" />
+                                                    <span><b>@catalogPage.Label</b><small>@catalogPage.Code</small></span>
+                                                </label>
+                                                @foreach (var action in PageCatalog.Actions)
+                                                {
+                                                    var granted = Model.EditingPageGrants.TryGetValue(catalogPage.Code, out var actions) && actions.Contains(action, StringComparer.OrdinalIgnoreCase);
+                                                    <label class="ac-check"><input type="checkbox" class="js-ac-permission" data-action="@action" name="@($"grant_{catalogPage.Code}_{action}")" checked="@granted" /><span></span></label>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </details>
+                            }
+                        </div>
+                    }
+
+                    @if (Model.CurrentRoleType == AccessRoleStore.TypeData)
+                    {
+                        <div class="ac-grants">
+                            <div class="ac-grants__head">
+                                <b>نطاق رؤية البيانات</b>
+                                <small>حدد نطاق الصفوف لكل كيان. «بدون قيد من هذا الدور» يعني أن الدور لا يضيّق هذا الكيان؛ منع الوصول بالكامل يتم من صلاحيات الصفحات.</small>
+                            </div>
+                            <div class="ac-scope-list">
+                                @foreach (var entity in Model.DataEntities)
+                                {
+                                    var selectedScope = Model.EditingDataScopes.TryGetValue(entity.Code, out var scope) ? scope : "None";
+                                    <label class="ac-scope-row">
+                                        <span><b>@entity.Label</b><small>@entity.Code</small></span>
+                                        <select name="scope_@entity.Code">
+                                            @foreach (var level in Model.ScopeLevels)
+                                            {
+                                                <option value="@level.Key" selected="@(selectedScope.Equals(level.Key, StringComparison.OrdinalIgnoreCase))">@level.Label</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (Model.CurrentRoleType == AccessRoleStore.TypeSensitiveFields)
+                    {
+                        <div class="ac-grants">
+                            <div class="ac-grants__head">
+                                <b>الحقول الحساسة</b>
+                                <small>هذه المنح إضافية فوق محرك الحماية الحالي، ولا تنشئ Direct Permission للمستخدم.</small>
+                            </div>
+                            @foreach (var field in Model.SensitiveFields)
+                            {
+                                <label class="ac-option-row">
+                                    <input type="checkbox" name="sensitive_@field.Code" checked="@Model.EditingSensitiveFields.Contains(field.Code)" />
+                                    <span><b>@field.Label</b><small>@field.Code</small></span>
+                                </label>
+                            }
+                        </div>
+                    }
+
+                    @if (Model.CurrentRoleType == AccessRoleStore.TypeSelfService)
+                    {
+                        <div class="ac-grants">
+                            <div class="ac-grants__head">
+                                <b>صلاحيات الخدمة الذاتية</b>
+                                <small>العمليات التي يستطيع الموظف تنفيذها من بوابته عند إسناد هذا الدور.</small>
+                            </div>
+                            @foreach (var item in Model.SelfServiceActions)
+                            {
+                                <label class="ac-option-row">
+                                    <input type="checkbox" name="ss_@item.Code" checked="@Model.EditingSelfService.Contains(item.Code)" />
+                                    <span><b>@item.Label</b><small>@item.Code</small></span>
+                                </label>
+                            }
+                        </div>
+                    }
+
+                    @if (Model.CurrentRoleType == AccessRoleStore.TypeReports)
+                    {
+                        <div class="ac-grants">
+                            <div class="ac-grants__head">
+                                <b>مجموعات التقارير</b>
+                                <small>حدد مجموعات التقارير المتاحة لهذا الدور.</small>
+                            </div>
+                            @foreach (var item in Model.ReportGroups)
+                            {
+                                <label class="ac-option-row">
+                                    <input type="checkbox" name="rep_@item.Code" checked="@Model.EditingReports.Contains(item.Code)" />
+                                    <span><b>@item.Label</b><small>@item.Code</small></span>
+                                </label>
+                            }
+                        </div>
+                    }
+
+                    <div class="ac-editor-actions">
+                        <button type="submit" class="zy-btn zy-btn--primary">حفظ الدور</button>
+                        @if (editing is not null)
+                        {
+                            <a asp-page="./Index" asp-route-Mode="@Model.Mode" asp-route-Type="@Model.CurrentRoleType" class="zy-btn zy-btn--secondary">إلغاء التعديل</a>
+                        }
+                    </div>
+                </form>
+
+                @if (editing is not null)
+                {
+                    <form method="post" asp-page-handler="DeleteRole" class="ac-danger-zone"
+                          onsubmit="return confirm('حذف هذا الدور نهائياً؟ لن يُسمح بالحذف إذا كان مسنداً إلى مستخدمين.');">
+                        <input type="hidden" name="id" value="@editing.Id" />
+                        <div><b>حذف الدور</b><small>الحذف متاح فقط بعد إزالة جميع الإسنادات.</small></div>
+                        <button type="submit" class="zy-btn zy-btn--danger">حذف</button>
+                    </form>
+                }
+            </aside>
+        </div>
+    }
+
+    @if (Model.Mode == "Assignments")
+    {
+        <section class="ac-panel">
+            <div class="ac-section-head">
+                <div><h2>إسناد الأدوار للمستخدمين</h2><p>المستخدم يأخذ صلاحياته من Roles فقط؛ لا توجد صلاحيات فردية قابلة للتحرير هنا.</p></div>
+            </div>
+
+            @if (Model.Users.Count == 0)
+            {
+                <div class="ac-empty">لا توجد حسابات مستخدمين فعّالة.</div>
+            }
+            else
+            {
+                <form method="get" class="ac-user-picker">
+                    <input type="hidden" name="Mode" value="Assignments" />
+                    <label><span>المستخدم</span>
+                        <select name="UserId" onchange="this.form.submit()">
+                            @foreach (var user in Model.Users)
+                            {
+                                <option value="@user.Id" selected="@(Model.UserId == user.Id)">@user.FullName — @user.UserName</option>
+                            }
+                        </select>
+                    </label>
+                </form>
+
+                @if (selectedUser is not null)
+                {
+                    <div class="ac-user-summary">
+                        <div><span>المستخدم</span><b>@selectedUser.FullName</b><small>@selectedUser.UserName · @selectedUser.Email</small></div>
+                        <div><span>الدور النظامي القديم</span><b>@selectedUser.SystemRole</b><small>للتوافق الحالي فقط؛ Access Roles هي طبقة التحكم الجديدة.</small></div>
+                        <div><span>الأدوار المسندة</span><b>@selectedRoleIds.Count</b><small>@(selectedRoleIds.Count == 0 ? "لا يوجد Role مخصص" : "Role مخصص فعّال/مسند")</small></div>
+                    </div>
+
+                    @if (selectedRoleIds.Count == 0)
+                    {
+                        <div class="ac-alert ac-alert--warning">حسب محرك التوافق الحالي، عدم وجود Role من نوع معيّن قد يعني وصولاً غير مقيّد لذلك النوع. راجع «الوصول الفعلي» قبل اعتماد الحساب.</div>
+                    }
+
+                    <form method="post" asp-page-handler="SaveAssignments" class="ac-assignment-form">
+                        <input type="hidden" name="systemUserId" value="@selectedUser.Id" />
+                        @foreach (var group in Model.AllRoles.Where(r => r.IsActive).GroupBy(r => r.RoleType))
+                        {
+                            <fieldset class="ac-role-group">
+                                <legend>@roleTypeLabels[group.Key]</legend>
+                                <div class="ac-role-select-grid">
+                                    @foreach (var role in group.OrderBy(r => r.NameAr))
+                                    {
+                                        <label class="ac-role-select">
+                                            <input type="checkbox" name="RoleIds" value="@role.Id" checked="@selectedRoleIds.Contains(role.Id)" />
+                                            <span><b>@role.NameAr</b><small>@role.NameEn · #@role.Id</small></span>
+                                        </label>
+                                    }
+                                </div>
+                            </fieldset>
+                        }
+                        <div class="ac-editor-actions"><button type="submit" class="zy-btn zy-btn--primary">حفظ إسناد المستخدم</button></div>
+                    </form>
+                }
+            }
+        </section>
+    }
+
+    @if (Model.Mode == "Effective")
+    {
+        <section class="ac-panel">
+            <div class="ac-section-head">
+                <div><h2>الوصول الفعلي</h2><p>اختر مستخدماً لمعرفة ما يصل إليه فعلياً ومصدر الوصول، بدون تعديل الصلاحيات من هذه الشاشة.</p></div>
+            </div>
+
+            <form method="get" class="ac-user-picker">
+                <input type="hidden" name="Mode" value="Effective" />
+                <label><span>المستخدم</span>
+                    <select name="UserId" onchange="this.form.submit()">
+                        <option value="">— اختر مستخدماً —</option>
+                        @foreach (var user in Model.Users)
+                        {
+                            <option value="@user.Id" selected="@(Model.UserId == user.Id)">@user.FullName — @user.UserName</option>
+                        }
+                    </select>
+                </label>
+            </form>
+
+            @if (Model.EffectiveUser is not null && Model.EffectiveProfile is not null)
+            {
+                var isAdminBypass = Model.EffectiveUser.SystemRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+                var hasDataRole = Model.EffectiveRoles.Any(r => r.RoleType == AccessRoleStore.TypeData);
+                var hasSensitiveRole = Model.EffectiveRoles.Any(r => r.RoleType == AccessRoleStore.TypeSensitiveFields);
+                var hasSelfServiceRole = Model.EffectiveRoles.Any(r => r.RoleType == AccessRoleStore.TypeSelfService);
+                var hasReportsRole = Model.EffectiveRoles.Any(r => r.RoleType == AccessRoleStore.TypeReports);
+
+                <div class="ac-effective-head">
+                    <div><span>الحساب</span><b>@Model.EffectiveUser.FullName</b><small>@Model.EffectiveUser.UserName · @Model.EffectiveUser.SystemRole</small></div>
+                    <div><span>Roles فعّالة</span><b>@Model.EffectiveRoles.Count</b><small>من أصل @Model.TotalRoleCount Role</small></div>
+                    <div><span>Direct Legacy</span><b>@Model.LegacyDirectPermissions.Count</b><small>قراءة فقط أثناء مرحلة الانتقال</small></div>
+                </div>
+
+                @if (isAdminBypass)
+                {
+                    <div class="ac-alert ac-alert--warning"><b>Admin bypass:</b> هذا الحساب مدير نظام، ولذلك يتجاوز قيود Access Roles في نقاط الحماية الحالية.</div>
+                }
+
+                <div class="ac-effective-grid">
+                    <article class="ac-effective-card">
+                        <h3>الأدوار المسندة</h3>
+                        @if (Model.EffectiveRoles.Count == 0)
+                        {
+                            <p class="ac-muted">لا توجد أدوار فعّالة مسندة.</p>
+                        }
+                        else
+                        {
+                            <div class="ac-chip-list">
+                                @foreach (var role in Model.EffectiveRoles)
+                                {
+                                    <span class="ac-chip"><b>@role.NameAr</b><small>@roleTypeLabels[role.RoleType]</small></span>
+                                }
+                            </div>
+                        }
+                    </article>
+
+                    <article class="ac-effective-card">
+                        <h3>صلاحيات الصفحات</h3>
+                        @if (isAdminBypass)
+                        {
+                            <p class="ac-state ac-state--wide">وصول كامل بسبب Admin.</p>
+                        }
+                        else if (!Model.EffectiveProfile.HasPagesRole)
+                        {
+                            <p class="ac-state ac-state--wide">غير مقيّد حالياً: لا يوجد Pages Role فعّال.</p>
+                        }
+                        else
+                        {
+                            <div class="ac-effective-lines">
+                                @foreach (var item in Model.EffectiveProfile.PageActions.OrderBy(x => x.Key))
+                                {
+                                    <div><code>@item.Key</code><span>@string.Join("، ", item.Value.OrderBy(x => x))</span></div>
+                                }
+                            </div>
+                        }
+                    </article>
+                </div>
+
+                <div class="ac-effective-grid">
+                    <article class="ac-effective-card">
+                        <h3>نطاق البيانات</h3>
+                        @if (isAdminBypass)
+                        {
+                            <p class="ac-state ac-state--wide">All — بسبب Admin.</p>
+                        }
+                        else if (!hasDataRole)
+                        {
+                            <p class="ac-state ac-state--wide">All حالياً: لا يوجد Data Role فعّال.</p>
+                        }
+                        else
+                        {
+                            <div class="ac-effective-lines">
+                                @foreach (var entity in Model.DataEntities)
+                                {
+                                    var scope = Model.EffectiveProfile.DataScopeFor(entity.Code);
+                                    var scopeLabel = Model.ScopeLevels.FirstOrDefault(s => s.Key == scope)?.Label ?? scope;
+                                    <div><span>@entity.Label</span><b>@scopeLabel</b></div>
+                                }
+                            </div>
+                        }
+                    </article>
+
+                    <article class="ac-effective-card">
+                        <h3>الحقول الحساسة</h3>
+                        @if (!hasSensitiveRole)
+                        {
+                            <p class="ac-muted">لا يوجد Sensitive Fields Role فعّال. الوصول قد يبقى ممكناً من طبقة الصلاحيات القديمة؛ راجع Direct Legacy أدناه.</p>
+                        }
+                        else if (Model.EffectiveSensitiveFields.Count == 0)
+                        {
+                            <p class="ac-muted">الدور لا يمنح أي حقل حساس.</p>
+                        }
+                        else
+                        {
+                            <div class="ac-chip-list">
+                                @foreach (var field in Model.SensitiveFields.Where(f => Model.EffectiveSensitiveFields.Contains(f.Code)))
+                                {
+                                    <span class="ac-chip"><b>@field.Label</b><small>@field.Code</small></span>
+                                }
+                            </div>
+                        }
+                    </article>
+                </div>
+
+                <div class="ac-effective-grid">
+                    <article class="ac-effective-card">
+                        <h3>الخدمة الذاتية</h3>
+                        @if (!hasSelfServiceRole)
+                        {
+                            <p class="ac-state ac-state--wide">غير مقيّدة بالتوافق الحالي: لا يوجد Self Service Role فعّال.</p>
+                        }
+                        else
+                        {
+                            <div class="ac-chip-list">
+                                @foreach (var item in Model.SelfServiceActions.Where(x => Model.EffectiveSelfService.Contains(x.Code)))
+                                {
+                                    <span class="ac-chip"><b>@item.Label</b><small>@item.Code</small></span>
+                                }
+                            </div>
+                        }
+                    </article>
+
+                    <article class="ac-effective-card">
+                        <h3>التقارير</h3>
+                        @if (!hasReportsRole)
+                        {
+                            <p class="ac-state ac-state--wide">غير مقيّدة بالتوافق الحالي: لا يوجد Reports Role فعّال.</p>
+                        }
+                        else
+                        {
+                            <div class="ac-chip-list">
+                                @foreach (var item in Model.ReportGroups.Where(x => Model.EffectiveReports.Contains(x.Code)))
+                                {
+                                    <span class="ac-chip"><b>@item.Label</b><small>@item.Code</small></span>
+                                }
+                            </div>
+                        }
+                    </article>
+                </div>
+
+                <article class="ac-effective-card ac-effective-card--full">
+                    <h3>الصلاحيات الفردية القديمة — قراءة فقط</h3>
+                    <p class="ac-muted">هذه الطبقة لم تعد تُدار من واجهة منفصلة. تظهر هنا فقط لكشف أي استثناء قديم قبل إلغائه أو ترحيله إلى Role.</p>
+                    @if (Model.LegacyDirectPermissions.Count == 0)
+                    {
+                        <div class="ac-empty">لا توجد Direct Permissions قديمة لهذا المستخدم.</div>
+                    }
+                    else
+                    {
+                        <div class="ac-legacy-table">
+                            <div class="ac-legacy-row ac-legacy-row--head"><span>Module</span><span>Permission</span><span>Effect</span><span>Scope</span><span>الحالة</span></div>
+                            @foreach (var permission in Model.LegacyDirectPermissions)
+                            {
+                                <div class="ac-legacy-row">
+                                    <span>@permission.Module</span>
+                                    <code>@permission.Code</code>
+                                    <span>@permission.Effect</span>
+                                    <span>@permission.Scope</span>
+                                    <span class="ac-status @(permission.IsActiveNow ? "is-on" : "is-off")">@(permission.IsActiveNow ? "سارية" : "منتهية/مستقبلية")</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </article>
+            }
+        </section>
+    }
+
+    <footer class="ac-footnote">
+        <b>قاعدة التصميم الجديدة:</b>
+        <span>User → Role Assignment → Permissions → Data Scope → Field Security.</span>
+        <small>لا يتم منح صلاحيات فردية جديدة من هذا المركز.</small>
+    </footer>
+</div>

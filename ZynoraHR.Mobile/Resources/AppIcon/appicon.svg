@@ -1,18 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <title>ZYNORA HR app icon</title>
-  <g fill="none" fill-rule="evenodd">
-    <path fill="#081426" d="M170 218h520l-112 126H58z"/>
-    <path fill="#18C7BD" d="M584 294h176L360 746H184z"/>
-    <path fill="#42DED3" opacity=".78" d="M584 294h88L272 746h-88z"/>
-    <path fill="#081426" d="M334 680h520L742 806H222z"/>
-    <rect x="150" y="720" width="74" height="74" rx="8" fill="#D4B36A"/>
-    <rect x="650" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="726" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="802" y="184" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="726" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="802" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="878" y="108" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="802" y="32" width="62" height="62" rx="6" fill="#18C7BD"/>
-    <rect x="878" y="32" width="62" height="62" rx="6" fill="#18C7BD"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<title>ZYNORA HR</title>
+<defs>
+<linearGradient id="cyan" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#18C7BD"/><stop offset="1" stop-color="#35D6CF"/></linearGradient>
+<linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E8EEF6"/></linearGradient>
+</defs>
+<path fill="url(#silver)" d="M230 308h438l-78 84H152z"/>
+<path fill="url(#cyan)" d="M610 352h128L398 742H270z"/>
+<path fill="url(#silver)" d="M356 700h438l-82 88H274z"/>
+<rect x="248" y="722" width="58" height="58" rx="3" fill="#D4B36A"/>
+<g fill="#18C7BD">
+<rect x="690" y="300" width="50" height="50" rx="2"/>
+<rect x="748" y="300" width="50" height="50" rx="2"/>
+<rect x="806" y="300" width="50" height="50" rx="2"/>
+<rect x="748" y="242" width="50" height="50" rx="2"/>
+<rect x="806" y="242" width="50" height="50" rx="2"/>
+<rect x="864" y="242" width="50" height="50" rx="2"/>
+<rect x="806" y="184" width="50" height="50" rx="2"/>
+<rect x="864" y="184" width="50" height="50" rx="2"/>
+</g>
 </svg>

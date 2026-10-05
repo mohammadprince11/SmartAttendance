@@ -132,6 +132,102 @@ public class ApprovalTemplatesModel : PageModel
         catch(InvalidTimeZoneException){return TimeZoneInfo.Utc;}
     }
 
+    public async Task<IActionResult> OnPostCreateLeaveDurationPresetAsync()
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return Forbid();
+
+        const string requestType = "LeaveRequest";
+        var existing = await ApprovalTemplateStore.ListAsync(_dbContext, CompanyId.Value, requestType);
+        var created = 0;
+
+        async Task AddIfMissingAsync(
+            string name,
+            decimal? minDays,
+            decimal? maxDays,
+            params ApprovalTemplateStore.StepRow[] steps)
+        {
+            if (existing.Any(template =>
+                    string.Equals(template.Name, name, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            var template = new ApprovalTemplateStore.TemplateRow
+            {
+                CompanyId = CompanyId.Value,
+                RequestType = requestType,
+                Name = name,
+                IsActive = true,
+                HasConditions = true,
+                CondMinAmount = minDays,
+                CondMaxAmount = maxDays,
+                Steps = steps.ToList()
+            };
+
+            await ApprovalTemplateStore.SaveAsync(_dbContext, scope, template);
+            created++;
+        }
+
+        await AddIfMissingAsync(
+            "إجازات أقل من 5 أيام",
+            minDays: 0m,
+            maxDays: 4m,
+            new ApprovalTemplateStore.StepRow
+            {
+                StepOrder = 1, StageOrder = 1,
+                ApproverType = "DirectManager",
+                DisplayName = "المدير المباشر"
+            });
+
+        await AddIfMissingAsync(
+            "إجازات من 5 إلى 10 أيام",
+            minDays: 5m,
+            maxDays: 10m,
+            new ApprovalTemplateStore.StepRow
+            {
+                StepOrder = 1, StageOrder = 1,
+                ApproverType = "DirectManager",
+                DisplayName = "المدير المباشر"
+            },
+            new ApprovalTemplateStore.StepRow
+            {
+                StepOrder = 2, StageOrder = 2,
+                ApproverType = "Role",
+                RoleName = "HR Officer",
+                DisplayName = "HR Officer"
+            });
+
+        await AddIfMissingAsync(
+            "إجازات أكثر من 10 أيام",
+            minDays: 11m,
+            maxDays: null,
+            new ApprovalTemplateStore.StepRow
+            {
+                StepOrder = 1, StageOrder = 1,
+                ApproverType = "DirectManager",
+                DisplayName = "المدير المباشر"
+            },
+            new ApprovalTemplateStore.StepRow
+            {
+                StepOrder = 2, StageOrder = 2,
+                ApproverType = "Role",
+                RoleName = "HR Officer",
+                DisplayName = "HR Officer"
+            },
+            new ApprovalTemplateStore.StepRow
+            {
+                StepOrder = 3, StageOrder = 3,
+                ApproverType = "Role",
+                RoleName = "HR Manager",
+                DisplayName = "HR Manager"
+            });
+
+        TempData["SuccessMessage"] = created == 0
+            ? "قوالب شرائح مدة الإجازة موجودة مسبقاً."
+            : $"تم إنشاء {created} قالب موافقة لشرائح مدة الإجازة.";
+
+        return RedirectToPage(new { Type = requestType, CompanyId });
+    }
+
     public async Task<IActionResult> OnPostSaveAsync()
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);

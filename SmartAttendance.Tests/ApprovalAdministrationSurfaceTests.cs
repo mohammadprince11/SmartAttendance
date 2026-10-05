@@ -15,7 +15,7 @@ public sealed class ApprovalAdministrationSurfaceTests
         Assert.Contains("/Approvals/Reports", layout, StringComparison.Ordinal);
         Assert.Contains("/Approvals/Committees", layout, StringComparison.Ordinal);
         Assert.Contains("data-nav-area=\"settings\"", layout, StringComparison.Ordinal);
-        Assert.Contains("/AuditLogs/Index", layout, StringComparison.Ordinal);
+        Assert.Contains("/Settings/Index", layout, StringComparison.Ordinal);
         Assert.Contains("data-zy-command-search", layout, StringComparison.Ordinal);
         Assert.Contains(".zynora-nav a[href]", search, StringComparison.Ordinal);
         Assert.DoesNotContain("innerHTML", search, StringComparison.OrdinalIgnoreCase);
@@ -41,14 +41,18 @@ public sealed class ApprovalAdministrationSurfaceTests
         var root = FindRoot();
         var model = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Settings", "Index.cshtml.cs"));
         var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Settings", "Index.cshtml"));
+        var hrPage = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "HrSettings", "Index.cshtml"));
         var auditModel = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "AuditLogs", "Index.cshtml.cs"));
 
         Assert.Contains("[Authorize(Roles = \"Admin\")]", model, StringComparison.Ordinal);
         Assert.Contains("[Authorize(Roles = \"Admin\")]", auditModel, StringComparison.Ordinal);
         Assert.Contains("asp-page=\"/Setup/Index\"", page, StringComparison.Ordinal);
-        Assert.Contains("asp-page=\"/AccessRoles/Index\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"/AccessControl/Index\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("/AccessRoles", page, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/EmployeePermissions", page, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("asp-page=\"/AuditLogs/Index\"", page, StringComparison.Ordinal);
-        Assert.Contains("asp-page=\"/HrSettings/ApprovalTemplates\"", page, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"/HrSettings/Index\"", page, StringComparison.Ordinal);
+        Assert.Contains("/HrSettings/ApprovalTemplates", hrPage, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Notifications;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -63,6 +64,10 @@ public static class ApprovalWorkflowEngine
         public string DisplayName { get; set; } = string.Empty;
         public string Status { get; set; } = "Pending";
         public DateTime? CurrentSince { get; set; }
+        public string? ActionBy { get; set; }
+        public DateTime? ActionAt { get; set; }
+        public string? Note { get; set; }
+        public string? DelegatedFrom { get; set; }
         public DateTime? ReminderSentAt { get; set; }
         public DateTime? EscalatedAt { get; set; }
         public string? EscalatedToRole { get; set; }
@@ -164,8 +169,6 @@ END;
     {
         await EnsureAsync(dbContext);
 
-        var typeKey = ResolveRequestTypeKey(requestType);
-
         var employee = await HrmsDatabase.QueryAsync(
             dbContext,
             "SELECT CompanyId,BranchId,DepartmentId,ISNULL(WorkType,'') AS WorkType FROM Employees WHERE Id=@Id AND IsDeleted=0;",
@@ -180,6 +183,73 @@ END;
         var employeeInfo = employee.FirstOrDefault();
         if (employeeInfo is null)
             return new ActionResult(false, "تعذّر بدء الموافقة لأن الموظف غير موجود.");
+
+        // اقرأ هوية النوع المخزنة أولاً. RequestTypeId هو المرجع الثابت، والاسم فقط
+        // fallback للطلبات القديمة التي سبقت إضافة الهوية الديناميكية.
+        await RequestTypeStore.EnsureAsync(dbContext);
+        var catalogTypes = await RequestTypeStore.ListTypesAsync(dbContext, onlyActive: false);
+        var requestRows = await HrmsDatabase.QueryAsync(dbContext, """
+SELECT TOP 1 RequestTypeId, ISNULL(RequestType,N'') AS RequestType,
+       COALESCE(FromDate,RequestDate,CAST(CreatedAt AS date)) AS FromDate,
+       COALESCE(ToDate,FromDate,RequestDate,CAST(CreatedAt AS date)) AS ToDate,
+       StartTime, EndTime, ISNULL(Reason,N'') AS Reason,
+       CASE WHEN NULLIF(LTRIM(RTRIM(ISNULL(AttachmentPath,N''))),N'') IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS HasAttachment
+FROM SelfServiceRequests WHERE Id=@Id AND EmployeeId=@EmployeeId;
+""", command =>
+        {
+            HrmsDatabase.AddParameter(command, "@Id", requestId);
+            HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
+        }, reader => new
+        {
+            RequestTypeId = HrmsDatabase.GetNullableInt(reader, "RequestTypeId"),
+            RequestType = HrmsDatabase.GetString(reader, "RequestType"),
+            FromDate = HrmsDatabase.GetDateOnly(reader, "FromDate") ?? DateOnly.FromDateTime(DateTime.Today),
+            ToDate = HrmsDatabase.GetDateOnly(reader, "ToDate") ?? DateOnly.FromDateTime(DateTime.Today),
+            StartTime = HrmsDatabase.GetTimeSpan(reader, "StartTime"),
+            EndTime = HrmsDatabase.GetTimeSpan(reader, "EndTime"),
+            Reason = HrmsDatabase.GetString(reader, "Reason"),
+            HasAttachment = HrmsDatabase.GetBool(reader, "HasAttachment")
+        });
+        var requestInfo = requestRows.FirstOrDefault();
+
+        var catalogType = requestInfo?.RequestTypeId is > 0
+            ? catalogTypes.FirstOrDefault(t => t.Id == requestInfo.RequestTypeId.Value)
+            : catalogTypes.FirstOrDefault(t => string.Equals(
+                t.Name,
+                requestInfo?.RequestType ?? requestType,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (catalogType is not null && requestInfo?.RequestTypeId is not > 0)
+        {
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                "UPDATE SelfServiceRequests SET RequestTypeId=@TypeId WHERE Id=@Id AND RequestTypeId IS NULL;",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@TypeId", catalogType.Id);
+                    HrmsDatabase.AddParameter(command, "@Id", requestId);
+                });
+        }
+
+        // EffectCode هو هوية التنفيذ الثابتة حتى لو غيّر الأدمن اسم النوع المعروض.
+        // نرجع لاستنتاج الاسم فقط للطلبات القديمة التي لا تحمل EffectCode معروفاً.
+        var legacyTypeName = requestInfo?.RequestType ?? requestType;
+        var typeKey = catalogType is null
+            ? ResolveRequestTypeKey(legacyTypeName)
+            : ResolveRequestTypeKeyFromEffectCode(RequestTypeEffectCatalog.EffectiveCode(catalogType))
+                ?? ResolveRequestTypeKey(legacyTypeName);
+        if (requestInfo is not null)
+        {
+            var balanceCheck = await CompanyLeavePolicyStore.ValidateRequestAsync(
+                dbContext, employeeId, requestId, requestInfo.RequestTypeId,
+                requestInfo.RequestType, requestInfo.FromDate, requestInfo.ToDate,
+                requestInfo.StartTime, requestInfo.EndTime, requestInfo.Reason, requestInfo.HasAttachment);
+            if (!balanceCheck.Ok)
+            {
+                await BlockSubmissionAsync(dbContext, requestId, "Draft", "يتطلب تعديل",
+                    "LeaveBalancePolicy", balanceCheck.Message);
+                return new ActionResult(false, balanceCheck.Message);
+            }
+        }
 
         var template = await ApprovalTemplateStore.ResolveAsync(dbContext, employeeInfo.CompanyId, typeKey, employeeInfo.BranchId, employeeInfo.DepartmentId, employeeInfo.WorkType,requestId);
 
@@ -301,6 +371,8 @@ WHERE m.GroupId=@GroupId;
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
             });
 
+        await NotifyEmployeeRequestAsync(dbContext, requestId, "تم إنشاء الطلب",
+            $"تم إنشاء الطلب رقم {requestId} وبدأ مسار الموافقة.");
         await NotifyCurrentApproversAsync(dbContext, requestId, "طلب بانتظار موافقتك",
             $"تم تقديم الطلب رقم {requestId} وهو بانتظار قرارك.");
         await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Submit", "طلب جديد",
@@ -339,6 +411,53 @@ WHERE m.GroupId=@GroupId;
             command => HrmsDatabase.AddParameter(command, "@Id", requestId),
             ReadStep);
         return flow;
+    }
+
+    public static async Task<Dictionary<int, FlowState>> GetFlowsAsync(
+        ApplicationDbContext dbContext, IEnumerable<int> requestIds)
+    {
+        await EnsureAsync(dbContext);
+        var ids = requestIds.Where(id => id > 0).Distinct().ToArray();
+        if (ids.Length == 0) return new();
+
+        var parameters = ids.Select((_, index) => $"@Request{index}").ToArray();
+        var flows = await HrmsDatabase.QueryAsync(dbContext, $"""
+SELECT * FROM ApprovalRequestFlows WHERE RequestId IN ({string.Join(",", parameters)});
+""", command =>
+        {
+            for (var index = 0; index < ids.Length; index++)
+                HrmsDatabase.AddParameter(command, parameters[index], ids[index]);
+        }, reader => new FlowState
+        {
+            RequestId = HrmsDatabase.GetInt(reader, "RequestId"),
+            TemplateName = HrmsDatabase.GetString(reader, "TemplateName"),
+            CommentRequiredOnReject = HrmsDatabase.GetBool(reader, "CommentRequiredOnReject"),
+            AttachmentRequiredOnRequest = HrmsDatabase.GetBool(reader, "AttachmentRequiredOnRequest"),
+            CancelLimitDays = HrmsDatabase.GetNullableInt(reader, "CancelLimitDays"),
+            NotifyJson = HrmsDatabase.GetString(reader, "NotifyJson"),
+            ReminderHours = HrmsDatabase.GetNullableInt(reader, "ReminderHours"),
+            EscalationDays = HrmsDatabase.GetNullableInt(reader, "EscalationDays"),
+            EscalationTo = HrmsDatabase.GetString(reader, "EscalationTo"),
+            EscalationAlternateUser = HrmsDatabase.GetString(reader, "EscalationAlternateUser"),
+            Escalated = HrmsDatabase.GetBool(reader, "Escalated")
+        });
+
+        if (flows.Count == 0) return new();
+        var flowIds = flows.Select(flow => flow.RequestId).ToArray();
+        var stepParams = flowIds.Select((_, index) => $"@Flow{index}").ToArray();
+        var steps = await HrmsDatabase.QueryAsync(dbContext, $"""
+SELECT * FROM ApprovalRequestSteps
+WHERE RequestId IN ({string.Join(",", stepParams)})
+ORDER BY RequestId,StepOrder;
+""", command =>
+        {
+            for (var index = 0; index < flowIds.Length; index++)
+                HrmsDatabase.AddParameter(command, stepParams[index], flowIds[index]);
+        }, ReadStep);
+
+        foreach (var flow in flows)
+            flow.Steps = steps.Where(step => step.RequestId == flow.RequestId).ToList();
+        return flows.ToDictionary(flow => flow.RequestId);
     }
 
     /// <summary>سجل قرار الطلب، مع حارس شركة صريح حتى لا يصبح الطلب المعرّف وحده باب IDOR.</summary>
@@ -420,6 +539,30 @@ ORDER BY h.RequestId,h.ActionAt,h.Id;
             "User" => string.Equals(step.UserName, userName, StringComparison.OrdinalIgnoreCase),
             _ => false
         };
+    }
+
+    /// <summary>
+    /// يفحص صلاحية البتّ بالطلب بنفس قواعد التنفيذ الفعلية، بما فيها
+    /// المدير المباشر/الدور/المستخدم/اللجان/التفويض/التصعيد.
+    /// يفيد واجهات API في عدم عرض صندوق موافقات أوسع من صلاحية المستخدم.
+    /// </summary>
+    public static async Task<bool> CanActAsync(
+        ApplicationDbContext dbContext,
+        int requestId,
+        string userName,
+        IEnumerable<string> roles,
+        int? actorEmployeeId)
+    {
+        var flow = await GetFlowAsync(dbContext, requestId);
+        if (flow is null) return false;
+
+        return await FindAuthorizedCurrentAsync(
+            dbContext,
+            flow,
+            requestId,
+            userName,
+            roles,
+            actorEmployeeId) is not null;
     }
 
     private sealed record StepAuthorization(bool Allowed, string? DelegatedFrom = null);
@@ -542,7 +685,8 @@ SELECT @Result;
 
     public static async Task<ActionResult> ApproveAsync(
         ApplicationDbContext dbContext, Security.CompanyScope scope, int requestId, string actor, string? note,
-        IEnumerable<string> actorRoles, int? actorEmployeeId)
+        IEnumerable<string> actorRoles, int? actorEmployeeId,
+        IEnumerable<string>? approvedFieldKeys = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         // الاعتماد يقدّم الطلب نحو أثرٍ ماليّ (قرض/بدل/زيادة) على موظف. المعرّف من
@@ -565,6 +709,7 @@ SELECT @Result;
         if (selected is null)
             return new ActionResult(false, "لا تملك صلاحية البتّ بالخطوة الحالية.");
         var current=selected.Step; var authorization=selected.Authorization;
+        var managerApproved = string.Equals(current.ApproverType, "DirectManager", StringComparison.OrdinalIgnoreCase);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         await AcquireDecisionLockAsync(dbContext,requestId);
@@ -596,6 +741,11 @@ SELECT @Changed;
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
 
+        // Persist field decisions only after ownership, actor authorization and the
+        // step claim succeed, inside the same transaction as the durable effect.
+        if (approvedFieldKeys is not null)
+            await DataChangeRequestStore.SetFieldDecisionsAsync(dbContext, requestId, approvedFieldKeys);
+
         var refreshed=await GetFlowAsync(dbContext,requestId);
         if(refreshed!.CurrentSteps.Any(step=>step.StageOrder==current.StageOrder))
         {
@@ -608,6 +758,9 @@ SELECT @Changed;
                     HrmsDatabase.AddParameter(command,"@Id",requestId);
                 });
             await transaction.CommitAsync();
+            if (managerApproved)
+                await NotifyEmployeeRequestAsync(dbContext, requestId, "اعتماد المدير",
+                    $"وافق المدير المباشر على الطلب رقم {requestId}.");
             await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "تحديث موافقة",
                 $"سُجّلت موافقة في الطلب رقم {requestId} وما زالت المرحلة بانتظار قرارات أخرى.");
             return new ActionResult(true,$"تم تسجيل قرارك؛ ما زالت المرحلة المتوازية بانتظار {remaining} قرار.");
@@ -631,8 +784,14 @@ UPDATE FormSubmissions
 SET Status=N'Approved',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note
 WHERE RequestId=@Id;
 
+IF NOT EXISTS (SELECT 1 FROM ApprovalEffectJobs WHERE RequestId=@Id)
+    INSERT INTO ApprovalEffectJobs
+        (RequestId, Actor, Attempts, NextAttemptAtUtc, CreatedAtUtc, UpdatedAtUtc)
+    VALUES
+        (@Id, @Actor, 0, SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME());
+
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
-VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بعد اكتمال لجنة الموافقة', 'Employee', '/SelfServices');
+VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بعد اكتمال لجنة الموافقة', 'Employee', N'/EmployeePortal?tab=requests&requestId=' + CAST(@Id AS nvarchar(20)) + N'#employee-request-' + CAST(@Id AS nvarchar(20)));
 """,
                 command =>
                 {
@@ -641,6 +800,11 @@ VALUES (N'طلب معتمد', N'تم اعتماد الطلب نهائياً بع
                     HrmsDatabase.AddParameter(command, "@Note", (object?)note ?? DBNull.Value);
                 });
             await transaction.CommitAsync();
+            if (managerApproved)
+                await NotifyEmployeeRequestAsync(dbContext, requestId, "اعتماد المدير",
+                    $"وافق المدير المباشر على الطلب رقم {requestId}.");
+            await NotifyEmployeeRequestAsync(dbContext, requestId, "تم اعتماد الطلب",
+                $"تم اعتماد الطلب رقم {requestId} نهائياً.");
             await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "طلب معتمد",
                 $"اكتملت الموافقات على الطلب رقم {requestId}.");
             return new ActionResult(true, "تم اعتماد الطلب نهائياً — اكتملت اللجنة.", FinalApproved: true);
@@ -668,6 +832,9 @@ WHERE Id = @Id;
                 HrmsDatabase.AddParameter(command, "@Id", requestId);
             });
         await transaction.CommitAsync();
+        if (managerApproved)
+            await NotifyEmployeeRequestAsync(dbContext, requestId, "اعتماد المدير",
+                $"وافق المدير المباشر على الطلب رقم {requestId}.");
         await NotifyCurrentApproversAsync(dbContext, requestId, "طلب بانتظار موافقتك", $"وصل الطلب إلى مرحلة: {nextName}.");
         await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Approve", "انتقال طلب",
             $"انتقل الطلب رقم {requestId} إلى مرحلة: {nextName}.");
@@ -731,7 +898,7 @@ INSERT INTO ApprovalHistories (RequestId, StepName, Action, ActionBy, Notes, Del
 VALUES (@RequestId, @StepName, 'Rejected', @Actor, @Note, @DelegatedFrom);
 
 INSERT INTO SystemNotifications (Title, Message, TargetRole, Url)
-VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepName, 'Employee', '/SelfServices');
+VALUES (N'طلب مرفوض', N'تم رفض الطلب في خطوة: ' + @StepName, 'Employee', N'/EmployeePortal?tab=requests&requestId=' + CAST(@RequestId AS nvarchar(20)) + N'#employee-request-' + CAST(@RequestId AS nvarchar(20)));
 END;
 
 SELECT @Changed;
@@ -748,6 +915,8 @@ SELECT @Changed;
         if (claimed != 1)
             return new ActionResult(false, "سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
         await transaction.CommitAsync();
+        await NotifyEmployeeRequestAsync(dbContext, requestId, "تم رفض الطلب",
+            $"تم رفض الطلب رقم {requestId} في خطوة {current.DisplayName}.");
         await DispatchConfiguredNotificationsAsync(dbContext, requestId, "Reject", "طلب مرفوض",
             $"رُفض الطلب رقم {requestId} في خطوة {current.DisplayName}.");
         return new ActionResult(true, "تم رفض الطلب.", Rejected: true);
@@ -798,7 +967,7 @@ BEGIN
  BEGIN
   UPDATE FormSubmissions SET Status=N'Returned',ReviewedBy=@Actor,ReviewedAt=SYSUTCDATETIME(),ReviewNote=@Note WHERE RequestId=@RequestId;
   INSERT INTO ApprovalHistories(RequestId,StepName,Action,ActionBy,Notes,DelegatedFrom) VALUES(@RequestId,@StepName,'Returned',@Actor,@Note,@DelegatedFrom);
-  INSERT INTO SystemNotifications(Title,Message,TargetRole,Url) VALUES(N'طلب يحتاج تعديلاً',N'أُعيد طلبك للتعديل: '+@Note,'Employee','/EmployeePortal?tab=requests');
+  INSERT INTO SystemNotifications(Title,Message,TargetRole,Url) VALUES(N'طلب يحتاج تعديلاً',N'أُعيد طلبك للتعديل: '+@Note,'Employee',N'/EmployeePortal?tab=requests&requestId=' + CAST(@RequestId AS nvarchar(20)) + N'#employee-request-' + CAST(@RequestId AS nvarchar(20)));
  END
  ELSE
  BEGIN
@@ -817,6 +986,8 @@ SELECT @Changed;
         });
         if (changed != 1) return new ActionResult(false,"سبق البتّ بهذه الخطوة أو تغيّرت حالتها.");
         await transaction.CommitAsync();
+        await NotifyEmployeeRequestAsync(dbContext, requestId, "أُعيد الطلب للتعديل",
+            $"أُعيد الطلب رقم {requestId} للتعديل. السبب: {note.Trim()}");
         return new ActionResult(true,"أُعيد الطلب إلى الموظف للتعديل وإعادة التقديم.");
     }
 
@@ -917,6 +1088,8 @@ SELECT @Changed;
         });
         if(changed!=1) return new ActionResult(false,"تغيّرت حالة الطلب ولم يعد قابلاً للإلغاء.");
         await transaction.CommitAsync();
+        await NotifyEmployeeRequestAsync(dbContext, requestId, "تم إلغاء الطلب",
+            $"تم إلغاء الطلب رقم {requestId}.");
         await DispatchConfiguredNotificationsAsync(dbContext,requestId,"Cancel","طلب ملغي",
             $"ألغى صاحب الطلب الطلب رقم {requestId}.");
         return new ActionResult(true,"تم إلغاء الطلب.");
@@ -1013,6 +1186,27 @@ VALUES(@RequestId,N'فحص التقديم',@Action,N'System',@Reason);
             HrmsDatabase.AddParameter(command,"@Reason",reason);
         });
 
+    private static string EmployeeRequestUrl(int requestId) =>
+        $"/EmployeePortal?tab=requests&requestId={requestId}#employee-request-{requestId}";
+
+    private static string ApprovalRequestUrl(int requestId) =>
+        $"/Approvals?RequestId={requestId}";
+
+    private static async Task NotifyEmployeeRequestAsync(
+        ApplicationDbContext dbContext, int requestId, string title, string message)
+    {
+        var employeeIds = await HrmsDatabase.QueryAsync(
+            dbContext,
+            "SELECT EmployeeId FROM SelfServiceRequests WHERE Id=@RequestId;",
+            command => HrmsDatabase.AddParameter(command, "@RequestId", requestId),
+            reader => HrmsDatabase.GetInt(reader, "EmployeeId"));
+        var employeeId = employeeIds.FirstOrDefault();
+        if (employeeId <= 0) return;
+
+        await EmployeeNotificationStore.CreateRequestWorkflowAsync(
+            dbContext, employeeId, title, message, EmployeeRequestUrl(requestId));
+    }
+
     private static async Task DispatchConfiguredNotificationsAsync(
         ApplicationDbContext dbContext,int requestId,string eventName,string title,string message)
     {
@@ -1027,19 +1221,20 @@ VALUES(@RequestId,N'فحص التقديم',@Action,N'System',@Reason);
         // المراقبون لقطةٌ من القالب؛ تصلهم أحداث الدورة دائماً بصفة مشاهدة فقط.
         await HrmsDatabase.ExecuteAsync(dbContext,"""
 INSERT INTO SystemNotifications(Title,Message,TargetUser,Url)
-SELECT @Title,@Message,w.UserName,'/Approvals'
+SELECT @Title,@Message,w.UserName,@Url
 FROM ApprovalRequestWatchers w WHERE w.RequestId=@RequestId;
 """, command =>
         {
             HrmsDatabase.AddParameter(command,"@RequestId",requestId);
             HrmsDatabase.AddParameter(command,"@Title",title);
             HrmsDatabase.AddParameter(command,"@Message",message);
+            HrmsDatabase.AddParameter(command,"@Url",ApprovalRequestUrl(requestId));
         });
 
         if(notifyEmployee)
             await HrmsDatabase.ExecuteAsync(dbContext,"""
 INSERT INTO SystemNotifications(Title,Message,TargetUser,Url)
-SELECT @Title,@Message,u.UserName,'/EmployeePortal?tab=requests'
+SELECT @Title,@Message,u.UserName,@Url
 FROM SelfServiceRequests r
 INNER JOIN Employees e ON e.Id=r.EmployeeId AND ISNULL(e.IsDeleted,0)=0
 INNER JOIN SystemUsers u ON u.EmployeeId=e.Id AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
@@ -1049,6 +1244,7 @@ WHERE r.Id=@RequestId;
                 HrmsDatabase.AddParameter(command,"@RequestId",requestId);
                 HrmsDatabase.AddParameter(command,"@Title",title);
                 HrmsDatabase.AddParameter(command,"@Message",message);
+                HrmsDatabase.AddParameter(command,"@Url",EmployeeRequestUrl(requestId));
             });
 
         if(notifyCommittee)
@@ -1061,16 +1257,16 @@ WHERE r.Id=@RequestId;
             foreach(var step in targets)
             {
                 if(step.ApproverType=="Role")
-                    await InsertNotificationAsync(dbContext,title,message,step.RoleName,null,"/Approvals");
+                    await InsertNotificationAsync(dbContext,title,message,step.RoleName,null,ApprovalRequestUrl(requestId));
                 else if(step.ApproverType=="User")
-                    await InsertNotificationAsync(dbContext,title,message,null,step.UserName,"/Approvals");
+                    await InsertNotificationAsync(dbContext,title,message,null,step.UserName,ApprovalRequestUrl(requestId));
                 else if(step.ApproverType=="CommitteeGroup")
                 {
                     foreach (var user in await FrozenCommitteeMembersAsync(dbContext, step.Id))
-                        await InsertNotificationAsync(dbContext,title,message,null,user,"/Approvals");
+                        await InsertNotificationAsync(dbContext,title,message,null,user,ApprovalRequestUrl(requestId));
                 }
                 else if(step.ApproverType=="ExternalCommittee")
-                    await InsertNotificationAsync(dbContext,title,message,"HR Manager",null,"/Approvals");
+                    await InsertNotificationAsync(dbContext,title,message,"HR Manager",null,ApprovalRequestUrl(requestId));
                 else if(step.ApproverType=="DirectManager")
                 {
                     var users=await HrmsDatabase.QueryAsync(dbContext,"""
@@ -1080,7 +1276,7 @@ INNER JOIN Employees manager ON manager.Id=requester.DirectManagerId AND manager
 INNER JOIN SystemUsers u ON u.EmployeeId=manager.Id AND u.IsActive=1 AND ISNULL(u.IsDeleted,0)=0
 WHERE r.Id=@RequestId;
 """,command=>HrmsDatabase.AddParameter(command,"@RequestId",requestId),reader=>HrmsDatabase.GetString(reader,"UserName"));
-                    foreach(var user in users) await InsertNotificationAsync(dbContext,title,message,null,user,"/Approvals");
+                    foreach(var user in users) await InsertNotificationAsync(dbContext,title,message,null,user,ApprovalRequestUrl(requestId));
                 }
             }
         }
@@ -1093,17 +1289,26 @@ WHERE r.Id=@RequestId;
         if (flow is null) return;
         foreach (var step in flow.CurrentSteps)
         {
+            var roleName = step.RoleName ?? string.Empty;
+            var stepTitle = step.ApproverType == "DirectManager"
+                ? "طلب وصل إلى المدير المباشر"
+                : step.ApproverType == "ExternalCommittee" ||
+                  roleName.Contains("HR", StringComparison.OrdinalIgnoreCase) ||
+                  roleName.Contains("موارد", StringComparison.OrdinalIgnoreCase)
+                    ? "طلب وصل إلى الموارد البشرية"
+                    : title;
+
             if (step.ApproverType == "Role")
-                await InsertNotificationAsync(dbContext, title, message, step.RoleName, null, "/Approvals");
+                await InsertNotificationAsync(dbContext, stepTitle, message, step.RoleName, null, ApprovalRequestUrl(requestId));
             else if (step.ApproverType == "User")
-                await InsertNotificationAsync(dbContext, title, message, null, step.UserName, "/Approvals");
+                await InsertNotificationAsync(dbContext, stepTitle, message, null, step.UserName, ApprovalRequestUrl(requestId));
             else if (step.ApproverType == "CommitteeGroup")
             {
                 foreach (var user in await FrozenCommitteeMembersAsync(dbContext, step.Id))
-                    await InsertNotificationAsync(dbContext, title, message, null, user, "/Approvals");
+                    await InsertNotificationAsync(dbContext, stepTitle, message, null, user, ApprovalRequestUrl(requestId));
             }
             else if (step.ApproverType == "ExternalCommittee")
-                await InsertNotificationAsync(dbContext, title, message, "HR Manager", null, "/Approvals");
+                await InsertNotificationAsync(dbContext, stepTitle, message, "HR Manager", null, ApprovalRequestUrl(requestId));
             else if (step.ApproverType == "DirectManager")
             {
                 var users = await HrmsDatabase.QueryAsync(dbContext, """
@@ -1114,7 +1319,7 @@ INNER JOIN SystemUsers u ON u.EmployeeId=manager.Id AND u.IsActive=1 AND ISNULL(
 WHERE r.Id=@RequestId;
 """, command => HrmsDatabase.AddParameter(command, "@RequestId", requestId),
                     reader => HrmsDatabase.GetString(reader, "UserName"));
-                foreach (var user in users) await InsertNotificationAsync(dbContext, title, message, null, user, "/Approvals");
+                foreach (var user in users) await InsertNotificationAsync(dbContext, stepTitle, message, null, user, ApprovalRequestUrl(requestId));
             }
         }
     }
@@ -1151,8 +1356,25 @@ WHERE r.Id=@RequestId;
     }
 
     /// <summary>
-    /// الأنواع الداينمكية تحمل أسماء تفصيلية (إجازة سنوية/مغادرة شخصية)، بينما
-    /// القوالب مفاتيح موديول ثابتة. التطبيع هنا يمنع سقوطها الصامت للمسار الافتراضي.
+    /// يحوّل الهوية التنفيذية الثابتة للنوع إلى مفتاح قالب الموافقة. هذا هو المسار
+    /// المفضّل للأنواع الداينمكية لأن اسم العرض قابل للتعديل من الإدارة.
+    /// </summary>
+    public static string? ResolveRequestTypeKeyFromEffectCode(string? effectCode) =>
+        RequestTypeEffectCatalog.Normalize(effectCode) switch
+        {
+            RequestTypeEffectCatalog.LeaveAnnual or RequestTypeEffectCatalog.LeaveSick or
+            RequestTypeEffectCatalog.LeaveUnpaid or RequestTypeEffectCatalog.LeaveOther or
+            RequestTypeEffectCatalog.BusinessTrip => "LeaveRequest",
+            RequestTypeEffectCatalog.ExitPermission => "ExitPermission",
+            RequestTypeEffectCatalog.Overtime => "Overtime",
+            RequestTypeEffectCatalog.WorkFromHome => "WorkFromHome",
+            RequestTypeEffectCatalog.ShiftChange => "ShiftChange",
+            _ => null
+        };
+
+    /// <summary>
+    /// الأنواع القديمة قد تحمل أسماء تفصيلية (إجازة سنوية/مغادرة شخصية)، بينما
+    /// القوالب مفاتيح موديول ثابتة. هذا المسار يبقى للتوافق عندما لا يوجد EffectCode.
     /// </summary>
     public static string ResolveRequestTypeKey(string? requestType)
     {
@@ -1234,7 +1456,7 @@ WHERE s.Status='Current' AND s.ReminderSentAt IS NULL AND s.CurrentSince IS NOT 
 INSERT INTO SystemNotifications(Title,Message,TargetRole,TargetUser,Url)
 SELECT N'تذكير موافقة',N'الطلب رقم '+CAST(m.RequestId AS nvarchar(20))+N' بانتظار قرارك: '+m.StepName,
  CASE WHEN m.ApproverType='Role' THEN m.RoleName WHEN m.ApproverType='DirectManager' AND managerUser.UserName IS NULL THEN 'HR' WHEN m.ApproverType='ExternalCommittee' THEN 'HR Manager' END,
- CASE WHEN m.ApproverType='User' THEN m.UserName WHEN m.ApproverType='DirectManager' THEN managerUser.UserName END,'/Approvals'
+ CASE WHEN m.ApproverType='User' THEN m.UserName WHEN m.ApproverType='DirectManager' THEN managerUser.UserName END,N'/Approvals?RequestId=' + CAST(m.RequestId AS nvarchar(20))
 FROM @Reminded m
 LEFT JOIN SelfServiceRequests r ON r.Id=m.RequestId
 LEFT JOIN Employees requester ON requester.Id=r.EmployeeId
@@ -1245,7 +1467,7 @@ OUTER APPLY(SELECT TOP(1) u.UserName FROM SystemUsers u
 
 INSERT INTO SystemNotifications(Title,Message,TargetUser,Url)
 SELECT N'تذكير موافقة',N'الطلب رقم '+CAST(m.RequestId AS nvarchar(20))+N' بانتظار قرارك: '+m.StepName,
-       member.UserName,'/Approvals'
+       member.UserName,N'/Approvals?RequestId=' + CAST(m.RequestId AS nvarchar(20))
 FROM @Reminded m
 INNER JOIN ApprovalRequestStepMembers member ON member.StepId=m.StepId
 WHERE m.ApproverType='CommitteeGroup';
@@ -1260,7 +1482,7 @@ UPDATE f SET Escalated=1 FROM ApprovalRequestFlows f WHERE EXISTS(SELECT 1 FROM 
 
 INSERT INTO SystemNotifications (Title, Message, TargetRole,TargetUser, Url)
 SELECT N'تصعيد طلب متأخر',N'الطلب رقم '+CAST(RequestId AS nvarchar(20))+N' متأخر في خطوة: '+StepName,
-       TargetRole,TargetUser,'/Approvals'
+       TargetRole,TargetUser,N'/Approvals?RequestId=' + CAST(RequestId AS nvarchar(20))
 FROM @Escalated;
 
 SELECT (SELECT COUNT(*) FROM @Reminded) AS Reminded,(SELECT COUNT(*) FROM @Escalated) AS Escalated;
@@ -1283,7 +1505,11 @@ SELECT (SELECT COUNT(*) FROM @Reminded) AS Reminded,(SELECT COUNT(*) FROM @Escal
         ExternalCommitteeId = HrmsDatabase.GetNullableInt(reader, "ExternalCommitteeId"),
         DisplayName = HrmsDatabase.GetString(reader, "DisplayName"),
         Status = HrmsDatabase.GetString(reader, "Status"),
-        CurrentSince = HrmsDatabase.GetDateTime(reader, "CurrentSince")
+        CurrentSince = HrmsDatabase.GetDateTime(reader, "CurrentSince"),
+        ActionBy = HrmsDatabase.GetString(reader, "ActionBy"),
+        ActionAt = HrmsDatabase.GetDateTime(reader, "ActionAt"),
+        Note = HrmsDatabase.GetString(reader, "Note"),
+        DelegatedFrom = HrmsDatabase.GetString(reader, "DelegatedFrom")
         ,ReminderSentAt=HrmsDatabase.GetDateTime(reader,"ReminderSentAt")
         ,EscalatedAt=HrmsDatabase.GetDateTime(reader,"EscalatedAt")
         ,EscalatedToRole=HrmsDatabase.GetString(reader,"EscalatedToRole")

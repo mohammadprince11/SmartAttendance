@@ -15,7 +15,8 @@
         s.Id, s.Name, s.NameEn, s.ColorHex, s.IsFlexible, s.FlexDailyHours, s.MultiPeriod, s.IsActive,
         s.FillMissingCheckIn, s.FillMissingCheckOut, s.StripSemantics, s.ConsiderPermissionsOutsideShift,
         s.ExcludePermsOutsideStartFromLate, s.TotalDurationMode, s.AvailableInRoster, s.RequestableFromEss,
-        s.LatenessGraceMinutes, s.EarlyLeaveGraceMinutes, s.GraceExceededPolicy,
+        s.LatenessGraceMinutes, s.LateCompensationEnabled, s.LateCompensationEligibleUntil, s.LateCompensationEndLimit,
+        s.EarlyLeaveGraceMinutes, s.GraceExceededPolicy,
         s.TimeLimitFrom, s.TimeLimitFromDayBefore,
         s.TimeLimitTo, s.TimeLimitToDayAfter, s.MidShiftTime,
         s.ConflictLateReturnEnabled, s.ConflictLateReturnAction, s.ConflictLateReturnValue,
@@ -216,6 +217,21 @@
                             <label>فترة السماح للتأخير (دقائق)<input type="number" name="LatenessGraceMinutes" id="sht-LGM" min="0" max="600" value="0" /></label>
                             <label>فترة السماح للخروج المبكر (دقائق)<input type="number" name="EarlyLeaveGraceMinutes" id="sht-ELG" min="0" max="600" value="0" /></label>
                         </div>
+                        <label class="zyu-95e15889185d">
+                            <input type="checkbox" name="LateCompensationEnabled" value="true" id="sht-LCE" onchange="shtCompChanged()" />
+                            السماح بتعويض التأخير بالبقاء بعد نهاية المناوبة
+                        </label>
+                        <div id="sht-LC-wrap" class="zyu-71658681447f" hidden>
+                            <label>آخر وقت وصول مؤهل للتعويض
+                                <input type="time" name="LateCompensationEligibleUntil" id="sht-LCEU" />
+                            </label>
+                            <label>آخر وقت خروج يُحسب للتعويض
+                                <input type="time" name="LateCompensationEndLimit" id="sht-LCEL" />
+                            </label>
+                        </div>
+                        <p id="sht-LC-hint" class="sht-hint" hidden>
+                            مثال: مناوبة 08:30–16:30، وصول مؤهل حتى 09:30، وتعويض حتى 17:00.
+                        </p>
                         <label class="zyu-df5afa5a8563">عند تجاوز فترة السماح <span class="sht-hint">— سياسة الشركة في احتساب الفارق</span>
                             <select name="GraceExceededPolicy" id="sht-GXP" class="sht-select">
                                 <option value="Subtract">يُطرح المسموح (تأخير 20د وسماحية 15 ⇐ يُسجَّل 5د)</option>
@@ -401,6 +417,17 @@
             if (flex) { var single = document.querySelector('[name="PeriodMode"][value="single"]'); if (single) single.checked = true; }
             shtPeriodModeChanged();
         }
+
+        function shtCompChanged() {
+            var on = document.getElementById('sht-LCE').checked;
+            document.getElementById('sht-LC-wrap').hidden = !on;
+            document.getElementById('sht-LC-hint').hidden = !on;
+            ['sht-LCEU', 'sht-LCEL'].forEach(function (id) {
+                var el = document.getElementById(id);
+                el.disabled = !on;
+                el.required = on;
+            });
+        }
         document.getElementById('sht-FlexHours').addEventListener('input', shtModeChanged);
 
         function shtReindexPeriods() {
@@ -571,6 +598,9 @@
                             (value === null || value === undefined) ? '' : value;
                     });
                     document.getElementById('sht-LGM').value = s.LatenessGraceMinutes || 0;
+                    document.getElementById('sht-LCE').checked = !!s.LateCompensationEnabled;
+                    document.getElementById('sht-LCEU').value = s.LateCompensationEligibleUntil || '';
+                    document.getElementById('sht-LCEL').value = s.LateCompensationEndLimit || '';
                     document.getElementById('sht-ELG').value = s.EarlyLeaveGraceMinutes || 0;
                     document.getElementById('sht-GXP').value = s.GraceExceededPolicy || 'Subtract';
                     document.getElementById('sht-TLF').value = s.TimeLimitFrom || '';
@@ -599,6 +629,7 @@
                 }
             }
             shtModeChanged();
+            shtCompChanged();
             shtConflictChanged();
             document.getElementById('sht-slide').classList.add('open');
             document.getElementById('sht-backdrop').classList.add('open');

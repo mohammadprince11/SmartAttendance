@@ -8,7 +8,7 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
 {
     public void Configure(EntityTypeBuilder<Company> builder)
     {
-        builder.ToTable("Companies");
+        builder.ToTable("Companies", table => table.UseSqlOutputClause(false));
 
         builder.HasKey(x => x.Id);
 
@@ -41,7 +41,12 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(x => x.TimeZoneId)
             .HasMaxLength(100);
 
-        builder.HasIndex(x => x.Code)
+        builder.HasOne(x => x.Tenant)
+            .WithMany(x => x.Companies)
+            .HasForeignKey(x => x.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => new { x.TenantId, x.Code })
             .IsUnique();
     }
 }

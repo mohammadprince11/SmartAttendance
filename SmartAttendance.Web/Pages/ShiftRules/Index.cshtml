@@ -31,7 +31,10 @@
             <h1>قواعد المناوبات</h1>
             <p>محرك «حضور ← إجراء»: في حالة [شرط على اليومية] ← [مخالفة/ملاحظة]، يدوي بالفرز أو تلقائي.</p>
         </div>
-        <button type="button" class="shr-btn" onclick="shrOpen(0)">+ قاعدة جديدة</button>
+        <div>
+            <button type="button" class="shr-btn ghost" onclick="shrOpenLateCutoff()">قالب حد الوصول 09:30</button>
+            <button type="button" class="shr-btn" onclick="shrOpen(0)">+ قاعدة جديدة</button>
+        </div>
     </header>
 
     @if (TempData["SuccessMessage"] != null)
@@ -405,6 +408,26 @@
             }
             document.getElementById('shr-slide').classList.add('open');
             document.getElementById('shr-backdrop').classList.add('open');
+        }
+
+        function shrOpenLateCutoff() {
+            shrOpen(0);
+            document.getElementById('shr-title').textContent = 'قاعدة حد الوصول 09:30';
+            document.getElementById('shr-Name').value = 'حد الوصول 09:30';
+            document.getElementById('shr-ApplyOn').value = 'Work';
+            document.getElementById('shr-Field').value = 'CheckIn';
+            document.getElementById('shr-Kind').value = 'Time';
+            shrFieldChanged();
+            document.getElementById('shr-Cmp').value = 'After';
+            document.getElementById('shr-Time').value = '09:30';
+            document.getElementById('shr-Anchor').value = 'Same';
+            document.getElementById('shr-ActionType').value = 'Violation';
+            document.getElementById('shr-ActionText').value = 'الوصول بعد 09:30 غير مسموح';
+            document.getElementById('shr-Auto').checked = false;
+            document.getElementById('shr-AllowEdit').checked = true;
+            document.getElementById('shr-Active').checked = true;
+            shrValueVisibility();
+            shrActionChanged();
         }
 
         function shrClose() {

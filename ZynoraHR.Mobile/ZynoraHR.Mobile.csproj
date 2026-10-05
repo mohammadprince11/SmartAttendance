@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
@@ -21,6 +21,7 @@
 		<!-- The APK is distributed and installed directly, so it must contain the
 		     managed assemblies instead of relying on IDE Fast Deployment files. -->
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<AndroidPackageFormats>apk</AndroidPackageFormats>
 
 		<!-- أدوات Android تُحفظ محلياً خارج Git لتكون أوامر البناء قابلة للتكرار. -->
 		<LocalMobileToolsRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\.mobile-tools'))</LocalMobileToolsRoot>
@@ -42,8 +43,8 @@
 		<ApplicationId>com.zynorahr.employee</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>0.1.1</ApplicationDisplayVersion>
-		<ApplicationVersion>2</ApplicationVersion>
+		<ApplicationDisplayVersion>0.6.1</ApplicationDisplayVersion>
+		<ApplicationVersion>12</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
@@ -55,12 +56,20 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(ZYNORA_ANDROID_KEYSTORE_PATH)' != ''">
+		<AndroidKeyStore>true</AndroidKeyStore>
+		<AndroidSigningKeyStore>$(ZYNORA_ANDROID_KEYSTORE_PATH)</AndroidSigningKeyStore>
+		<AndroidSigningKeyAlias>zynora-release</AndroidSigningKeyAlias>
+		<AndroidSigningStorePass>env:ZYNORA_ANDROID_KEYSTORE_PASSWORD</AndroidSigningStorePass>
+		<AndroidSigningKeyPass>env:ZYNORA_ANDROID_KEY_PASSWORD</AndroidSigningKeyPass>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#F4F7FB" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#07111F" BaseSize="1024,1024" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#081426" BaseSize="256,256" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#07111F" BaseSize="256,256" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -70,11 +79,18 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- Complete mobile UI translation catalogs. Embedded so localization works offline. -->
+		<MauiAsset Include="Resources\Localization\ui.ar.json" LogicalName="Localization/ui.ar.json" />
+		<MauiAsset Include="Resources\Localization\ui.en.json" LogicalName="Localization/ui.en.json" />
+		<MauiAsset Include="Resources\Localization\ui.ckb.json" LogicalName="Localization/ui.ckb.json" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="Xamarin.AndroidX.Credentials" Version="1.5.0.3" />
+		<PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.5.0.3" />
 	</ItemGroup>
 
 </Project>

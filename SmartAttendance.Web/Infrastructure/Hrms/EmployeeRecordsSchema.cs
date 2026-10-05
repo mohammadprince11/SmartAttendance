@@ -1,4 +1,4 @@
-using SmartAttendance.Infrastructure.Persistence;
+﻿using SmartAttendance.Infrastructure.Persistence;
 
 namespace SmartAttendance.Web.Infrastructure.Hrms;
 
@@ -20,15 +20,15 @@ BEGIN
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
         EmployeeId int NOT NULL,
         RecordType int NOT NULL,
-        Title nvarchar(200) NOT NULL,
-        Subtitle nvarchar(200) NULL,
-        Country nvarchar(100) NULL,
-        RefNo nvarchar(100) NULL,
+        Title nvarchar(300) NOT NULL,
+        Subtitle nvarchar(1000) NULL,
+        Country nvarchar(120) NULL,
+        RefNo nvarchar(120) NULL,
         FromDate date NULL,
         ToDate date NULL,
         Amount decimal(18,2) NULL,
         IsCurrent bit NOT NULL DEFAULT(0),
-        Note nvarchar(500) NULL,
+        Note nvarchar(max) NULL,
         AttachmentName nvarchar(260) NULL,
         AttachmentPath nvarchar(500) NULL,
         CreatedAt datetime2 NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -73,6 +73,72 @@ IF COL_LENGTH('EmployeeFileRecords', 'RefContactPhone') IS NULL
 
 IF COL_LENGTH('EmployeeFileRecords', 'RefContactNote') IS NULL
     ALTER TABLE EmployeeFileRecords ADD RefContactNote nvarchar(500) NULL;
+-- People AI promotion can carry richer structured values than the original
+-- generic employee-file schema allowed. Widen only undersized nvarchar
+-- columns; never shrink a database that is already wider.
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.EmployeeFileRecords')
+      AND name = N'Title'
+      AND TYPE_NAME(user_type_id) = N'nvarchar'
+      AND max_length <> -1
+      AND max_length < 600
+)
+    ALTER TABLE dbo.EmployeeFileRecords
+        ALTER COLUMN Title nvarchar(300) NOT NULL;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.EmployeeFileRecords')
+      AND name = N'Subtitle'
+      AND TYPE_NAME(user_type_id) = N'nvarchar'
+      AND max_length <> -1
+      AND max_length < 2000
+)
+    ALTER TABLE dbo.EmployeeFileRecords
+        ALTER COLUMN Subtitle nvarchar(1000) NULL;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.EmployeeFileRecords')
+      AND name = N'Country'
+      AND TYPE_NAME(user_type_id) = N'nvarchar'
+      AND max_length <> -1
+      AND max_length < 240
+)
+    ALTER TABLE dbo.EmployeeFileRecords
+        ALTER COLUMN Country nvarchar(120) NULL;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.EmployeeFileRecords')
+      AND name = N'RefNo'
+      AND TYPE_NAME(user_type_id) = N'nvarchar'
+      AND max_length <> -1
+      AND max_length < 240
+)
+    ALTER TABLE dbo.EmployeeFileRecords
+        ALTER COLUMN RefNo nvarchar(120) NULL;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.EmployeeFileRecords')
+      AND name = N'Note'
+      AND TYPE_NAME(user_type_id) = N'nvarchar'
+      AND max_length <> -1
+)
+    ALTER TABLE dbo.EmployeeFileRecords
+        ALTER COLUMN Note nvarchar(max) NULL;
 """);
     }
 }

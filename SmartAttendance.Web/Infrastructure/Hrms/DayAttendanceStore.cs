@@ -34,7 +34,13 @@ public static class DayAttendanceStore
         public decimal LateHours { get; set; }
         public decimal EarlyLeaveHours { get; set; }
         public decimal WorkedHours { get; set; }
-        public string Status { get; set; } = "Absent";    // Present | Late | Incomplete | Absent | Weekend | Rest
+        public string Status { get; set; } = "Absent";    // الحقيقة الخام المشتقة
+        public string? PolicyOverrideStatus { get; set; }
+        public string? PolicyOverrideReason { get; set; }
+        public string EffectiveStatus => string.IsNullOrWhiteSpace(PolicyOverrideStatus)
+            ? Status
+            : PolicyOverrideStatus;
+        public bool HasPolicyOverride => !string.IsNullOrWhiteSpace(PolicyOverrideStatus);
         public bool IsAnalyzed { get; set; }
 
         /// <summary>
@@ -52,6 +58,7 @@ public static class DayAttendanceStore
     /// <see cref="DayRow.Status"/> (Present · Late · Absent · Incomplete …) ولا يتصادم معها.
     /// </summary>
     public const string StaleFilterKey = "Stale";
+    public const string PolicyAbsentFilterKey = "PolicyAbsent";
 
     /// <summary>
     /// فلتر أزرار العدّادات بشاشة الحضور اليومي. فارغ = الكل.
@@ -66,6 +73,7 @@ public static class DayAttendanceStore
         {
             null or "" => rows.ToList(),
             StaleFilterKey => rows.Where(row => row.IsStale).ToList(),
+            PolicyAbsentFilterKey => rows.Where(row => row.PolicyOverrideStatus == "Absent").ToList(),
             _ => rows.Where(row => row.Status == statusFilter).ToList()
         };
 
@@ -689,6 +697,31 @@ WHERE EmployeeId=@Emp AND WorkDate=@Date;
         return Math.Round((decimal)effective.TotalHours, 2);
     }
 
+    public static TimeSpan ApplyLateCompensation(
+        TimeSpan lateSpan,
+        DateTime checkIn,
+        DateTime checkOut,
+        TimeSpan shiftEnd,
+        bool enabled,
+        string? eligibleUntil,
+        string? endLimit)
+    {
+        if (!enabled || lateSpan <= TimeSpan.Zero || checkOut.Date != checkIn.Date)
+            return lateSpan;
+
+        if (!TimeSpan.TryParse(eligibleUntil, out var eligible)
+            || !TimeSpan.TryParse(endLimit, out var limit)
+            || checkIn.TimeOfDay > eligible
+            || limit <= shiftEnd)
+            return lateSpan;
+
+        var compensatedUntil = checkOut.TimeOfDay < limit ? checkOut.TimeOfDay : limit;
+        var extra = compensatedUntil - shiftEnd;
+        if (extra <= TimeSpan.Zero) return lateSpan;
+
+        return lateSpan - (extra >= lateSpan ? lateSpan : extra);
+    }
+
     /// <summary>
     /// أيام العمل خارج المكتب المعتمدة، مفهرسة (موظف × يوم) ⟶ سياق اليوم.
     ///
@@ -816,24 +849,32 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
     {
         static double Minutes(TimeOnly value) =>
             value.Hour * 60d + value.Minute + value.Second / 60d;
-        static double OnAxis(TimeOnly value, double anchor)
+
+        // Put a time-of-day on the occurrence nearest to the shift start.
+        // This preserves a genuine early arrival (07:55 for an 08:00 shift)
+        // while still mapping after-midnight punches of an overnight shift
+        // (00:30 for a 22:00 shift) onto the following day.
+        static double OnNearestAxis(TimeOnly value, double anchor)
         {
             var minutes = Minutes(value);
-            return minutes < anchor ? minutes + 1440d : minutes;
+            var nextDay = minutes + 1440d;
+            return Math.Abs(minutes - anchor) <= Math.Abs(nextDay - anchor)
+                ? minutes
+                : nextDay;
         }
 
         var shiftStartMinutes = Minutes(shiftStart);
-        var checkInMinutes = OnAxis(checkIn, shiftStartMinutes);
+        var checkInMinutes = OnNearestAxis(checkIn, shiftStartMinutes);
         if (checkInMinutes <= shiftStartMinutes) return TimeSpan.Zero;
 
-        var shiftEndMinutes = OnAxis(shiftEnd, shiftStartMinutes);
+        var shiftEndMinutes = OnNearestAxis(shiftEnd, shiftStartMinutes);
         if (shiftEndMinutes <= shiftStartMinutes) shiftEndMinutes += 1440d;
         var creditMinutes = 0d;
 
         foreach (var (permStart, permEnd) in permissions)
         {
-            var start = OnAxis(permStart, shiftStartMinutes);
-            var end = OnAxis(permEnd, shiftStartMinutes);
+            var start = OnNearestAxis(permStart, shiftStartMinutes);
+            var end = OnNearestAxis(permEnd, shiftStartMinutes);
             if (end <= start) end += 1440d;
 
             if (!considerOutsideShift)
@@ -1016,9 +1057,22 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         decimal late = 0, early = 0;
         if (TimeSpan.TryParse(day?.StartTime, out var shiftStart))
         {
-            // قسيمة المغادرة المعتمدة (إن وُجدت) تُطرح من مدة التأخير قبل السماحية
-            late = ApplyGrace(checkIn.Value.TimeOfDay - shiftStart - lateCredit,
-                shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
+            // قسيمة المغادرة المعتمدة (إن وُجدت) تُطرح من مدة التأخير قبل السماحية.
+            var rawLate = checkIn.Value.TimeOfDay - shiftStart - lateCredit;
+
+            if (TimeSpan.TryParse(day?.EndTime, out var compensationShiftEnd))
+            {
+                rawLate = ApplyLateCompensation(
+                    rawLate,
+                    checkIn.Value,
+                    checkOut.Value,
+                    compensationShiftEnd,
+                    shift.LateCompensationEnabled,
+                    shift.LateCompensationEligibleUntil,
+                    shift.LateCompensationEndLimit);
+            }
+
+            late = ApplyGrace(rawLate, shift.LatenessGraceMinutes, shift.GraceExceededPolicy);
         }
         if (checkOut.Value.Date == checkIn.Value.Date
             && TimeSpan.TryParse(day?.StartTime, out var dayStart)
@@ -1115,9 +1169,22 @@ WHERE RequestType = N'ExitPermission' AND Status = N'Approved'
         EarlyLeaveHours = reader["EarlyLeaveHours"] is decimal early ? early : 0,
         WorkedHours = reader["WorkedHours"] is decimal worked ? worked : 0,
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : "Absent",
+        PolicyOverrideStatus = OptionalString(reader, "PolicyOverrideStatus"),
+        PolicyOverrideReason = OptionalString(reader, "PolicyOverrideReason"),
         IsAnalyzed = HrmsDatabase.GetBool(reader, "IsAnalyzed"),
         IsStale = HrmsDatabase.GetBool(reader, "IsStale")
     };
+
+    private static string? OptionalString(System.Data.Common.DbDataReader reader, string name)
+    {
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (!string.Equals(reader.GetName(i), name, StringComparison.OrdinalIgnoreCase))
+                continue;
+            return reader.IsDBNull(i) ? null : Convert.ToString(reader.GetValue(i));
+        }
+        return null;
+    }
 
     private static async Task<string> StaleCaseSqlAsync(ApplicationDbContext dbContext)
     {
@@ -1188,6 +1255,7 @@ LEFT JOIN SelfServiceRequests ss
         public int LateCount { get; init; }
         public int AbsentCount { get; init; }
         public int IncompleteCount { get; init; }
+        public int PolicyAbsentCount { get; init; }
         public int StaleCount { get; init; }
         /// <summary>موظفو العرض الحالي المميَّزون — نطاق زرّ الإشعار.</summary>
         public int NotifyEmployeeCount { get; init; }
@@ -1211,6 +1279,7 @@ LEFT JOIN SelfServiceRequests ss
         if (scope.IsDeniedAll || pageSize <= 0) return new PagedDays();
 
         await EnsureAsync(dbContext);
+        await AttendancePolicyOverrideStore.EnsureAsync(dbContext);
 
         var companyClause = scope.IsUnrestricted
             ? string.Empty
@@ -1315,10 +1384,15 @@ WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}{sta
             dbContext,
             $"""
 SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    po.OverrideStatus AS PolicyOverrideStatus, po.Reason AS PolicyOverrideReason,
     Stale.IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
+LEFT JOIN AttendancePolicyOverrides po
+  ON po.EmployeeId = d.EmployeeId
+ AND po.WorkDate = d.WorkDate
+ AND po.PolicyKey = N'MonthlyLateAllowance'
 CROSS APPLY (SELECT {staleCase} AS IsStale) AS Stale
 WHERE d.WorkDate >= @From AND d.WorkDate <= @To{companyClause}{searchClause}{statusClause}
 ORDER BY d.WorkDate DESC, e.EmployeeNo
@@ -1600,6 +1674,7 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
         if (employeeIds is { Count: 0 }) return new List<DayRow>();
 
         await EnsureAsync(dbContext);
+        await AttendancePolicyOverrideStore.EnsureAsync(dbContext);
 
         // الترشيح بالموظف يقع بالـSQL: النداء العام يمرّر null فيبقى الاستعلام حرفياً
         // كما كان (صفر تغيير على الشاشات)، والنداء المفرد يضيف شرطاً مُوسَّطاً.
@@ -1625,10 +1700,15 @@ OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
             dbContext,
             $"""
 SELECT d.*, e.EmployeeNo, e.FullName, s.Name AS ShiftName, s.ColorHex AS ShiftColor,
+    po.OverrideStatus AS PolicyOverrideStatus, po.Reason AS PolicyOverrideReason,
     {staleCase} AS IsStale
 FROM DayAttendances d
 INNER JOIN Employees e ON e.Id = d.EmployeeId
 LEFT JOIN ShiftTypes s ON s.Id = d.ShiftTypeId
+LEFT JOIN AttendancePolicyOverrides po
+  ON po.EmployeeId = d.EmployeeId
+ AND po.WorkDate = d.WorkDate
+ AND po.PolicyKey = N'MonthlyLateAllowance'
 WHERE d.WorkDate >= @From AND d.WorkDate <= @To{employeeClause}{companyClause}
 ORDER BY e.EmployeeNo, d.WorkDate;
 """,

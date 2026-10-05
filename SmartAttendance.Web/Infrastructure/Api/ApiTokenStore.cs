@@ -16,6 +16,8 @@ public static class ApiTokenStore
     /// <summary>هوية مالك التوكن المستخرجة عند التحقق (تبني ClaimsPrincipal).</summary>
     public sealed class TokenIdentity
     {
+        public int TenantId { get; set; }
+        public string TenantCode { get; set; } = string.Empty;
         public int SystemUserId { get; set; }
         public int? EmployeeId { get; set; }
         public string Username { get; set; } = string.Empty;
@@ -37,6 +39,7 @@ BEGIN
     (
         Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
         TokenHash char(64) NOT NULL,
+        TenantId int NOT NULL,
         SystemUserId int NOT NULL,
         EmployeeId int NULL,
         Username nvarchar(150) NOT NULL,
@@ -49,6 +52,9 @@ BEGIN
     );
     CREATE UNIQUE INDEX UX_ApiTokens_Hash ON ApiTokens (TokenHash);
 END;
+
+IF COL_LENGTH('dbo.ApiTokens', 'TenantId') IS NULL
+    THROW 51000, 'ApiTokens.TenantId is missing. Apply the controlled tenant migration before starting the application.', 1;
 """);
     }
 
@@ -66,12 +72,13 @@ END;
         await HrmsDatabase.ExecuteAsync(
             db,
             """
-INSERT INTO ApiTokens (TokenHash, SystemUserId, EmployeeId, Username, Role, DisplayName, ExpiresAt, SecurityStamp)
-VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp, @Stamp);
+INSERT INTO ApiTokens (TokenHash, TenantId, SystemUserId, EmployeeId, Username, Role, DisplayName, ExpiresAt, SecurityStamp)
+VALUES (@Hash, @TenantId, @Sys, @Emp, @User, @Role, @Name, @Exp, @Stamp);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Hash", hash);
+                HrmsDatabase.AddParameter(command, "@TenantId", identity.TenantId);
                 HrmsDatabase.AddParameter(command, "@Sys", identity.SystemUserId);
                 HrmsDatabase.AddParameter(command, "@Emp", (object?)identity.EmployeeId ?? DBNull.Value);
                 HrmsDatabase.AddParameter(command, "@User", identity.Username);
@@ -98,13 +105,29 @@ VALUES (@Hash, @Sys, @Emp, @User, @Role, @Name, @Exp, @Stamp);
         return (await HrmsDatabase.QueryAsync(
             db,
             """
-SELECT SystemUserId, EmployeeId, Username, Role, DisplayName, ISNULL(SecurityStamp, '') AS SecurityStamp
-FROM ApiTokens
-WHERE TokenHash = @Hash AND RevokedAt IS NULL AND ExpiresAt > SYSUTCDATETIME();
+SELECT t.TenantId, tn.Code AS TenantCode, t.SystemUserId, t.EmployeeId, t.Username, t.Role,
+       t.DisplayName, ISNULL(t.SecurityStamp, '') AS SecurityStamp
+FROM ApiTokens t
+INNER JOIN Tenants tn ON tn.Id = t.TenantId AND tn.IsActive = 1 AND tn.IsDeleted = 0
+INNER JOIN TenantLicenses license ON license.TenantId = t.TenantId
+    AND license.Status IN (N'Trial', N'Active')
+    AND license.StartsAtUtc <= SYSUTCDATETIME()
+    AND (license.ExpiresAtUtc IS NULL
+         OR license.ExpiresAtUtc >= SYSUTCDATETIME()
+         OR license.GraceEndsAtUtc >= SYSUTCDATETIME())
+    AND EXISTS
+    (
+        SELECT 1
+        FROM STRING_SPLIT(license.EnabledModulesCsv, N',') enabledModule
+        WHERE LTRIM(RTRIM(enabledModule.value)) = N'Mobile'
+    )
+WHERE t.TokenHash = @Hash AND t.RevokedAt IS NULL AND t.ExpiresAt > SYSUTCDATETIME();
 """,
             command => HrmsDatabase.AddParameter(command, "@Hash", hash),
             reader => new TokenIdentity
             {
+                TenantId = HrmsDatabase.GetInt(reader, "TenantId"),
+                TenantCode = HrmsDatabase.GetString(reader, "TenantCode"),
                 SystemUserId = HrmsDatabase.GetInt(reader, "SystemUserId"),
                 EmployeeId = HrmsDatabase.GetNullableInt(reader, "EmployeeId"),
                 Username = HrmsDatabase.GetString(reader, "Username"),

@@ -64,5 +64,6 @@ public enum UserNotificationType
     Birthday = 2,
     WorkAnniversary = 3,
     ContractExpiry = 4,
-    ProbationEnding = 5
+    ProbationEnding = 5,
+    RequestWorkflow = 6
 }

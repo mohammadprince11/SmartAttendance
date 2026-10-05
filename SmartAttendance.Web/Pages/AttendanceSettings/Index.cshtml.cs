@@ -55,6 +55,10 @@ public class IndexModel : PageModel
     public int MissingPunchWindowDays { get; set; }
     public bool MissingPunchReasonRequired { get; set; }
 
+    public bool MonthlyLateAllowanceEnabled { get; set; }
+    public int MonthlyLateAllowanceMinutes { get; set; } = 120;
+    public bool LateAllowanceExceededAsAbsent { get; set; } = true;
+
     public async Task OnGetAsync()
     {
         var scope = await _companyScope.GetAsync();
@@ -86,6 +90,11 @@ public class IndexModel : PageModel
         MissingPunchMonthlyLimit = await MissingPunchPolicy.GetMonthlyLimitAsync(_dbContext);
         MissingPunchWindowDays = await MissingPunchPolicy.GetWindowDaysAsync(_dbContext);
         MissingPunchReasonRequired = await MissingPunchPolicy.GetReasonRequiredAsync(_dbContext);
+
+        var latenessPolicy = await AttendanceLatenessPolicy.LoadAsync(_dbContext, CompanyId);
+        MonthlyLateAllowanceEnabled = latenessPolicy.Enabled;
+        MonthlyLateAllowanceMinutes = latenessPolicy.AllowanceMinutes;
+        LateAllowanceExceededAsAbsent = latenessPolicy.ExceededAsAbsent;
     }
 
     /// <summary>حفظ استثناءي النطاق الجغرافي بحسب اتجاه البصمة.</summary>
@@ -110,6 +119,36 @@ public class IndexModel : PageModel
             _dbContext, Request.Form["MissingPunchReasonRequired"] == "true");
         TempData["SuccessMessage"] = "حُفظت حدود طلبات البصمة المفقودة.";
         return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostSaveLatenessPolicyAsync()
+    {
+        if (!int.TryParse(Request.Form["CompanyId"], out var companyId) || companyId <= 0)
+        {
+            TempData["SuccessMessage"] = "اختر الشركة أولاً.";
+            return RedirectToPage();
+        }
+
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (!scope.Allows(companyId)) return Forbid();
+
+        var enabled = Request.Form["MonthlyLateAllowanceEnabled"] == "true";
+        var asAbsent = Request.Form["LateAllowanceExceededAsAbsent"] == "true";
+        var minutes = int.TryParse(Request.Form["MonthlyLateAllowanceMinutes"], out var value)
+            ? Math.Clamp(value, 0, 10080)
+            : 120;
+
+        await AttendanceLatenessPolicy.SaveAsync(
+            _dbContext,
+            companyId,
+            new AttendanceLatenessPolicy.Policy(enabled, minutes, asAbsent));
+
+        TempData["SuccessMessage"] = enabled
+            ? $"حُفظت سياسة التأخير: سماح {minutes} دقيقة لكل دورة حضور"
+              + (asAbsent ? "، واليوم المتأخر بعد نفاد السماح يُعامل غياباً." : ".")
+            : "تم تعطيل سياسة السماح الشهري للتأخير.";
+
+        return RedirectToPage(new { CompanyId = companyId });
     }
 
     /// <summary>حفظ مفتاحَي إعادة التحليل بعد الموافقات (المفتاح + حارسه المضاد).</summary>

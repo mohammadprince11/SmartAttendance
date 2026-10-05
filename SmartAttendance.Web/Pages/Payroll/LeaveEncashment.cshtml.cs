@@ -102,7 +102,9 @@ public class LeaveEncashmentModel : PageModel
             $"SELECT COUNT(*) FROM Employees e WHERE e.Id=@Emp AND ISNULL(e.IsDeleted,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Emp", employeeId));
         if (allowed != 1) return new JsonResult(new { ok = false });
-        var balances = await LeaveBalanceCalculator.ForEmployeeAsync(_db, employeeId, year);
+        var balances = await CompanyLeavePolicyStore.GetBalanceSnapshotsAsync(
+            _db, employeeId, LeaveEncashmentPolicy.BalanceAsOfForYear(year));
+        var annualSourceId = await LeaveEncashmentPolicy.AnnualSourceRequestTypeIdAsync(_db, employeeId);
         var annualAvailable = await LeaveEncashmentPolicy.AvailableAnnualDaysAsync(_db, scope, employeeId, year);
         return new JsonResult(new
         {
@@ -110,11 +112,13 @@ public class LeaveEncashmentModel : PageModel
             year,
             types = balances.Select(b => new
             {
-                type = b.Type.ToString(),
-                label = LeaveTypeText(b.Type),
-                remaining = b.Type == LeaveType.Annual ? annualAvailable : b.Remaining,
-                entitled = b.Entitled + b.CarriedOver,
-                used = b.Used
+                requestTypeId = b.SourceRequestTypeId,
+                type = b.RequestTypeName,
+                label = b.RequestTypeName,
+                unit = b.Unit,
+                remaining = annualSourceId == b.SourceRequestTypeId ? annualAvailable : b.Remaining,
+                entitled = b.Entitlement,
+                used = b.Reserved
             })
         });
     }

@@ -47,6 +47,7 @@ public static class LoanStore
         public string Status { get; set; } = Pending;
         public string? AttachmentName { get; set; }
         public string? AttachmentPath { get; set; }
+        public string? RequestKey { get; set; }
         public DateTime CreatedAt { get; set; }
 
         // محسوبة من الأقساط
@@ -223,7 +224,10 @@ ORDER BY l.CreatedAt DESC;
             });
     }
 
-    /// <summary>ينشئ/يحدّث القرض ويولّد جدول الأقساط (لغير المُغلق). يرجع Id.</summary>
+    /// <summary>
+    /// ينشئ قرضاً Pending أو يعدّل شروط قرض ما زال Pending فقط، ثم يولّد الجدول
+    /// داخل نفس المعاملة حتى لا ينفصل رأس القرض عن أقساطه.
+    /// </summary>
     public static async Task<int> SaveAsync(
         ApplicationDbContext dbContext, Security.CompanyScope scope, Loan_ loan, string userName)
     {
@@ -238,33 +242,91 @@ ORDER BY l.CreatedAt DESC;
                 dbContext, Security.EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", loan.Id, scope))
             throw new UnauthorizedAccessException("القرض خارج نطاق صلاحيتك.");
 
+        if (loan.Amount <= 0m)
+            throw new InvalidOperationException("مبلغ القرض يجب أن يكون أكبر من صفر.");
+        if (loan.StartMonth is < 1 or > 12 || loan.StartYear < 1)
+            throw new InvalidOperationException("فترة بدء الخصم غير صالحة.");
+        loan.LoanType = loan.LoanType == Advance ? Advance : Loan;
         if (loan.InstallmentCount < 1) loan.InstallmentCount = 1;
         loan.MonthlyAmount = Math.Round(loan.Amount / loan.InstallmentCount, 2, MidpointRounding.AwayFromZero);
 
-        int loanId;
-        if (loan.Id > 0)
-        {
-            await HrmsDatabase.ExecuteAsync(dbContext, UpdateSql, command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Id", loan.Id);
-                Add(command, loan);
-            });
-            loanId = loan.Id;
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(loan.ReferenceNo))
-                loan.ReferenceNo = await GenerateReferenceNoAsync(dbContext);
-            loanId = await HrmsDatabase.ScalarAsync<int>(dbContext, InsertSql + " SELECT CAST(SCOPE_IDENTITY() AS int);", command =>
-            {
-                Add(command, loan);
-                HrmsDatabase.AddParameter(command, "@Ref", loan.ReferenceNo);
-                HrmsDatabase.AddParameter(command, "@By", userName);
-            });
-        }
+        // الحفظ لا يعتمد الحالة القادمة من النموذج؛ الاعتماد/الرفض لهما مسار مستقل.
+        loan.Status = Pending;
+        if (loan.Id <= 0)
+            loan.RequestKey = NormalizeRequestKey(loan.RequestKey);
 
-        await RegenerateScheduleAsync(dbContext, loanId, loan);
-        return loanId;
+        var ownTransaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync()
+            : null;
+        try
+        {
+            int loanId;
+            if (loan.Id > 0)
+            {
+                var currentStatus = await HrmsDatabase.ScalarAsync<string>(
+                    dbContext,
+                    $"""
+SELECT TOP 1 l.Status
+FROM EmployeeLoans l WITH (UPDLOCK, HOLDLOCK)
+INNER JOIN Employees e ON e.Id = l.EmployeeId
+WHERE l.Id = @Id
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
+                    command => HrmsDatabase.AddParameter(command, "@Id", loan.Id));
+
+                if (!string.Equals(currentStatus, Pending, StringComparison.Ordinal))
+                    throw new InvalidOperationException("لا يمكن تعديل شروط قرض بعد خروجه من حالة قيد الموافقة.");
+
+                await HrmsDatabase.ExecuteAsync(dbContext, UpdateSql, command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Id", loan.Id);
+                    Add(command, loan);
+                });
+                loanId = loan.Id;
+            }
+            else
+            {
+                var existingId = await HrmsDatabase.ScalarAsync<int>(
+                    dbContext,
+                    $"""
+SELECT TOP 1 l.Id
+FROM EmployeeLoans l WITH (UPDLOCK, HOLDLOCK)
+INNER JOIN Employees e ON e.Id = l.EmployeeId
+WHERE l.RequestKey = @RequestKey
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
+                    command => HrmsDatabase.AddParameter(command, "@RequestKey", loan.RequestKey));
+
+                if (existingId > 0)
+                {
+                    if (ownTransaction is not null)
+                        await ownTransaction.CommitAsync();
+                    return existingId;
+                }
+
+                if (string.IsNullOrWhiteSpace(loan.ReferenceNo))
+                    loan.ReferenceNo = await GenerateReferenceNoAsync(dbContext);
+                loanId = await HrmsDatabase.ScalarAsync<int>(
+                    dbContext,
+                    InsertSql + " SELECT CAST(SCOPE_IDENTITY() AS int);",
+                    command =>
+                    {
+                        Add(command, loan);
+                        HrmsDatabase.AddParameter(command, "@Ref", loan.ReferenceNo);
+                        HrmsDatabase.AddParameter(command, "@By", userName);
+                    });
+            }
+
+            await RegenerateScheduleAsync(dbContext, loanId, loan);
+            if (ownTransaction is not null)
+                await ownTransaction.CommitAsync();
+            return loanId;
+        }
+        finally
+        {
+            if (ownTransaction is not null)
+                await ownTransaction.DisposeAsync();
+        }
     }
 
     /// <summary>يعيد توليد جدول الأقساط غير المرحّلة (لا يمسّ المرحّلة). آخر قسط يمتصّ فرق التقريب.</summary>
@@ -312,24 +374,76 @@ ORDER BY l.CreatedAt DESC;
         }
     }
 
+    public static bool CanTransition(string? currentStatus, string? targetStatus) =>
+        (currentStatus, targetStatus) switch
+        {
+            (Pending, Approved) => true,
+            (Pending, Rejected) => true,
+            (Approved, Closed) => true,
+            _ => string.Equals(currentStatus, targetStatus, StringComparison.Ordinal)
+                 && targetStatus is Approved or Rejected or Closed
+        };
+
     public static async Task<bool> SetStatusAsync(ApplicationDbContext dbContext, Security.CompanyScope scope, int id, string status, string userName)
     {
         ArgumentNullException.ThrowIfNull(scope);
         await EnsureAsync(dbContext);
+        if (status is not Approved and not Rejected and not Closed)
+            return false;
+
         // اعتماد/رفض/إغلاق القرض كتابةٌ مالية بمعرّفٍ من النموذج — يُفحَص بالنطاق.
         if (!await Security.EmployeeCompanyGuard.CanAccessOwnedRowAsync(
                 dbContext, Security.EmployeeCompanyGuard.Tables.EmployeeLoans, "Id", id, scope))
             return false;
-        var approvedStamp = status == Approved ? ", ApprovedAt = SYSUTCDATETIME(), ApprovedBy = @By" : "";
-        await HrmsDatabase.ExecuteAsync(dbContext,
-            $"UPDATE EmployeeLoans SET Status = @St{approvedStamp} WHERE Id = @Id;",
-            command =>
+
+        var ownTransaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync()
+            : null;
+        try
+        {
+            var currentStatus = await HrmsDatabase.ScalarAsync<string>(
+                dbContext,
+                $"""
+SELECT TOP 1 l.Status
+FROM EmployeeLoans l WITH (UPDLOCK, HOLDLOCK)
+INNER JOIN Employees e ON e.Id = l.EmployeeId
+WHERE l.Id = @Id
+  AND {Security.EmployeeCompanyGuard.ListFilter(scope, "e.CompanyId")};
+""",
+                command => HrmsDatabase.AddParameter(command, "@Id", id));
+
+            if (!CanTransition(currentStatus, status))
+                return false;
+
+            // إعادة نفس الطلب idempotent: لا نعيد ختم الاعتماد ولا نكتب بلا داعٍ.
+            if (string.Equals(currentStatus, status, StringComparison.Ordinal))
             {
-                HrmsDatabase.AddParameter(command, "@Id", id);
-                HrmsDatabase.AddParameter(command, "@St", status);
-                HrmsDatabase.AddParameter(command, "@By", userName);
-            });
-        return true;
+                if (ownTransaction is not null)
+                    await ownTransaction.CommitAsync();
+                return true;
+            }
+
+            var approvedStamp = status == Approved
+                ? ", ApprovedAt = SYSUTCDATETIME(), ApprovedBy = @By"
+                : "";
+            await HrmsDatabase.ExecuteAsync(dbContext,
+                $"UPDATE EmployeeLoans SET Status = @St{approvedStamp} WHERE Id = @Id;",
+                command =>
+                {
+                    HrmsDatabase.AddParameter(command, "@Id", id);
+                    HrmsDatabase.AddParameter(command, "@St", status);
+                    HrmsDatabase.AddParameter(command, "@By", userName);
+                });
+
+            if (ownTransaction is not null)
+                await ownTransaction.CommitAsync();
+            return true;
+        }
+        finally
+        {
+            if (ownTransaction is not null)
+                await ownTransaction.DisposeAsync();
+        }
     }
 
     public static async Task DeleteAsync(ApplicationDbContext dbContext, Security.CompanyScope scope, int id)
@@ -459,6 +573,14 @@ ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
         return (zeroBased / 12, zeroBased % 12 + 1);
     }
 
+    private static string NormalizeRequestKey(string? requestKey)
+    {
+        var value = string.IsNullOrWhiteSpace(requestKey)
+            ? Guid.NewGuid().ToString("N")
+            : requestKey.Trim();
+        return value.Length <= 64 ? value : value[..64];
+    }
+
     private static async Task<string> GenerateReferenceNoAsync(ApplicationDbContext dbContext)
     {
         var prefix = $"LN{DateTime.Today:yy}-";
@@ -470,17 +592,17 @@ ORDER BY i.DueYear, i.DueMonth, i.SeqNo;
 
     private const string InsertSql = """
 INSERT INTO EmployeeLoans
- (EmployeeId, LoanType, Amount, InstallmentCount, MonthlyAmount, StartYear, StartMonth, Reason, Note, Status, AttachmentName, AttachmentPath, ReferenceNo, CreatedBy)
+ (EmployeeId, LoanType, Amount, InstallmentCount, MonthlyAmount, StartYear, StartMonth, Reason, Note, Status, AttachmentName, AttachmentPath, RequestKey, ReferenceNo, CreatedBy)
 VALUES
- (@Emp, @Type, @Amount, @Count, @Monthly, @SYear, @SMonth, @Reason, @Note, @Status, @AttName, @AttPath, @Ref, @By);
+ (@Emp, @Type, @Amount, @Count, @Monthly, @SYear, @SMonth, @Reason, @Note, @Status, @AttName, @AttPath, @RequestKey, @Ref, @By);
 """;
 
     private const string UpdateSql = """
 UPDATE EmployeeLoans SET
   EmployeeId=@Emp, LoanType=@Type, Amount=@Amount, InstallmentCount=@Count, MonthlyAmount=@Monthly,
   StartYear=@SYear, StartMonth=@SMonth, Reason=@Reason, Note=@Note, Status=@Status,
-  AttachmentName=@AttName, AttachmentPath=@AttPath
-WHERE Id=@Id AND Status IN (N'Pending', N'Approved');
+  AttachmentName=COALESCE(@AttName, AttachmentName), AttachmentPath=COALESCE(@AttPath, AttachmentPath)
+WHERE Id=@Id AND Status = N'Pending';
 """;
 
     private static Loan_ Read(System.Data.Common.DbDataReader reader) => new()
@@ -502,6 +624,7 @@ WHERE Id=@Id AND Status IN (N'Pending', N'Approved');
         Status = HrmsDatabase.GetString(reader, "Status") is { Length: > 0 } st ? st : Pending,
         AttachmentName = HrmsDatabase.GetString(reader, "AttachmentName") is { Length: > 0 } an ? an : null,
         AttachmentPath = HrmsDatabase.GetString(reader, "AttachmentPath") is { Length: > 0 } ap ? ap : null,
+        RequestKey = HrmsDatabase.GetString(reader, "RequestKey") is { Length: > 0 } rk ? rk : null,
         CreatedAt = HrmsDatabase.GetDateTime(reader, "CreatedAt") ?? default,
         PaidAmount = reader["PaidAmount"] is decimal pa ? pa : 0,
         PaidCount = HrmsDatabase.GetInt(reader, "PaidCount")
@@ -521,5 +644,6 @@ WHERE Id=@Id AND Status IN (N'Pending', N'Approved');
         HrmsDatabase.AddParameter(command, "@Status", string.IsNullOrWhiteSpace(l.Status) ? Pending : l.Status);
         HrmsDatabase.AddParameter(command, "@AttName", (object?)l.AttachmentName ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@AttPath", (object?)l.AttachmentPath ?? DBNull.Value);
+        HrmsDatabase.AddParameter(command, "@RequestKey", (object?)l.RequestKey ?? DBNull.Value);
     }
 }

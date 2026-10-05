@@ -7,9 +7,12 @@ using SmartAttendance.Web.Infrastructure.Security;
 namespace SmartAttendance.Web.Pages.Payroll;
 
 /// <summary>
-/// نهاية الخدمة (/Payroll/EndOfService) — مطابقة كيان «نهاية الخدمة/STB». تحسب مكافأة
-/// نهاية الخدمة بشرائح سنوات الخدمة على آخر أساسي + بدل رصيد الإجازات + مستحقات −
-/// اقتطاعات = صافي التسوية. كل الأرقام تُحتسب بالسيرفر (لا من العميل).
+/// نهاية الخدمة (/Payroll/EndOfService) — تسوية نهائية محكومة بسياسة الشركة.
+/// أهلية المكافأة صريحة لكل تسوية، وقيمتها إمّا Policy أو Manual، ثم يضاف بدل رصيد
+/// الإجازات والمستحقات الأخرى وتطرح الاقتطاعات. فروقات Tax/GOSI لا تُستنتج قانونياً:
+/// يُحفظ ما اقتُطع فعلياً من Regular Payroll، ويدخل الفرق فقط بعد إدخال Due مراجَع
+/// واختيار تضمينه صراحةً. الاعتماد يرحّل الصافي إلى OffCycle Payroll.
+/// كل الأرقام تُحتسب بالسيرفر (لا من العميل).
 /// </summary>
 public class EndOfServiceModel : PageModel
 {
@@ -33,6 +36,7 @@ public class EndOfServiceModel : PageModel
 
     public List<EndOfServiceStore.Settlement> Items { get; set; } = new();
     public List<EndOfServiceStore.EmployeeInfo> Employees { get; set; } = new();
+    public Dictionary<int, EndOfServicePolicy.Policy> CompanyPolicies { get; set; } = new();
 
     public int TotalCount { get; set; }
     public int DraftCount { get; set; }
@@ -53,6 +57,65 @@ public class EndOfServiceModel : PageModel
         TotalCount = Items.Count;
 
         Employees = await EndOfServiceStore.EmployeeInfosAsync(_db, scope);
+        foreach (var companyId in Employees.Select(e => e.CompanyId).Where(id => id > 0).Distinct())
+            CompanyPolicies[companyId] = await EndOfServicePolicy.LoadAsync(_db, companyId);
+    }
+
+    public async Task<IActionResult> OnGetSettlementContextAsync(
+        int employeeId,
+        string? lastWorkingDate,
+        decimal lastBasic = 0m,
+        decimal leaveDays = 0m)
+    {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var employee = (await EndOfServiceStore.EmployeeInfosAsync(_db, scope))
+            .FirstOrDefault(item => item.Id == employeeId);
+        if (employee is null)
+            return new JsonResult(new { ok = false, message = "الموظف خارج نطاق الصلاحية." });
+
+        if (!DateOnly.TryParse(lastWorkingDate, out var end))
+            return new JsonResult(new { ok = false, message = "أدخل آخر يوم عمل." });
+
+        lastBasic = Math.Max(0m, lastBasic);
+        leaveDays = Math.Max(0m, leaveDays);
+
+        var payrollPeriod = await EndOfServiceStore.ResolvePayrollPeriodAsync(
+            _db, employee.CompanyId, end);
+        var rateBasis = await PayrollDivisorPolicy.ResolveForPeriodAsync(
+            _db, employee.CompanyId, payrollPeriod.Year, payrollPeriod.Month);
+        var dailyRate = PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor);
+        var leaveEncashment = Math.Round(leaveDays * dailyRate, 2);
+
+        var withholding = await TerminationSettlementStore.LoadYearAsync(
+            _db, scope, employeeId, end.Year);
+        var lastPaidMonthKey = await TerminationSettlementStore.LastPaidMonthKeyAsync(
+            _db, scope, employeeId);
+        var terminationMonthUnpaid = TerminationSettlementPolicy.TerminationMonthUnpaid(
+            end, lastPaidMonthKey);
+
+        string? PeriodText(int? key)
+        {
+            if (key is not > 0) return null;
+            var year = (key.Value - 1) / 12;
+            var month = ((key.Value - 1) % 12) + 1;
+            return $"{month:00}/{year}";
+        }
+
+        return new JsonResult(new
+        {
+            ok = true,
+            payrollYear = payrollPeriod.Year,
+            payrollMonth = payrollPeriod.Month,
+            salaryDaysBasis = rateBasis.Basis,
+            salaryDivisor = rateBasis.Divisor,
+            dailyRate,
+            leaveEncashment,
+            withheldTax = withholding.Tax,
+            withheldGosi = withholding.Gosi,
+            monthsPaid = withholding.MonthsPaid,
+            lastPaidPeriod = PeriodText(lastPaidMonthKey),
+            terminationMonthUnpaid
+        });
     }
 
     public async Task<IActionResult> OnPostSaveAsync()
@@ -60,6 +123,8 @@ public class EndOfServiceModel : PageModel
         var f = Request.Form;
         DateOnly? D(string key) => DateOnly.TryParse(f[key], out var d) ? d : null;
         decimal Dec(string key) => decimal.TryParse(f[key], out var v) ? v : 0;
+        decimal? NullableDec(string key) =>
+            decimal.TryParse(f[key], out var v) ? Math.Max(0m, v) : null;
 
         var empId = int.TryParse(f["EmployeeId"], out var e) ? e : 0;
         var start = D("ServiceStartDate");
@@ -68,18 +133,96 @@ public class EndOfServiceModel : PageModel
         var leaveDays = Dec("LeaveBalanceDays");
         var otherDues = Dec("OtherDues");
         var deductions = Dec("Deductions");
+        var taxDueReviewed = NullableDec("TaxDueReviewed");
+        var gosiDueReviewed = NullableDec("GosiDueReviewed");
+        var includeTaxDifference = f["TaxDifferenceIncluded"] == "true";
+        var includeGosiDifference = f["GosiDifferenceIncluded"] == "true";
 
         if (empId <= 0) { TempData["PayrollMessage"] = "اختر الموظف."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (start is null || end is null) { TempData["PayrollMessage"] = "أدخل تاريخ بدء الخدمة وآخر يوم عمل."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (end <= start) { TempData["PayrollMessage"] = "آخر يوم عمل يجب أن يكون بعد بدء الخدمة."; TempData["PayrollOk"] = false; return RedirectToPage(); }
         if (lastBasic <= 0) { TempData["PayrollMessage"] = "آخر راتب أساسي يجب أن يكون أكبر من صفر."; TempData["PayrollOk"] = false; return RedirectToPage(); }
 
-        // كل الحسابات بالسيرفر
+        // كل الحسابات المالية بالسيرفر. الأهلية لا تُستنتج من نص سبب الانتهاء:
+        // المادة 45 لها استثناءات، لذلك القرار صريح لكل تسوية.
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        var employee = (await EndOfServiceStore.EmployeeInfosAsync(_db, scope))
+            .FirstOrDefault(item => item.Id == empId);
+        if (employee is null)
+        {
+            TempData["PayrollMessage"] = "لا صلاحية على هذا الموظف.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var eosPolicy = await EndOfServicePolicy.LoadAsync(_db, employee.CompanyId);
+        var gratuityEligible = f["GratuityEligible"] == "true";
+        var multiplier = Dec("GratuityMultiplier") == 2m ? 2m : 1m;
+        var manualGratuity = Math.Max(0m, Dec("ManualGratuityAmount"));
+
         var years = EndOfServiceStore.YearsOfService(start.Value, end.Value);
-        var (gratuity, _) = EndOfServiceStore.ComputeGratuity(years, lastBasic);
-        var dailyRate = Math.Round(lastBasic / 30m, 4);
+        decimal gratuity;
+        if (!gratuityEligible)
+        {
+            gratuity = 0m;
+        }
+        else if (eosPolicy.AutoCalculationEnabled)
+        {
+            gratuity = EndOfServiceStore.ComputeGratuity(
+                years, lastBasic, eosPolicy.WeeksPerYear, multiplier).Gratuity;
+        }
+        else
+        {
+            if (manualGratuity <= 0m)
+            {
+                TempData["PayrollMessage"] =
+                    "الحساب التلقائي لمكافأة نهاية الخدمة غير مفعّل لهذه الشركة. أدخل مبلغ المكافأة يدوياً أو فعّل سياسة الشركة.";
+                TempData["PayrollOk"] = false;
+                return RedirectToPage();
+            }
+
+            gratuity = manualGratuity;
+        }
+
+        var payrollPeriod = await EndOfServiceStore.ResolvePayrollPeriodAsync(
+            _db, employee.CompanyId, end.Value);
+        var rateBasis = await PayrollDivisorPolicy.ResolveForPeriodAsync(
+            _db, employee.CompanyId, payrollPeriod.Year, payrollPeriod.Month);
+        var dailyRate = PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor);
         var leaveEnc = Math.Round(leaveDays * dailyRate, 2);
-        var net = Math.Round(gratuity + leaveEnc + otherDues - deductions, 2);
+
+        var withholding = await TerminationSettlementStore.LoadYearAsync(
+            _db, scope, empId, end.Value.Year);
+
+        if (includeTaxDifference && taxDueReviewed is null)
+        {
+            TempData["PayrollMessage"] = "أدخل Tax Due المراجَع قبل اختيار تضمين فرق الضريبة.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+        if (includeGosiDifference && gosiDueReviewed is null)
+        {
+            TempData["PayrollMessage"] = "أدخل GOSI Due المراجَع قبل اختيار تضمين فرق الضمان.";
+            TempData["PayrollOk"] = false;
+            return RedirectToPage();
+        }
+
+        var taxDifference = includeTaxDifference
+            ? new TerminationSettlementPolicy.Difference(
+                TerminationSettlementPolicy.ItemTax,
+                withholding.Tax,
+                taxDueReviewed!.Value).SignedAmount
+            : 0m;
+        var gosiDifference = includeGosiDifference
+            ? new TerminationSettlementPolicy.Difference(
+                TerminationSettlementPolicy.ItemGosi,
+                withholding.Gosi,
+                gosiDueReviewed!.Value).SignedAmount
+            : 0m;
+        var terminationDifferenceNet = Math.Round(
+            taxDifference + gosiDifference, 2, MidpointRounding.AwayFromZero);
+        var net = Math.Round(
+            gratuity + leaveEnc + otherDues - deductions + terminationDifferenceNet, 2);
 
         var id = int.TryParse(f["Id"], out var sid) ? sid : 0;
         if (id > 0 && await EndOfServiceStore.IsApprovedAsync(_db, id))
@@ -99,16 +242,31 @@ public class EndOfServiceModel : PageModel
             LastBasic = lastBasic,
             Reason = string.IsNullOrWhiteSpace(f["Reason"]) ? null : f["Reason"].ToString().Trim(),
             GratuityAmount = gratuity,
+            GratuityCalculationMode = !gratuityEligible
+                ? "NotEligible"
+                : eosPolicy.AutoCalculationEnabled ? "Policy" : "Manual",
+            GratuityEligible = gratuityEligible,
+            GratuityWeeksPerYear = gratuityEligible && eosPolicy.AutoCalculationEnabled
+                ? eosPolicy.WeeksPerYear
+                : null,
+            GratuityMultiplier = multiplier,
+            GratuityBasisAmount = lastBasic,
             LeaveBalanceDays = leaveDays,
             LeaveEncashment = leaveEnc,
             OtherDues = otherDues,
             Deductions = deductions,
+            TaxWithheldSnapshot = withholding.Tax,
+            TaxDueReviewed = taxDueReviewed,
+            TaxDifferenceIncluded = includeTaxDifference,
+            GosiWithheldSnapshot = withholding.Gosi,
+            GosiDueReviewed = gosiDueReviewed,
+            GosiDifferenceIncluded = includeGosiDifference,
+            TerminationDifferenceNet = terminationDifferenceNet,
             NetSettlement = net,
             Note = string.IsNullOrWhiteSpace(f["Note"]) ? null : f["Note"].ToString().Trim(),
             Status = "Draft"
         };
 
-        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
         try
         {
             await EndOfServiceStore.SaveAsync(_db, scope, s, User?.Identity?.Name ?? "system");
@@ -126,10 +284,11 @@ public class EndOfServiceModel : PageModel
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        var ok = await EndOfServiceStore.ApproveAsync(_db, scope, id, User?.Identity?.Name ?? "system");
-        TempData["PayrollMessage"] = ok ? "اعتُمدت التسوية." : "تعذّر الاعتماد (ربما معتمدة سابقاً).";
-        TempData["PayrollOk"] = ok;
-        return RedirectToPage(new { Tab = ok ? "Approved" : "Draft" });
+        var result = await EndOfServiceStore.ApproveAsync(
+            _db, scope, id, User?.Identity?.Name ?? "system");
+        TempData["PayrollMessage"] = result.Message;
+        TempData["PayrollOk"] = result.Ok;
+        return RedirectToPage(new { Tab = result.Ok || result.PostedToPayroll ? "Approved" : "Draft" });
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(int id)

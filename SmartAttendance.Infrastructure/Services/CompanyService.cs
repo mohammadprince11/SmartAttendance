@@ -21,22 +21,35 @@ public class CompanyService : ICompanyService
         _dbContext = dbContext;
     }
 
-        public async Task<IEnumerable<CompanyListViewModel>> GetAllAsync(string? searchTerm = null)
+    public async Task<IEnumerable<CompanyListViewModel>> GetAllAsync(int tenantId, string? searchTerm = null)
     {
-        var companies = await _unitOfWork.Companies.GetAllAsync();
+        if (tenantId <= 0)
+            return [];
+
+        var query = _dbContext.Companies
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(x => x.TenantId == tenantId && !x.IsDeleted);
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            companies = companies.Where(x =>
-                x.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            var term = searchTerm.Trim();
+            query = query.Where(x => x.Name.Contains(term) || x.Code.Contains(term));
         }
 
+        var companies = await query.OrderBy(x => x.Name).ToListAsync();
         return _mapper.Map<IEnumerable<CompanyListViewModel>>(companies);
     }
 
-    public async Task<CompanyDetailsViewModel?> GetByIdAsync(int id)
+    public async Task<CompanyDetailsViewModel?> GetByIdAsync(int id, int tenantId)
     {
-        var company = await _unitOfWork.Companies.GetByIdAsync(id);
+        if (tenantId <= 0)
+            return null;
+
+        var company = await _dbContext.Companies
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted);
 
         if (company == null)
             return null;
@@ -44,9 +57,15 @@ public class CompanyService : ICompanyService
         return _mapper.Map<CompanyDetailsViewModel>(company);
     }
 
-    public async Task<CompanyEditViewModel?> GetEditByIdAsync(int id)
+    public async Task<CompanyEditViewModel?> GetEditByIdAsync(int id, int tenantId)
     {
-        var company = await _unitOfWork.Companies.GetByIdAsync(id);
+        if (tenantId <= 0)
+            return null;
+
+        var company = await _dbContext.Companies
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted);
 
         if (company == null)
             return null;
@@ -54,10 +73,13 @@ public class CompanyService : ICompanyService
         return _mapper.Map<CompanyEditViewModel>(company);
     }
 
-        public async Task<bool> CreateAsync(CompanyCreateViewModel model)
+    public async Task<bool> CreateAsync(CompanyCreateViewModel model, int tenantId)
     {
+        if (tenantId <= 0)
+            return false;
+
         var code = string.IsNullOrWhiteSpace(model.Code)
-            ? await GenerateNextCompanyCodeAsync()
+            ? await GenerateNextCompanyCodeAsync(tenantId)
             : model.Code.Trim();
 
         var baseCode = code;
@@ -65,14 +87,16 @@ public class CompanyService : ICompanyService
 
         while (await _dbContext.Companies
             .IgnoreQueryFilters()
-            .AnyAsync(x => x.Code == code))
+            .AnyAsync(x => x.TenantId == tenantId && x.Code == code))
         {
             code = $"{baseCode}-{counter}";
             counter++;
         }
 
         var company = _mapper.Map<Company>(model);
+        company.TenantId = tenantId;
         company.Code = code;
+        model.Code = code;
 
         await _unitOfWork.Companies.AddAsync(company);
         await _unitOfWork.SaveChangesAsync();
@@ -80,14 +104,14 @@ public class CompanyService : ICompanyService
         return true;
     }
 
-    private async Task<string> GenerateNextCompanyCodeAsync()
+    private async Task<string> GenerateNextCompanyCodeAsync(int tenantId)
     {
         const string prefix = "COMP-";
 
         var existingCodes = await _dbContext.Companies
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .Where(x => x.Code.StartsWith(prefix))
+            .Where(x => x.TenantId == tenantId && x.Code.StartsWith(prefix))
             .Select(x => x.Code)
             .ToListAsync();
 
@@ -103,7 +127,7 @@ public class CompanyService : ICompanyService
             var candidate = $"{prefix}{nextNumber:000}";
             var exists = await _dbContext.Companies
                 .IgnoreQueryFilters()
-                .AnyAsync(x => x.Code == candidate);
+                .AnyAsync(x => x.TenantId == tenantId && x.Code == candidate);
 
             if (!exists)
                 return candidate;
@@ -112,9 +136,14 @@ public class CompanyService : ICompanyService
         }
     }
 
-    public async Task<bool> UpdateAsync(CompanyEditViewModel model)
+    public async Task<bool> UpdateAsync(CompanyEditViewModel model, int tenantId)
     {
-        var company = await _unitOfWork.Companies.GetByIdAsync(model.Id);
+        if (tenantId <= 0)
+            return false;
+
+        var company = await _dbContext.Companies
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == model.Id && x.TenantId == tenantId && !x.IsDeleted);
 
         if (company == null)
             return false;
@@ -130,10 +159,14 @@ public class CompanyService : ICompanyService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, int tenantId)
     {
+        if (tenantId <= 0)
+            return false;
+
         var company = await _dbContext.Companies
-            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted);
 
         if (company == null)
             return false;
@@ -157,8 +190,10 @@ public class CompanyService : ICompanyService
 
         return true;
     }
-    public async Task<bool> CodeExistsAsync(string code)
+    public async Task<bool> CodeExistsAsync(string code, int tenantId)
     {
-        return await _unitOfWork.Companies.ExistsByCodeAsync(code);
+        return tenantId > 0 && await _dbContext.Companies
+            .IgnoreQueryFilters()
+            .AnyAsync(x => x.TenantId == tenantId && x.Code == code && !x.IsDeleted);
     }
 }

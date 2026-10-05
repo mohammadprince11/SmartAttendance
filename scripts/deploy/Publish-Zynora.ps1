@@ -12,8 +12,9 @@
       • لا يلمس شيئاً قبل أن تنجح نسختا الرجوع — الملفات **والقاعدة**.
       • يتحقّق أن الموقع قام فعلاً؛ وإن لم يقم يرجع تلقائياً لنسخة الملفات.
 
-    ⚠️ الرجوع التلقائيّ يستعيد **الملفات وحدها**. هجرات المخطط التي طُبِّقت عند
-    الإقلاع تبقى مطبَّقة — ولهذا نسخة القاعدة إلزامية لا اختيارية.
+    ⚠️ الرجوع التلقائيّ يستعيد **الملفات وحدها**. هجرات المخطط تُطبَّق الآن
+    صراحةً قبل تشغيل الإنتاج عبر DatabaseMigrator، وأي هجرة مطبَّقة تبقى في القاعدة
+    عند رجوع الملفات — ولهذا نسخة القاعدة إلزامية لا اختيارية.
 
 .PARAMETER TaskName
     اسم المهمة المجدولة التي تشغّل الموقع (حلقة run-server).
@@ -32,10 +33,10 @@ param(
     # مطلوب للنشر، لا للفحص وحده (-CheckOnly) — يُتحقق منه بعد تحديد الوضع.
     [string] $TaskName,
 
-    [string] $SitePath   = 'C:\ZynoraPortal',
+    [string] $SitePath   = 'C:\SmartAttendance\local-runtime\portal',
     [string] $RepoPath   = (Get-Location).Path,
-    [string] $BackupRoot = 'C:\ZynoraPortal-Backups',
-    [string] $PublishDir = 'C:\ZynoraPortal-publish',
+    [string] $BackupRoot = 'C:\SmartAttendance\local-runtime\backups',
+    [string] $PublishDir = 'C:\SmartAttendance\local-runtime\publish',
 
     [string] $SqlServer,
     [string] $Database,
@@ -89,6 +90,48 @@ function Stop-SiteProcesses {
     Get-CimInstance Win32_Process -Filter "Name='cmd.exe' OR Name='wscript.exe' OR Name='timeout.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($SitePath, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
         ForEach-Object { Write-Host "  قتل حلقة PID $($_.ProcessId) ($($_.Name))"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+    # The People AI OCR Python runtime lives outside the site directory, so
+    # stopping SmartAttendance.Web.exe does not always terminate it. Select
+    # only workers whose command line points at this site's exact worker script.
+    $workerScript = Join-Path $SitePath 'PeopleAI\local_ocr_worker.py'
+    $workers = @(
+        Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.CommandLine -and
+                $_.CommandLine.IndexOf(
+                    $workerScript,
+                    [StringComparison]::OrdinalIgnoreCase) -ge 0 -and
+                $_.CommandLine.IndexOf(
+                    '--serve',
+                    [StringComparison]::OrdinalIgnoreCase) -ge 0
+            }
+    )
+
+    $workerIds = @($workers | ForEach-Object { [int] $_.ProcessId })
+    $workerRoots = @(
+        $workers |
+            Where-Object {
+                $workerIds -notcontains [int] $_.ParentProcessId
+            }
+    )
+
+    $taskkillPath = Join-Path $env:SystemRoot 'System32\taskkill.exe'
+    foreach ($worker in $workerRoots) {
+        Write-Host "  قتل People AI worker tree PID $($worker.ProcessId)"
+        try {
+            Start-Process `
+                -FilePath $taskkillPath `
+                -ArgumentList @('/PID', "$($worker.ProcessId)", '/T', '/F') `
+                -WindowStyle Hidden `
+                -Wait `
+                -ErrorAction SilentlyContinue | Out-Null
+        }
+        catch {
+            # Worker cleanup is best-effort. A child may exit between discovery
+            # and taskkill; that race must never abort the deployment.
+        }
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -109,7 +152,7 @@ if (-not $CheckOnly -and -not $TaskName) {
 if (-not $CheckOnly -and -not $SkipDbBackup -and (-not $Database -or -not $SqlServer)) {
     throw @'
 نسخة القاعدة إلزامية: مرّر -SqlServer و-Database.
-السبب: هجرات المخطط تُطبَّق عند أول إقلاع، والرجوع بالملفات لا يبطلها.
+السبب: هجرات المخطط تُطبَّق صراحةً قبل تشغيل الإنتاج، والرجوع بالملفات لا يبطلها.
 إن كنت تنسخ القاعدة بوسيلة أخرى فمرّر -SkipDbBackup صراحةً.
 '@
 }
@@ -134,7 +177,7 @@ $migrator = Join-Path $RepoPath 'SmartAttendance.Web\Infrastructure\Hrms\SqlSche
 if (Test-Path $migrator) {
     $ids = Select-String -Path $migrator -Pattern '"\d{8}-\d{2}-[a-z0-9-]+"' -AllMatches |
            ForEach-Object { $_.Matches } | ForEach-Object { $_.Value.Trim('"') }
-    Write-Warn "هجرات المخطط بالكود: $($ids.Count). ستُطبَّق غير المسجَّلة منها بأول إقلاع."
+    Write-Warn "هجرات المخطط بالكود: $($ids.Count). في Production يجب تطبيق غير المسجّل منها صراحةً عبر DatabaseMigrator قبل التشغيل."
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -354,9 +397,38 @@ if ($SkipDbBackup) {
 # ─────────────────────────────────────────────────────────────────────────────
 # ٣) إيقاف المهمة وقتل حلقة run-server
 # ─────────────────────────────────────────────────────────────────────────────
+$deploymentTaskDisabled = $false
+trap {
+    $capturedError = $_
+    try {
+        if ($deploymentTaskDisabled) {
+            Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null
+        }
+
+        Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        Write-Warn 'فشل النشر قبل اكتماله؛ أُعيد تشغيل المهمة المجدولة تلقائياً.'
+    }
+    catch {
+        Write-Warn 'فشل أيضاً الاسترداد التلقائي للمهمة المجدولة؛ يلزم تشغيلها يدوياً.'
+    }
+
+    [Console]::Error.WriteLine($capturedError.ToString())
+    exit 1
+}
+
 Write-Step '٣) إيقاف الموقع'
-Disable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
-Stop-ScheduledTask    -TaskName $TaskName -ErrorAction SilentlyContinue
+try {
+    Disable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null
+    $deploymentTaskDisabled = $true
+}
+catch {
+    # بعض الحسابات التشغيلية تملك حق Stop/Start للمهمة، لكن لا تملك حق
+    # تغيير Enabled. في هذه الحالة تبقى المهمة مفعّلة ونوقف نسختها الجارية
+    # فقط؛ لا يجوز أن يتحول ذلك إلى فشل نشر زائف بعد نسخ الملفات بنجاح.
+    $deploymentTaskDisabled = $false
+    Write-Warn 'تعذر تعطيل المهمة (صلاحيات محدودة)؛ سيتم إيقاف النسخة الجارية مع إبقاء المهمة مفعّلة.'
+}
+Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 
 Stop-SiteProcesses -SitePath $SitePath
 
@@ -427,8 +499,11 @@ Write-Ok 'نُسخ والإعدادات وأصول الخادم سليمة'
 # ٦) تشغيل ثم قياس
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Step '٦) تشغيل وقياس'
-Enable-ScheduledTask -TaskName $TaskName | Out-Null
-Start-ScheduledTask  -TaskName $TaskName
+if ($deploymentTaskDisabled) {
+    Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null
+}
+Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+$deploymentTaskDisabled = $false
 
 $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
 $ready    = $false
@@ -486,7 +561,7 @@ foreach ($path in '/health/live', '/health/ready') {
 Write-Host "`nتمّ النشر: $branch @ $head" -ForegroundColor Green
 Write-Host "الرجوع (ملفات): robocopy `"$backupDir`" `"$SitePath`" /MIR"
 if (-not $SkipDbBackup) { Write-Host "الرجوع (قاعدة):  RESTORE DATABASE [$Database] FROM DISK=N'$dbBackup' WITH REPLACE" }
-Write-Warn 'تحقّق بالمتصفّح بجلسة حقيقية:'
-Write-Warn "  • زمن /AttendanceRecords (كان ~2.4s — فهرس AttendanceDate يُفترض أن يُسقطه)"
-Write-Warn '  • تبويبة الحضور بمجموعاتها الثمانية · /Holidays من تحت «إعدادات تسجيل الحضور»'
-Write-Warn '  • دخولٌ جديد — الجلسات القائمة تُطرد مرّة واحدة (مفاتيح Data Protection انتقلت للقاعدة).'
+Write-Host ''
+Write-Host 'فحص ما بعد النشر:' -ForegroundColor Cyan
+Write-Host '  • /health/live و /health/ready تم التحقق منهما أعلاه.'
+Write-Host '  • راجع فقط تحذيرات Production Readiness الفعلية الظاهرة في مرحلة التحقق؛ لا توجد تحذيرات ثابتة قديمة.'

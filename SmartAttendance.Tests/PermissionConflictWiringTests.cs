@@ -77,6 +77,28 @@ public class PermissionConflictWiringTests
     }
 
     [Fact]
+    public void Credit_OvernightShift_AfterMidnightArrival_UsesNextDayAxis()
+    {
+        var credit = DayAttendanceStore.PermissionLatenessCredit(
+            new[] { (T("22:00"), T("00:30")) },
+            shiftStart: T("22:00"), checkIn: T("00:30"),
+            considerOutsideShift: false, shiftEnd: T("06:00"));
+
+        Assert.Equal(TimeSpan.FromHours(2.5), credit);
+    }
+
+    [Fact]
+    public void Credit_OvernightShift_EarlyArrivalBeforeStart_Zero()
+    {
+        var credit = DayAttendanceStore.PermissionLatenessCredit(
+            new[] { (T("22:00"), T("23:00")) },
+            shiftStart: T("22:00"), checkIn: T("21:55"),
+            considerOutsideShift: false, shiftEnd: T("06:00"));
+
+        Assert.Equal(TimeSpan.Zero, credit);
+    }
+
+    [Fact]
     public void Derive_LateCredit_ErasesLateness()
     {
         var shift = new ShiftTypeStore.ShiftType { Name = "صباحية" };

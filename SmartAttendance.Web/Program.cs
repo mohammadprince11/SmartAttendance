@@ -8,7 +8,6 @@ using SmartAttendance.Web.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Application.AttendanceImports.Services;
-using SmartAttendance.Application.AttendanceProcessing.Services;
 using SmartAttendance.Application.AttendanceRecords.Services;
 using SmartAttendance.Application.AttendanceReports.Services;
 using SmartAttendance.Application.Branches.Services;
@@ -33,6 +32,7 @@ using SmartAttendance.Infrastructure.Seeding;
 using SmartAttendance.Infrastructure.Services;
 using SmartAttendance.Web.Infrastructure.Theming;
 using SmartAttendance.Web.Infrastructure.Localization;
+using SmartAttendance.Web.Infrastructure.Platform;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,6 +104,21 @@ else
     builder.Services.AddSingleton<IFileThreatScanner, DisabledFileThreatScanner>();
 
 builder.Services.AddSingleton<IProtectedFileService, ProtectedFileService>();
+builder.Services.AddScoped<IOnboardingProtectedAssetService, OnboardingProtectedAssetService>();
+
+builder.Services.Configure<SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions>(
+    builder.Configuration.GetSection(
+        SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiWorkerOptions.SectionName));
+
+builder.Services.AddSingleton<
+    SmartAttendance.Web.Infrastructure.PeopleAi.ILocalOcrProcessClient,
+    SmartAttendance.Web.Infrastructure.PeopleAi.LocalOcrProcessClient>();
+
+// Register the queue supervisor even when configuration is incomplete. It
+// reports the disabled state explicitly, while usable configurations keep
+// retrying transient OCR startup failures instead of abandoning queued jobs.
+builder.Services.AddHostedService<
+    SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiJobProcessorService>();
 
 // مقاييس الطلبات بالذاكرة (FIX-004 · OBS-006): خطُّ الأساس الذي كان مفقوداً —
 // زمن الطلب وP95 ومعدّل الأخطاء لكل مسار. Singleton لأن الحالة مشتركة عبر الطلبات.
@@ -233,8 +248,23 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             if (!PublicPathPolicy.IsStaticAsset(context.HttpContext.Request.Path.Value))
             {
                 var username = context.Principal?.Identity?.Name;
+                var tenantId = TenantContext.GetTenantId(context.Principal);
                 var ticketStamp = context.Principal
                     ?.FindFirst(AccountSecurityStore.SecurityStampClaimType)?.Value;
+
+                // الإيقاف أو انتهاء اللايسنس يسقط الجلسات القائمة أيضاً؛ منع الدخول
+                // وحده لا يكفي لأن تذكرة الكوكي قد تبقى حيّة ساعات بعد قرار المالك.
+                if (!tenantId.HasValue ||
+                    !await PlatformPortalStore.IsTenantAccessAllowedAsync(
+                        context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>(),
+                        tenantId.Value,
+                        DateTime.UtcNow))
+                {
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
+                }
 
                 AccountSecurityState? accountState = null;
 
@@ -244,6 +274,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                         context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>(),
                         context.HttpContext.RequestServices
                             .GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+                        tenantId.Value,
                         username);
                 }
                 catch (Exception ex)
@@ -353,7 +384,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     // مصادقة توكن Bearer لواجهة الموبايل (بجانب الكوكيز) — كنترولرات /api/*
     .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
         SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler>(
-        SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName, null);
+        SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName, null)
+    .AddCookie(PlatformAuthenticationDefaults.Scheme, options =>
+    {
+        options.LoginPath = "/Platform/Login";
+        options.AccessDeniedPath = "/Platform/Login";
+        options.Cookie.Name = "ZYNORA.PlatformOwner";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+        options.Cookie.Path = "/Platform";
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = cookieSecurity == CookieSecurityDecision.AlwaysSecure
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.SameAsRequest;
+        options.ExpireTimeSpan = TimeSpan.FromHours(4);
+        options.SlidingExpiration = false;
+    });
 
 // سياسة تفويض احتياطية: **كل** نقطة تتطلّب مستخدماً مصادقاً ما لم تُعفَ صراحةً
 // بـ[AllowAnonymous]. سببها أن PublicPathPolicy يصنّف /api/ و/push/ و/files/
@@ -367,6 +413,13 @@ builder.Services.AddAuthorization(options =>
             SmartAttendance.Web.Infrastructure.Api.ApiTokenAuthHandler.SchemeName)
         .RequireAuthenticatedUser()
         .Build();
+
+    options.AddPolicy(
+        PlatformAuthenticationDefaults.Policy,
+        policy => policy
+            .AddAuthenticationSchemes(PlatformAuthenticationDefaults.Scheme)
+            .RequireAuthenticatedUser()
+            .RequireClaim(PlatformAuthenticationDefaults.OwnerIdClaim));
 });
 
 // كنترولرات واجهة الموبايل (REST/JSON) — بجانب Razor Pages
@@ -375,6 +428,13 @@ builder.Services.AddControllers();
 // حدّ معدّل محاولات الدخول — يخنق رشّ كلمات المرور الذي لا يلمس قفل الحساب
 // (القفل لكل حساب؛ الرشّ يجرّب كلمة واحدة على ألف حساب). المحدِّد **عام** بمُقسِّم
 // يعفي كل ما ليس مسار دخول، فلا يُخنق استعمال مشروع.
+var loginRateLimitPermitLimit = LoginRateLimitPolicy.ResolvePermitLimit(
+    builder.Configuration.GetValue<int?>(
+        LoginRateLimitPolicy.PermitLimitConfigurationKey));
+var loginRateLimitWindowMinutes = LoginRateLimitPolicy.ResolveWindowMinutes(
+    builder.Configuration.GetValue<int?>(
+        LoginRateLimitPolicy.WindowMinutesConfigurationKey));
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -393,8 +453,8 @@ builder.Services.AddRateLimiter(options =>
                 LoginRateLimitPolicy.PartitionKey(context.Connection.RemoteIpAddress?.ToString()),
                 _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = LoginRateLimitPolicy.PermitLimit,
-                    Window = TimeSpan.FromMinutes(LoginRateLimitPolicy.WindowMinutes),
+                    PermitLimit = loginRateLimitPermitLimit,
+                    Window = TimeSpan.FromMinutes(loginRateLimitWindowMinutes),
                     QueueLimit = 0
                 });
         });
@@ -426,8 +486,6 @@ builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IShiftService, ShiftService>();
 builder.Services.AddScoped<IEmployeeShiftService, EmployeeShiftService>();
 builder.Services.AddScoped<IAttendanceRecordService, AttendanceRecordService>();
-builder.Services.AddScoped<IAttendanceProcessingService, AttendanceProcessingService>();
-builder.Services.AddScoped<IAttendanceReportService, AttendanceReportService>();
 builder.Services.AddScoped<IAttendanceAdvancedReportService, AttendanceAdvancedReportService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
@@ -442,6 +500,9 @@ builder.Services.AddScoped<ISetupService, SetupService>();
 builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IAccessRoleService, SmartAttendance.Web.Infrastructure.Security.AccessRoleService>();
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.IEffectiveScopeService, SmartAttendance.Web.Infrastructure.Security.EffectiveScopeService>();
+builder.Services.AddScoped<
+    SmartAttendance.Web.Infrastructure.PeopleAi.IPeopleAiSessionAccessService,
+    SmartAttendance.Web.Infrastructure.PeopleAi.PeopleAiSessionAccessService>();
 // نطاق شركات الطلب — يُشتقّ من محرك الصلاحيات نفسه (IEffectiveScopeService) فلا
 // يتباعد عنه مصدرُ حقيقةٍ ثانٍ. Scoped لأن نتيجته تُكاش بعمر الطلب.
 builder.Services.AddScoped<SmartAttendance.Web.Infrastructure.Security.ICompanyScopeProvider, SmartAttendance.Web.Infrastructure.Security.CompanyScopeProvider>();
@@ -502,6 +563,7 @@ builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integration
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Integrations.DevicePunchProcessorService>();
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Reports.ReportScheduleDispatcherService>();
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Hrms.ApprovalSlaDispatcherService>();
+builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Hrms.ApprovalEffectDispatcherService>();
 
 // كلمة مرور شهادة HTTPS لم تعد بالمستودع: مصدرها متغيّر البيئة وحده. نفشل بوضوح
 // عند الحاجة إليها وغيابها بدل رسالة ربط غامضة من Kestrel أو تشغيل بلا TLS بصمت.
@@ -566,31 +628,35 @@ if (SmartAttendance.Web.Infrastructure.Hrms.EnvironmentDatabaseGuard.Validate(
     throw new InvalidOperationException(environmentRefusal);
 }
 
-// هجرات المخطط المحكومة للجداول القديمة (SQL خام) تعمل صراحةً مرة واحدة عند
-// الإقلاع — لا بكل طلب — وأي فشل يظهر فوراً بدل عطل صامت لاحق.
+// Production schema changes are deployed explicitly before service restart.
+// Development/staging keep the historical startup behavior unless disabled.
+var applyDatabaseMigrationsOnStartup =
+    app.Configuration.GetValue<bool?>("DatabaseMigrations:ApplyOnStartup")
+    ?? !app.Environment.IsProduction();
+
+if (app.Environment.IsProduction() && applyDatabaseMigrationsOnStartup)
+{
+    throw new InvalidOperationException(
+        "DatabaseMigrations:ApplyOnStartup must be false in Production. " +
+        "Run the controlled database migrator before starting ZYNORA.");
+}
+
 using (var migrationScope = app.Services.CreateScope())
 {
-    var migrationDb = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // These legacy tables pre-date the controlled migrator. Ensure their base shape
-    // at startup so the SalaryItemId migration also covers a clean database.
-    await SmartAttendance.Web.Infrastructure.Hrms.SalaryItemStore.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeAllowanceSchema.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.PayrollTransactionStore.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.EmployeeUpdateSchema.EnsureAsync(migrationDb);
-    // الجداول القديمة الأساسية يجب أن توجد قبل الهجرات التي تضيف لها علاقات
-    // (مثل ApprovalRequestWatchers -> SelfServiceRequests).
-    await SmartAttendance.Web.Infrastructure.Hrms.HrmsDatabase.EnsureCreatedAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Security.LoginDatabase.EnsureCreatedAsync(migrationDb);
-    // ShiftTypes must exist before controlled migrations that extend it. Previously the
-    // migrator ran first, recorded guarded ALTER migrations as applied, then the shift
-    // table was created later without those columns.
-    await SmartAttendance.Web.Infrastructure.Hrms.ShiftTypeStore.EnsureAsync(migrationDb);
-    await SmartAttendance.Web.Infrastructure.Hrms.SqlSchemaMigrator.ApplyAsync(migrationDb);
+    var migrationDb = migrationScope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
 
-    // مخطط توكنات الـAPI يُضمَن هنا مرّة واحدة عند الإقلاع — لا بمسار التحقّق الساخن.
-    // كان ValidateAsync يفحص/ينشئ الجدول (DDL) بكل طلب Bearer؛ نقلُه للإقلاع يجعل
-    // التحقّق بحثاً مفهرساً محدوداً (بذرة فريدة على TokenHash).
-    await SmartAttendance.Web.Infrastructure.Api.ApiTokenStore.EnsureAsync(migrationDb);
+    if (applyDatabaseMigrationsOnStartup)
+    {
+        await SmartAttendance.Web.Infrastructure.Hrms.DatabaseDeployment
+            .ApplyAsync(migrationDb);
+    }
+    else
+    {
+        // Verification only. No DDL is executed on production startup.
+        await SmartAttendance.Web.Infrastructure.Hrms.DatabaseDeployment
+            .VerifyProductionSchemaAsync(migrationDb);
+    }
 }
 
 await DefaultShiftSeeder.SeedAsync(app.Services);
@@ -653,6 +719,10 @@ app.Use(async (context, next) =>
 
 app.UseRouting();
 
+// بوابة المالك لا تُفتح من دومينات العملاء. محلياً يُسمح بالـloopback، وفي
+// الإنتاج يجب ضبط PlatformPortal:AllowedHosts على الدومين الإداري المنفصل.
+app.UseMiddleware<PlatformHostMiddleware>();
+
 // قياس الطلبات بعد UseRouting كي يتوفّر قالب المسار المُطابَق، وقبل المصادقة/التحديد
 // كي يلتقط ردود 401/429 أيضاً — فيقيس الطلب كاملاً بلا استثناء (FIX-004).
 app.UseMiddleware<SmartAttendance.Web.Infrastructure.Observability.RequestMetricsMiddleware>();
@@ -670,6 +740,43 @@ app.UseAuthorization();
 // وتردّ 401 على CSS وJS وعامل خدمة الـPWA — أي أن صفحة الدخول نفسها تفقد تنسيقها
 // وتطبيق الموظف ينكسر. إعفاؤها صريح: الحماية على البيانات لا على ملفات الواجهة.
 app.MapStaticAssets().AllowAnonymous();
+
+app.MapGet("/.well-known/assetlinks.json", (IConfiguration configuration) =>
+{
+    var packageName = configuration["AndroidApp:PackageName"]?.Trim();
+    var fingerprints = configuration
+        .GetSection("AndroidApp:Sha256CertFingerprints")
+        .Get<string[]>()?
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Select(value => value.Trim())
+        .ToArray();
+
+    if (string.IsNullOrWhiteSpace(packageName) ||
+        fingerprints is null ||
+        fingerprints.Length == 0)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Json(new object[]
+    {
+        new
+        {
+            relation = new[]
+            {
+                "delegate_permission/common.handle_all_urls",
+                "delegate_permission/common.get_login_creds"
+            },
+            target = new
+            {
+                @namespace = "android_app",
+                package_name = packageName,
+                sha256_cert_fingerprints = fingerprints
+            }
+        }
+    });
+}).AllowAnonymous();
+
 // Compatibility aliases after deleting the old hidden Razor redirect pages.
 // AttendanceOperations is the single physical destination.
 app.MapGet("/AttendanceProcessing", () =>

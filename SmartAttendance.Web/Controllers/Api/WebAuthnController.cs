@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using SmartAttendance.Infrastructure.Persistence;
+using SmartAttendance.Web.Infrastructure.Api;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
 
@@ -21,7 +22,7 @@ namespace SmartAttendance.Web.Controllers.Api;
 [ApiController]
 [Route("api/v1/webauthn")]
 [Route("api/webauthn")]
-[Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme + "," + ApiTokenAuthHandler.SchemeName)]
 public class WebAuthnController : ControllerBase
 {
     private static readonly TimeSpan ChallengeLifetime = TimeSpan.FromMinutes(5);
@@ -30,17 +31,20 @@ public class WebAuthnController : ControllerBase
     private readonly IMemoryCache _cache;
     private readonly SmartAttendance.Application.Common.Security.ILoginIdentityService _loginIdentityService;
     private readonly ReverseProxyOptions _reverseProxy;
+    private readonly IConfiguration _configuration;
 
     public WebAuthnController(
         ApplicationDbContext db,
         IMemoryCache cache,
         SmartAttendance.Application.Common.Security.ILoginIdentityService loginIdentityService,
-        Microsoft.Extensions.Options.IOptions<ReverseProxyOptions> reverseProxyOptions)
+        Microsoft.Extensions.Options.IOptions<ReverseProxyOptions> reverseProxyOptions,
+        IConfiguration configuration)
     {
         _db = db;
         _cache = cache;
         _loginIdentityService = loginIdentityService;
         _reverseProxy = reverseProxyOptions.Value;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -51,9 +55,37 @@ public class WebAuthnController : ControllerBase
     /// </summary>
     private Fido2 CreateFido2()
     {
-        // المرحلة 10: لا نقرأ X-Forwarded-Proto الخام هنا — ForwardedHeadersMiddleware
-        // يطبّعه لوسطاء موثوقين فقط ثم نبني الأصل من القيم المطبَّعة، مع قائمة
-        // مضيفات بيضاء اختيارية بالإعدادات. أصل غير موثوق ⟹ رفض صريح لا تخمين.
+        if (User.Identities.Any(identity =>
+                identity.IsAuthenticated &&
+                string.Equals(
+                    identity.AuthenticationType,
+                    ApiTokenAuthHandler.SchemeName,
+                    StringComparison.Ordinal)))
+        {
+            var rpId = _configuration["WebAuthn:MobileRpId"]?.Trim();
+            var mobileOrigins = _configuration
+                .GetSection("WebAuthn:MobileOrigins")
+                .Get<string[]>()?
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .ToHashSet(StringComparer.Ordinal);
+
+            if (string.IsNullOrWhiteSpace(rpId) ||
+                mobileOrigins is null ||
+                mobileOrigins.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "إعداد WebAuthn الخاص بتطبيق الموبايل غير مكتمل.");
+            }
+
+            return new Fido2(new Fido2Configuration
+            {
+                ServerDomain = rpId,
+                ServerName = "Zynora HR",
+                Origins = mobileOrigins
+            });
+        }
+
         var origin = ForwardedOriginResolver.Resolve(
             Request.Scheme,
             Request.Host.Value,
@@ -80,10 +112,15 @@ public class WebAuthnController : ControllerBase
 
         var username = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(username)) return 0;
+        var tenantId = TenantContext.GetTenantId(User) ?? 0;
         return await HrmsDatabase.ScalarAsync<int>(
             _db,
-            "SELECT TOP 1 ISNULL(EmployeeId, 0) FROM AppLoginUsers WHERE Username = @U AND IsActive = 1",
-            c => HrmsDatabase.AddParameter(c, "@U", username));
+            "SELECT TOP 1 ISNULL(EmployeeId, 0) FROM AppLoginUsers WHERE TenantId = @TenantId AND Username = @U AND IsActive = 1",
+            c =>
+            {
+                HrmsDatabase.AddParameter(c, "@TenantId", tenantId);
+                HrmsDatabase.AddParameter(c, "@U", username);
+            });
     }
 
     // ===== التسجيل (من درج إعدادات بوابة الموظف) =====
@@ -219,6 +256,8 @@ public class WebAuthnController : ControllerBase
         public AuthenticatorAssertionRawResponse Assertion { get; set; } = default!;
     }
 
+    private sealed record LoginLocator(int TenantId, string TenantCode, string Username);
+
     /// <summary>
     /// تحقق التأكيد: توقيع صحيح بالمفتاح النشط ⟹ توكن إثبات أحادي الاستهلاك
     /// (دقيقتان) يُرفَق بنموذج البصمة فيقبله الخادم.
@@ -330,18 +369,27 @@ public class WebAuthnController : ControllerBase
         }
 
         // حساب الدخول المرتبط بالموظف (نفضّل حساب دور «موظف»).
-        var username = await HrmsDatabase.ScalarAsync<string>(
+        var locator = (await HrmsDatabase.QueryAsync(
             _db,
             """
-SELECT TOP 1 Username FROM AppLoginUsers
-WHERE EmployeeId = @Emp AND IsActive = 1
-ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
+SELECT TOP 1 u.TenantId, t.Code AS TenantCode, u.Username
+FROM AppLoginUsers u
+INNER JOIN Tenants t ON t.Id = u.TenantId AND t.IsActive = 1 AND t.IsDeleted = 0
+WHERE u.EmployeeId = @Emp AND u.IsActive = 1
+ORDER BY CASE WHEN u.Role = 'Employee' THEN 0 ELSE 1 END, u.Id;
 """,
-            c => HrmsDatabase.AddParameter(c, "@Emp", credential.EmployeeId));
-        if (string.IsNullOrWhiteSpace(username))
+            c => HrmsDatabase.AddParameter(c, "@Emp", credential.EmployeeId),
+            reader => new LoginLocator(
+                HrmsDatabase.GetInt(reader, "TenantId"),
+                HrmsDatabase.GetString(reader, "TenantCode"),
+                HrmsDatabase.GetString(reader, "Username")))).FirstOrDefault();
+        if (locator is null || string.IsNullOrWhiteSpace(locator.Username))
             return BadRequest(new { message = "لا يوجد حساب دخول نشط مرتبط بهذا الموظف." });
 
-        var user = await LoginDatabase.GetByUsernameAsync(_db, username);
+        var user = await LoginDatabase.GetByUsernameAsync(
+            _db,
+            locator.TenantId,
+            locator.Username);
         if (user is null || !user.IsActive)
             return BadRequest(new { message = "الحساب غير متاح." });
         if (user.IsLockedOut(DateTime.UtcNow))
@@ -354,6 +402,7 @@ ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
             systemUserId = await _loginIdentityService.EnsureSystemUserAsync(
                 new SmartAttendance.Application.Common.Security.LoginIdentityRequest
                 {
+                    TenantId = locator.TenantId,
                     EmployeeId = user.EmployeeId,
                     UserName = user.Username,
                     DisplayName = displayName,
@@ -387,6 +436,8 @@ ORDER BY CASE WHEN Role = 'Employee' THEN 0 ELSE 1 END, Id;
             new("DisplayName", displayName),
             new("EmployeeId", user.EmployeeId?.ToString() ?? string.Empty),
             new("SystemUserId", systemUserId.Value.ToString()),
+            new(TenantContext.TenantIdClaimType, locator.TenantId.ToString()),
+            new(TenantContext.TenantCodeClaimType, locator.TenantCode),
             new("SessionIssuedUtc", issuedUtc.ToString("O")),
             new(AccountSecurityStore.SecurityStampClaimType, securityStamp)
         };

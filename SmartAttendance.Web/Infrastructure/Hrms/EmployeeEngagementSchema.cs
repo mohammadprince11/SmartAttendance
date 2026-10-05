@@ -4,11 +4,9 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 
 public static class EmployeeEngagementSchema
 {
-    public static async Task EnsureAsync(ApplicationDbContext dbContext)
-    {
-        await HrmsDatabase.ExecuteAsync(
-            dbContext,
-            """
+    // يُستهلك حصراً من SqlSchemaMigrator. إبقاء تعريف الجداول في موضع واحد يمنع
+    // اختلاف الهجرة المحكومة عن التحقق الذي تجريه مسارات القراءة والكتابة.
+    public const string MigrationSql = """
 IF OBJECT_ID('EmployeePortalAnnouncements', 'U') IS NULL
 BEGIN
     CREATE TABLE EmployeePortalAnnouncements
@@ -123,35 +121,21 @@ BEGIN
     CREATE UNIQUE INDEX UX_EmployeePollVotes_PollEmployee ON EmployeePollVotes(PollId, EmployeeId);
 END;
 
-IF OBJECT_ID('SelfServiceRequests', 'U') IS NULL
-BEGIN
-    CREATE TABLE SelfServiceRequests
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        EmployeeId int NOT NULL,
-        RequestType nvarchar(80) NOT NULL,
-        CreatedAt datetime2 NOT NULL DEFAULT(SYSUTCDATETIME()),
-        FromDate datetime2 NULL,
-        ToDate datetime2 NULL,
-        Reason nvarchar(max) NULL,
-        Status nvarchar(50) NOT NULL DEFAULT('Pending')
-    );
-END;
+""";
 
-IF OBJECT_ID('AttendanceRecords', 'U') IS NULL
-BEGIN
-    CREATE TABLE AttendanceRecords
-    (
-        Id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        EmployeeId int NOT NULL,
-        AttendanceDate datetime2 NOT NULL,
-        CheckIn datetime2 NULL,
-        CheckOut datetime2 NULL,
-        Status nvarchar(50) NULL,
-        Source nvarchar(50) NULL,
-        Notes nvarchar(max) NULL
-    );
-END;
+    /// <summary>
+    /// يتحقق من أن الهجرة المحكومة طُبقت. لا ينشئ أو يعدل مخططاً أثناء الطلب.
+    /// </summary>
+    public static Task EnsureAsync(ApplicationDbContext dbContext) =>
+        HrmsDatabase.ExecuteAsync(
+            dbContext,
+            """
+IF OBJECT_ID('EmployeePortalAnnouncements', 'U') IS NULL
+   OR OBJECT_ID('EmployeeFeedbackItems', 'U') IS NULL
+   OR OBJECT_ID('EmployeeCompensations', 'U') IS NULL
+   OR OBJECT_ID('EmployeePolls', 'U') IS NULL
+   OR OBJECT_ID('EmployeePollOptions', 'U') IS NULL
+   OR OBJECT_ID('EmployeePollVotes', 'U') IS NULL
+    THROW 51000, 'Employee engagement schema is missing. Run the controlled database migrator.', 1;
 """);
-    }
 }

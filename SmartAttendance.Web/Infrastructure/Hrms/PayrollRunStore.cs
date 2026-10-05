@@ -570,10 +570,10 @@ SELECT SequenceNo FROM @allocated;
 
         // بوابة مصدر الحقيقة: لا أثر حضور في الراتب من شهر ما زال قيد المراجعة.
         // نبني الملخص أولاً (فقط صفوف UnderReview تتحدث)، ثم نتحقق من أن كل موظف
-        // داخل نطاق الدفعة له اعتماد شهري Approved/Locked. يجب أن يسبق هذا أي أثر
+        // داخل نطاق الدفعة له حضور شهري Locked نهائي للرواتب. يجب أن يسبق هذا أي أثر
         // مالي مثل ترحيل قسط قرض، كي يكون فشل البوابة بلا كتابة جزئية.
         await MonthAttendanceStore.BuildMonthAsync(
-            dbContext, loanScope, run.Year, run.Month);
+            dbContext, loanScope, run.Year, run.Month, runCompanyForLoans);
         var unapprovedAttendance = await HrmsDatabase.ScalarAsync<int>(
             dbContext,
             """
@@ -876,7 +876,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
 
         var overtimeBaseMode = await GetPayrollSetting("Payroll.OvertimeBaseMode", PayrollEarningBase.ModeBasic);
         var unpaidLeaveBaseMode = await GetPayrollSetting("Payroll.UnpaidLeaveBaseMode", PayrollEarningBase.ModeBasic);
-        var salaryDaysBasis = await GetPayrollSetting(PayrollDivisorPolicy.SalaryDaysBasisKey, PayrollDivisorPolicy.BasisFixed30);
+        var salaryDaysBasis = await PayrollDivisorPolicy.LoadSalaryDaysBasisAsync(dbContext, runCompanyForLoans);
         var standardDailyHours = PayrollDivisorPolicy.DailyHours(
             await GetPayrollSetting(PayrollDivisorPolicy.StandardDailyHoursKey, "8"));
         var missingPunchPenaltyPercent = await MissingPunchPayrollPolicy.LoadPercentAsync(
@@ -995,8 +995,12 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
             var factor = link.Factor;
             var proratedBasic = Math.Round(basic * factor, 2);
 
-            var dailyRate = basic > 0 ? Math.Round(basic / 30m, 4) : 0;
-            var hourlyRate = dailyRate > 0 ? Math.Round(dailyRate / 8m, 4) : 0;
+            // مصدر واحد لقيمة اليوم والساعة داخل كامل المسير. الافتراضي 30/8
+            // يحافظ على الأرقام القديمة، بينما PeriodDays/StandardDailyHours يطبّقان
+            // بالتساوي على تعديل أيام الراتب وبدل الإجازة والصيغ وباقي الحسابات.
+            var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
+            var dailyRate = PayrollRateBasis.DailyRate(basic, salaryDivisor);
+            var hourlyRate = PayrollRateBasis.HourlyRate(dailyRate, standardDailyHours);
 
             // سمات الموظف — تُقرأ مرّةً هنا لأنّ إنفاذ «معايير الاستحقاق» على عناصر
             // الراتب (العلاوات والصيغ) يسبق حسم ملفَّي الضريبة/الضمان لاحقاً.
@@ -1068,8 +1072,7 @@ WHERE ISNULL(v.IsDeleted,0)=0 AND ISNULL(e.IsDeleted,0)=0
 
             // مقام أيام الراتب + أجرا الأوفرتايم والإجازة اليوميّان بوعاءيهما المهيَّأين.
             // الافتراضات تجعلهما = الأساسي ÷ 30 (÷ 8) حرفياً كسلوك المحرك القائم.
-            var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);
-            var missingPunchDailyBasic = PayrollRateBasis.DailyRate(basic, salaryDivisor);
+            var missingPunchDailyBasic = dailyRate;
             var missingPunchPenalty = MissingPunchPayrollPolicy.Calculate(
                 missingPunchDailyBasic, incompleteDays, missingPunchPenaltyPercent);
             var overtimeHourlyRate = PayrollRateBasis.HourlyRate(
@@ -1796,11 +1799,16 @@ ORDER BY e.EmployeeNo;
     // ---------------- دورة الحياة ----------------
     public static async Task<(bool, string)> LockAsync(ApplicationDbContext dbContext, int runId)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var run = await GetRunAsync(dbContext, runId);
         var res = await TransitionAsync(dbContext, runId, from: "Calculated", to: "Locked", "LockedAt", "قُفلت الدفعة.");
-        // قفل حركات الدفعة (لكل حركة) — الحركات الجديدة بعدها تبقى غير مقفلة
+
+        // تغيير حالة الدفعة وقفل الحركات عملية مالية واحدة: فشل قفل الحركات يجب أن
+        // يعيد الدفعة إلى Calculated تلقائياً عبر rollback، لا أن يتركها Locked جزئياً.
         if (res.Item1 && run != null)
             await PayrollTransactionStore.LockForRunAsync(dbContext, runId, run.Year, run.Month);
+
+        await transaction.CommitAsync();
         return res;
     }
 
@@ -1889,6 +1897,7 @@ ORDER BY e.EmployeeNo;
     /// </summary>
     public static async Task<(bool, string)> UnlockAsync(ApplicationDbContext dbContext, int runId)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
         var res = await TransitionAsync(dbContext, runId, from: "Locked", to: "Calculated", null, "أُلغي القفل — عادت الدفعة قابلة للتعديل.");
         if (res.Item1)
         {
@@ -1899,6 +1908,8 @@ ORDER BY e.EmployeeNo;
                 "UPDATE PayrollRuns SET ApprovedBy = NULL, ApprovedAt = NULL, ApprovalNote = NULL WHERE Id = @Id AND COL_LENGTH('PayrollRuns','ApprovedAt') IS NOT NULL;",
                 command => HrmsDatabase.AddParameter(command, "@Id", runId));
         }
+
+        await transaction.CommitAsync();
         return res;
     }
 

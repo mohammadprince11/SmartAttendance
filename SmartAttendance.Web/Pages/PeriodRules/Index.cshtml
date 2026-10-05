@@ -7,7 +7,7 @@
     ViewData["Title"] = "القواعد الفترية";
     var (evalYear, evalPeriod) = Model.EvalResolved;
     var rulesJson = JsonSerializer.Serialize(Model.Rules.Select(r => new {
-        r.Id, r.Name, r.PeriodType, r.Metric, r.IsActive,
+        r.Id, r.Name, r.PeriodType, r.Metric, r.AllowanceMinutes, r.IsActive,
         Slices = r.Slices.Select(s => new { s.SliceFrom, s.SliceTo, s.ActionType, s.ActionText, s.ActionValue })
     }));
 }
@@ -45,7 +45,7 @@
                         <div>
                             <span class="pr-rule-name">@r.Name</span>
                             <span class="pr-chip @(r.IsActive ? "" : "off")">@(r.IsActive ? "مفعّلة" : "معطّلة")</span>
-                            <div class="pr-rule-meta">@r.PeriodLabel · المقياس: @r.MetricText · @r.Slices.Count شريحة</div>
+                            <div class="pr-rule-meta">@r.PeriodLabel · المقياس: @r.MetricText · @r.Slices.Count شريحة@if (r.Metric == "LateViolationDays") { <text> · سماح @r.AllowanceMinutes دقيقة</text> }</div>
                         </div>
                         <div class="zyu-69374f356aba">
                             <button type="button" class="pr-btn ghost sm" onclick="prEdit(@r.Id)">تعديل</button>
@@ -152,12 +152,16 @@
                         </select>
                     </label>
                     <label>المقياس المُجمَّع
-                        <select name="Metric" id="pr-Metric">
+                        <select name="Metric" id="pr-Metric" onchange="prMetricKind(this.value)">
                             @foreach (var (key, label, _) in Model.MetricList)
                             { <option value="@key">@label</option> }
                         </select>
                     </label>
                 </div>
+                <label id="pr-allowance-wrap" hidden>سماح التأخير بالدقائق
+                    <input type="number" min="0" step="1" name="AllowanceMinutes" id="pr-AllowanceMinutes" value="120" />
+                    <small>بعد استنفاد هذا الرصيد، يُحسب كل يوم تأخير لاحق ضمن أيام المخالفة.</small>
+                </label>
                 <label class="zyu-95e15889185d"><input type="checkbox" name="IsActive" id="pr-IsActive" value="true" checked /> مفعّلة</label>
 
                 <div>
@@ -188,6 +192,10 @@
             document.getElementById('pr-eval-week').disabled = !week;
         }
 
+        function prMetricKind(v){
+            document.getElementById('pr-allowance-wrap').hidden = v !== 'LateViolationDays';
+        }
+
         function prSliceRow(s){
             s = s || {};
             var actions = PR_ACTIONS.map(function(a){
@@ -216,12 +224,15 @@
                 document.getElementById('pr-Name').value = r.Name;
                 document.getElementById('pr-PeriodType').value = r.PeriodType;
                 document.getElementById('pr-Metric').value = r.Metric;
+                document.getElementById('pr-AllowanceMinutes').value = r.AllowanceMinutes != null ? r.AllowanceMinutes : 0;
                 document.getElementById('pr-IsActive').checked = !!r.IsActive;
                 (r.Slices||[]).forEach(function(s){ prAddSlice(s); });
             } else {
+                document.getElementById('pr-AllowanceMinutes').value = 120;
                 document.getElementById('pr-IsActive').checked = true;
                 prAddSlice(); prAddSlice();
             }
+            prMetricKind(document.getElementById('pr-Metric').value);
             document.getElementById('pr-slide').classList.add('open');
             document.getElementById('pr-backdrop').classList.add('open');
         }

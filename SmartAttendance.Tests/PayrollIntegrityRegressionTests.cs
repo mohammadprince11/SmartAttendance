@@ -78,6 +78,20 @@ public sealed class PayrollIntegrityRegressionTests
     }
 
     [Fact]
+    public void Payroll_run_uses_one_company_rate_basis_for_day_and_hour_amounts()
+    {
+        var root = FindRoot();
+        var runStore = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollRunStore.cs"));
+
+        Assert.Contains("var salaryDivisor = PayrollDivisorPolicy.Divisor(salaryDaysBasis, daysInPeriod);", runStore);
+        Assert.Contains("var dailyRate = PayrollRateBasis.DailyRate(basic, salaryDivisor);", runStore);
+        Assert.Contains("var hourlyRate = PayrollRateBasis.HourlyRate(dailyRate, standardDailyHours);", runStore);
+        Assert.Contains("t.Days.Value * dailyRate", runStore);
+        Assert.DoesNotContain("Math.Round(basic / 30m, 4)", runStore);
+        Assert.DoesNotContain("Math.Round(dailyRate / 8m, 4)", runStore);
+    }
+
+    [Fact]
     public void Payroll_source_persists_deferred_deductions_and_validates_leave_encashment()
     {
         var root = FindRoot();
@@ -91,6 +105,70 @@ public sealed class PayrollIntegrityRegressionTests
         Assert.Contains("ValidateAsync", page);
         Assert.Contains("SaveManyAsync", page);
         Assert.Contains("OnPostImportAsync", page);
+    }
+
+    [Fact]
+    public void End_of_service_is_policy_driven_and_company_scoped()
+    {
+        var root = FindRoot();
+        var store = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "EndOfServiceStore.cs"));
+        var provision = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "ProvisionCalculator.cs"));
+        var page = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Payroll", "EndOfService.cshtml.cs"));
+        var markup = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Pages", "Payroll", "EndOfService.cshtml"));
+        var terminationStore = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "TerminationSettlementStore.cs"));
+
+        Assert.DoesNotContain("DefaultTiers", store);
+        Assert.Contains("EndOfServicePolicy.Compute", store);
+        Assert.Contains("ISNULL(e.CompanyId, 0) AS CompanyId", provision);
+        Assert.DoesNotContain("ISNULL(b.CompanyId, 0) AS CompanyId", provision);
+        Assert.Contains("EndOfServicePolicy.LoadAsync", provision);
+        Assert.Contains("EndOfServicePolicy.LoadAsync", page);
+        Assert.Contains("EndOfServiceStore.ResolvePayrollPeriodAsync", page);
+        Assert.Contains("PayrollDivisorPolicy.ResolveForPeriodAsync", page);
+        Assert.Contains("PayrollRateBasis.DailyRate(lastBasic, rateBasis.Divisor)", page);
+        Assert.DoesNotContain("lastBasic / 30m", page);
+        Assert.Contains("OnGetSettlementContextAsync", page);
+        Assert.Contains("TerminationSettlementStore.LoadYearAsync", page);
+        Assert.Contains("TerminationSettlementPolicy.TerminationMonthUnpaid", page);
+        Assert.Contains("new TerminationSettlementPolicy.Difference", page);
+        Assert.Contains("TaxDueReviewed", page);
+        Assert.Contains("GosiDueReviewed", page);
+        Assert.Contains("TaxDifferenceIncluded", markup);
+        Assert.Contains("GosiDifferenceIncluded", markup);
+        Assert.Contains("es-c-term-diff", markup);
+        Assert.Contains("handler: 'SettlementContext'", markup);
+        Assert.Contains("ES_SETTLEMENT_CONTEXT", markup);
+        Assert.DoesNotContain("var daily = basic / 30", markup);
+        Assert.Contains("SUM(ISNULL(l.TaxAmount,0))", terminationStore);
+        Assert.Contains("SUM(ISNULL(l.GosiEmployee,0))", terminationStore);
+        Assert.Contains("ISNULL(r.RunType,N'Regular') = N'Regular'", terminationStore);
+        Assert.Contains("rr.OriginalRunId = r.Id", terminationStore);
+        Assert.Contains("EmployeeCompanyGuard.ListFilter(scope", terminationStore);
+        Assert.Contains("PayrollDivisorPolicy.ResolveForDateAsync", provision);
+        Assert.Contains("PayrollRateBasis.DailyRate(e.Basic, leaveRatePolicy.Divisor)", provision);
+        Assert.DoesNotContain("e.Basic / 30m", provision);
+        Assert.Contains("ResolveLabelForDateAsync", store);
+        Assert.Contains("GratuityCalculationMode", store);
+        Assert.Contains("GratuityWeeksPerYear", store);
+
+        var migrator = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "SqlSchemaMigrator.cs"));
+        Assert.Contains("20260920-07-payroll-end-of-service-audit-snapshot", migrator);
+        Assert.Contains("GratuityBasisAmount", migrator);
+        Assert.Contains("20260920-08-payroll-eos-offcycle-link", migrator);
+        Assert.Contains("PayrollTransactionId", migrator);
+        Assert.Contains("20260920-10-payroll-eos-termination-differences", migrator);
+        Assert.Contains("TaxWithheldSnapshot", migrator);
+        Assert.Contains("GosiWithheldSnapshot", migrator);
+        Assert.Contains("TerminationDifferenceNet", migrator);
+
+        Assert.Contains("WITH (UPDLOCK, HOLDLOCK)", store);
+        Assert.Contains("TaxWithheldSnapshot", store);
+        Assert.Contains("GosiWithheldSnapshot", store);
+        Assert.Contains("PaymentType = \"OutSalary\"", store);
+        Assert.Contains("Source = \"EndOfService\"", store);
+
+        var transactions = File.ReadAllText(Path.Combine(root, "SmartAttendance.Web", "Infrastructure", "Hrms", "PayrollTransactionStore.cs"));
+        Assert.Contains("ISNULL(PaymentType, N'InSalary') = N'InSalary'", transactions);
     }
 
     [Fact]

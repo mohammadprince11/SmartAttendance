@@ -66,6 +66,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? CompanyId { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public bool Onboarding { get; set; }
+
     [BindProperty]
     public CompanySetupProfileViewModel Profile { get; set; } = new();
 

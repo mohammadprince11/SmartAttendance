@@ -348,12 +348,15 @@ public class EmployeeService : IEmployeeService
         return model;
     }
 
-    public async Task<bool> CreateAsync(EmployeeCreateViewModel model)
+    public async Task<bool> CreateAsync(EmployeeCreateViewModel model) =>
+        await CreateAndGetIdAsync(model) is > 0;
+
+    public async Task<int?> CreateAndGetIdAsync(EmployeeCreateViewModel model)
     {
         if (string.IsNullOrWhiteSpace(model.EmployeeNo) ||
             await EmployeeNoExistsAsync(model.EmployeeNo))
         {
-            return false;
+            return null;
         }
 
         var department = await _unitOfWork.Departments.GetByIdAsync(
@@ -374,7 +377,7 @@ public class EmployeeService : IEmployeeService
               !position.IsActive ||
               position.CompanyId != branch.CompanyId)))
         {
-            return false;
+            return null;
         }
 
         // شركة الموظف تُشتقّ من فرعه ولا تُخمَّن: عدم الاتساق يُرفض قبله بالتحقق
@@ -385,7 +388,23 @@ public class EmployeeService : IEmployeeService
 
         if (companyId is null)
         {
-            return false;
+            return null;
+        }
+
+        if (model.DirectManagerId.HasValue)
+        {
+            var managerValid = await _dbContext.Employees
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.Id == model.DirectManagerId.Value &&
+                    !x.IsDeleted &&
+                    x.IsActive &&
+                    x.Branch.CompanyId == companyId.Value);
+
+            if (!managerValid)
+            {
+                return null;
+            }
         }
 
         var employee = _mapper.Map<Employee>(model);
@@ -394,6 +413,10 @@ public class EmployeeService : IEmployeeService
         employee.CompanyId = companyId;
         employee.PositionId = model.PositionId;
         employee.Position = position?.Name;
+        employee.DirectManagerId = model.DirectManagerId;
+        employee.EmploymentStatus =
+            Trimmed(model.EmploymentStatus) ??
+            (model.IsActive ? "Active" : "Inactive");
 
         employee.FirstName = Trimmed(model.FirstName);
         employee.SecondName = Trimmed(model.SecondName);
@@ -417,7 +440,7 @@ public class EmployeeService : IEmployeeService
         await _unitOfWork.Employees.AddAsync(employee);
         await _unitOfWork.SaveChangesAsync();
 
-        return true;
+        return employee.Id;
     }
 
     public async Task<bool> UpdateAsync(EmployeeEditViewModel model)
@@ -508,6 +531,9 @@ public class EmployeeService : IEmployeeService
         employee.Country = model.Country;
         employee.IsActive = model.IsActive;
         employee.DirectManagerId = model.DirectManagerId;
+        employee.EmploymentStatus =
+            Trimmed(model.EmploymentStatus) ??
+            (model.IsActive ? "Active" : employee.EmploymentStatus);
         employee.BranchId = model.BranchId;
         employee.DepartmentId = model.DepartmentId;
 
@@ -722,6 +748,7 @@ public class EmployeeService : IEmployeeService
             {
                 Id = x.Id,
                 CompanyId = x.CompanyId,
+                DepartmentId = x.DepartmentId,
                 Name = x.Name,
                 IsActive = x.IsActive
             })
@@ -753,12 +780,12 @@ public class EmployeeService : IEmployeeService
                 .CurrentTransaction?.GetDbTransaction();
             command.CommandText = includeInactive
                 ? """
-                  SELECT Id, CompanyId, ArabicName, IsActive
+                  SELECT Id, CompanyId, ArabicName, IsActive, DepartmentId
                   FROM dbo.HrJobPositions
                   ORDER BY ArabicName;
                   """
                 : """
-                  SELECT Id, CompanyId, ArabicName, IsActive
+                  SELECT Id, CompanyId, ArabicName, IsActive, DepartmentId
                   FROM dbo.HrJobPositions
                   WHERE IsActive = 1
                   ORDER BY ArabicName;
@@ -776,7 +803,10 @@ public class EmployeeService : IEmployeeService
                         ? string.Empty
                         : reader.GetString(2),
                     IsActive = !reader.IsDBNull(3) &&
-                               reader.GetBoolean(3)
+                               reader.GetBoolean(3),
+                    DepartmentId = reader.IsDBNull(4)
+                        ? null
+                        : reader.GetInt32(4)
                 });
             }
         }
@@ -832,6 +862,8 @@ public class EmployeeService : IEmployeeService
         public int CompanyId { get; set; }
 
         public string Name { get; set; } = string.Empty;
+
+        public int? DepartmentId { get; set; }
 
         public bool IsActive { get; set; }
     }

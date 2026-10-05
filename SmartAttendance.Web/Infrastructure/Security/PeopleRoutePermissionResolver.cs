@@ -11,7 +11,8 @@ public enum PeoplePermissionScopeMode
 
 public sealed record PeopleRoutePermissionRequirement(
     string PermissionCode,
-    PeoplePermissionScopeMode ScopeMode);
+    PeoplePermissionScopeMode ScopeMode,
+    bool AllowCompatibilityFallback = true);
 
 public static class PeopleRoutePermissionResolver
 {
@@ -44,20 +45,6 @@ public static class PeopleRoutePermissionResolver
             return Employee(PeoplePermissionCodes.Edit);
         }
 
-        if (normalizedPath.StartsWith("/payroll/terminationsettlement", StringComparison.Ordinal))
-        {
-            // GET بلا موظف يفتح شاشة الاختيار فقط ولا يقرأ بيانات شخص. فرض نطاق
-            // Employee هنا يجعل المحلّل يفشل لعدم وجود هدف، فيُحجب حتى Admin.
-            // عند اختيار موظف أو الإرسال يبقى الحارس الصفّي إلزامياً.
-            if (HttpMethods.IsGet(context.Request.Method) &&
-                (!int.TryParse(context.Request.Query["EmployeeId"], out var targetEmployeeId) ||
-                 targetEmployeeId <= 0))
-            {
-                return null;
-            }
-
-            return Employee(PeoplePermissionCodes.EndService);
-        }
 
         if (normalizedPath.StartsWith("/employees" ) is false &&
             normalizedPath.StartsWith("/employeedocuments", StringComparison.Ordinal))
@@ -76,6 +63,16 @@ public static class PeopleRoutePermissionResolver
             normalizedPath == "/employees/index")
         {
             return DataSet(PeoplePermissionCodes.ViewDirectory);
+        }
+
+        if (normalizedPath.StartsWith("/employees/smartonboarding", StringComparison.Ordinal))
+        {
+            // People AI processing is an explicit grant. Legacy role compatibility
+            // must never implicitly enable document AI processing.
+            return new PeopleRoutePermissionRequirement(
+                PeoplePermissionCodes.AiProcessDocuments,
+                PeoplePermissionScopeMode.DataSet,
+                AllowCompatibilityFallback: false);
         }
 
         if (normalizedPath.StartsWith("/employees/create", StringComparison.Ordinal))
@@ -155,11 +152,6 @@ public static class PeopleRoutePermissionResolver
             }
 
             return Employee(PeoplePermissionCodes.ViewProfile);
-        }
-
-        if (normalizedPath.StartsWith("/employeepermissions", StringComparison.Ordinal))
-        {
-            return Global(PeoplePermissionCodes.ManagePermissions);
         }
 
 

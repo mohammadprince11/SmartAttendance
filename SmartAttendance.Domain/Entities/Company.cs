@@ -4,6 +4,10 @@ namespace SmartAttendance.Domain.Entities;
 
 public class Company : AuditableEntity
 {
+    public int TenantId { get; set; } = 1;
+
+    public Tenant? Tenant { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public string Code { get; set; } = string.Empty;

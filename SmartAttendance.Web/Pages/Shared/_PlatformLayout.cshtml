@@ -1,0 +1,42 @@
+@using SmartAttendance.Web.Infrastructure.Platform
+@{
+    var isAuthenticated = User.Identities.Any(identity =>
+        identity.AuthenticationType == PlatformAuthenticationDefaults.Scheme && identity.IsAuthenticated);
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>@(ViewData["Title"] ?? "إدارة المنصة") - ZYNORA</title>
+    <link rel="stylesheet" href="~/css/platform-portal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-select-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-dropdown-contract.css" asp-append-version="true" />
+    <script src="~/js/platform-portal.js" asp-append-version="true" defer></script>
+</head>
+<body class="platform-body">
+    @if (isAuthenticated)
+    {
+        <header class="platform-topbar">
+            <a class="platform-brand" asp-page="/Platform/Index">
+                <img src="~/brand/zynora-logo-horizontal-light.svg" alt="ZYNORA" />
+                <span>إدارة المنصة</span>
+            </a>
+            <div class="platform-owner">
+                <span>@User.Identity?.Name</span>
+                <form method="post" asp-page="/Platform/Logout">
+                    <button class="platform-button platform-button--ghost" type="submit">تسجيل الخروج</button>
+                </form>
+            </div>
+        </header>
+    }
+
+    <main class="platform-shell @(isAuthenticated ? null : "platform-shell--login")">
+        @RenderBody()
+    </main>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/zynora-select-system.js" asp-append-version="true"></script>
+</body>
+</html>

@@ -19,10 +19,10 @@
     لا يعدّل شيئاً على الجهاز الحالي — قراءة ونسخ فقط.
 
 .PARAMETER OutputRoot
-    مجلد الحزمة. الافتراضي C:\ZynoraHandover.
+    مجلد الحزمة. الافتراضي C:\SmartAttendance\local-runtime\handover.
 
 .PARAMETER LivePath
-    مسار النشر الحيّ. الافتراضي C:\ZynoraPortal.
+    مسار النشر الحيّ. الافتراضي C:\SmartAttendance\local-runtime\portal.
 
 .PARAMETER SqlInstance
     خادم SQL. الافتراضي localhost.
@@ -40,8 +40,8 @@
 
 [CmdletBinding()]
 param(
-    [string] $OutputRoot = 'C:\ZynoraHandover',
-    [string] $LivePath   = 'C:\ZynoraPortal',
+    [string] $OutputRoot = 'C:\SmartAttendance\local-runtime\handover',
+    [string] $LivePath   = 'C:\SmartAttendance\local-runtime\portal',
     [string] $SqlInstance = 'localhost',
     [string] $Database   = 'SmartAttendance',
     [switch] $IncludeImportArchives

@@ -85,6 +85,42 @@ BEGIN
 
     CREATE UNIQUE INDEX UX_EmployeeFinancialInfos_EmployeeId ON EmployeeFinancialInfos (EmployeeId);
 END;
+
+-- Existing databases may contain the required bit columns without DEFAULT constraints.
+-- Repair them idempotently so every salary insert path remains valid.
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.default_constraints dc
+    JOIN sys.columns c
+      ON c.object_id = dc.parent_object_id
+     AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID('dbo.EmployeeFinancialInfos')
+      AND c.name = 'EndOfServiceCompute')
+    ALTER TABLE dbo.EmployeeFinancialInfos ADD CONSTRAINT DF_EmployeeFinancialInfos_EndOfServiceCompute DEFAULT(0) FOR EndOfServiceCompute;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.default_constraints dc
+    JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID('dbo.EmployeeFinancialInfos') AND c.name = 'CalcPreviousSalaries')
+    ALTER TABLE dbo.EmployeeFinancialInfos ADD CONSTRAINT DF_EmployeeFinancialInfos_CalcPreviousSalaries DEFAULT(0) FOR CalcPreviousSalaries;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.default_constraints dc
+    JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID('dbo.EmployeeFinancialInfos') AND c.name = 'StopSalaryCalc')
+    ALTER TABLE dbo.EmployeeFinancialInfos ADD CONSTRAINT DF_EmployeeFinancialInfos_StopSalaryCalc DEFAULT(0) FOR StopSalaryCalc;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.default_constraints dc
+    JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID('dbo.EmployeeFinancialInfos') AND c.name = 'BankCommitment')
+    ALTER TABLE dbo.EmployeeFinancialInfos ADD CONSTRAINT DF_EmployeeFinancialInfos_BankCommitment DEFAULT(0) FOR BankCommitment;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.default_constraints dc
+    JOIN sys.columns c ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id
+    WHERE dc.parent_object_id = OBJECT_ID('dbo.EmployeeFinancialInfos') AND c.name = 'IsDeleted')
+    ALTER TABLE dbo.EmployeeFinancialInfos ADD CONSTRAINT DF_EmployeeFinancialInfos_IsDeleted DEFAULT(0) FOR IsDeleted;
 """);
     }
 }

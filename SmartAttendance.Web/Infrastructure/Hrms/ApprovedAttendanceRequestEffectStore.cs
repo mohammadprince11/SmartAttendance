@@ -11,7 +11,7 @@ namespace SmartAttendance.Web.Infrastructure.Hrms;
 public static class ApprovedAttendanceRequestEffectStore
 {
     private sealed record RequestRow(
-        int Id, int EmployeeId, string RequestType, DateOnly FromDate, DateOnly ToDate,
+        int Id, int EmployeeId, int? RequestTypeId, string RequestType, DateOnly FromDate, DateOnly ToDate,
         TimeSpan? StartTime, TimeSpan? EndTime, int? ShiftTypeId, string Reason);
 
     public sealed record Outcome(bool Applied, string Message);
@@ -25,7 +25,7 @@ public static class ApprovedAttendanceRequestEffectStore
         var request = await LoadApprovedAsync(db, requestId);
         if (request is null) return new Outcome(false, string.Empty);
 
-        var resolution = await ResolveAsync(db, request.RequestType);
+        var resolution = await ResolveAsync(db, request.RequestTypeId, request.RequestType);
         var applied = resolution.Key switch
         {
             "LeaveRequest" => await ApplyLeaveAsync(db, request, resolution.LeaveType, actor),
@@ -47,11 +47,13 @@ public static class ApprovedAttendanceRequestEffectStore
 
     private sealed record Resolution(string Key, LeaveType LeaveType, bool AffectsAttendance);
 
-    private static async Task<Resolution> ResolveAsync(ApplicationDbContext db, string requestType)
+    private static async Task<Resolution> ResolveAsync(ApplicationDbContext db, int? requestTypeId, string requestType)
     {
         await RequestTypeStore.EnsureAsync(db);
-        var dynamicType = (await RequestTypeStore.ListTypesAsync(db, onlyActive: false))
-            .FirstOrDefault(type => string.Equals(type.Name, requestType, StringComparison.OrdinalIgnoreCase));
+        var types = await RequestTypeStore.ListTypesAsync(db, onlyActive: false);
+        var dynamicType = requestTypeId is > 0
+            ? types.FirstOrDefault(type => type.Id == requestTypeId.Value)
+            : types.FirstOrDefault(type => string.Equals(type.Name, requestType, StringComparison.OrdinalIgnoreCase));
 
         if (dynamicType is not null)
         {
@@ -62,6 +64,10 @@ public static class ApprovedAttendanceRequestEffectStore
                 return new Resolution("ExitPermission", LeaveType.Emergency, true);
             if (effect.Kind == BulkRequestStore.EffectKind.OutOfOffice)
                 return new Resolution(effect.RequestTypeCode, LeaveType.Emergency, true);
+            if (effect.Kind == BulkRequestStore.EffectKind.ShiftChange)
+                return new Resolution("ShiftChange", LeaveType.Emergency, true);
+            if (effect.Kind == BulkRequestStore.EffectKind.Overtime)
+                return new Resolution("Overtime", LeaveType.Emergency, false);
         }
 
         var key = ApprovalWorkflowEngine.ResolveRequestTypeKey(requestType);
@@ -84,7 +90,7 @@ public static class ApprovedAttendanceRequestEffectStore
     private static async Task<RequestRow?> LoadApprovedAsync(ApplicationDbContext db, int requestId)
     {
         var rows = await HrmsDatabase.QueryAsync(db, """
-SELECT TOP 1 Id, EmployeeId, ISNULL(RequestType,N'') AS RequestType,
+SELECT TOP 1 Id, EmployeeId, RequestTypeId, ISNULL(RequestType,N'') AS RequestType,
        COALESCE(FromDate, RequestDate, CAST(CreatedAt AS date)) AS FromDate,
        COALESCE(ToDate, FromDate, RequestDate, CAST(CreatedAt AS date)) AS ToDate,
        StartTime, EndTime, ShiftTypeId, ISNULL(Reason,N'') AS Reason
@@ -92,7 +98,7 @@ FROM SelfServiceRequests
 WHERE Id=@Id AND Status=N'Approved' AND EmployeeId IS NOT NULL;
 """, command => HrmsDatabase.AddParameter(command, "@Id", requestId), reader => new RequestRow(
             HrmsDatabase.GetInt(reader, "Id"), HrmsDatabase.GetInt(reader, "EmployeeId"),
-            HrmsDatabase.GetString(reader, "RequestType"),
+            HrmsDatabase.GetNullableInt(reader, "RequestTypeId"), HrmsDatabase.GetString(reader, "RequestType"),
             HrmsDatabase.GetDateOnly(reader, "FromDate") ?? default,
             HrmsDatabase.GetDateOnly(reader, "ToDate") ?? default,
             HrmsDatabase.GetTimeSpan(reader, "StartTime"), HrmsDatabase.GetTimeSpan(reader, "EndTime"),
