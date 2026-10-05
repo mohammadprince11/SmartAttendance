@@ -12,6 +12,7 @@ using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.CompanyContext;
 using SmartAttendance.Web.Infrastructure.Imports;
 using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.Platform;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -289,6 +290,25 @@ public class IndexModel : PageModel
         PageNumber = result.PageNumber;
         PageSize = result.PageSize;
         TotalPages = result.TotalPages;
+    }
+
+    public async Task<IActionResult> OnGetEmployeeCapacityAsync()
+    {
+        Response.Headers.CacheControl = "no-store";
+        var allowed = await _permissionAuthorizationService.HasGlobalPermissionAsync(
+            PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0,
+            PeoplePermissionCodes.Create,
+            PeopleCompatibilityAccess.IsAllowed(PeopleAccessContext.GetRole(HttpContext), PeoplePermissionCodes.Create),
+            HttpContext.RequestAborted);
+        if (!allowed) return Forbid();
+
+        var capacity = await TenantEmployeeCapacity.LoadAsync(
+            _dbContext, TenantContext.GetTenantId(User) ?? 0);
+        return new JsonResult(new
+        {
+            canAdd = capacity?.CanAdd == true,
+            message = TenantEmployeeCapacity.LimitMessage(capacity)
+        });
     }
 
     /// <summary>القالب الفارغ: ترويسة الأعمدة وقوائم المراجع فقط.</summary>

@@ -12,6 +12,7 @@ using SmartAttendance.Web.Infrastructure.HrSettings;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Localization;
 using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.Platform;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
@@ -187,8 +188,9 @@ public class CreateModel : PageModel
         SponsorOptions = await HrLookups.ValuesAsync(_dbContext, "sponsors");
     }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (await CheckEmployeeCapacityAsync() is { } capacityDenial) return capacityDenial;
         CanEditCompensation = await CanEditCompensationGloballyAsync();
         CanUseSmartOnboarding = await CanUseSmartOnboardingAsync();
         await LoadScopedOrganizationAsync();
@@ -206,10 +208,12 @@ public class CreateModel : PageModel
         {
             CodeSchemaPreview = codeSchema.Prefix + (codeSchema.LastNumber + 1).ToString(new string('0', Math.Clamp(codeSchema.Digits, 1, 12)));
         }
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        if (await CheckEmployeeCapacityAsync() is { } capacityDenial) return capacityDenial;
         CanEditCompensation = await CanEditCompensationGloballyAsync();
         CanUseSmartOnboarding = await CanUseSmartOnboardingAsync();
         await LoadScopedOrganizationAsync();
@@ -320,7 +324,18 @@ public class CreateModel : PageModel
             }
         }
 
-        var created = await _employeeService.CreateAsync(Employee);
+        bool created;
+        try
+        {
+            created = await _employeeService.CreateAsync(Employee);
+        }
+        catch (Exception exception) when (TenantEmployeeCapacity.IsLimitException(exception))
+        {
+            // Another request may consume the final slot after the preflight.
+            var capacity = await TenantEmployeeCapacity.LoadAsync(_dbContext, TenantContext.GetTenantId(User) ?? 0);
+            TempData["ErrorMessage"] = TenantEmployeeCapacity.LimitMessage(capacity);
+            return RedirectToPage("./Index");
+        }
 
         if (!created)
         {
@@ -388,6 +403,21 @@ public class CreateModel : PageModel
             PeoplePermissionCodes.EditCompensation,
             PeopleCompatibilityAccess.IsAllowed(role, PeoplePermissionCodes.EditCompensation),
             HttpContext.RequestAborted);
+    }
+
+    private async Task<IActionResult?> CheckEmployeeCapacityAsync()
+    {
+        var allowed = await _permissionAuthorization.HasGlobalPermissionAsync(
+            PeopleAccessContext.GetSystemUserId(HttpContext) ?? 0,
+            PeoplePermissionCodes.Create,
+            PeopleCompatibilityAccess.IsAllowed(PeopleAccessContext.GetRole(HttpContext), PeoplePermissionCodes.Create),
+            HttpContext.RequestAborted);
+        if (!allowed) return Forbid();
+
+        var capacity = await TenantEmployeeCapacity.LoadAsync(_dbContext, TenantContext.GetTenantId(User) ?? 0);
+        if (capacity?.CanAdd == true) return null;
+        TempData["ErrorMessage"] = TenantEmployeeCapacity.LimitMessage(capacity);
+        return RedirectToPage("./Index");
     }
 
     private async Task<bool> CanUseSmartOnboardingAsync()

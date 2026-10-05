@@ -165,10 +165,21 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
         return rows.Count > 0 ? rows[0] : null;
     }
 
-    public async Task<IActionResult> OnGetAsync(int? employeeId, string? tab, string? section)
+    public static int ResolveExplicitEmployeeSelection(int? employeeId, bool employeeSelected) =>
+        employeeSelected ? Math.Max(0, employeeId.GetValueOrDefault()) : 0;
+
+    public async Task<IActionResult> OnGetAsync(int? employeeId, string? tab, string? section, bool employeeSelected = false)
     {
         var actor = await ResolveActorScopeAsync();
         if (!await CanViewAsync(actor))
+        {
+            return Forbid();
+        }
+
+        // A legacy/bookmarked employeeId alone is not a picker choice.
+        // This marker is navigation state only; authorization is still mandatory.
+        employeeId = ResolveExplicitEmployeeSelection(employeeId, employeeSelected);
+        if (employeeId.GetValueOrDefault() > 0 && !await CanAccessEmployeeAsync(actor, employeeId.GetValueOrDefault()))
         {
             return Forbid();
         }
@@ -244,7 +255,7 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
         if (changes.Count == 0)
         {
             StatusMessage = "\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0644\u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629.";
-            return RedirectToPage(new { employeeId, tab = "stage", section = "employee-master" });
+            return RedirectToPage(new { employeeId, employeeSelected = true, tab = "stage", section = "employee-master" });
         }
 
         var requestedBy = User.Identity?.Name ?? "System";
@@ -294,7 +305,7 @@ VALUES
         }
 
         StatusMessage = $"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0642\u0641\u0644\u0629 EU{DateTime.UtcNow:yy}-{batchId}. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0633\u0631\u064A\u0627\u0646: {resolvedEffectiveDate:dd/MM/yyyy}.";
-        return RedirectToPage(new { employeeId, tab = "confirm", section = "employee-master" });
+        return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm", section = "employee-master" });
     }
     // ZYNORA_FIX14B_STAGE_METHOD_END
     public async Task<IActionResult> OnPostLockAsync(int batchId, int employeeId)
@@ -306,7 +317,7 @@ VALUES
         if (batch is null || !batch.Status.Equals("Open", StringComparison.OrdinalIgnoreCase))
         {
             StatusMessage = "الحركة غير موجودة أو تم قفلها مسبقاً.";
-            return RedirectToPage(new { employeeId, tab = "confirm" });
+            return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm" });
         }
 
         // تخويل عند **الكتابة** (الحاسم): الموظف الحقيقيّ للحركة ضمن النطاق. القفل هو
@@ -373,7 +384,7 @@ WHERE Id = @BatchId AND Status = 'Open';
             });
 
         StatusMessage = $"تم قفل الحركة رقم {batchId} وتطبيق التغييرات على ملف الموظف.";
-        return RedirectToPage(new { employeeId, tab = "history" });
+        return RedirectToPage(new { employeeId, employeeSelected = true, tab = "history" });
     }
 
     public async Task<IActionResult> OnPostDeleteOpenAsync(int batchId, int employeeId)
@@ -390,7 +401,7 @@ WHERE Id = @BatchId AND Status = 'Open';
             !await CanAccessEmployeeAsync(actor, target.EmployeeId))
         {
             StatusMessage = "الحركة غير موجودة أو خارج نطاق صلاحياتك.";
-            return RedirectToPage(new { employeeId, tab = "confirm" });
+            return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm" });
         }
 
         await HrmsDatabase.ExecuteAsync(
@@ -405,7 +416,7 @@ WHERE Id = @BatchId AND Status = 'Open';
             command => HrmsDatabase.AddParameter(command, "@BatchId", batchId));
 
         StatusMessage = "تم حذف الحركة غير المقفلة.";
-        return RedirectToPage(new { employeeId, tab = "confirm" });
+        return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm" });
     }
 
     // ZYNORA_FIX14B_MOVEMENT_COLUMNS_START
@@ -421,16 +432,21 @@ WHERE Id = @BatchId AND Status = 'Open';
 Tab = NormalizeTab(tab);
         ActiveSectionKey = NormalizeSection(section);
 
-        Employees = await LoadEmployeesAsync();
-        Departments = await LoadDepartmentsAsync();
-
-        SelectedEmployeeId = employeeId.GetValueOrDefault();
+        // No automatic employee selection. The shared picker submits an explicit ID.
+        SelectedEmployeeId = Math.Max(0, employeeId.GetValueOrDefault());
         if (SelectedEmployeeId <= 0)
         {
-            SelectedEmployeeId = Employees.FirstOrDefault()?.Id ?? 0;
+            return;
         }
 
         SelectedEmployee = await LoadEmployeeAsync(SelectedEmployeeId) ?? UpdateEmployee.Empty;
+        if (SelectedEmployee.Id <= 0)
+        {
+            SelectedEmployeeId = 0;
+            return;
+        }
+
+        Departments = await LoadDepartmentsAsync();
         PositionOptions = await LoadPositionOptionsAsync(SelectedEmployee.Position); // ZYNORA_FIX14G_LOAD_LOOKUPS
         NationalityOptions = await LoadNationalityOptionsAsync();
         ManagerOptions = await LoadActiveManagersAsync(SelectedEmployeeId);

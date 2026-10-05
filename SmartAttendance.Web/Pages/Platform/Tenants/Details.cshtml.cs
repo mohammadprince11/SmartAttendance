@@ -64,15 +64,23 @@ public sealed class DetailsModel : PageModel
     [TempData]
     public string? ErrorMessage { get; set; }
 
+    [TempData]
+    public string? LicenseMessage { get; set; }
+
+    [TempData]
+    public string? LicenseError { get; set; }
+
     public sealed class InputModel
     {
         public int TenantId { get; set; }
         public string VersionToken { get; set; } = string.Empty;
 
-        [Required, StringLength(60, MinimumLength = 2)]
+        // jQuery length rules count selected options, not the selected code's characters.
+        // Regex validates the actual string on both client and server.
+        [Required(ErrorMessage = "اختر خطة الترخيص."), RegularExpression(@"^[\s\S]{2,60}$", ErrorMessage = "اسم الخطة يجب أن يكون بين حرفين و60 حرفاً.")]
         public string PlanCode { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "اختر حالة الترخيص.")]
         public string LicenseStatus { get; set; } = "Active";
 
         [DataType(DataType.Date)]
@@ -84,9 +92,9 @@ public sealed class DetailsModel : PageModel
         [DataType(DataType.Date)]
         public DateTime? GraceEndsAt { get; set; }
 
-        [Range(1, 1000)] public int MaxCompanies { get; set; }
-        [Range(1, 1000000)] public int MaxEmployees { get; set; }
-        [Range(0, 100000)] public int MaxDevices { get; set; }
+        [Range(1, 1000, ErrorMessage = "حد الشركات يجب أن يكون بين 1 و1000.")] public int MaxCompanies { get; set; }
+        [Range(1, 1000000, ErrorMessage = "حد الموظفين يجب أن يكون بين 1 و1000000.")] public int MaxEmployees { get; set; }
+        [Range(0, 100000, ErrorMessage = "حد الأجهزة يجب أن يكون بين 0 و100000.")] public int MaxDevices { get; set; }
     }
 
     public sealed class CustomerProfileInputModel
@@ -226,18 +234,25 @@ public sealed class DetailsModel : PageModel
 
     public async Task<IActionResult> OnPostSaveLicenseAsync()
     {
-        if (!TryDecodeVersion(Input.VersionToken, out var version) ||
-            !PlatformLicensePolicy.AllowedStatuses.Contains(Input.LicenseStatus, StringComparer.Ordinal) ||
-            Input.ExpiresAt.HasValue && Input.ExpiresAt.Value.Date < Input.StartsAt.Date ||
-            Input.GraceEndsAt.HasValue && (!Input.ExpiresAt.HasValue || Input.GraceEndsAt.Value.Date < Input.ExpiresAt.Value.Date) ||
-            EnabledModules.Length == 0 || EnabledModules.Any(module => !Modules.ContainsKey(module)))
-        {
-            ModelState.AddModelError(string.Empty, "تحقق من بيانات اللايسنس قبل الحفظ.");
-        }
+        PlatformFormValidation.RemoveOtherForms(ModelState, nameof(Renewal), nameof(Domain), nameof(CustomerProfile));
+
+        if (!TryDecodeVersion(Input.VersionToken, out var version))
+            ModelState.AddModelError("Input.VersionToken", "بيانات نسخة الترخيص غير صالحة. حدّث الصفحة ثم أعد المحاولة.");
+        if (!PlatformLicensePolicy.AllowedStatuses.Contains(Input.LicenseStatus, StringComparer.Ordinal))
+            ModelState.AddModelError("Input.LicenseStatus", "اختر حالة ترخيص صالحة.");
+        if (Input.ExpiresAt.HasValue && Input.ExpiresAt.Value.Date < Input.StartsAt.Date)
+            ModelState.AddModelError("Input.ExpiresAt", "تاريخ الانتهاء يجب ألا يسبق تاريخ البداية.");
+        if (Input.GraceEndsAt.HasValue && (!Input.ExpiresAt.HasValue || Input.GraceEndsAt.Value.Date < Input.ExpiresAt.Value.Date))
+            ModelState.AddModelError("Input.GraceEndsAt", "نهاية فترة السماح يجب أن تكون بتاريخ الانتهاء أو بعده، مع تحديد تاريخ الانتهاء.");
+        if (EnabledModules.Length == 0 || EnabledModules.Any(module => !Modules.ContainsKey(module)))
+            ModelState.AddModelError(nameof(EnabledModules), "اختر مودلاً واحداً على الأقل من المودلات المتاحة.");
 
         if (!ModelState.IsValid)
         {
             if (!await LoadTenantAsync(Input.TenantId)) return NotFound();
+            Renewal = NewRenewalInput(Tenant);
+            Domain = NewDomainInput(Tenant);
+            CustomerProfile = NewCustomerProfileInput(Tenant);
             return Page();
         }
 
@@ -260,14 +275,14 @@ public sealed class DetailsModel : PageModel
 
         if (!updated)
         {
-            Message = "لم يُحفظ التعديل لأن اللايسنس تغير من جلسة أخرى. راجع القيم ثم أعد المحاولة.";
+            LicenseError = "لم يُحفظ التعديل لأن اللايسنس تغير من جلسة أخرى أو تعذر تحديثه. راجع القيم ثم أعد المحاولة.";
         }
         else
         {
-            Message = "تم تحديث اللايسنس بنجاح.";
+            LicenseMessage = "تم حفظ تغييرات اللايسنس بنجاح.";
         }
 
-        return RedirectToPage(new { id = Input.TenantId });
+        return RedirectToPage(null, null, new { id = Input.TenantId }, "license-management");
     }
 
     public async Task<IActionResult> OnPostSetActiveAsync(int id, string? reason, bool confirmed)

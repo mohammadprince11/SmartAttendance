@@ -6,8 +6,9 @@
 }
 
 <link rel="stylesheet" href="~/css/zynora-employee-updates.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/employee-updates-identity.css" asp-append-version="true" />
 
-<section class="nxupd-page nxupd-page-v14b" dir="rtl">
+<section class="nxupd-page nxupd-page-v14b zy-employee-updates" dir="rtl">
     <header class="nxupd-hero">
         <div>
             <h1>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
@@ -26,27 +27,34 @@
 
     <section class="nxupd-selector-card nxupd-selector-card-single">
         <form method="get" class="nxupd-employee-select">
+            <input type="hidden" name="employeeSelected" value="true" />
             <input type="hidden" name="tab" value="@Model.Tab" />
             <input type="hidden" name="section" value="employee-master" />
             @* المنتقي المشترك بدل منسدلةٍ كانت تحمّل 1356 موظفاً بكل فتحة صفحة *@
             <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
                 Name = "employeeId",
                 SelectedId = Model.SelectedEmployeeId,
-                SelectedCode = Model.SelectedEmployee.EmployeeNo,
-                SelectedName = Model.SelectedEmployee.FullName,
+                SelectedCode = Model.SelectedEmployeeId > 0 ? Model.SelectedEmployee.EmployeeNo : string.Empty,
+                SelectedName = Model.SelectedEmployeeId > 0 ? Model.SelectedEmployee.FullName : string.Empty,
                 SubmitOnSelect = true })" />
         </form>
     </section>
 
-    <nav class="nxupd-top-tabs">
-        <a class="@(Model.Tab == "stage" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="stage" asp-route-section="employee-master">&#x0625;&#x062F;&#x062E;&#x0627;&#x0644; &#x062D;&#x0631;&#x0643;&#x0629; &#x062C;&#x062F;&#x064A;&#x062F;&#x0629;</a>
-        <a class="@(Model.Tab == "confirm" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;</a>
-        <a class="@(Model.Tab == "history" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="history" asp-route-section="employee-master">&#x0627;&#x0644;&#x0647;&#x0633;&#x062A;&#x0631;&#x064A;</a>
+    <nav class="nxupd-top-tabs" aria-label="مراحل تحديث الموظف">
+        <a class="@(Model.Tab == "stage" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-employeeSelected="@(Model.SelectedEmployeeId > 0)" asp-route-tab="stage" asp-route-section="employee-master">&#x0625;&#x062F;&#x062E;&#x0627;&#x0644; &#x062D;&#x0631;&#x0643;&#x0629; &#x062C;&#x062F;&#x064A;&#x062F;&#x0629;</a>
+        <a class="@(Model.Tab == "confirm" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-employeeSelected="@(Model.SelectedEmployeeId > 0)" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;</a>
+        <a class="@(Model.Tab == "history" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-employeeSelected="@(Model.SelectedEmployeeId > 0)" asp-route-tab="history" asp-route-section="employee-master">&#x0627;&#x0644;&#x0647;&#x0633;&#x062A;&#x0631;&#x064A;</a>
     </nav>
 
     <main class="nxupd-layout nxupd-layout-single">
         <section class="nxupd-content">
-            @if (Model.Tab == "stage")
+            @if (Model.SelectedEmployeeId <= 0)
+            {
+                <section class="nxupd-card">
+                    <div class="nxupd-empty">اختر موظفاً لعرض بياناته وتحديثها.</div>
+                </section>
+            }
+            else if (Model.Tab == "stage")
             {
                 <section class="nxupd-card nxupd-stage-card">
                     <header class="nxupd-card-head">
@@ -217,7 +225,7 @@
 
                         <footer class="nxupd-form-footer">
                             <button type="submit">&#x0625;&#x0646;&#x0634;&#x0627;&#x0621; &#x062D;&#x0631;&#x0643;&#x0629; &#x063A;&#x064A;&#x0631; &#x0645;&#x0642;&#x0641;&#x0644;&#x0629;</button>
-                            <a asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x0630;&#x0647;&#x0627;&#x0628; &#x0625;&#x0644;&#x0649; &#x0635;&#x0641;&#x062D;&#x0629; &#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;</a>
+                            <a asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-employeeSelected="true" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x0630;&#x0647;&#x0627;&#x0628; &#x0625;&#x0644;&#x0649; &#x0635;&#x0641;&#x062D;&#x0629; &#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;</a>
                         </footer>
                     </form>
                 </section>

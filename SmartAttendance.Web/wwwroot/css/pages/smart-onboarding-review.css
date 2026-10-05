@@ -251,25 +251,8 @@
     color:var(--color-text-primary)
 }
 
-/* Final Preview enhanced ZYNORA selects: match visible text inputs exactly. */
-.sor-shell .sor-final-form .nxcs-select .nxcs-trigger.nxcs-trigger{
-    border:1px solid var(--color-border-strong) !important;
-    background:var(--color-surface) !important;
-    background-image:none !important;
-    color:var(--color-text-primary) !important;
-    box-shadow:none !important;
-}
-.sor-shell .sor-final-form .nxcs-select .nxcs-trigger.nxcs-trigger:hover{
-    border-color:var(--color-border-strong) !important;
-    background:var(--color-surface) !important;
-    box-shadow:none !important;
-}
-.sor-shell .sor-final-form .nxcs-select.is-open .nxcs-trigger.nxcs-trigger,
-.sor-shell .sor-final-form .nxcs-select .nxcs-trigger.nxcs-trigger:focus{
-    border-color:var(--color-primary) !important;
-    background:var(--color-surface) !important;
-    box-shadow:none !important;
-}
+/* Enhanced selects use zynora-dropdown-contract.css, like every other page.
+   Do not override their palette to match this page's text inputs. */
 
 .sor-confidence--high{
     background:var(--color-success-soft)!important;

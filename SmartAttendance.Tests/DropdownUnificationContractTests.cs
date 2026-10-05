@@ -30,6 +30,30 @@ public sealed class DropdownUnificationContractTests
     }
 
     [Fact]
+    public void DropdownPalette_UsesIdentityTokensSharedByAllLayouts()
+    {
+        var source = ReadWeb("wwwroot", "css", "zynora-dropdown-contract.css");
+        Assert.Contains("--zy-dd-field: #111b2a", source);
+        Assert.Contains("--zy-dd-panel: #0f1a29", source);
+        Assert.Contains("--zy-dd-option-active: #20374f", source);
+        Assert.Contains("@layer zynora-dropdown-contract {", source);
+        Assert.Contains(".nxr-search-dropdown .nxr-option", source);
+        Assert.Contains("--zy-dd-text: var(--text-default)", source);
+        Assert.Contains("--zy-dd-muted: var(--text-muted)", source);
+        Assert.DoesNotContain("var(--color-text-primary", source);
+        Assert.DoesNotContain("var(--color-text-secondary", source);
+        Assert.Contains("scrollbar-color: var(--zy-dd-border-focus) var(--zy-dd-panel)", source);
+        Assert.Contains("font-family: var(--zy-dd-font) !important", source);
+    }
+
+    [Fact]
+    public void OnboardingReview_DoesNotOverrideEnhancedSelectPalette()
+    {
+        var source = ReadWeb("wwwroot", "css", "pages", "smart-onboarding-review.css");
+        Assert.DoesNotContain(".nxcs-trigger", source);
+    }
+
+    [Fact]
     public void EmployeePortal_DoesNotLoadASecondPageLocalSelectSystem()
     {
         var page = ReadWeb("Pages", "EmployeePortal", "DataChange.cshtml");

@@ -1,0 +1,347 @@
+/* Page-scoped visual contract. Important layer wins the legacy v14 overrides;
+   leave native widget hiding, submission, confirmations and popup positioning alone. */
+@layer zynora-employee-updates {
+    .zy-employee-updates {
+        display: grid !important;
+        gap: var(--zy-space-4) !important;
+        min-inline-size: 0 !important;
+        color: var(--text-default) !important;
+        font-family: var(--font-family) !important;
+    }
+    .zy-employee-updates :is(.nxupd-hero, .nxupd-selector-card, .nxupd-top-tabs, .nxupd-card,
+        .nxupd-stage-block, .nxupd-batch, .nxupd-history-body) {
+        background: var(--surface-panel) !important;
+        background-image: none !important;
+        border: 1px solid var(--border-default) !important;
+        border-radius: var(--zy-radius-lg, 16px) !important;
+        box-shadow: none !important;
+        min-inline-size: 0 !important;
+    }
+    .zy-employee-updates :is(.nxupd-hero, .nxupd-card, .nxupd-stage-block) {
+        padding: var(--zy-space-4) !important;
+    }
+    .zy-employee-updates .nxupd-hero {
+        min-block-size: 0 !important;
+        min-height: 0 !important;
+        flex-wrap: wrap !important;
+    }
+    .zy-employee-updates .nxupd-hero h1 { font-size: var(--fs-h1, 28px) !important; }
+    .zy-employee-updates :is(h1, h2, h3, strong, label) {
+        color: var(--text-default) !important;
+    }
+    .zy-employee-updates :is(.nxupd-hero p, .nxupd-card-head p, .nxupd-field small,
+        .nxupd-note small, .nxupd-stage-block > header span, .nxupd-history-body span,
+        .nxupd-history-body small, .nxupd-batch header small, .nxupd-employee-select label) {
+        color: var(--text-muted) !important;
+        font-weight: 500 !important;
+        line-height: 1.65 !important;
+        overflow-wrap: anywhere !important;
+    }
+    .zy-employee-updates .nxupd-hero-status {
+        inline-size: auto !important;
+        width: auto !important;
+        min-block-size: 0 !important;
+        min-height: 0 !important;
+        padding: 12px 20px !important;
+        border: 1px solid var(--border-default) !important;
+        background: var(--surface-raised) !important;
+        border-radius: 12px !important;
+        flex-shrink: 0 !important;
+    }
+    .zy-employee-updates .nxupd-hero-status strong { font-size: 26px !important; }
+    .zy-employee-updates .nxupd-hero-status small { color: var(--text-muted) !important; }
+    .zy-employee-updates .nxupd-selector-card { padding: 16px !important; }
+    /* The shared picker must not inherit compact legacy form-control sizing. */
+    .zy-employee-updates .nxupd-employee-select,
+    .zy-employee-updates .nxupd-employee-select .zyep {
+        display: grid !important;
+        inline-size: 100% !important;
+        min-inline-size: 0 !important;
+        gap: 8px !important;
+    }
+    .zy-employee-updates .zyep-box {
+        display: grid !important;
+        grid-template-columns: 108px minmax(0, 1fr) 44px !important;
+        gap: 8px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+    }
+    .zy-employee-updates .zyep-box :is(.zyep-code, .zyep-name, .zyep-open) {
+        box-sizing: border-box !important;
+        block-size: 44px !important;
+        min-block-size: 44px !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        min-inline-size: 0 !important;
+        inline-size: 100% !important;
+        margin: 0 !important;
+        border: 1px solid var(--zy-dd-border) !important;
+        border-radius: var(--zy-dd-radius) !important;
+        background: var(--zy-dd-field) !important;
+        color: var(--text-default) !important;
+        font-family: inherit !important;
+        font-size: 13px !important;
+        line-height: normal !important;
+        padding: 0 12px !important;
+        box-shadow: none !important;
+    }
+    .zy-employee-updates .zyep-code { direction: ltr !important; text-align: center !important; font-weight: 600 !important; }
+    .zy-employee-updates .zyep-name { text-align: start !important; font-weight: 600 !important; text-overflow: ellipsis !important; }
+    .zy-employee-updates .zyep-box .zyep-open {
+        display: grid !important;
+        place-items: center !important;
+        padding: 0 !important;
+        background: var(--surface-raised) !important;
+        color: var(--brand-primary) !important;
+        cursor: pointer !important;
+    }
+    .zy-employee-updates .zyep-open svg { inline-size: 18px !important; block-size: 18px !important; }
+    .zy-employee-updates .zyep-box :is(input, button):focus-visible {
+        outline: 2px solid var(--brand-primary) !important;
+        outline-offset: 2px !important;
+    }
+    .zy-employee-updates .zyep-box .zyep-open:hover { background: var(--zy-dd-option-active) !important; }
+    .zy-employee-updates .zyep-box input::placeholder { color: var(--text-muted) !important; }
+    .zy-employee-updates .zyep-box .zyep-code.zyep-bad { color: var(--color-danger) !important; border-color: var(--color-danger) !important; }
+    @media (max-width: 480px) {
+        .zy-employee-updates .zyep-box { grid-template-columns: 80px minmax(0, 1fr) 44px !important; }
+    }
+    .zy-employee-updates .nxupd-top-tabs {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        padding: 8px !important;
+    }
+    .zy-employee-updates .nxupd-top-tabs a {
+        min-inline-size: 0 !important;
+        min-width: 0 !important;
+        padding: 10px 12px !important;
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        border-radius: 10px !important;
+        color: var(--text-muted) !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+    }
+    .zy-employee-updates .nxupd-top-tabs a:is(.active, :hover, :focus-visible) {
+        background: color-mix(in srgb, var(--brand-primary) 18%, var(--surface-panel)) !important;
+        border-color: var(--brand-primary) !important;
+        color: var(--text-default) !important;
+    }
+    .zy-employee-updates :is(.nxupd-form, .nxupd-stage-card, .nxupd-stage-blocks,
+        .nxupd-batch-list, .nxupd-history) {
+        display: grid !important;
+        gap: var(--zy-space-4) !important;
+        min-inline-size: 0 !important;
+    }
+    .zy-employee-updates .nxupd-stage-blocks {
+        grid-template-columns: minmax(0, 1fr) !important;
+        column-count: auto !important;
+    }
+    .zy-employee-updates .nxupd-stage-block {
+        display: block !important;
+        inline-size: 100% !important;
+        margin: 0 !important;
+    }
+    .zy-employee-updates :is(.nxupd-card-head, .nxupd-stage-block > header) {
+        margin-block-end: 16px !important;
+        padding-block-end: 16px !important;
+        border-block-end: 1px solid var(--border-default) !important;
+        gap: 12px !important;
+        flex-wrap: wrap !important;
+    }
+    .zy-employee-updates .nxupd-stage-block > header h3 { font-size: 18px !important; }
+    .zy-employee-updates :is(.nxupd-pill, .nxupd-stage-block > header strong) {
+        border: 1px solid var(--border-default) !important;
+        background: var(--surface-raised) !important;
+        color: var(--text-default) !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+    }
+    .zy-employee-updates :is(.nxupd-rule-box, .nxupd-movement-meta, .nxupd-batch-note) {
+        padding: 16px !important;
+        margin: 0 !important;
+        border: 1px solid var(--border-default) !important;
+        background: var(--surface-raised) !important;
+        border-radius: 12px !important;
+        color: var(--text-default) !important;
+    }
+    .zy-employee-updates .nxupd-rule-box span { color: var(--text-muted) !important; }
+    .zy-employee-updates .nxupd-movement-meta {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 16px !important;
+        align-items: start !important;
+    }
+    .zy-employee-updates .nxupd-movement-meta > .nxupd-note { grid-column: 1 / -1 !important; }
+    .zy-employee-updates .nxupd-fields {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 20px !important;
+        align-items: start !important;
+    }
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) {
+        display: grid !important;
+        grid-template-rows: auto auto auto !important;
+        gap: 8px !important;
+        min-inline-size: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        background-image: none !important;
+    }
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) :is(input, textarea):not(.nxcal-native):not([type="hidden"]) {
+        inline-size: 100% !important;
+        min-inline-size: 0 !important;
+        min-height: 44px !important;
+        border: 1px solid var(--zy-dd-border) !important;
+        border-radius: var(--zy-dd-radius) !important;
+        background: var(--zy-dd-field) !important;
+        background-image: none !important;
+        color: var(--text-default) !important;
+        box-shadow: none !important;
+        font-family: inherit !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) input:not(.nxcal-native):not([type="hidden"]) {
+        height: 44px !important;
+        max-height: none !important;
+        line-height: normal !important;
+        padding: 0 12px !important;
+    }
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) textarea {
+        min-height: 100px !important;
+        padding: 12px !important;
+    }
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) :is(input, textarea):focus-visible {
+        outline: 2px solid var(--zy-dd-border-focus) !important;
+        outline-offset: 2px !important;
+    }
+    .zy-employee-updates .nxupd-field small b {
+        color: var(--text-default) !important;
+        font-weight: 600 !important;
+    }
+    .zy-employee-updates .nxupd-field small {
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    .zy-employee-updates .nxupd-form-footer {
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        padding-block-start: 20px !important;
+        border-block-start: 1px solid var(--border-default) !important;
+    }
+    .zy-employee-updates :is(.nxupd-form-footer button, .nxupd-batch footer button) {
+        background: var(--brand-primary-strong) !important;
+        background-image: none !important;
+        color: var(--color-on-primary) !important;
+        border: 1px solid var(--brand-primary-strong) !important;
+        box-shadow: none !important;
+        font-weight: 700 !important;
+    }
+    .zy-employee-updates .nxupd-form-footer a {
+        background: transparent !important;
+        color: var(--text-default) !important;
+        border: 1px solid var(--border-default) !important;
+    }
+    .zy-employee-updates .nxupd-batch footer button.danger {
+        background: var(--status-danger-soft) !important;
+        color: var(--color-danger) !important;
+        border-color: var(--color-danger) !important;
+    }
+    .zy-employee-updates .nxupd-change-table :is(th, td) {
+        color: var(--text-default) !important;
+        border-color: var(--border-default) !important;
+        text-align: start !important;
+    }
+    .zy-employee-updates .nxupd-change-table th {
+        background: var(--surface-raised) !important;
+        color: var(--text-muted) !important;
+    }
+    .zy-employee-updates .nxupd-history-body li {
+        background: var(--surface-raised) !important;
+        color: var(--text-default) !important;
+        border-color: var(--border-default) !important;
+        grid-template-columns: minmax(100px, .8fr) minmax(0, 1fr) 24px minmax(0, 1fr) !important;
+        overflow-wrap: anywhere !important;
+    }
+    .zy-employee-updates .nxupd-history-body li :is(b, strong) { color: var(--text-default) !important; }
+    .zy-employee-updates [data-section-key="financial"] .nxupd-field small {
+        display: block !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+    .zy-employee-updates [data-section-key="financial"] .nxupd-field small b {
+        font-family: inherit !important;
+    }
+    .zy-employee-updates .nxupd-history-dot {
+        background: var(--brand-primary) !important;
+        box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand-primary) 16%, transparent) !important;
+    }
+    .zy-employee-updates .nxupd-batch header strong {
+        background: var(--status-warning-soft) !important;
+        border-color: var(--color-warning) !important;
+        color: var(--color-warning) !important;
+    }
+    .zy-employee-updates .nxupd-empty {
+        background: var(--surface-raised) !important;
+        border-color: var(--border-default) !important;
+        color: var(--text-muted) !important;
+    }
+    .zy-employee-updates .nxupd-alert {
+        background: var(--status-success-soft) !important;
+        color: var(--color-success) !important;
+        border-color: var(--color-success) !important;
+    }
+    /* Confirmation markup is outside the page section; scope through its owner. */
+    body:has(.zy-employee-updates) .nxupd-modal-backdrop {
+        background: color-mix(in srgb, var(--surface-app) 80%, transparent) !important;
+        background-image: none !important;
+    }
+    body:has(.zy-employee-updates) .nxupd-modal {
+        background: var(--surface-panel) !important;
+        background-image: none !important;
+        border-color: var(--border-default) !important;
+        color: var(--text-default) !important;
+    }
+    body:has(.zy-employee-updates) .nxupd-modal :is(h2, h3, p, strong) { color: var(--text-default) !important; }
+    body:has(.zy-employee-updates) .nxupd-modal :is(.nxupd-modal-copy span, small) { color: var(--text-muted) !important; }
+    body:has(.zy-employee-updates) .nxupd-modal :is(.nxupd-modal-icon, .nxupd-modal-warning, .nxupd-modal-close) {
+        background: var(--surface-raised) !important;
+        border-color: var(--border-default) !important;
+        color: var(--text-default) !important;
+        box-shadow: none !important;
+    }
+    body:has(.zy-employee-updates) .nxupd-modal::before { border-color: var(--border-default) !important; }
+    body:has(.zy-employee-updates) .nxupd-modal-actions button {
+        background: var(--surface-raised) !important;
+        background-image: none !important;
+        border-color: var(--border-default) !important;
+        color: var(--text-default) !important;
+        box-shadow: none !important;
+    }
+    body:has(.zy-employee-updates) .nxupd-modal-actions .confirm {
+        background: var(--brand-primary-strong) !important;
+        color: var(--color-on-primary) !important;
+    }
+    body:has(.zy-employee-updates) .nxupd-modal[data-tone="danger"] .confirm {
+        background: var(--color-danger) !important;
+    }
+    @media (max-width: 1100px) {
+        .zy-employee-updates .nxupd-fields { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 760px) {
+        .zy-employee-updates :is(.nxupd-hero, .nxupd-card, .nxupd-stage-block) { padding: 16px !important; }
+        .zy-employee-updates :is(.nxupd-fields, .nxupd-movement-meta, .nxupd-top-tabs, .nxupd-history-body li) {
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+        .zy-employee-updates .nxupd-hero-status { justify-self: start !important; }
+        .zy-employee-updates .nxupd-form-footer > :is(button, a) { inline-size: 100% !important; }
+    }
+}
