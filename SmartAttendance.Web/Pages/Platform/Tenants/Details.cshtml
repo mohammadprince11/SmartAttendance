@@ -110,6 +110,7 @@
     </div>
 }
 
+<div class="platform-section-stack">
 <form method="post" asp-page-handler="SaveCustomerProfile" class="platform-card platform-form-section">
     <input asp-for="CustomerProfile.TenantId" type="hidden" />
     <div asp-validation-summary="ModelOnly" class="platform-alert platform-alert--danger"></div>
@@ -472,6 +473,8 @@
         </ol>
     }
 </section>
+
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
