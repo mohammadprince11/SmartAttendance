@@ -241,7 +241,8 @@
             </div>
         }
 
-        <form method="post" asp-page-handler="SaveCategory" class="zyp-editor-grid zyu-410cf9349439">
+        <form method="post" asp-page-handler="SaveCategory" class="zy-hr-category-form">
+            <div class="zyp-editor-grid">
             <label>
                 اسم فئة جديدة
                 <input asp-for="CategoryName" placeholder="اللوائح والسياسات" />
@@ -254,10 +255,10 @@
                 الترتيب
                 <input asp-for="CategorySortOrder" type="number" min="0" />
             </label>
-            <label class="zyu-110c1427da8c">
-                &nbsp;
+            </div>
+            <footer class="nxhs-actions">
                 <button type="submit" class="zyc-add-rule zyu-8ede280590c3">إضافة فئة</button>
-            </label>
+            </footer>
         </form>
     </div>
 </section>

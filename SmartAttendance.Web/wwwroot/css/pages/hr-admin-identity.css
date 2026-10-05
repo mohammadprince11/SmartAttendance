@@ -69,6 +69,8 @@
         display: grid !important; grid-template-columns: 80px minmax(0, 1fr) 44px !important;
         gap: 8px !important; border: 0 !important; background: transparent !important;
         min-inline-size: 0 !important; box-shadow: none !important;
+        overflow: visible !important; block-size: auto !important; height: auto !important;
+        min-block-size: 44px !important; min-height: 44px !important; max-block-size: none !important; max-height: none !important;
     }
     .zy-hr-admin-page .zyep-open {
         inline-size: 44px !important; block-size: 44px !important; border-radius: 10px !important;
@@ -76,6 +78,11 @@
         border: 1px solid var(--border-default) !important;
     }
     .zy-hr-admin-page .zyep-box :is(.zyep-code, .zyep-name) { min-width: 0 !important; margin: 0 !important; }
+    .zy-hr-admin-page .zyep-box :is(.zyep-code, .zyep-name, .zyep-open) {
+        height: 44px !important; min-height: 44px !important; max-height: 44px !important;
+        block-size: 44px !important; min-block-size: 44px !important; max-block-size: 44px !important;
+        align-self: center !important;
+    }
     .zy-hr-admin-page :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
         min-inline-size: 0 !important; max-inline-size: 100% !important; inline-size: 100% !important;
         border: 1px solid var(--zy-dd-border, var(--border-default)) !important; border-radius: 10px !important;
@@ -110,6 +117,25 @@
         background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important;
         border-color: var(--color-primary-strong) !important;
     }
+    /* zyp-move was a 28px icon-only utility; these views also use it for text links. */
+    .zy-hr-admin-page :is(.nxhs-actions, .zyp-actions) .zyp-move {
+        width: auto !important; inline-size: auto !important; min-inline-size: max-content !important;
+        flex: 0 0 auto !important; white-space: nowrap !important; line-height: 1.5 !important;
+    }
+    .zy-hr-admin-page .zy-hr-filter-form {
+        display: flex !important; flex-wrap: wrap !important; justify-content: flex-start !important;
+        align-items: end !important; gap: 12px !important;
+    }
+    .zy-hr-admin-page .zy-hr-filter-form > label {
+        width: auto !important; inline-size: min(100%, 320px) !important; flex: 0 1 320px !important;
+    }
+    .zy-hr-admin-page .zy-hr-filter-form > .zy-hr-filter-action {
+        inline-size: auto !important; flex: 0 0 auto !important; display: flex !important;
+    }
+    .zy-hr-admin-page .zy-hr-filter-action button { margin: 0 !important; }
+    .zy-hr-admin-page .zy-hr-category-form { display: grid; gap: 16px; }
+    .zy-hr-admin-page .zy-hr-category-form .zyp-editor-grid { margin-block-end: 0 !important; }
+    .zy-hr-admin-page .zy-hr-category-form .nxhs-actions { margin-block-start: 0 !important; justify-content: flex-start !important; }
     .zy-hr-admin-page :is(.is-active, .zydoc-token:hover) {
         color: var(--brand-primary) !important; border-color: var(--brand-primary) !important;
         background: var(--color-primary-soft) !important;
@@ -151,6 +177,12 @@
     .zy-hr-admin-page :is(.zy-alert-success, .nxr-success, .nxr-doc-status.valid) { border-color: var(--status-success) !important; color: var(--status-success) !important; }
     .zy-hr-admin-page :is(.nxr-doc-status.expiring, .nxr-document-rules-count.warn) { border-color: var(--status-warning) !important; color: var(--status-warning) !important; }
     .zy-hr-admin-page :is(.zyc-empty, .nxr-empty) { padding: 32px !important; color: var(--text-muted) !important; text-align: center !important; }
+    .zy-hr-admin-page .nxr-table td.nxr-empty {
+        display: table-cell !important; width: auto !important; inline-size: auto !important;
+        text-align: center !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+    }
+    .zy-hr-admin-page .zy-hr-empty-state { display: grid !important; place-items: center !important; min-height: 128px !important; min-block-size: 128px !important; padding: 24px !important; }
+    .zy-hr-admin-page .nxr-table-wrap.is-empty { min-height: 0 !important; min-block-size: 0 !important; max-height: none !important; background: var(--surface-panel) !important; }
     .zy-hr-admin-page .nxhs-cards { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 16px !important; }
     .zy-hr-admin-page .nxhs-card { display: grid !important; align-content: start !important; gap: 12px !important; text-decoration: none !important; min-height: 140px !important; transition: border-color 150ms; }
     .zy-hr-admin-page .nxhs-card strong { font-size: 17px !important; font-weight: 600 !important; }
