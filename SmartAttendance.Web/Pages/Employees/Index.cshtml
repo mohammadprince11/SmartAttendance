@@ -11,6 +11,7 @@
 @section Styles { <link rel="stylesheet" href="~/css/zynora-people.css" asp-append-version="true" /> }
 <link rel="stylesheet" href="~/css/pages/index-9de51f6552.css" asp-append-version="true" />
 <script src="~/js/zynora-employee-row-click.js" asp-append-version="true" defer></script>
+<script src="~/js/zynora-employee-capacity.js" asp-append-version="true" defer></script>
 
 <div class="zhr-container">
     <h1 class="zy-page-title">قائمة الموظفين</h1>
@@ -23,7 +24,7 @@
         {
             <div class="zyu-5fcdd953a3c9">
                 @if (Model.CanImportEmployees) { <button type="button" class="zhr-btn zhr-btn-secondary" data-import-open>استيراد الموظفين</button> }
-                @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary">إضافة موظف</a> }
+                @if (Model.CanCreateEmployee) { <a asp-page="./Create" class="zhr-btn zhr-btn-primary" data-employee-add data-capacity-url="@Url.Page("./Index", "EmployeeCapacity")">إضافة موظف</a> }
             </div>
         }
     </div>
@@ -151,6 +152,16 @@
         }
     </section>
 </div>
+
+@if (Model.CanCreateEmployee)
+{
+    <div class="zy-modal-backdrop" id="employee-capacity-backdrop" inert></div>
+    <div class="zy-modal zyu-7abdba98c688" id="employee-capacity-modal" role="alertdialog" aria-modal="true" aria-labelledby="employee-capacity-title" aria-describedby="employee-capacity-message" inert>
+        <div class="zy-modal__header"><h2 id="employee-capacity-title">حد الموظفين مكتمل</h2></div>
+        <div class="zy-modal__body"><p id="employee-capacity-message"></p></div>
+        <div class="zy-modal__footer"><button type="button" class="zhr-btn zhr-btn-primary" data-capacity-close>حسناً</button></div>
+    </div>
+}
 
 @if (Model.CanImportEmployees)
 {
