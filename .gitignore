@@ -123,3 +123,10 @@ _design-backups/
 
 # Local Serena workspace state
 .serena/
+
+# Graphify workstation query history/cache is not product source.
+/graphify-out/.graphify_learning.json
+/graphify-out/.vocab.txt
+/graphify-out/cache/last_query_stamp
+/graphify-out/memory/
+/graphify-out/reflections/

@@ -76,15 +76,13 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostApproveAsync(int id)
     {
+        var scope = await ScopeAsync();
         var result = await ApprovalWorkflowEngine.ApproveAsync(
-            _dbContext, await ScopeAsync(), id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
-        // لا نكتب قرارات الحقول إلا بعد قبول المحرك لهوية صاحب الخطوة؛ وإلا أمكن
-        // لمستخدم يرى الشاشة أن يغيّر قرارات طلب ثم يترك اعتماده لشخص مخوّل.
-        if (result.Ok)
-            await DataChangeRequestStore.SetFieldDecisionsAsync(_dbContext, id, ApprovedFieldKeys);
+            _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId(), ApprovedFieldKeys);
         Message = result.Message;
         MessageIsError = !result.Ok;
-        if (result.FinalApproved) await ApplyEffectsAsync(id, await ScopeAsync());
+        if (result.FinalApproved && !await ApplyEffectsAsync(id, scope))
+            Message += " تم حفظ الأثر وسيعاد تنفيذه تلقائياً.";
         await LoadAsync();
         return Page();
     }
@@ -111,17 +109,23 @@ public class IndexModel : PageModel
     /// <summary>اعتماد مجمّع: يقدّم كل طلب محدَّد خطوةً واحدة، ويُفعّل الأثر لِمَن اكتملت لجنته.</summary>
     public async Task<IActionResult> OnPostBulkApproveAsync()
     {
-        int ok = 0, final = 0;
+        int ok = 0, final = 0, deferred = 0;
         var scope = await ScopeAsync();
         foreach (var id in Ids.Distinct())
         {
             var r = await ApprovalWorkflowEngine.ApproveAsync(
                 _dbContext, scope, id, ActorName(), Note, ActorRoles(), ActorEmployeeId());
             if (r.Ok) ok++;
-            if (r.FinalApproved) { await ApplyEffectsAsync(id, scope); final++; }
+            if (r.FinalApproved)
+            {
+                if (!await ApplyEffectsAsync(id, scope)) deferred++;
+                final++;
+            }
         }
         Message = ok == 0 ? "لم يُعتمد أي طلب (تحقق من الصلاحية/الخطوة)." :
-            $"تم اعتماد خطوة لـ {ok} طلب" + (final > 0 ? $"، منها {final} اكتملت لجنتها وفُعِّل أثرها." : ".");
+            $"تم اعتماد خطوة لـ {ok} طلب" +
+            (final > 0 ? $"، منها {final} اكتملت لجنتها." : ".") +
+            (deferred > 0 ? $" {deferred} أثر محفوظ لإعادة التنفيذ تلقائياً." : string.Empty);
         MessageIsError = ok == 0;
         await LoadAsync();
         return Page();
@@ -144,18 +148,20 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    private async Task ApplyEffectsAsync(int id, CompanyScope scope)
+    private async Task<bool> ApplyEffectsAsync(int id, CompanyScope scope)
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-        await DataChangeRequestStore.ApplyIfDataChangeAsync(_dbContext, id, ActorName(), ip);
-        await FinancialRequestStore.ApplyIfFinancialAsync(_dbContext, scope, id, ActorName(), ip);
-        await EmployeeLifecycleApprovalStore.ApplyIfLifecycleAsync(
-            _dbContext, scope, id, ActorName(), ip);
-
-        // مسار موحّد: يطبّق الأثر الحقيقي للإجازة/المغادرة/المناوبة/الأوفرتايم،
-        // ثم يعيد تحليل اليومية تلقائياً حسب سياسة إعدادات الحضور.
-        await ApprovedAttendanceRequestEffectStore.ApplyAsync(
-            _dbContext, scope, id, ActorName());
+        try
+        {
+            await ApprovalEffectJobStore.ApplyNowAsync(
+                _dbContext, id, scope, ActorName(), ip);
+            return true;
+        }
+        catch
+        {
+            // مهمة الأثر باقية في الصندوق الدائم، فلا نفقد الاعتماد أو نتيجته.
+            return false;
+        }
     }
 
     private string ActorName() => User?.Identity?.Name ?? "HR";

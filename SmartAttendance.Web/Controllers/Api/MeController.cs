@@ -1066,28 +1066,32 @@ WHERE Id = @Id;
             ActorName,
             string.IsNullOrWhiteSpace(body?.Note) ? null : body!.Note!.Trim(),
             ActorRoles,
-            EmployeeId);
+            EmployeeId,
+            body?.ApprovedFieldKeys);
 
         if (!action.Ok) return BadRequest(new { message = action.Message });
 
-        if (string.Equals(
-                request.RequestType,
-                DataChangeRequestStore.RequestTypeLabel,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            await DataChangeRequestStore.SetFieldDecisionsAsync(
-                _db,
-                id,
-                body?.ApprovedFieldKeys ?? []);
-        }
-
+        var effectsPending = false;
         if (action.FinalApproved)
-            await ApplyApprovalEffectsAsync(id, scope);
+        {
+            try
+            {
+                await ApplyApprovalEffectsAsync(id, scope);
+            }
+            catch
+            {
+                // الاعتماد ومهمة الأثر حُفظا ذرياً؛ العامل الخلفي سيعيد المحاولة.
+                effectsPending = true;
+            }
+        }
 
         return Ok(new
         {
-            message = action.Message,
-            finalApproved = action.FinalApproved
+            message = effectsPending
+                ? action.Message + " تم حفظ الأثر للتنفيذ التلقائي عند عودة الخدمة."
+                : action.Message,
+            finalApproved = action.FinalApproved,
+            effectsPending
         });
     }
 
@@ -1140,32 +1144,12 @@ WHERE Id = @Id;
         CompanyScope scope)
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-
-        await DataChangeRequestStore.ApplyIfDataChangeAsync(
+        await ApprovalEffectJobStore.ApplyNowAsync(
             _db,
             id,
+            scope,
             ActorName,
             ip);
-
-        await FinancialRequestStore.ApplyIfFinancialAsync(
-            _db,
-            scope,
-            id,
-            ActorName,
-            ip);
-
-        await EmployeeLifecycleApprovalStore.ApplyIfLifecycleAsync(
-            _db,
-            scope,
-            id,
-            ActorName,
-            ip);
-
-        await ApprovedAttendanceRequestEffectStore.ApplyAsync(
-            _db,
-            scope,
-            id,
-            ActorName);
     }
 
     /// <summary>طلبات الخدمة الذاتية العامة الخاصة بي (إجازة/مغادرة/...).</summary>

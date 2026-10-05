@@ -45,10 +45,19 @@ public sealed class ApprovalStepAuthorizationContractTests
             directory!.FullName, "SmartAttendance.Web", "Pages", "Approvals", "Index.cshtml.cs"));
         var handler = source.IndexOf("OnPostApproveAsync", StringComparison.Ordinal);
         var approval = source.IndexOf("ApprovalWorkflowEngine.ApproveAsync", handler, StringComparison.Ordinal);
-        var decisions = source.IndexOf("SetFieldDecisionsAsync", handler, StringComparison.Ordinal);
+        Assert.True(handler >= 0 && approval > handler);
+        Assert.Contains("ActorEmployeeId(), ApprovedFieldKeys", source[approval..], StringComparison.Ordinal);
+        Assert.DoesNotContain("SetFieldDecisionsAsync", source, StringComparison.Ordinal);
 
-        Assert.True(handler >= 0 && approval > handler && decisions > approval);
-        Assert.Contains("if (result.Ok)", source[approval..decisions], StringComparison.Ordinal);
+        var engine = File.ReadAllText(Path.Combine(directory.FullName,
+            "SmartAttendance.Web", "Infrastructure", "Hrms", "ApprovalWorkflowEngine.cs"));
+        var method = engine[engine.IndexOf("public static async Task<ActionResult> ApproveAsync(", StringComparison.Ordinal)..];
+        var ownership = method.IndexOf("CanAccessOwnedRowAsync", StringComparison.Ordinal);
+        var authorization = method.IndexOf("FindAuthorizedCurrentAsync", StringComparison.Ordinal);
+        var claim = method.IndexOf("if (claimed != 1)", StringComparison.Ordinal);
+        var decisions = method.IndexOf("SetFieldDecisionsAsync", StringComparison.Ordinal);
+        Assert.True(ownership >= 0 && ownership < authorization && authorization < claim && claim < decisions);
+        Assert.Contains("if (approvedFieldKeys is not null)", method[..decisions], StringComparison.Ordinal);
     }
 
     private static int Count(string source, string value)

@@ -8,8 +8,9 @@ public sealed class CompanyLanguageConfiguration : IEntityTypeConfiguration<Comp
 {
     public void Configure(EntityTypeBuilder<CompanyLanguage> builder)
     {
-        // Created by the explicit, narrowly-scoped localization migration. The
-        // legacy model snapshot is intentionally not reconciled by this feature.
+        // Created by the explicit localization migration, registered in the
+        // controlled startup SQL migrator as 20260902-02-company-data-localization.
+        // The legacy EF model snapshot is intentionally not reconciled here.
         builder.ToTable("CompanyLanguages", table => table.ExcludeFromMigrations());
         builder.HasKey(x => x.Id);
         builder.Property(x => x.CultureCode).HasMaxLength(35).IsRequired();

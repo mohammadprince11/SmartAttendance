@@ -129,6 +129,19 @@
                 </div>
             </div>
 
+            @if (Model.RequiresTwoFactor)
+            {
+                <div class="login-field">
+                    <label asp-for="TwoFactorCode">@T["رمز المصادقة الثنائية"]</label>
+                    <input asp-for="TwoFactorCode" inputmode="numeric"
+                           autocomplete="one-time-code" maxlength="6" />
+                </div>
+                <div class="login-field">
+                    <label asp-for="RecoveryCode">@T["رمز الاسترداد"]</label>
+                    <input asp-for="RecoveryCode" autocomplete="off" />
+                </div>
+            }
+
             <label class="login-check">
                 <input asp-for="RememberMe" />
                 <span>@T["تذكرني"]</span>

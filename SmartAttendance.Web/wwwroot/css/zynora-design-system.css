@@ -48,6 +48,16 @@
     --color-danger: #b91c1c;   --color-danger-soft: #fdecec;
     --color-info: #0369a1;     --color-info-soft: #e8f5fd;
 
+    /* Employee notification defaults stay here, not in page CSS. Keep the
+       existing palette and readable fallbacks if migrated tokens are absent. */
+    --color-employee-notification-surface: var(--zy-migrated-color-57c5aa9398, #121a2b);
+    --color-employee-notification-border: var(--zy-migrated-color-b34d3e7911, rgba(255,255,255,.12));
+    --color-employee-notification-shadow: var(--zy-migrated-color-fd9af3c8e7, rgba(0,0,0,.52));
+    --color-employee-notification-text: var(--zy-migrated-color-3bd84bea55, #eaf6f8);
+    --color-employee-notification-divider: var(--zy-migrated-color-c201d2dab2, rgba(255,255,255,.09));
+    --color-employee-notification-accent: var(--zy-migrated-color-0f1cc78a41, #65d9e0);
+    --color-employee-notification-muted: var(--zy-migrated-color-6d65c193c8, #9fb3c7);
+
     /* --- الخط والمقاسات (سلم موحد مضغوط بكثافة كيان — لا أحجام عشوائية) --- */
     --font-family: "Tajawal", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
     /* السلم بـrem لا px (تدقيق راحة العين 2026-07-31): px يتجاهل إعداد حجم الخط
