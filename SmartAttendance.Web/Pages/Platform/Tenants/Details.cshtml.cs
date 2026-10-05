@@ -75,7 +75,9 @@ public sealed class DetailsModel : PageModel
         public int TenantId { get; set; }
         public string VersionToken { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "اختر خطة الترخيص."), StringLength(60, MinimumLength = 2, ErrorMessage = "اسم الخطة يجب أن يكون بين حرفين و60 حرفاً.")]
+        // jQuery length rules count selected options, not the selected code's characters.
+        // Regex validates the actual string on both client and server.
+        [Required(ErrorMessage = "اختر خطة الترخيص."), RegularExpression(@"^[\s\S]{2,60}$", ErrorMessage = "اسم الخطة يجب أن يكون بين حرفين و60 حرفاً.")]
         public string PlanCode { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "اختر حالة الترخيص.")]
