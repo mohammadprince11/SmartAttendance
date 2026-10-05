@@ -260,10 +260,18 @@
     }
 </section>
 
-<form method="post" asp-page-handler="SaveLicense" class="platform-card platform-form-section">
+<form method="post" asp-page-handler="SaveLicense" id="license-management" class="platform-card platform-form-section">
     <input asp-for="Input.TenantId" type="hidden" />
     <input asp-for="Input.VersionToken" type="hidden" />
-    <div asp-validation-summary="ModelOnly" class="platform-alert platform-alert--danger"></div>
+    <div asp-validation-summary="All" role="alert" class="platform-alert platform-alert--danger"></div>
+    @if (!string.IsNullOrWhiteSpace(Model.LicenseMessage))
+    {
+        <div role="status" class="platform-alert platform-alert--success">@Model.LicenseMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.LicenseError))
+    {
+        <div role="alert" class="platform-alert platform-alert--danger">@Model.LicenseError</div>
+    }
 
     <header>
         <span>LIC</span>
