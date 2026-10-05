@@ -160,7 +160,7 @@
                                                 }
                                                 else if (field.InputType == "checkbox")
                                                 {
-                                                    <input type="checkbox" name="@field.Key" value="true" checked="@(Model.FieldValue(field.Key) == "true")" />
+                                                    <input type="checkbox" name="@field.Key" value="true" aria-label="@field.Label" checked="@(Model.FieldValue(field.Key).Equals("true", StringComparison.OrdinalIgnoreCase))" />
                                                     <input type="hidden" name="@field.Key" value="false" />
                                                 }
                                                 else if (field.InputType == "select-department")

@@ -31,26 +31,32 @@ const scripts = ['zynora-kayan-nav.js', 'zynora-ui-stabilization-phase1.js'].map
     const css = ['zynora-theme-contract.css', 'zynora-design-tokens.css', 'zynora-design-system.css',
       'zynora-employee-updates.css', 'pages/employee-updates-identity.css']
       .map(x => fs.readFileSync(path.join(cssRoot,x),'utf8')).join('\n');
-    for (const theme of ['dark','light']) for (const width of [320,390,900,1440]) {
+    for (const theme of ['dark','light']) for (const width of [320,390,900,1440]) for (const section of ['employee-info','financial','payment']) {
       await page.setViewportSize({width,height:700});
       await page.setContent(`<!doctype html><html dir="rtl" data-theme="${theme}"><head><style>${css}</style></head><body class="zy-app">
-        <section class="nxupd-page nxupd-page-v14b zy-employee-updates"><section class="nxupd-card"><form id="synthetic"><div class="nxupd-fields">
+        <section class="nxupd-page nxupd-page-v14b zy-employee-updates"><section class="nxupd-card nxupd-stage-block" data-section-key="${section}"><form id="synthetic"><div class="nxupd-fields">
         <div class="nxupd-field"><label>اختيار تجريبي</label><select name="Choice"><option>A</option><option>B</option></select></div>
         <div class="nxupd-field"><label>علم تجريبي</label><input type="checkbox" name="Flag" value="true" checked><input type="hidden" name="Flag" value="false"></div>
         <div class="nxupd-field"><label>قراءة فقط</label><input readonly value="Synthetic only"></div></div></form></section></section></body></html>`);
       const initial = await page.evaluate(()=>({
         checkbox:getComputedStyle(document.querySelector('[type="checkbox"]')).width,
+        checkboxHeight:document.querySelector('[type="checkbox"]').getBoundingClientRect().height,
+        checkboxWidth:document.querySelector('[type="checkbox"]').getBoundingClientRect().width,
+        appearance:getComputedStyle(document.querySelector('[type="checkbox"]')).appearance,
         flags:new FormData(document.getElementById('synthetic')).getAll('Flag'),
         overflow:document.documentElement.scrollWidth>innerWidth,
         entries:[...new FormData(document.getElementById('synthetic')).keys()]
       }));
       assert.equal(initial.checkbox,'20px');
+      assert.equal(initial.checkboxWidth,20);
+      assert.equal(initial.checkboxHeight,20);
+      assert.equal(initial.appearance,'auto');
       assert.equal(initial.overflow,false);
       assert.deepEqual(initial.flags,['true','false']);
       assert.deepEqual(initial.entries,['Choice','Flag','Flag']);
       await page.locator('[type="checkbox"]').uncheck();
       assert.deepEqual(await page.evaluate(()=>new FormData(document.getElementById('synthetic')).getAll('Flag')),['false']);
     }
-    console.log('PASS: 8 synthetic field fixtures, RTL responsive grid, 20px checkboxes, checked/unchecked payloads, no readonly submission.');
+    console.log('PASS: 24 synthetic field fixtures across employee/financial/payment sections, RTL responsive grid, native 20x20px checkboxes, checked/unchecked payloads, no readonly submission.');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});

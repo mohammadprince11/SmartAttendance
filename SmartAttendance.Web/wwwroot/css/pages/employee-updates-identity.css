@@ -2,6 +2,15 @@
    leave native widget hiding, submission, confirmations and popup positioning alone. */
 @layer zynora-employee-updates {
     .zy-employee-updates .nxupd-field input[type="checkbox"] {
+        appearance: auto !important;
+        box-sizing: border-box !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        max-width: 20px !important;
+        min-height: 20px !important;
+        max-height: 20px !important;
+        border-radius: 4px !important;
         inline-size: 20px !important;
         block-size: 20px !important;
         min-inline-size: 20px !important;
@@ -205,7 +214,7 @@
         background: transparent !important;
         background-image: none !important;
     }
-    .zy-employee-updates :is(.nxupd-field, .nxupd-note) :is(input, textarea):not(.nxcal-native):not([type="hidden"]) {
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) :is(input, textarea):not(.nxcal-native):not([type="hidden"]):not([type="checkbox"]) {
         inline-size: 100% !important;
         min-inline-size: 0 !important;
         min-height: 44px !important;
@@ -219,7 +228,7 @@
         font-size: 13px !important;
         font-weight: 600 !important;
     }
-    .zy-employee-updates :is(.nxupd-field, .nxupd-note) input:not(.nxcal-native):not([type="hidden"]) {
+    .zy-employee-updates :is(.nxupd-field, .nxupd-note) input:not(.nxcal-native):not([type="hidden"]):not([type="checkbox"]) {
         height: 44px !important;
         max-height: none !important;
         line-height: normal !important;

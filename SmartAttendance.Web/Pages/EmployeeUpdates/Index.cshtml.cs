@@ -899,6 +899,12 @@ END;
             return value.Equals("true", StringComparison.OrdinalIgnoreCase) ? "فعال" : "غير فعال";
         }
 
+        if (Sections.SelectMany(section => section.Fields).Any(field =>
+                field.Key.Equals(key, StringComparison.OrdinalIgnoreCase) && field.InputType == "checkbox"))
+        {
+            return bool.TryParse(value, out var enabled) ? (enabled ? "نعم" : "لا") : "-";
+        }
+
         if (key.Equals("DepartmentId", StringComparison.OrdinalIgnoreCase))
         {
             return Departments.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
