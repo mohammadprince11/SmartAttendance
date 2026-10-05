@@ -33,10 +33,10 @@ param(
     # مطلوب للنشر، لا للفحص وحده (-CheckOnly) — يُتحقق منه بعد تحديد الوضع.
     [string] $TaskName,
 
-    [string] $SitePath   = 'C:\ZynoraPortal',
+    [string] $SitePath   = 'C:\SmartAttendance\local-runtime\portal',
     [string] $RepoPath   = (Get-Location).Path,
-    [string] $BackupRoot = 'C:\ZynoraPortal-Backups',
-    [string] $PublishDir = 'C:\ZynoraPortal-publish',
+    [string] $BackupRoot = 'C:\SmartAttendance\local-runtime\backups',
+    [string] $PublishDir = 'C:\SmartAttendance\local-runtime\publish',
 
     [string] $SqlServer,
     [string] $Database,

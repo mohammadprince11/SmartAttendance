@@ -14,7 +14,7 @@
     مسار حزمة النقل (مجلد handover_*).
 
 .PARAMETER LivePath
-    مسار النشر على الجهاز الجديد. الافتراضي C:\ZynoraPortal.
+    مسار النشر على الجهاز الجديد. الافتراضي C:\SmartAttendance\local-runtime\portal.
 
 .PARAMETER WhatIfOnly
     يفحص ويعرض الخطة بلا تنفيذ.
@@ -29,7 +29,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $BundlePath,
 
-    [string] $LivePath    = 'C:\ZynoraPortal',
+    [string] $LivePath    = 'C:\SmartAttendance\local-runtime\portal',
     [string] $SqlInstance = 'localhost',
     [string] $Database    = 'SmartAttendance',
     [switch] $WhatIfOnly

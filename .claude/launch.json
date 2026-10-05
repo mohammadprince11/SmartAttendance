@@ -13,10 +13,10 @@
       "runtimeArgs": [
         "run", "--project", "SmartAttendance.Web", "--urls", "http://localhost:5091", "--",
         "--PeopleAIWorker:Enabled=true",
-        "--PeopleAIWorker:PythonExecutable=C:\\ZynoraRuntime\\PeopleAI\\.venv\\Scripts\\python.exe",
+        "--PeopleAIWorker:PythonExecutable=C:\\SmartAttendance\\local-runtime\\ocr\\PeopleAI\\.venv\\Scripts\\python.exe",
         "--PeopleAIWorker:ScriptPath=PeopleAI/local_ocr_worker.py",
-        "--PeopleAIWorker:TempDirectory=C:\\ZynoraRuntime\\PeopleAI\\tmp",
-        "--PeopleAIWorker:PaddleCacheDirectory=C:\\ZynoraRuntime\\PeopleAI\\paddlex-cache",
+        "--PeopleAIWorker:TempDirectory=C:\\SmartAttendance\\local-runtime\\ocr\\PeopleAI\\tmp",
+        "--PeopleAIWorker:PaddleCacheDirectory=C:\\SmartAttendance\\local-runtime\\ocr\\PeopleAI\\paddlex-cache",
         "--PeopleAIWorker:StartupRetrySeconds=5"
       ],
       "port": 5091,
@@ -28,10 +28,10 @@
       "runtimeArgs": [
         "run", "--project", "SmartAttendance.Web", "-c", "Release", "--no-build", "--urls", "http://localhost:5092", "--",
         "--PeopleAIWorker:Enabled=true",
-        "--PeopleAIWorker:PythonExecutable=C:\\ZynoraRuntime\\PeopleAI\\.venv\\Scripts\\python.exe",
+        "--PeopleAIWorker:PythonExecutable=C:\\SmartAttendance\\local-runtime\\ocr\\PeopleAI\\.venv\\Scripts\\python.exe",
         "--PeopleAIWorker:ScriptPath=PeopleAI/local_ocr_worker.py",
-        "--PeopleAIWorker:TempDirectory=C:\\ZynoraRuntime\\PeopleAI\\tmp",
-        "--PeopleAIWorker:PaddleCacheDirectory=C:\\ZynoraRuntime\\PeopleAI\\paddlex-cache",
+        "--PeopleAIWorker:TempDirectory=C:\\SmartAttendance\\local-runtime\\ocr\\PeopleAI\\tmp",
+        "--PeopleAIWorker:PaddleCacheDirectory=C:\\SmartAttendance\\local-runtime\\ocr\\PeopleAI\\paddlex-cache",
         "--PeopleAIWorker:StartupRetrySeconds=5"
       ],
       "port": 5092,
