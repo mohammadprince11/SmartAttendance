@@ -173,6 +173,11 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
             return Forbid();
         }
 
+        if (employeeId.GetValueOrDefault() > 0 && !await CanAccessEmployeeAsync(actor, employeeId.GetValueOrDefault()))
+        {
+            return Forbid();
+        }
+
         await LoadPageAsync(employeeId, tab, section);
         return Page();
     }
@@ -421,16 +426,21 @@ WHERE Id = @BatchId AND Status = 'Open';
 Tab = NormalizeTab(tab);
         ActiveSectionKey = NormalizeSection(section);
 
-        Employees = await LoadEmployeesAsync();
-        Departments = await LoadDepartmentsAsync();
-
-        SelectedEmployeeId = employeeId.GetValueOrDefault();
+        // No automatic employee selection. The shared picker submits an explicit ID.
+        SelectedEmployeeId = Math.Max(0, employeeId.GetValueOrDefault());
         if (SelectedEmployeeId <= 0)
         {
-            SelectedEmployeeId = Employees.FirstOrDefault()?.Id ?? 0;
+            return;
         }
 
         SelectedEmployee = await LoadEmployeeAsync(SelectedEmployeeId) ?? UpdateEmployee.Empty;
+        if (SelectedEmployee.Id <= 0)
+        {
+            SelectedEmployeeId = 0;
+            return;
+        }
+
+        Departments = await LoadDepartmentsAsync();
         PositionOptions = await LoadPositionOptionsAsync(SelectedEmployee.Position); // ZYNORA_FIX14G_LOAD_LOOKUPS
         NationalityOptions = await LoadNationalityOptionsAsync();
         ManagerOptions = await LoadActiveManagersAsync(SelectedEmployeeId);

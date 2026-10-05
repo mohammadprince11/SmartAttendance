@@ -33,8 +33,8 @@
             <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel {
                 Name = "employeeId",
                 SelectedId = Model.SelectedEmployeeId,
-                SelectedCode = Model.SelectedEmployee.EmployeeNo,
-                SelectedName = Model.SelectedEmployee.FullName,
+                SelectedCode = Model.SelectedEmployeeId > 0 ? Model.SelectedEmployee.EmployeeNo : string.Empty,
+                SelectedName = Model.SelectedEmployeeId > 0 ? Model.SelectedEmployee.FullName : string.Empty,
                 SubmitOnSelect = true })" />
         </form>
     </section>
@@ -47,7 +47,13 @@
 
     <main class="nxupd-layout nxupd-layout-single">
         <section class="nxupd-content">
-            @if (Model.Tab == "stage")
+            @if (Model.SelectedEmployeeId <= 0)
+            {
+                <section class="nxupd-card">
+                    <div class="nxupd-empty">اختر موظفاً لعرض بياناته وتحديثها.</div>
+                </section>
+            }
+            else if (Model.Tab == "stage")
             {
                 <section class="nxupd-card nxupd-stage-card">
                     <header class="nxupd-card-head">
