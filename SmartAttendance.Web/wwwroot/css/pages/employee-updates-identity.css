@@ -1,6 +1,17 @@
 /* Page-scoped visual contract. Important layer wins the legacy v14 overrides;
    leave native widget hiding, submission, confirmations and popup positioning alone. */
 @layer zynora-employee-updates {
+    .zy-employee-updates .nxupd-field input[type="checkbox"] {
+        inline-size: 20px !important;
+        block-size: 20px !important;
+        min-inline-size: 20px !important;
+        max-inline-size: 20px !important;
+        min-block-size: 20px !important;
+        max-block-size: 20px !important;
+        padding: 0 !important;
+        margin: 12px 0;
+        accent-color: var(--brand-primary);
+    }
     .zy-employee-updates {
         display: grid !important;
         gap: var(--zy-space-4) !important;

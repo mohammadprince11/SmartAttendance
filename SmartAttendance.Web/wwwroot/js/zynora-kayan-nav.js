@@ -39,6 +39,8 @@
 
     function markCurrentGroup() {
         var current = normalize(window.location.pathname);
+        var section = new URLSearchParams(window.location.search).get("section") || "";
+        var financial = section === "financial" || section === "payment";
 
         groups.forEach(function (group) {
             var summary = group.querySelector(":scope > summary");
@@ -48,6 +50,10 @@
                 group.querySelectorAll(":scope > .zynora-nav-group-links a[href]"),
                 function (link) {
                     var target = hrefPath(link);
+                    if (current === "/employeeupdates" && isSame(current, target)) {
+                        var targetSection = new URL(link.href, window.location.origin).searchParams.get("section") || "";
+                        return financial ? targetSection === section : !targetSection;
+                    }
                     return target && target !== "/" &&
                         (isSame(current, target) || current.indexOf(target + "/") === 0);
                 }

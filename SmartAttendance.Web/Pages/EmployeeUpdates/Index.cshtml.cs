@@ -13,7 +13,7 @@ namespace SmartAttendance.Web.Pages.EmployeeUpdates;
 /// دفتر حركات الموظف (نمط كيان): تعديلات البيانات كسجلات Transaction بمرجع
 /// وتاريخ تنفيذ وحالة، بدل التعديل المباشر — الأساس لقفل الرواتب لاحقاً.
 /// </summary>
-public class IndexModel : PageModel
+public partial class IndexModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IPermissionAuthorizationService _permissions;
@@ -31,7 +31,7 @@ public class IndexModel : PageModel
 
     /// <summary>حقول الإسناد الوظيفيّ — تغييرها يتطلّب ChangeAssignment (نظير P0-7).</summary>
     private static readonly HashSet<string> AssignmentFieldKeys =
-        new(StringComparer.OrdinalIgnoreCase) { "DepartmentId", "DirectManagerId", "Position" };
+        new(StringComparer.OrdinalIgnoreCase) { "BranchId", "DepartmentId", "DirectManagerId", "PositionId", "Position" };
 
     public string Tab { get; private set; } = "stage";
     public string ActiveSectionKey { get; private set; } = "employee-info";
@@ -135,6 +135,10 @@ public class IndexModel : PageModel
             PeopleCompatibilityAccess.IsAllowed(actor.Role, PeoplePermissionCodes.EditCompensation),
             HttpContext.RequestAborted);
 
+    private Task<bool> CanEditProfileAsync(ActorScope actor, int employeeId) =>
+        _permissions.CanAccessEmployeeAsync(actor.SystemUserId, PeoplePermissionCodes.Edit, employeeId,
+            PeopleCompatibilityAccess.IsAllowed(actor.Role, PeoplePermissionCodes.Edit), HttpContext.RequestAborted);
+
     private Task<bool> CanChangeAssignmentAsync(ActorScope actor, int employeeId) =>
         _permissions.CanAccessEmployeeAsync(
             actor.SystemUserId,
@@ -195,7 +199,7 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
         // تخويل: عرضٌ + الموظف المستهدَف ضمن النطاق. بلا هذا كان أي واصلٍ للصفحة
         // يُنشئ حركةً لأي موظفٍ بأي شركة (تُطبَّق عند القفل).
         var actor = await ResolveActorScopeAsync();
-        if (!await CanViewAsync(actor) || !await CanAccessEmployeeAsync(actor, employeeId))
+        if (!await CanViewAsync(actor) || !await CanAccessEmployeeAsync(actor, employeeId) || !await CanEditProfileAsync(actor, employeeId))
         {
             return Forbid();
         }
@@ -222,7 +226,7 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
         foreach (var field in stagedFields)
         {
             // إسقاط الحقول التي لا يملك المستخدم صلاحية تطبيقها — فلا تُرحَّل مضلِّلةً.
-            if (field.Target == "compensation" && !canEditCompensation)
+            if (IsFinancialField(field) && (!canEditCompensation || !CanViewFinancial))
             {
                 continue;
             }
@@ -232,16 +236,18 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
                 continue;
             }
 
+            if (field.ReadOnly || !Request.Form.ContainsKey(field.Key)) continue;
             var oldValue = NormalizeValue(current.GetValueOrDefault(field.Key, string.Empty));
             var newValue = NormalizeValue(Request.Form[field.Key].FirstOrDefault() ?? string.Empty);
-
-            if (field.InputType == "select-active")
-            {
-                newValue = newValue.Equals("true", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
-            }
+            if (field.Target is "custom" or "financial-custom" && field.InputType == "checkbox" && newValue == "false") newValue = "";
 
             if (!oldValue.Equals(newValue, StringComparison.OrdinalIgnoreCase))
             {
+                if (!ValidStoredFieldValue(field, newValue))
+                {
+                    StatusMessage = $"قيمة غير صالحة لحقل «{field.Label}». لم تُحفظ الحركة.";
+                    return RedirectToPage(new { employeeId, employeeSelected = true, tab = "stage" });
+                }
                 changes.Add(new UpdateChange
                 {
                     FieldKey = field.Key,
@@ -252,6 +258,11 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
             }
         }
 
+        if (!await ValidProfileAssignmentAsync(employeeId, changes))
+        {
+            StatusMessage = "الارتباط الوظيفي غير صالح ضمن نطاق الموظف.";
+            return RedirectToPage(new { employeeId, employeeSelected = true, tab = "stage" });
+        }
         if (changes.Count == 0)
         {
             StatusMessage = "\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0644\u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629.";
@@ -262,6 +273,7 @@ WHERE e.Id = @Id AND ISNULL(e.IsDeleted, 0) = 0;
         var resolvedEffectiveDate = (effectiveDate ?? DateTime.Today).Date;
         var sectionName = "\u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641";
 
+        await using var stageTransaction = await _dbContext.Database.BeginTransactionAsync();
         var batchId = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
             """
@@ -305,6 +317,7 @@ VALUES
         }
 
         StatusMessage = $"\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0642\u0641\u0644\u0629 EU{DateTime.UtcNow:yy}-{batchId}. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0633\u0631\u064A\u0627\u0646: {resolvedEffectiveDate:dd/MM/yyyy}.";
+        await stageTransaction.CommitAsync();
         return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm", section = "employee-master" });
     }
     // ZYNORA_FIX14B_STAGE_METHOD_END
@@ -323,7 +336,7 @@ VALUES
         // تخويل عند **الكتابة** (الحاسم): الموظف الحقيقيّ للحركة ضمن النطاق. القفل هو
         // اللحظة التي تُطبَّق فيها التغييرات على ملف الموظف — فيُفحص هنا لا عند العرض.
         var actor = await ResolveActorScopeAsync();
-        if (!await CanViewAsync(actor) || !await CanAccessEmployeeAsync(actor, batch.EmployeeId))
+        if (!await CanViewAsync(actor) || !await CanAccessEmployeeAsync(actor, batch.EmployeeId) || !await CanEditProfileAsync(actor, batch.EmployeeId))
         {
             return Forbid();
         }
@@ -331,39 +344,39 @@ VALUES
         var canEditCompensation = await CanEditCompensationAsync(actor, batch.EmployeeId);
         var canChangeAssignment = await CanChangeAssignmentAsync(actor, batch.EmployeeId);
 
-        var definitions = BuildFieldDictionary();
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var status = await HrmsDatabase.ScalarAsync<string>(_dbContext,
+            "SELECT Status FROM EmployeeUpdateBatches WITH (UPDLOCK, HOLDLOCK) WHERE Id = @Id;",
+            command => HrmsDatabase.AddParameter(command, "@Id", batchId));
+        if (status != "Open") return RedirectToPage(new { employeeId, employeeSelected = true, tab = "history" });
+        var definitions = (await BuildSectionsWithDynamicFieldsAsync()).SelectMany(s => s.Fields)
+            .GroupBy(f => f.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var current = await BuildCurrentValuesAsync(batch.EmployeeId);
         foreach (var change in batch.Changes)
         {
-            // حارسٌ ثانٍ عند التطبيق: حتى لو دخلت حركةٌ حقلاً حسّاساً (بيانات قديمة أو
-            // مسارٌ آخر)، لا يُكتب راتبٌ بلا EditCompensation ولا إسنادٌ بلا ChangeAssignment.
-            if (AssignmentFieldKeys.Contains(change.FieldKey) && !canChangeAssignment)
+            if (!definitions.TryGetValue(change.FieldKey, out var field) || field.ReadOnly ||
+                !ValidStoredFieldValue(field, change.NewValue) ||
+                !NormalizeValue(current.GetValueOrDefault(change.FieldKey, "")).Equals(NormalizeValue(change.OldValue), StringComparison.OrdinalIgnoreCase))
             {
-                continue;
+                StatusMessage = "الحركة قديمة أو تتعارض مع بيانات الملف الحالية. أنشئ حركة جديدة؛ لم تُطبَّق تغييرات.";
+                return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm" });
             }
-
-            if (!definitions.TryGetValue(change.FieldKey, out var field))
-            {
-                await ApplyCustomFieldAsync(batch.EmployeeId, change.FieldKey, change.FieldLabel, change.NewValue);
-                continue;
-            }
-
-            if (field.Target == "employee")
-            {
-                await ApplyEmployeeFieldAsync(batch.EmployeeId, change.FieldKey, change.NewValue);
-            }
-            else if (field.Target == "compensation")
-            {
-                if (!canEditCompensation)
-                {
-                    continue;
-                }
-
-                await ApplyCompensationFieldAsync(batch.EmployeeId, change.FieldKey, change.NewValue);
-            }
+            if ((IsFinancialField(field) && (!canEditCompensation || !CanViewFinancial)) ||
+                (AssignmentFieldKeys.Contains(field.Key) && !canChangeAssignment)) return Forbid();
+        }
+        if (!await ValidProfileAssignmentAsync(batch.EmployeeId, batch.Changes))
+        {
+            StatusMessage = "تعذر تطبيق الارتباط الوظيفي ضمن النطاق الحالي؛ لم تُطبَّق تغييرات.";
+            return RedirectToPage(new { employeeId, employeeSelected = true, tab = "confirm" });
+        }
+        foreach (var change in batch.Changes)
+        {
+            var field = definitions[change.FieldKey];
+            if (field.Target is "employee" or "compensation")
+                await ApplyProfileFieldAsync(batch.EmployeeId, field, change.NewValue);
             else
-            {
                 await ApplyCustomFieldAsync(batch.EmployeeId, change.FieldKey, change.FieldLabel, change.NewValue);
-            }
         }
 
         var lockedBy = User.Identity?.Name ?? "System";
@@ -383,6 +396,7 @@ WHERE Id = @BatchId AND Status = 'Open';
                 HrmsDatabase.AddParameter(command, "@BatchId", batchId);
             });
 
+        await transaction.CommitAsync();
         StatusMessage = $"تم قفل الحركة رقم {batchId} وتطبيق التغييرات على ملف الموظف.";
         return RedirectToPage(new { employeeId, employeeSelected = true, tab = "history" });
     }
@@ -446,13 +460,19 @@ Tab = NormalizeTab(tab);
             return;
         }
 
-        Departments = await LoadDepartmentsAsync();
-        PositionOptions = await LoadPositionOptionsAsync(SelectedEmployee.Position); // ZYNORA_FIX14G_LOAD_LOOKUPS
+        await LoadProfileAssignmentOptionsAsync(SelectedEmployeeId);
+        Departments = ProfileDepartments;
         NationalityOptions = await LoadNationalityOptionsAsync();
         ManagerOptions = await LoadActiveManagersAsync(SelectedEmployeeId);
         CurrentValues = await BuildCurrentValuesAsync(SelectedEmployeeId);
         OpenBatches = await LoadBatchesAsync(SelectedEmployeeId, "Open");
         HistoryBatches = await LoadBatchesAsync(SelectedEmployeeId, "Locked");
+        if (!CanViewFinancial)
+        {
+            var sensitive = Sections.SelectMany(s => s.Fields).Where(IsFinancialField).Select(f => f.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            Sections = Sections.Select(s => s with { Fields = s.Fields.Where(f => !IsFinancialField(f)).ToList() }).ToList();
+            foreach (var batch in OpenBatches.Concat(HistoryBatches)) batch.Changes.RemoveAll(c => sensitive.Contains(c.FieldKey));
+        }
     }
 
     private async Task<List<UpdateEmployee>> LoadEmployeesAsync()
@@ -690,71 +710,7 @@ ORDER BY e.FullName, e.EmployeeNo;
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        var employeeRows = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-SELECT TOP 1
-    ISNULL(EmployeeNo, '') AS EmployeeNo,
-    ISNULL(FullName, '') AS FullName,
-    ISNULL(NationalId, '') AS NationalId,
-    ISNULL(Phone, '') AS Phone,
-    ISNULL(Email, '') AS Email,
-    ISNULL(Position, '') AS Position,
-    ISNULL(Nationality, '') AS Nationality,
-    ISNULL(DirectManagerId, 0) AS DirectManagerId,
-    HireDate,
-    BirthDate,
-    ISNULL(IsActive, 0) AS IsActive,
-    ISNULL(DepartmentId, 0) AS DepartmentId -- ZYNORA_FIX14G_EMPLOYEE_VALUES_QUERY
-FROM Employees
-WHERE Id = @EmployeeId;
-""",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-            reader =>
-            {
-                values["EmployeeNo"] = HrmsDatabase.GetString(reader, "EmployeeNo");
-                values["FullName"] = HrmsDatabase.GetString(reader, "FullName");
-                values["NationalId"] = HrmsDatabase.GetString(reader, "NationalId");
-                values["Phone"] = HrmsDatabase.GetString(reader, "Phone");
-                values["Email"] = HrmsDatabase.GetString(reader, "Email");
-                values["Position"] = HrmsDatabase.GetString(reader, "Position");
-                values["Nationality"] = HrmsDatabase.GetString(reader, "Nationality");
-                var managerIdValue = HrmsDatabase.GetInt(reader, "DirectManagerId");
-                values["DirectManagerId"] = managerIdValue > 0 ? managerIdValue.ToString() : string.Empty;
-                values["HireDate"] = ToInputDate(HrmsDatabase.GetDateTime(reader, "HireDate"));
-                values["BirthDate"] = ToInputDate(HrmsDatabase.GetDateTime(reader, "BirthDate"));
-                values["IsActive"] = HrmsDatabase.GetBool(reader, "IsActive") ? "true" : "false";
-                values["DepartmentId"] = HrmsDatabase.GetInt(reader, "DepartmentId").ToString();
-                return true;
-            });
-
-        var compensationRows = await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-SELECT TOP 1
-    ISNULL(BasicSalary, 0) AS BasicSalary,
-    ISNULL(Allowances, 0) AS Allowances,
-    ISNULL(Deductions, 0) AS Deductions,
-    ISNULL(PaymentMethod, '') AS PaymentMethod,
-    ISNULL(BankName, '') AS BankName,
-    ISNULL(BankAccount, '') AS BankAccount,
-    ISNULL(Currency, 'IQD') AS Currency
-FROM EmployeeCompensations
-WHERE EmployeeId = @EmployeeId
-ORDER BY UpdatedAt DESC, Id DESC;
-""",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId),
-            reader =>
-            {
-                values["BasicSalary"] = ToDecimalString(reader, "BasicSalary");
-                values["Allowances"] = ToDecimalString(reader, "Allowances");
-                values["Deductions"] = ToDecimalString(reader, "Deductions");
-                values["PaymentMethod"] = HrmsDatabase.GetString(reader, "PaymentMethod");
-                values["BankName"] = HrmsDatabase.GetString(reader, "BankName");
-                values["BankAccount"] = HrmsDatabase.GetString(reader, "BankAccount");
-                values["Currency"] = HrmsDatabase.GetString(reader, "Currency");
-                return true;
-            });
+        await ReadProfileValuesAsync(employeeId, values);
 
         var customRows = await HrmsDatabase.QueryAsync(
             _dbContext,
@@ -905,128 +861,6 @@ ORDER BY Id;
             });
     }
 
-    private async Task ApplyEmployeeFieldAsync(int employeeId, string fieldKey, string value)
-    {
-        var employee = await _dbContext.Employees
-            .FirstOrDefaultAsync(x => x.Id == employeeId);
-
-        if (employee == null)
-        {
-            return;
-        }
-
-        switch (fieldKey)
-        {
-            case "FullName":
-                employee.FullName = value ?? string.Empty;
-                break;
-            case "EmployeeNo":
-                employee.EmployeeNo = value ?? string.Empty;
-                break;
-            case "NationalId":
-                employee.NationalId = value ?? string.Empty;
-                break;
-            case "Phone":
-                employee.Phone = value ?? string.Empty;
-                break;
-            case "Email":
-                employee.Email = value ?? string.Empty;
-                break;
-            case "Position":
-                employee.Position = value ?? string.Empty;
-                break;
-            case "Nationality": // ZYNORA_FIX14G_APPLY_NATIONALITY
-                employee.Nationality = value ?? string.Empty;
-                break;
-            case "DirectManagerId":
-                employee.DirectManagerId =
-                    int.TryParse(value, out var managerId) && managerId > 0
-                        ? managerId
-                        : null;
-                break;
-            case "DepartmentId":
-                if (int.TryParse(value, out var departmentId) && departmentId > 0)
-                {
-                    employee.DepartmentId = departmentId;
-                }
-                break;
-            case "HireDate":
-                if (DateTime.TryParse(value, out var hireDate))
-                {
-                    employee.HireDate = DateOnly.FromDateTime(hireDate);
-                }
-                break;
-            case "BirthDate":
-                employee.BirthDate = DateTime.TryParse(value, out var birthDate)
-                    ? DateOnly.FromDateTime(birthDate)
-                    : null;
-                break;
-            case "IsActive":
-                employee.IsActive = value?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-                break;
-            default:
-                return;
-        }
-
-        employee.UpdatedAt = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync();
-    }
-
-    private async Task ApplyCompensationFieldAsync(int employeeId, string fieldKey, string value)
-    {
-        await HrmsDatabase.ExecuteAsync(
-            _dbContext,
-            """
-IF NOT EXISTS (SELECT 1 FROM EmployeeCompensations WHERE EmployeeId = @EmployeeId)
-BEGIN
-    INSERT INTO EmployeeCompensations (EmployeeId, Currency, UpdatedAt)
-    VALUES (@EmployeeId, 'IQD', SYSUTCDATETIME());
-END;
-""",
-            command => HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId));
-
-        if (fieldKey is "BasicSalary" or "Allowances" or "Deductions")
-        {
-            var number = decimal.TryParse(value, out var d) ? d : 0;
-            var sql = fieldKey switch
-            {
-                "BasicSalary" => "UPDATE EmployeeCompensations SET BasicSalary = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                "Allowances" => "UPDATE EmployeeCompensations SET Allowances = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                "Deductions" => "UPDATE EmployeeCompensations SET Deductions = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                _ => throw new InvalidOperationException("Unsupported compensation numeric field.")
-            };
-
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                sql,
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@Value", number);
-                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                });
-        }
-        else
-        {
-            var sql = fieldKey switch
-            {
-                "PaymentMethod" => "UPDATE EmployeeCompensations SET PaymentMethod = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                "BankName" => "UPDATE EmployeeCompensations SET BankName = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                "BankAccount" => "UPDATE EmployeeCompensations SET BankAccount = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                "Currency" => "UPDATE EmployeeCompensations SET Currency = @Value, UpdatedAt = SYSUTCDATETIME() WHERE EmployeeId = @EmployeeId;",
-                _ => throw new InvalidOperationException("Unsupported compensation text field.")
-            };
-
-            await HrmsDatabase.ExecuteAsync(
-                _dbContext,
-                sql,
-                command =>
-                {
-                    HrmsDatabase.AddParameter(command, "@Value", value ?? string.Empty);
-                    HrmsDatabase.AddParameter(command, "@EmployeeId", employeeId);
-                });
-        }
-    }
-
     private async Task ApplyCustomFieldAsync(int employeeId, string fieldKey, string fieldLabel, string value)
     {
         await HrmsDatabase.ExecuteAsync(
@@ -1074,6 +908,10 @@ END;
         {
             return ManagerOptions.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
         }
+
+        if (key == "BranchId") return ProfileBranches.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
+        if (key == "PositionId") return ProfilePositions.FirstOrDefault(x => x.Id.ToString() == value)?.Name ?? "-";
+        if (key is "Gender" or "MaritalStatus") return OptionLabel(value);
 
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -1141,7 +979,7 @@ END;
 
     private static List<UpdateSection> BuildSections()
     {
-        return new List<UpdateSection>
+        return UseProfileFields(new List<UpdateSection>
         {
             new("employee-info", "معلومات الموظف", "البيانات الأساسية والتوظيف والاتصال في حركة واحدة: الاسم، المنصب، القسم، المدير، الهاتف، البريد",
                 new()
@@ -1193,7 +1031,7 @@ END;
                     new("Accommodation", "السكن", "custom", "text", "داخلي / خارجي"),
                     new("EmergencyContact", "جهة اتصال للطوارئ", "custom", "text", "الاسم والرقم")
                 })
-        };
+        });
     }
 
     // ZYNORA_FIX14A_DYNAMIC_PROFILE_FIELDS_METHOD_START
@@ -1215,6 +1053,8 @@ BEGIN
         CAST('' AS nvarchar(120)) AS FieldKey,
         CAST('' AS nvarchar(150)) AS FieldLabel,
         CAST('text' AS nvarchar(40)) AS FieldType,
+        CAST('' AS nvarchar(max)) AS FieldOptions,
+        CAST(0 AS bit) AS IsRequired,
         CAST(0 AS int) AS SortOrder
     WHERE 1 = 0;
 END
@@ -1225,6 +1065,8 @@ BEGIN
         ISNULL(FieldKey, '') AS FieldKey,
         ISNULL(FieldLabel, '') AS FieldLabel,
         ISNULL(FieldType, 'text') AS FieldType,
+        ISNULL(FieldOptions, '') AS FieldOptions,
+        ISNULL(IsRequired, 0) AS IsRequired,
         ISNULL(SortOrder, 0) AS SortOrder
     FROM EmployeeProfileFieldDefinitions
     WHERE IsActive = 1
@@ -1248,6 +1090,8 @@ END
                 FieldKey = HrmsDatabase.GetString(reader, "FieldKey"),
                 FieldLabel = HrmsDatabase.GetString(reader, "FieldLabel"),
                 FieldType = HrmsDatabase.GetString(reader, "FieldType"),
+                FieldOptions = HrmsDatabase.GetString(reader, "FieldOptions"),
+                IsRequired = HrmsDatabase.GetBool(reader, "IsRequired"),
                 SortOrder = HrmsDatabase.GetInt(reader, "SortOrder")
             });
 
@@ -1263,9 +1107,9 @@ END
                 .Select(field => new UpdateField(
                     field.FieldKey,
                     string.IsNullOrWhiteSpace(field.FieldLabel) ? field.FieldKey : field.FieldLabel,
-                    "custom",
+                    group.Key == "financial" ? "financial-custom" : "custom",
                     NormalizeDynamicFieldInputType(field.FieldType),
-                    string.Empty))
+                    string.Empty, field.FieldOptions, field.IsRequired))
                 .ToList();
 
             if (fields.Count > 0)
@@ -1278,7 +1122,7 @@ END
             }
         }
 
-        return sections;
+        return await WithProfileLookupsAsync(sections);
     }
 
     private static string NormalizeProfileSectionKey(string? key)
@@ -1338,6 +1182,8 @@ END
             "number" => "number",
             "date" => "date",
             "textarea" => "textarea",
+            "select" => "select",
+            "checkbox" => "checkbox",
             _ => "text"
         };
     }
@@ -1405,7 +1251,7 @@ END
         }
 
         var personal = new List<UpdateField>();
-        AddByKeys(personal, "employee-info", "Phone", "Email");
+        AddByKeys(personal, "employee-info", "Phone", "Email", "Gender", "MaritalStatus", "Country", "IsCitizen", "PassportNo", "SponsorName", "Religion", "MotherCountry", "MotherCity", "PersonalEmail", "PhoneExtension");
         AddByKeys(personal, "extra", "Nationality", "Accommodation", "EmergencyContact");
         AddFromSection(personal, "profile-personal");
         if (personal.Count > 0)
@@ -1418,7 +1264,7 @@ END
         }
 
         var job = new List<UpdateField>();
-        AddByKeys(job, "employee-info", "Position", "DepartmentId", "DirectManagerId", "HireDate");
+        AddByKeys(job, "employee-info", "BranchId", "DepartmentId", "PositionId", "DirectManagerId", "HireDate", "JoiningDate", "WorkType", "JobGrade", "ContractEndDate");
         AddByKeys(job, "extra", "ContractType");
         AddFromSection(job, "profile-job");
         if (job.Count > 0)
@@ -1489,10 +1335,13 @@ END
         public string FieldLabel { get; set; } = string.Empty;
         public string FieldType { get; set; } = "text";
         public int SortOrder { get; set; }
+        public string FieldOptions { get; set; } = "";
+        public bool IsRequired { get; set; }
     }
     // ZYNORA_FIX14A_DYNAMIC_PROFILE_FIELD_RECORD_END
     public record UpdateSection(string Key, string Name, string Description, List<UpdateField> Fields);
-    public record UpdateField(string Key, string Label, string Target, string InputType, string Placeholder);
+    public record UpdateField(string Key, string Label, string Target, string InputType, string Placeholder,
+        string Options = "", bool IsRequired = false, bool ReadOnly = false);
 
     public class UpdateEmployee
     {

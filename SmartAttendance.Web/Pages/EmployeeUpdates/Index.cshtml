@@ -70,6 +70,16 @@
                         <span>&#x0627;&#x0644;&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x064A;&#x0646;&#x0634;&#x0626; &#x062D;&#x0631;&#x0643;&#x0629; &#x0623;&#x0648;&#x0644;&#x0627;&#x064B;&#x060C; &#x0648;&#x064A;&#x064F;&#x0637;&#x0628;&#x0642; &#x0639;&#x0644;&#x0649; &#x0645;&#x0644;&#x0641; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641; &#x0628;&#x0639;&#x062F; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644; &#x0648;&#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F;.</span>
                     </div>
 
+                    <div class="nxupd-rule-box">
+                        <span>الاسم بلغاته، الرقم العائلي، الصورة والتوقيع والسجلات المتعددة تُدار من ملف الموظف.</span>
+                        <a asp-page="/Employees/Profile" asp-route-id="@Model.SelectedEmployeeId">فتح ملف الموظف</a>
+                        <a asp-page="/Employees/Edit" asp-route-id="@Model.SelectedEmployeeId">تعديل بيانات الملف</a>
+                        @if (Model.CanViewFinancial)
+                        {
+                            <a asp-page="/Employees/FinancialInfo" asp-route-id="@Model.SelectedEmployeeId">الملفات المالية ومرفقاتها</a>
+                        }
+                    </div>
+
                     <form method="post" asp-page-handler="Stage" class="nxupd-form">
                         <input type="hidden" name="employeeId" value="@Model.SelectedEmployeeId" />
                         <input type="hidden" name="sectionKey" value="employee-master" />
@@ -114,7 +124,46 @@
                                             <div class="nxupd-field" data-field-key="@field.Key" data-field-type="@field.InputType">
                                                 <label>@field.Label</label>
 
-                                                @if (field.InputType == "select-department")
+                                                @if (field.Key is "BankAccount" or "Deductions" or "ShiftName" or "AttendanceRule" or "GraceMinutes" or "WorkHours")
+                                                {
+                                                    <span>يُدار بإجراء مستقل من ملف الموظف؛ ليس حقلاً مباشراً في هذه الحركة.</span>
+                                                }
+                                                else if (field.ReadOnly)
+                                                {
+                                                    <input type="text" value="@Model.FieldValue(field.Key)" readonly aria-readonly="true" />
+                                                    <small>للعرض فقط؛ يُعدَّل بإجراءاته الخاصة من ملف الموظف.</small>
+                                                }
+                                                else if (field.InputType is "select-branch" or "select-position-id")
+                                                {
+                                                    var options = field.InputType == "select-branch" ? Model.ProfileBranches : Model.ProfilePositions;
+                                                    <select data-zynora-select="true" name="@field.Key" required="@field.IsRequired">
+                                                        <option value="">اختر...</option>
+                                                        @foreach (var option in options)
+                                                        {
+                                                            <option value="@option.Id" selected="@(Model.FieldValue(field.Key) == option.Id.ToString())">@option.Name</option>
+                                                        }
+                                                    </select>
+                                                }
+                                                else if (field.InputType == "select")
+                                                {
+                                                    <select data-zynora-select="true" name="@field.Key" required="@field.IsRequired">
+                                                        <option value="">اختر...</option>
+                                                        @if (!string.IsNullOrEmpty(Model.FieldValue(field.Key)) && !field.Options.Split('\n', System.StringSplitOptions.TrimEntries).Contains(Model.FieldValue(field.Key)))
+                                                        {
+                                                            <option value="@Model.FieldValue(field.Key)" selected>@Model.FieldValue(field.Key)</option>
+                                                        }
+                                                        @foreach (var option in field.Options.Split('\n', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries))
+                                                        {
+                                                            <option value="@option" selected="@(Model.FieldValue(field.Key) == option)">@SmartAttendance.Web.Pages.EmployeeUpdates.IndexModel.OptionLabel(option)</option>
+                                                        }
+                                                    </select>
+                                                }
+                                                else if (field.InputType == "checkbox")
+                                                {
+                                                    <input type="checkbox" name="@field.Key" value="true" checked="@(Model.FieldValue(field.Key) == "true")" />
+                                                    <input type="hidden" name="@field.Key" value="false" />
+                                                }
+                                                else if (field.InputType == "select-department")
                                                 {
                                                     <select data-zynora-select="true" name="@field.Key">
                                                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x0642;&#x0633;&#x0645;</option>
@@ -200,11 +249,11 @@
                                                 }
                                                 else if (field.InputType == "number")
                                                 {
-                                                    <input type="number" step="0.01" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" />
+                                                    <input type="number" step="0.0001" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" required="@field.IsRequired" />
                                                 }
                                                 else if (field.InputType == "date")
                                                 {
-                                                    <input type="date" name="@field.Key" value="@Model.FieldValue(field.Key)" />
+                                                    <input type="date" name="@field.Key" value="@Model.FieldValue(field.Key)" required="@field.IsRequired" />
                                                 }
                                                 else if (field.InputType == "textarea")
                                                 {
@@ -215,7 +264,10 @@
                                                     <input type="text" name="@field.Key" value="@Model.FieldValue(field.Key)" placeholder="@field.Placeholder" />
                                                 }
 
-                                                <small>&#x0627;&#x0644;&#x0642;&#x064A;&#x0645;&#x0629; &#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x064A;&#x0629;: <b>@Model.FieldDisplayValue(field.Key, Model.FieldValue(field.Key))</b></small>
+                                                @if (field.Key is not ("BankAccount" or "Deductions" or "ShiftName" or "AttendanceRule" or "GraceMinutes" or "WorkHours"))
+                                                {
+                                                    <small>&#x0627;&#x0644;&#x0642;&#x064A;&#x0645;&#x0629; &#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x064A;&#x0629;: <b>@Model.FieldDisplayValue(field.Key, Model.FieldValue(field.Key))</b></small>
+                                                }
                                             </div>
                                         }
                                     </div>

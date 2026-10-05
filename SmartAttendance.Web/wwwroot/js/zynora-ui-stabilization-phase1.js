@@ -77,6 +77,8 @@
 
     function activateCurrentNavigation() {
         var current = normalize(window.location.pathname);
+        var section = new URLSearchParams(window.location.search).get("section") || "";
+        var financial = section === "financial" || section === "payment";
         var links = Array.from(
             document.querySelectorAll(
                 ".zynora-nav-link[href]"
@@ -97,6 +99,10 @@
 
         links.forEach(function (link) {
             var path = hrefPath(link);
+            if (current === "/employeeupdates" && isSame(current, path)) {
+                var targetSection = new URL(link.href, window.location.origin).searchParams.get("section") || "";
+                if (financial ? targetSection !== section : !!targetSection) return;
+            }
 
             if (
                 path &&
@@ -129,6 +135,8 @@
                     "is-active",
                     !!hasActiveLink
                 );
+                var summary = group.querySelector(":scope > summary");
+                if (summary) summary.classList.toggle("ky-current", !!hasActiveLink);
             });
     }
 
