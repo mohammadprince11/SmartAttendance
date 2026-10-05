@@ -6,8 +6,9 @@
 }
 
 <link rel="stylesheet" href="~/css/zynora-employee-updates.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/employee-updates-identity.css" asp-append-version="true" />
 
-<section class="nxupd-page nxupd-page-v14b" dir="rtl">
+<section class="nxupd-page nxupd-page-v14b zy-employee-updates" dir="rtl">
     <header class="nxupd-hero">
         <div>
             <h1>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B;&#x0627;&#x062A; &#x0627;&#x0644;&#x0645;&#x0648;&#x0638;&#x0641;</h1>
@@ -38,7 +39,7 @@
         </form>
     </section>
 
-    <nav class="nxupd-top-tabs">
+    <nav class="nxupd-top-tabs" aria-label="مراحل تحديث الموظف">
         <a class="@(Model.Tab == "stage" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="stage" asp-route-section="employee-master">&#x0625;&#x062F;&#x062E;&#x0627;&#x0644; &#x062D;&#x0631;&#x0643;&#x0629; &#x062C;&#x062F;&#x064A;&#x062F;&#x0629;</a>
         <a class="@(Model.Tab == "confirm" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="confirm" asp-route-section="employee-master">&#x0627;&#x0644;&#x062A;&#x0623;&#x0643;&#x064A;&#x062F; &#x0642;&#x0628;&#x0644; &#x0627;&#x0644;&#x0642;&#x0641;&#x0644;</a>
         <a class="@(Model.Tab == "history" ? "active" : "")" asp-page="./Index" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-tab="history" asp-route-section="employee-master">&#x0627;&#x0644;&#x0647;&#x0633;&#x062A;&#x0631;&#x064A;</a>
