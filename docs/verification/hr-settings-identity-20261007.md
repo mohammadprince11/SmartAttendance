@@ -12,6 +12,8 @@ separate action footer, and termination-reason fields have visible labels.
 
 No handlers, field names, validation constraints, authorization, JavaScript
 business behavior, database logic, calculation rules or runtime settings change.
+Notification switches additionally expose their current state through
+role="switch" and aria-checked, updated after the existing successful POST.
 Static attribute comparison uses commit 97d19f71 as the immutable baseline.
 
 Verification:
@@ -22,6 +24,12 @@ Verification:
 - 54 full-shell synthetic browser fixtures: all nine views, dark/light themes,
   390/900/1800px; visibility, palette, overflow, field height, hidden POST values,
   native checkboxes, shared dropdowns, segmented radios and approval drawer.
+- Follow-up: all 54 fixtures passed again with 52x28px capsule switches,
+  contained 22px thumbs, RTL on/off travel and centered segmented labels.
+  The actual notification inline script is exercised with mocked successful
+  fetch responses; mouse activation and keyboard Space update aria-checked
+  and the existing detail visibility. Release build passed again with no
+  warnings or errors. No real notification setting was changed.
 - 30 preceding clipping regression fixtures passed.
 - 72 preceding HR administration identity fixtures passed.
 - Configured NuGet sources reported no vulnerable packages.

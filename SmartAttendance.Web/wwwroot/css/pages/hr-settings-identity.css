@@ -42,7 +42,13 @@
     .zy-hr-settings-page .nxhs-segment { position: relative; }
     .zy-hr-settings-page :is(label, label b, label span) { overflow-wrap: anywhere; }
     .zy-hr-settings-page .nxhs-segment { block-size: 44px !important; height: 44px !important; min-height: 44px !important; max-height: 44px !important; inline-size: max-content !important; max-inline-size: 100% !important; background: var(--surface-input) !important; border-color: var(--border-default) !important; border-radius: 10px !important; }
-    .zy-hr-settings-page .nxhs-segment label { color: var(--text-muted) !important; font-weight: 600 !important; }
+    .zy-hr-settings-page .nxhs-segment label {
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        flex: 1 1 0 !important; min-inline-size: 80px !important; block-size: 100% !important;
+        padding: 0 16px !important; margin: 0 !important; line-height: 1.5 !important;
+        text-align: center !important; white-space: nowrap !important; font-size: 14px !important;
+        color: var(--text-muted) !important; font-weight: 600 !important;
+    }
     .zy-hr-settings-page .nxhs-segment input:checked + label { background: var(--color-primary-soft) !important; background-image: none !important; color: var(--color-primary-text) !important; }
     /* Visually hidden radios remain keyboard reachable; native hidden POST values stay hidden. */
     .zy-hr-settings-page .nxhs-segment input[type="radio"] { display: block !important; position: absolute; opacity: 0; }
@@ -108,9 +114,23 @@
     .zy-hr-settings-page :is(.nxhs-table, .hrms-table, .apt-matrix) :is(th, td) { background: transparent !important; border: 0 !important; border-block-end: 1px solid var(--border-default) !important; color: var(--text-default) !important; padding: 14px 16px !important; text-align: start !important; }
     .zy-hr-settings-page :is(.nxhs-table, .hrms-table, .apt-matrix) th { background: var(--surface-raised) !important; color: var(--text-muted) !important; }
     .zy-hr-settings-page .nxhs-reason-shell { background: transparent !important; border: 0 !important; }
-    .zy-hr-settings-page .nxhs-switch-button { background: var(--surface-input) !important; border-color: var(--border-default) !important; box-shadow: none !important; }
+    .zy-hr-settings-page .nxhs-switch-button {
+        display: inline-block !important; position: relative !important; flex: 0 0 auto !important;
+        width: 52px !important; min-width: 52px !important; max-width: 52px !important;
+        height: 28px !important; min-height: 28px !important; max-height: 28px !important;
+        inline-size: 52px !important; min-inline-size: 52px !important; max-inline-size: 52px !important;
+        block-size: 28px !important; min-block-size: 28px !important; max-block-size: 28px !important;
+        padding: 0 !important; margin: 0 !important; border: 1px solid var(--border-default) !important;
+        border-radius: 999px !important; background: var(--surface-input) !important; box-shadow: none !important;
+    }
     .zy-hr-settings-page .nxhs-switch-button.on { background: var(--brand-primary) !important; border-color: var(--brand-primary) !important; }
-    .zy-hr-settings-page .nxhs-switch-button span { background: var(--text-default) !important; }
+    .zy-hr-settings-page .nxhs-switch-button span {
+        position: absolute !important; inset: auto !important; inset-block-start: 2px !important; inset-inline-start: 2px !important;
+        inline-size: 22px !important; block-size: 22px !important; width: 22px !important; height: 22px !important;
+        padding: 0 !important; margin: 0 !important; border-radius: 50% !important;
+        background: var(--text-default) !important; transition: inset-inline-start 150ms ease !important;
+    }
+    .zy-hr-settings-page .nxhs-switch-button.on span { inset-inline-start: 26px !important; background: var(--color-on-primary) !important; }
     .zy-hr-settings-page :is(.apt-slide, .nxhs-delete-dialog) { background: var(--surface-panel) !important; background-image: none !important; border-color: var(--border-default) !important; color: var(--text-default) !important; box-shadow: none !important; padding: 24px !important; }
     .zy-hr-settings-page .apt-slide { inset-inline-start: auto !important; inset-inline-end: 0 !important; inline-size: min(640px, 100vw) !important; transition-duration: 200ms !important; }
     .zy-hr-settings-page :is(.apt-backdrop, .nxhs-delete-backdrop) { background: color-mix(in srgb, var(--surface-input) 75%, transparent) !important; }

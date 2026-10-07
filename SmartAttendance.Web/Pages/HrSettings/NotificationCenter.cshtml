@@ -43,7 +43,7 @@
 
                     <form method="post" asp-page-handler="ToggleRule" class="nxhs-switch-form">
                         <input type="hidden" name="id" value="@rule.Id" />
-                        <button type="submit" class="nxhs-switch-button @(rule.IsEnabled ? "on" : "")" aria-label="تبديل الإشعار">
+                        <button type="submit" class="nxhs-switch-button @(rule.IsEnabled ? "on" : "")" aria-label="تبديل الإشعار" role="switch" aria-checked="@(rule.IsEnabled ? "true" : "false")">
                             <span></span>
                         </button>
                     </form>
@@ -114,6 +114,7 @@
                         if (!response.ok) throw new Error(response.status);
                         var nowOn = !button.classList.contains("on");
                         button.classList.toggle("on", nowOn);
+                        button.setAttribute("aria-checked", nowOn ? "true" : "false");
                         article.classList.toggle("is-open", nowOn);
                         if (details) {
                             details.hidden = !nowOn;
