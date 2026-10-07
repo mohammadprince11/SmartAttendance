@@ -88,7 +88,7 @@
                             <input name="supervisorName" value="@rule.SupervisorName" placeholder="اسم المشرف" />
                         </label>
 
-                        <button type="submit">حفظ</button>
+                        <noscript><button type="submit">حفظ</button></noscript>
                     </div>
                 </form>
             </article>
@@ -109,6 +109,7 @@
                 if (saving) return;
                 var button = form.querySelector(".nxhs-switch-button");
                 var article = form.closest(".nxhs-notification-item");
+                if (article.notificationDetailsPending) return;
                 var details = article.querySelector(".nxhs-notification-details");
                 var status = article.querySelector(".zy-notification-save-status");
                 var previous = button.classList.contains("on");
@@ -156,21 +157,74 @@
             });
         });
 
-        // حفظ التفاصيل يعيد التحميل (redirect) — نحفظ موضع التمرير ونرجعه حتى لا تقفز الصفحة.
-        // المستند هو مالك التمرير (zynora-global-scroll-system.css) — و`.zynora-content`
-        // لم يعد مُمرِّراً فـ scrollTop عليه صفر دائماً.
-        var scroller = document.scrollingElement || document.documentElement;
+        // حفظ تلقائي متسلسل لكل قاعدة؛ لا إعادة POST تلقائية بعد رد غير مؤكد.
+        var unsavedForms = new Set();
         document.querySelectorAll(".nxhs-notification-details").forEach(function (form) {
-            form.addEventListener("submit", function () {
-                try { sessionStorage.setItem("nxhs-notif-scroll", scroller.scrollTop); } catch (e) { }
+            var article = form.closest(".nxhs-notification-item");
+            var toggle = article.querySelector(".nxhs-switch-button");
+            var status = article.querySelector(".zy-notification-save-status");
+            var timer, saving = false, queued = false, uncertain = false;
+            function snapshot() { return JSON.stringify(Array.from(new FormData(form).entries())); }
+            var confirmed = snapshot();
+            function changed() {
+                if (snapshot() === confirmed && !saving && !uncertain) { unsavedForms.delete(form); return; }
+                unsavedForms.add(form);
+                clearTimeout(timer);
+                timer = setTimeout(save, 600);
+            }
+            async function save() {
+                clearTimeout(timer);
+                if (saving) { queued = true; return; }
+                if (toggle.hasAttribute("aria-busy")) { timer = setTimeout(save, 150); return; }
+                var sent = snapshot();
+                if (sent === confirmed && !uncertain) { unsavedForms.delete(form); return; }
+                if (!form.reportValidity()) {
+                    status.classList.add("is-error");
+                    status.textContent = "صحّح الحقول غير الصالحة حتى يتم الحفظ تلقائياً.";
+                    return;
+                }
+                saving = true;
+                queued = false;
+                article.notificationDetailsPending = true;
+                toggle.setAttribute("aria-busy", "true");
+                toggle.setAttribute("aria-disabled", "true");
+                status.classList.remove("is-error");
+                status.textContent = "جارٍ الحفظ…";
+                var succeeded = false;
+                try {
+                    var response = await fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin", headers: { "Accept": "application/json" } });
+                    if (!response.ok || response.redirected) throw new Error("Save failed");
+                    var result = await response.json();
+                    if (result.saved !== true) throw new Error("Invalid confirmation");
+                    confirmed = sent;
+                    uncertain = false;
+                    succeeded = true;
+                    status.textContent = "تم الحفظ";
+                    if (snapshot() === confirmed) unsavedForms.delete(form);
+                } catch (error) {
+                    uncertain = true;
+                    clearTimeout(timer);
+                    status.classList.add("is-error");
+                    status.textContent = "تعذّر تأكيد الحفظ. أبقِ الصفحة مفتوحة وتحقق من الاتصال، ثم عدّل الحقل للمحاولة مجدداً.";
+                } finally {
+                    saving = false;
+                    article.notificationDetailsPending = false;
+                    toggle.removeAttribute("aria-busy");
+                    toggle.removeAttribute("aria-disabled");
+                    // أحدث التعديلات فقط، بعد تأكيد الطلب السابق، لتجنب الكتابة بترتيب معكوس.
+                    if (succeeded && (queued || snapshot() !== confirmed)) timer = setTimeout(save, 0);
+                }
+            }
+            form.addEventListener("input", changed);
+            form.addEventListener("change", changed);
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                unsavedForms.add(form);
+                save();
             });
         });
-        try {
-            var savedScroll = sessionStorage.getItem("nxhs-notif-scroll");
-            if (savedScroll !== null) {
-                scroller.scrollTop = parseInt(savedScroll, 10) || 0;
-                sessionStorage.removeItem("nxhs-notif-scroll");
-            }
-        } catch (e) { }
+        window.addEventListener("beforeunload", function (e) {
+            if (unsavedForms.size) { e.preventDefault(); e.returnValue = ""; }
+        });
     </script>
 }

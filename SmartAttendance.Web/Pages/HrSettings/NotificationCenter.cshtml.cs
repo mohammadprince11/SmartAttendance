@@ -44,9 +44,17 @@ public class NotificationCenterModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostUpdateRuleAsync(int id, string audience, int daysBefore, string selectedItems, string supervisorName)
+    public async Task<IActionResult> OnPostUpdateRuleAsync(int id, string audience, int daysBefore, string selectedItems, string? supervisorName)
     {
-        await HrSettingsStore.UpdateNotificationRuleAsync(_db, id, audience, daysBefore, selectedItems, supervisorName);
+        var json = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
+        if (json)
+        {
+            if (!ModelState.IsValid || id <= 0 || daysBefore < 0 || string.IsNullOrWhiteSpace(audience) || string.IsNullOrWhiteSpace(selectedItems)) return BadRequest();
+            Rules = await HrSettingsStore.LoadNotificationRulesAsync(_db);
+            if (!Rules.Any(x => x.Id == id)) return NotFound();
+        }
+        await HrSettingsStore.UpdateNotificationRuleAsync(_db, id, audience, daysBefore, selectedItems, supervisorName ?? string.Empty);
+        if (json) return new JsonResult(new { saved = true });
         TempData["SuccessMessage"] = "تم تحديث إعدادات الإشعار.";
         return RedirectToPage();
     }

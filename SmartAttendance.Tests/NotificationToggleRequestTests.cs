@@ -37,4 +37,25 @@ public sealed class NotificationToggleRequestTests
             PageContext = new PageContext { HttpContext = context }
         };
     }
+
+    [Theory]
+    [InlineData(0, "المشرفين", 0, "كل الموظفين")]
+    [InlineData(1, "المشرفين", -1, "كل الموظفين")]
+    [InlineData(1, "", 0, "كل الموظفين")]
+    [InlineData(1, "المشرفين", 0, "")]
+    public async Task JsonDetails_RejectsInvalidValues_BeforeDatabaseAccess(int id, string audience, int days, string items)
+    {
+        using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().Options);
+        var model = CreateModel(db);
+        Assert.IsType<BadRequestResult>(await model.OnPostUpdateRuleAsync(id, audience, days, items, null));
+    }
+
+    [Fact]
+    public async Task JsonDetails_RejectsInvalidBinding_BeforeDatabaseAccess()
+    {
+        using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().Options);
+        var model = CreateModel(db);
+        model.ModelState.AddModelError("daysBefore", "Invalid integer");
+        Assert.IsType<BadRequestResult>(await model.OnPostUpdateRuleAsync(1, "المشرفين", 0, "كل الموظفين", null));
+    }
 }
