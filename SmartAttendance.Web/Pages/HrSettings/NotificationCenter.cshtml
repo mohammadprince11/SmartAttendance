@@ -4,7 +4,7 @@
 @*
     مركز الإشعارات — التبديل صار AJAX (2026-07): سابقاً كل نقرة مفتاح كانت
     POST بإعادة تحميل كاملة فتومض الشاشة وتقفز («ترجف»). الآن fetch يقلب
-    الحالة ويُظهر/يخفي لوحة التفاصيل محلياً؛ الإرسال العادي يبقى fallback.
+    الحالة ويُظهر/يخفي لوحة التفاصيل فوراً؛ الإرسال العادي يبقى عند غياب JS.
     لوحة التفاصيل تُرندر لكل قاعدة (مخفية للمعطلة) حتى يشتغل الإظهار بلا تحميل.
 *@
 
@@ -47,6 +47,7 @@
                             <span></span>
                         </button>
                     </form>
+                    <span class="zy-notification-save-status" role="status" aria-live="polite"></span>
                 </header>
 
                 @* التفاصيل تُرندر دائماً وتُخفى للمعطلة — حتى يُظهرها التبديل بلا إعادة تحميل *@
@@ -99,30 +100,59 @@
 
 @section Scripts {
     <script>
-        // تبديل الإشعار بلا إعادة تحميل: fetch POST ثم قلب الحالة محلياً.
-        // عند فشل الشبكة نرجع للإرسال العادي حتى لا يعلق المفتاح.
+        // استجابة فورية، ثم تثبيت الحالة المطلوبة على الخادم بدون redirect.
+        // لا نعيد POST تلقائياً عند الفشل: قد يكون الحفظ نجح وانقطع الرد فقط.
         document.querySelectorAll(".nxhs-switch-form").forEach(function (form) {
+            var saving = false;
             form.addEventListener("submit", function (e) {
                 e.preventDefault();
+                if (saving) return;
                 var button = form.querySelector(".nxhs-switch-button");
                 var article = form.closest(".nxhs-notification-item");
                 var details = article.querySelector(".nxhs-notification-details");
-                button.disabled = true;
+                var status = article.querySelector(".zy-notification-save-status");
+                var previous = button.classList.contains("on");
+                var desired = !previous;
+                var body = new FormData(form);
+                body.set("isEnabled", String(desired));
+                saving = true;
+                button.setAttribute("aria-busy", "true");
+                button.setAttribute("aria-disabled", "true");
+                if (details) details.inert = true;
+                status.classList.remove("is-error");
+                status.textContent = "جارٍ الحفظ…";
+                function showState(enabled) {
+                    button.classList.toggle("on", enabled);
+                    button.setAttribute("aria-checked", String(enabled));
+                    article.classList.toggle("is-open", enabled);
+                    if (details) {
+                        details.hidden = !enabled;
+                        details.classList.toggle("reveal", enabled);
+                    }
+                }
+                showState(desired);
 
-                fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin" })
+                fetch(form.action, { method: "POST", body: body, credentials: "same-origin", headers: { "Accept": "application/json" } })
                     .then(function (response) {
-                        if (!response.ok) throw new Error(response.status);
-                        var nowOn = !button.classList.contains("on");
-                        button.classList.toggle("on", nowOn);
-                        button.setAttribute("aria-checked", nowOn ? "true" : "false");
-                        article.classList.toggle("is-open", nowOn);
-                        if (details) {
-                            details.hidden = !nowOn;
-                            details.classList.toggle("reveal", nowOn);
-                        }
+                        if (!response.ok || response.redirected) throw new Error("Save failed");
+                        return response.json();
                     })
-                    .catch(function () { form.submit(); })
-                    .finally(function () { button.disabled = false; });
+                    .then(function (result) {
+                        if (typeof result.isEnabled !== "boolean") throw new Error("Invalid state");
+                        showState(result.isEnabled);
+                        status.textContent = "تم الحفظ";
+                    })
+                    .catch(function () {
+                        showState(previous);
+                        status.classList.add("is-error");
+                        status.textContent = "تعذّر تأكيد الحفظ. حدّث الصفحة للتحقق ثم حاول مجدداً.";
+                    })
+                    .finally(function () {
+                        saving = false;
+                        button.removeAttribute("aria-busy");
+                        button.removeAttribute("aria-disabled");
+                        if (details) details.inert = false;
+                    });
             });
         });
 

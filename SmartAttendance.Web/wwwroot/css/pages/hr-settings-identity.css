@@ -131,6 +131,9 @@
         background: var(--text-default) !important; transition: inset-inline-start 150ms ease !important;
     }
     .zy-hr-settings-page .nxhs-switch-button.on span { inset-inline-start: 26px !important; background: var(--color-on-primary) !important; }
+    .zy-hr-settings-page .nxhs-switch-button[aria-busy="true"] { cursor: progress !important; }
+    .zy-hr-settings-page .zy-notification-save-status { color: var(--text-muted); font-size: 12px; }
+    .zy-hr-settings-page .zy-notification-save-status.is-error { color: var(--color-danger); }
     .zy-hr-settings-page :is(.apt-slide, .nxhs-delete-dialog) { background: var(--surface-panel) !important; background-image: none !important; border-color: var(--border-default) !important; color: var(--text-default) !important; box-shadow: none !important; padding: 24px !important; }
     .zy-hr-settings-page .apt-slide { inset-inline-start: auto !important; inset-inline-end: 0 !important; inline-size: min(640px, 100vw) !important; transition-duration: 200ms !important; }
     .zy-hr-settings-page :is(.apt-backdrop, .nxhs-delete-backdrop) { background: color-mix(in srgb, var(--surface-input) 75%, transparent) !important; }

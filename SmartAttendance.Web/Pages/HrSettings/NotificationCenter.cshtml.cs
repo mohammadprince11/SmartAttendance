@@ -27,13 +27,18 @@ public class NotificationCenterModel : PageModel
         Rules = await HrSettingsStore.LoadNotificationRulesAsync(_db);
     }
 
-    public async Task<IActionResult> OnPostToggleRuleAsync(int id)
+    public async Task<IActionResult> OnPostToggleRuleAsync(int id, bool? isEnabled = null)
     {
+        var json = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
+        if (json && (!isEnabled.HasValue || !ModelState.IsValid)) return BadRequest();
         Rules = await HrSettingsStore.LoadNotificationRulesAsync(_db);
         var rule = Rules.FirstOrDefault(x => x.Id == id);
+        if (json && rule == null) return NotFound();
         if (rule != null)
         {
-            await HrSettingsStore.ToggleNotificationRuleAsync(_db, id, !rule.IsEnabled);
+            var desired = isEnabled ?? !rule.IsEnabled;
+            await HrSettingsStore.ToggleNotificationRuleAsync(_db, id, desired);
+            if (json) return new JsonResult(new { isEnabled = desired });
         }
 
         return RedirectToPage();
