@@ -7,8 +7,10 @@
 <link rel="stylesheet" href="~/css/pages/lookups-51691a7731.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/hr-settings-identity.css" asp-append-version="true" />
 
-<div class="hrms-page" data-hrms-tabs-group>
+<div class="hrms-page zy-hr-admin-page zy-hr-settings-page" data-hrms-tabs-group>
     <div class="page-header">
         <div>
             <h1>القوائم المرجعية</h1>
@@ -36,15 +38,22 @@
 
         <div class="hrms-tabpanel @(i == 0 ? "active" : "")" data-hrms-tabpanel="@category.Key">
             <div class="hrms-table-card">
-                <form method="post" asp-page-handler="Add" class="hrms-inline-form zyu-2130e9f98a91">
+                <form method="post" asp-page-handler="Add" class="zy-hr-lookup-form">
                     <input type="hidden" name="category" value="@category.Key" />
-                    <label>الاسم بالعربية</label>
-                    <input name="arabicName" required placeholder="القيمة الجديدة..." />
-                    <label>بالإنجليزية</label>
-                    <input name="englishName" placeholder="اختياري" />
-                    <label>الترتيب</label>
-                    <input name="sortOrder" type="number" min="0" value="0" class="zyu-d5528ca69877" />
-                    <button type="submit" class="hrms-btn-primary">+ إضافة</button>
+                    <div class="zy-hr-lookup-fields">
+                        <label>الاسم بالعربية
+                            <input name="arabicName" required placeholder="القيمة الجديدة..." />
+                        </label>
+                        <label>بالإنجليزية
+                            <input name="englishName" placeholder="اختياري" />
+                        </label>
+                        <label>الترتيب
+                            <input name="sortOrder" type="number" min="0" value="0" />
+                        </label>
+                    </div>
+                    <footer class="nxhs-actions">
+                        <button type="submit" class="hrms-btn-primary">+ إضافة</button>
+                    </footer>
                 </form>
 
                 @if (!items.Any())

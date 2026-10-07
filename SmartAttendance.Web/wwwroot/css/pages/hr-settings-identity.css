@@ -1,0 +1,135 @@
+/* HR settings only. Keep form contracts, hidden controls, tabs and drawer lifecycle intact. */
+@layer zynora-hr-settings {
+    .zy-hr-settings-page { padding: 0 !important; --nxhs-green: var(--status-success); --nxhs-red: var(--status-danger); }
+    .zy-hr-settings-page :is(.page-header, .rtc-head, .lp-head, .pai-head,
+        .hrms-table-card, .rtc-cat, .rtc-newcat, .lp-card, .lp-company, .pai-card, .pai-company) {
+        min-inline-size: 0 !important; max-inline-size: 100% !important;
+        background: var(--surface-panel) !important; background-image: none !important;
+        color: var(--text-default) !important; border: 1px solid var(--border-default) !important;
+        border-radius: 16px !important; box-shadow: none !important;
+        padding: 24px !important; margin: 0 !important;
+    }
+    .zy-hr-settings-page :is(.page-header, .rtc-head, .lp-head, .pai-head, .pai-company, .lp-card-head, .pai-card-head, .rtc-cat-head) {
+        display: flex !important; flex-wrap: wrap !important; gap: 16px !important;
+        align-items: center !important; justify-content: space-between !important;
+    }
+    .zy-hr-settings-page :is(.nxhs-panel, .nxhs-self-panel) { inline-size: 100% !important; max-inline-size: 100% !important; max-width: none !important; }
+    .zy-hr-settings-page :is(.rtc-sub, .nxhs-helper, .apt-help, .lp-grid small, .pai-local span, .pai-company small, .pai-field-identity code, .pai-readiness small) {
+        color: var(--text-muted) !important; font-weight: 500 !important; line-height: 1.7 !important; overflow-wrap: anywhere;
+    }
+    .zy-hr-settings-page :is(.rtc-sub, .lp-head p) { margin: 0 !important; }
+    .zy-hr-settings-page :is(.nxhs-setting-section, .nxhs-subbox, .nxhs-duration-row, .nxhs-option-row,
+        .nxhs-inline-add, .nxhs-notification-item, .rtc-type, .apt-sim, .apt-step, .pai-local, .pai-readiness > span,
+        .pai-policy-row, .pai-field-policy-row, .pai-doc-type-row) {
+        background: var(--surface-raised) !important; background-image: none !important;
+        border: 1px solid var(--border-default) !important; border-radius: 12px !important;
+        box-shadow: none !important; color: var(--text-default) !important;
+        padding: 16px !important; min-inline-size: 0 !important; margin-block-end: 16px !important;
+    }
+    .zy-hr-settings-page .nxhs-setting-section:last-of-type { margin-block-end: 0 !important; }
+    .zy-hr-settings-page :is(.nxhs-setting-section h2, .nxhs-notification-item > header, .rtc-body, .pai-field-add, .pai-doc-type-add, .pai-policy-add, .lp-flags) {
+        border-color: var(--border-default) !important;
+    }
+    .zy-hr-settings-page :is(.nxhs-field, .nxhs-field-row, .nxhs-level-select, .nxhs-notif-grid > label,
+        .apt-form-grid > label, .apt-delegation-form > label, .rtc-grid > label, .lp-grid > label,
+        .pai-fields > label, .pai-company > label, .pai-policy-row > label, .pai-field-policy-row > label,
+        .pai-doc-type-row > label, .pai-field-add > label, .pai-doc-type-add > label, .zy-hr-lookup-fields > label, .nxhs-inline-add > label) {
+        display: grid; gap: 8px; min-inline-size: 0 !important; font-size: 13px !important; font-weight: 600 !important;
+    }
+    .zy-hr-settings-page :is(.nxhs-field-row, .nxhs-team-access-row) { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) !important; gap: 16px !important; }
+    .zy-hr-settings-page .nxhs-duration-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important; }
+    .zy-hr-settings-page :is(.nxhs-option-row, .nxhs-segment) { flex-direction: row !important; justify-content: flex-start !important; }
+    .zy-hr-settings-page .nxhs-segment { position: relative; }
+    .zy-hr-settings-page :is(label, label b, label span) { overflow-wrap: anywhere; }
+    .zy-hr-settings-page .nxhs-segment { block-size: 44px !important; height: 44px !important; min-height: 44px !important; max-height: 44px !important; inline-size: max-content !important; max-inline-size: 100% !important; background: var(--surface-input) !important; border-color: var(--border-default) !important; border-radius: 10px !important; }
+    .zy-hr-settings-page .nxhs-segment label { color: var(--text-muted) !important; font-weight: 600 !important; }
+    .zy-hr-settings-page .nxhs-segment input:checked + label { background: var(--color-primary-soft) !important; background-image: none !important; color: var(--color-primary-text) !important; }
+    /* Visually hidden radios remain keyboard reachable; native hidden POST values stay hidden. */
+    .zy-hr-settings-page .nxhs-segment input[type="radio"] { display: block !important; position: absolute; opacity: 0; }
+    .zy-hr-settings-page .nxhs-segment input:focus-visible + label { outline: 2px solid var(--brand-primary); outline-offset: -3px; }
+    .zy-hr-settings-page :is(.nxhs-check-line, .nxhs-permission-grid label, .rtc-toggles label, .lp-grid .lp-check,
+        .lp-flags label, .pai-check, .pai-toggle, .pai-language-field label) {
+        display: flex !important; flex-direction: row !important; align-items: center !important;
+        gap: 10px !important; min-inline-size: 0 !important; font-weight: 500 !important;
+        color: var(--text-default) !important; text-align: start !important;
+    }
+    .zy-hr-settings-page :is(input[type="checkbox"], input[type="radio"]) { flex: 0 0 auto; margin: 0; }
+    .zy-hr-settings-page :is(.rtc-grid, .lp-grid, .nxhs-notif-grid, .nxhs-permission-grid, .apt-delegation-form,
+        .zy-hr-lookup-fields, .pai-policy-row, .pai-policy-add, .pai-field-policy-row, .pai-field-add, .pai-doc-type-row, .pai-doc-type-add) {
+        display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 16px !important; align-items: end !important; min-inline-size: 0 !important;
+    }
+    .zy-hr-settings-page :is(.pai-policy-add, .pai-field-add, .pai-doc-type-add) > h3 { grid-column: 1 / -1; }
+    .zy-hr-settings-page :is(.pai-company label, .lp-company label) { min-width: 0 !important; inline-size: min(100%, 360px); display: grid; gap: 8px; }
+    .zy-hr-settings-page .lp-company select { min-width: 0 !important; }
+    .zy-hr-settings-page :is(.pai-grid, .apt-layout) { display: grid !important; gap: 24px !important; min-inline-size: 0; }
+    .zy-hr-settings-page .pai-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) !important; }
+    .zy-hr-settings-page .apt-layout { grid-template-columns: 260px minmax(0, 1fr) !important; }
+    .zy-hr-settings-page :is(.lp-list, .pai-policy-list, .pai-field-policy-list, .pai-doc-type-list) { display: grid; gap: 16px !important; }
+    .zy-hr-settings-page :is(.rtc-inline, .rtc-actions, .lp-actions, .pai-actions, .pai-field-actions, .nxhs-search-head, .zy-hr-setting-actions) {
+        display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 12px !important; min-inline-size: 0;
+    }
+    .zy-hr-settings-page .rtc-inline > :is(input:not([type="hidden"]), .nxcs, select) { flex: 1 1 160px; width: auto !important; inline-size: auto !important; }
+    .zy-hr-settings-page .nxhs-inline-add { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 16px !important; }
+    .zy-hr-settings-page .nxhs-inline-add > button { justify-self: start; }
+    .zy-hr-settings-page .nxhs-notif-grid .wide { grid-column: 1 / -1; }
+    .zy-hr-settings-page .nxhs-search-head input[type="search"] { max-inline-size: 360px !important; }
+    .zy-hr-settings-page :is(button:not(.nxcs-trigger):not(.nxcs-option):not(.nxhs-switch-button), .rtc-btn, .lp-back, .hrms-tab) {
+        background: var(--surface-raised) !important; background-image: none !important; box-shadow: none !important;
+        color: var(--text-default) !important; border: 1px solid var(--border-default) !important; border-radius: 10px !important;
+        padding: 10px 16px !important; font: inherit !important; font-size: 13px !important; font-weight: 600 !important;
+        min-block-size: 40px !important; text-decoration: none !important; line-height: 1.5 !important; white-space: normal;
+    }
+    .zy-hr-settings-page :is(.rtc-btn.primary, .hrms-btn-primary, .lp-actions button, .zy-btn--primary,
+        .nxhs-inline-add > button, .nxhs-notif-grid > button, .nxhs-reason-row > button, .nxhs-generate-now button,
+        .apt-delegation-form > button, .apt-slide button[type="submit"]) {
+        background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important; border-color: var(--color-primary-strong) !important;
+    }
+    .zy-hr-settings-page :is(.danger, .pai-danger, .nxhs-delete-trigger, .nxhs-modal-delete, .hrms-btn-danger) { color: var(--status-danger) !important; border-color: var(--status-danger) !important; }
+    .zy-hr-settings-page :is(.hrms-tab.active, .apt-catalog a.active) { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; border-color: var(--brand-primary) !important; }
+    .zy-hr-settings-page .apt-catalog a { color: var(--text-default) !important; }
+    .zy-hr-settings-page :is(.rtc-newcat > summary, .rtc-addtype > summary, .rtc-cat-head summary) { color: var(--color-primary-text) !important; font-weight: 600 !important; border-color: var(--border-default) !important; }
+    .zy-hr-settings-page .apt-step .num { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; }
+    .zy-hr-settings-page :is(.hrms-tabs, .rtc-chips, .rtc-cat-title) { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; min-inline-size: 0; }
+    .zy-hr-settings-page :is(.rtc-badge, .rtc-chip, .apt-chip, .apt-count, .lp-state, .hrms-badge) {
+        background: var(--surface-raised) !important; color: var(--text-default) !important; border: 1px solid var(--border-default) !important;
+        border-radius: 8px !important; padding: 5px 10px !important; font-size: 12px !important; font-weight: 600 !important;
+    }
+    .zy-hr-settings-page :is(.lp-note, .lp-status, .rtc-status, .pai-alert) {
+        border: 1px solid var(--border-default) !important; border-radius: 12px !important;
+        background: var(--surface-raised) !important; color: var(--text-default) !important; padding: 16px !important; margin: 0 !important;
+    }
+    .zy-hr-settings-page :is(.lp-empty, .pai-empty, .hrms-empty) { padding: 32px !important; text-align: center !important; color: var(--text-muted) !important; background: var(--surface-raised) !important; border-radius: 12px !important; }
+    .zy-hr-settings-page .pai-alert--danger { border-color: var(--status-danger) !important; }
+    .zy-hr-settings-page .pai-alert--success { border-color: var(--status-success) !important; }
+    .zy-hr-settings-page :is(.nxhs-table-wrap, .hrms-table-wrap) { overflow-x: auto !important; min-inline-size: 0 !important; max-inline-size: 100% !important; border: 1px solid var(--border-default) !important; border-radius: 12px !important; margin-block-start: 16px !important; }
+    .zy-hr-settings-page :is(.nxhs-table, .hrms-table, .apt-matrix) { inline-size: 100% !important; border-collapse: collapse !important; color: var(--text-default) !important; background: var(--surface-panel) !important; }
+    .zy-hr-settings-page :is(.nxhs-table, .hrms-table) { min-inline-size: 720px !important; }
+    .zy-hr-settings-page :is(.nxhs-table, .hrms-table, .apt-matrix) :is(th, td) { background: transparent !important; border: 0 !important; border-block-end: 1px solid var(--border-default) !important; color: var(--text-default) !important; padding: 14px 16px !important; text-align: start !important; }
+    .zy-hr-settings-page :is(.nxhs-table, .hrms-table, .apt-matrix) th { background: var(--surface-raised) !important; color: var(--text-muted) !important; }
+    .zy-hr-settings-page .nxhs-reason-shell { background: transparent !important; border: 0 !important; }
+    .zy-hr-settings-page .nxhs-switch-button { background: var(--surface-input) !important; border-color: var(--border-default) !important; box-shadow: none !important; }
+    .zy-hr-settings-page .nxhs-switch-button.on { background: var(--brand-primary) !important; border-color: var(--brand-primary) !important; }
+    .zy-hr-settings-page .nxhs-switch-button span { background: var(--text-default) !important; }
+    .zy-hr-settings-page :is(.apt-slide, .nxhs-delete-dialog) { background: var(--surface-panel) !important; background-image: none !important; border-color: var(--border-default) !important; color: var(--text-default) !important; box-shadow: none !important; padding: 24px !important; }
+    .zy-hr-settings-page .apt-slide { inset-inline-start: auto !important; inset-inline-end: 0 !important; inline-size: min(640px, 100vw) !important; transition-duration: 200ms !important; }
+    .zy-hr-settings-page :is(.apt-backdrop, .nxhs-delete-backdrop) { background: color-mix(in srgb, var(--surface-input) 75%, transparent) !important; }
+    .zy-hr-settings-page .nxhs-notif-grid b { background: var(--surface-input) !important; color: var(--text-default) !important; border-color: var(--border-default) !important; }
+    .zy-hr-settings-page :is(.rtc-type-name, .rtc-cat-title, .nxhs-check-line b) { font-weight: 600 !important; }
+    .zy-hr-settings-page :is(.nxhs-delete-warning, .nxhs-delete-icon) { background: var(--surface-raised) !important; color: var(--status-danger) !important; border-color: var(--status-danger) !important; }
+    .zy-hr-settings-page select[multiple] { block-size: auto !important; min-block-size: 120px !important; }
+    .zy-hr-settings-page select option { background: var(--surface-input) !important; color: var(--text-default) !important; }
+    @media (max-width: 1100px) {
+        .zy-hr-settings-page :is(.apt-layout, .pai-grid) { grid-template-columns: minmax(0, 1fr) !important; }
+        .zy-hr-settings-page :is(.nxhs-inline-add, .rtc-grid, .lp-grid, .nxhs-notif-grid, .apt-delegation-form,
+            .pai-policy-row, .pai-policy-add, .pai-field-policy-row, .pai-field-add, .pai-doc-type-row, .pai-doc-type-add) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 650px) {
+        .zy-hr-settings-page :is(.page-header, .rtc-head, .lp-head, .pai-head, .hrms-table-card, .rtc-cat, .rtc-newcat, .lp-card, .lp-company, .pai-card, .pai-company) { padding: 16px !important; }
+        .zy-hr-settings-page :is(.nxhs-duration-row, .nxhs-field-row, .nxhs-team-access-row, .nxhs-inline-add,
+            .rtc-grid, .lp-grid, .nxhs-notif-grid, .nxhs-permission-grid, .apt-delegation-form, .apt-form-grid, .zy-hr-lookup-fields,
+            .pai-fields, .pai-readiness, .pai-policy-row, .pai-policy-add, .pai-field-policy-row, .pai-field-add, .pai-doc-type-row, .pai-doc-type-add) { grid-template-columns: minmax(0, 1fr) !important; }
+        .zy-hr-settings-page .nxhs-unit-segment { min-width: 0 !important; }
+        .zy-hr-settings-page .nxhs-option-row { flex-wrap: wrap !important; }
+    }
+}
