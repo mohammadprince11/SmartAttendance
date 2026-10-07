@@ -6,8 +6,10 @@
 }
 
 <link rel="stylesheet" href="~/css/zynora-hr-settings-v16.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/hr-settings-identity.css" asp-append-version="true" />
 
-<section class="nxhs-page nxhs-simple" dir="rtl">
+<section class="nxhs-page nxhs-simple zy-hr-admin-page zy-hr-settings-page" dir="rtl">
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>أسباب الإيقاف</h1>
@@ -25,10 +27,18 @@
         </header>
 
         <form method="post" asp-page-handler="Add" class="nxhs-inline-add">
-            <input asp-for="Name" placeholder="اسم السبب" required />
-            <select data-zynora-select="true" asp-for="IsMandatory"><option value="false">اختياري</option><option value="true">إلزامي</option></select>
-            <select data-zynora-select="true" asp-for="RequiresSelfService"><option value="true">يطلب من الخدمة الذاتية</option><option value="false">لا يطلب</option></select>
-            <input asp-for="EndOfServicePercent" type="number" min="0" max="100" step="1" />
+            <label>اسم السبب
+                <input asp-for="Name" placeholder="اسم السبب" required />
+            </label>
+            <label>الإلزامية
+                <select data-zynora-select="true" asp-for="IsMandatory"><option value="false">اختياري</option><option value="true">إلزامي</option></select>
+            </label>
+            <label>الخدمة الذاتية
+                <select data-zynora-select="true" asp-for="RequiresSelfService"><option value="true">يطلب من الخدمة الذاتية</option><option value="false">لا يطلب</option></select>
+            </label>
+            <label>النسبة المستحقة (%)
+                <input asp-for="EndOfServicePercent" type="number" min="0" max="100" step="1" />
+            </label>
             <button type="submit">إضافة</button>
         </form>
 
