@@ -1,0 +1,13 @@
+body {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+}
+.farewell-page {
+    max-inline-size: 44rem;
+    margin-inline: auto;
+    padding: var(--sp-6);
+}
+.farewell-page .zy-card { padding: var(--sp-6); }
+.farewell-message { white-space: pre-wrap; overflow-wrap: anywhere; }

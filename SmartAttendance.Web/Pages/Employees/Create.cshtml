@@ -223,7 +223,7 @@
                     <label asp-for="Employee.Nationality">&#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</label>
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
-                        @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryNationalities)
+                        @foreach (var option in Model.NationalityOptions)
                         {
                             <option value="@option.Value">@option.Label</option>
                         }

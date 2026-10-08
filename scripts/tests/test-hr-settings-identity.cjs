@@ -8,7 +8,8 @@ const root = path.resolve(__dirname, '../..');
 const web = path.join(root, 'SmartAttendance.Web');
 const read = p => fs.readFileSync(path.join(web, p), 'utf8');
 const shell = [...read('Pages/Shared/_Layout.cshtml').matchAll(/href="~\/css\/([^"]+)"/g)].map(m => m[1]);
-const views = ['NoticePeriod','SelfServiceSettings','TerminationReasons','NotificationCenter','Lookups','ApprovalTemplates','RequestTypes','LeavePolicies','PeopleAI/Index'];
+// ApprovalTemplates has separate full-page workspace tests, not the legacy drawer contract.
+const views = ['NoticePeriod','SelfServiceSettings','TerminationReasons','NotificationCenter','Lookups','RequestTypes','LeavePolicies','PeopleAI/Index'];
 const contract = s => (s.match(/(?:asp-(?!append-version)[\w-]+|name|id|type|value|method|enctype|required|data-[\w-]+|onchange|onclick)\s*=\s*"[^"]*"/g)||[]).sort();
 const fields = '<label>اسم الإعداد<input name="sample" value="إعداد تجريبي"></label><label>الاختيار<select name="choice"><option value="a">الأول</option><option value="b">الثاني</option></select></label>';
 const check = '<label class="nxhs-check-line pai-check lp-check"><input type="checkbox" name="enabled">تفعيل الخيار</label><input type="hidden" name="postValue" value="false">';
@@ -35,7 +36,12 @@ fixtures.NotificationCenter = fixtures.NotificationCenter.replace(actions, '');
     for (const view of views) {
       const sourcePath='SmartAttendance.Web/Pages/HrSettings/'+view+'.cshtml';
       const source=fs.readFileSync(path.join(root,sourcePath),'utf8');
-      assert.deepEqual(contract(source),contract(execFileSync('git',['show','97d19f71:'+sourcePath],{cwd:root,encoding:'utf8'})),view+'/form-contract');
+      const baseline = process.env.HR_SETTINGS_BASELINE
+        ? fs.readFileSync(path.join(process.env.HR_SETTINGS_BASELINE,sourcePath),'utf8')
+        : execFileSync('git',['show','97d19f71:'+sourcePath],{cwd:root,encoding:'utf8'});
+      // Navigation and disclosure metadata are presentation only. Keep every POST field/handler.
+      const submittedMarkup = s => view === 'PeopleAI/Index' ? (s.match(/<form\b[\s\S]*?<\/form>/g)||[]).join('\n') : s.replace(/asp-page="\.\/Index"/g,'').replace(/id="reason-@reason.Id"/g,'');
+      assert.deepEqual(contract(submittedMarkup(source)),contract(submittedMarkup(baseline)),view+'/form-contract');
       assert(source.includes('zy-hr-admin-page zy-hr-settings-page'),view+'/scope');
       assert(!source.includes('<style'),view+'/no-inline-style');
       const pageCss=[...source.matchAll(/href="~\/css\/([^"]+)"/g)].map(m=>m[1]);
@@ -43,11 +49,18 @@ fixtures.NotificationCenter = fixtures.NotificationCenter.replace(actions, '');
       const styles=[...shell.slice(0,split),...pageCss,...shell.slice(split)].map(f=>read('wwwroot/css/'+f)).join('\n');
       const cls=view==='Lookups'?'hrms-page':view==='RequestTypes'?'rtc-wrap':view==='LeavePolicies'?'lp-page':view==='PeopleAI/Index'?'pai-shell':'nxhs-page nxhs-simple';
       const header=view==='Lookups'?'page-header':view==='RequestTypes'?'rtc-head':view==='LeavePolicies'?'lp-head':view==='PeopleAI/Index'?'pai-head':'nxhs-titlebar';
+      // Published notification cards now include a search toolbar and a native
+      // configuration disclosure. Exercise their current script, not the old shell.
+      const fixtureHtml = view === 'NotificationCenter' && source.includes('id="notification-search"')
+        ? '<input id="notification-search" hidden><span id="notification-search-count" hidden></span><p id="notification-search-empty" hidden></p>' + fixtures[view]
+          .replace('<form class="nxhs-notification-details" hidden>', '<details class="zy-notification-config"><summary>إعدادات الإشعار</summary><form class="nxhs-notification-details">')
+          .replace('</form></article>', '</form></details></article>')
+        : fixtures[view];
       if(process.env.HR_SETTINGS_VIEW && process.env.HR_SETTINGS_VIEW!==view) continue;
       for(const theme of ['dark','light']) for(const width of [390,900,1800]) {
         const page=await browser.newPage({viewport:{width,height:1100}});
         await page.route('**/*',r=>r.abort());
-        await page.setContent('<!doctype html><html lang="ar" dir="rtl" data-ready="true" data-theme="'+theme+'"><head><style>'+styles+'</style></head><body class="zy-app"><main class="zynora-content zy-scope zy-ui-contract"><section class="'+cls+' zy-hr-admin-page zy-hr-settings-page"><header class="'+header+'"><h1>إعدادات الموارد البشرية</h1></header>'+fixtures[view]+'</section></main></body></html>');
+        await page.setContent('<!doctype html><html lang="ar" dir="rtl" data-ready="true" data-theme="'+theme+'"><head><style>'+styles+'</style></head><body class="zy-app"><main class="zynora-content zy-scope zy-ui-contract"><section class="'+cls+' zy-hr-admin-page zy-hr-settings-page"><header class="'+header+'"><h1>إعدادات الموارد البشرية</h1></header>'+fixtureHtml+'</section></main></body></html>');
         await page.addScriptTag({content:read('wwwroot/js/zynora-select-system.js')});
         await page.waitForTimeout(500);
         const key=view+'/'+theme+'/'+width;
@@ -166,6 +179,8 @@ fixtures.NotificationCenter = fixtures.NotificationCenter.replace(actions, '');
         checks++; await page.close();
       }
     }
-    console.log('PASS: '+checks+' full-shell HR settings fixtures; all 9 form contracts preserved; themes, responsive layout, controls, radio, drawer and hidden values.');
+    if (!process.env.HR_SETTINGS_VIEW || process.env.HR_SETTINGS_VIEW === 'ApprovalTemplates')
+      process.stdout.write(execFileSync(process.execPath,[path.join(__dirname,'test-approval-workspace.cjs')],{cwd:root,encoding:'utf8'}));
+    console.log('PASS: '+checks+' full-shell HR settings fixtures; 8 legacy form contracts preserved; approval workspace separately tested; themes, responsive layout, controls, radio and hidden values.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

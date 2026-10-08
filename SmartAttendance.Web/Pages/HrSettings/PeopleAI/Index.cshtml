@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="~/css/pages/people-ai-settings.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/hr-settings-identity.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/people-ai-workspace.css" asp-append-version="true" />
 }
 
 <div class="pai-shell zy-hr-admin-page zy-hr-settings-page" dir="rtl">
@@ -21,7 +22,7 @@
             <div class="zy-desc">إعدادات الذكاء المساعد للأشخاص، التكرار، المراجعة، والمستندات المطلوبة لكل شركة.</div>
         </div>
         <div class="zy-spacer"></div>
-        <span class="zy-badge zy-badge--info">Local Only</span>
+        <span class="zy-badge zy-badge--info">معالجة محلية فقط</span>
     </header>
 
     @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
@@ -52,7 +53,13 @@
     }
     else
     {
-        <section class="pai-grid">
+        <nav class="pai-tabs" aria-label="أقسام People AI" role="tablist" hidden data-pai-tabs data-company="@Model.CompanyId">
+            <button type="button" role="tab" id="pai-tab-general" aria-controls="pai-general" aria-selected="true" tabindex="0" data-pai-tab="pai-general">السياسة العامة</button>
+            <button type="button" role="tab" id="pai-tab-types" aria-controls="pai-types" aria-selected="false" tabindex="-1" data-pai-tab="pai-types">أنواع المستندات <span>@Model.DocumentTypes.Count</span></button>
+            <button type="button" role="tab" id="pai-tab-policies" aria-controls="pai-policies" aria-selected="false" tabindex="-1" data-pai-tab="pai-policies">سياسات المستندات <span>@Model.DocumentPolicies.Count</span></button>
+            <button type="button" role="tab" id="pai-tab-fields" aria-controls="pai-fields" aria-selected="false" tabindex="-1" data-pai-tab="pai-fields">حقول المراجعة <span>@Model.FieldPolicies.Count</span></button>
+        </nav>
+        <section class="pai-grid" id="pai-general" data-pai-panel aria-labelledby="pai-tab-general">
             <form method="post" asp-page-handler="SavePolicy" class="pai-card">
                 <input type="hidden" name="companyId" value="@Model.CompanyId" />
                 <div class="pai-card-head">
@@ -109,13 +116,13 @@
                 </div>
             </form>
 
-            <section class="pai-card pai-card--info">
-                <div class="pai-card-head">
+            <details class="pai-card pai-card--info pai-advanced">
+                <summary class="pai-card-head">
                     <div>
-                        <h2>حالة البنية</h2>
-                        <p>الطبقات التي أصبحت جاهزة قبل تشغيل OCR فعلي.</p>
+                        <h2>التفاصيل التقنية والأمان</h2>
+                        <p>عرض التخزين المحمي، نطاق الشركات، وسجل التدقيق.</p>
                     </div>
-                </div>
+                </summary>
                 <div class="pai-readiness">
                     <span><b>Protected Storage</b><small>خارج wwwroot</small></span>
                     <span><b>Company Scope</b><small>يفرض على Create وOnboarding</small></span>
@@ -124,10 +131,10 @@
                     <span><b>Audit Foundation</b><small>بدون تخزين PII الخام</small></span>
                     <span><b>Cloud Processing</b><small>معطّل</small></span>
                 </div>
-            </section>
+            </details>
         </section>
 
-        <section class="pai-card pai-doc-types">
+        <section class="pai-card pai-doc-types" id="pai-types" data-pai-panel aria-labelledby="pai-tab-types">
             <div class="pai-card-head">
                 <div>
                     <h2>أنواع المستندات</h2>
@@ -139,9 +146,14 @@
                 <span class="zy-badge zy-badge--info">@Model.DocumentTypes.Count نوع</span>
             </div>
 
+            <label class="pai-list-search" data-pai-search-label hidden>بحث عن نوع مستند<input type="search" data-pai-search placeholder="اسم المستند أو مفتاحه" /></label>
+            @if (Model.DocumentTypes.Count == 0) { <p class="zy-empty">لا توجد أنواع مستندات. أضف النوع المطلوب من القسم أدناه.</p> }
+            <p class="zy-empty" data-pai-no-results hidden>لا توجد نتائج مطابقة للبحث.</p>
             <div class="pai-doc-type-list">
                 @foreach (var type in Model.DocumentTypes)
                 {
+                    <details class="pai-record" data-pai-record data-pai-search-text="@type.DisplayLabel @type.DocumentType">
+                        <summary><span><strong>@type.DisplayLabel</strong><code>@type.DocumentType</code></span><span class="zy-badge">@(type.IsActive ? "فعال" : "مخفي")</span><span class="pai-record-hint">تعديل</span></summary>
                     <form method="post"
                           asp-page-handler="SaveDocumentType"
                           class="pai-doc-type-row">
@@ -187,9 +199,11 @@
                             </button>
                         </div>
                     </form>
+                    </details>
                 }
             </div>
 
+            <details class="pai-add-section"><summary>إضافة نوع مستند جديد</summary>
             <form method="post"
                   asp-page-handler="SaveDocumentType"
                   class="pai-doc-type-add">
@@ -227,9 +241,10 @@
                     إضافة النوع
                 </button>
             </form>
+            </details>
         </section>
 
-        <section class="pai-card pai-docs">
+        <section class="pai-card pai-docs" id="pai-policies" data-pai-panel aria-labelledby="pai-tab-policies">
             <div class="pai-card-head">
                 <div>
                     <h2>سياسات المستندات</h2>
@@ -238,9 +253,16 @@
                 <span class="zy-badge zy-badge--info">@Model.DocumentPolicies.Count سياسة</span>
             </div>
 
+            <label class="pai-list-search" data-pai-search-label hidden>بحث عن سياسة مستند<input type="search" data-pai-search placeholder="نوع المستند أو فئة الموظف" /></label>
+            @if (Model.DocumentPolicies.Count == 0) { <p class="zy-empty">لا توجد سياسات مستندات. أضف سياسة من القسم أدناه.</p> }
+            <p class="zy-empty" data-pai-no-results hidden>لا توجد نتائج مطابقة للبحث.</p>
             <div class="pai-policy-list">
                 @foreach (var policy in Model.DocumentPolicies)
                 {
+                    var categoryLabel = policy.EmployeeCategory == "Citizen" ? "مواطن" : policy.EmployeeCategory == "Expat" ? "وافد" : "الجميع";
+                    var documentLabel = Model.DocumentTypes.FirstOrDefault(t => t.DocumentType == policy.DocumentType)?.DisplayLabel ?? policy.DocumentType;
+                    <details class="pai-record" data-pai-record data-pai-search-text="@documentLabel @policy.DocumentType @categoryLabel">
+                        <summary><span><strong>@documentLabel</strong><small>@categoryLabel</small></span><span class="zy-badge">@(policy.Requirement == "Required" ? "مطلوب" : policy.Requirement == "Optional" ? "اختياري" : "غير مطبق")</span><span class="pai-record-hint">تعديل</span></summary>
                     <form method="post" asp-page-handler="SaveDocumentPolicy" class="pai-policy-row">
                         <input type="hidden" name="companyId" value="@Model.CompanyId" />
                         <input type="hidden" name="documentType" value="@policy.DocumentType" />
@@ -276,34 +298,43 @@
 
                         <button type="submit" class="zy-btn">حفظ</button>
                     </form>
+                    </details>
                 }
             </div>
 
+            <details class="pai-add-section"><summary>إضافة / تحديث سياسة مستند</summary>
             <form method="post" asp-page-handler="SaveDocumentPolicy" class="pai-policy-add">
                 <input type="hidden" name="companyId" value="@Model.CompanyId" />
                 <h3>إضافة / تحديث سياسة مستند</h3>
+                <label><span>نوع المستند</span>
                 <input name="documentType"
                        list="pai-document-types"
                        placeholder="مثال: WorkPermit"
                        required />
+                </label>
+                <label><span>فئة الموظف</span>
                 <select name="employeeCategory">
                     <option value="All">الجميع</option>
                     <option value="Citizen">مواطن</option>
                     <option value="Expat">وافد</option>
                 </select>
+                </label>
+                <label><span>الحالة</span>
                 <select name="requirement">
                     <option value="Required">مطلوب</option>
                     <option value="Optional">اختياري</option>
                     <option value="NotApplicable">غير مطبق</option>
                 </select>
+                </label>
                 <label class="pai-check"><input type="checkbox" name="requireExpiryDate" value="true" /> تاريخ انتهاء</label>
                 <label class="pai-check"><input type="checkbox" name="requireOriginalVerification" value="true" /> تحقق من الأصل</label>
                 <label class="pai-check"><input type="checkbox" name="active" value="true" checked /> فعال</label>
                 <button type="submit" class="zy-btn zy-btn--primary">حفظ السياسة</button>
             </form>
+            </details>
         </section>
 
-        <section class="pai-card pai-field-config">
+        <section class="pai-card pai-field-config" id="pai-fields" data-pai-panel aria-labelledby="pai-tab-fields">
             <div class="pai-card-head">
                 <div>
                     <h2>حقول المراجعة</h2>
@@ -316,9 +347,14 @@
                 <span class="zy-badge zy-badge--info">@Model.FieldPolicies.Count حقل</span>
             </div>
 
+            <label class="pai-list-search" data-pai-search-label hidden>بحث عن حقل مراجعة<input type="search" data-pai-search placeholder="اسم الحقل أو نوع المستند" /></label>
+            @if (Model.FieldPolicies.Count == 0) { <p class="zy-empty">لا توجد حقول مراجعة. أضف الحقول المطلوبة من القسم أدناه.</p> }
+            <p class="zy-empty" data-pai-no-results hidden>لا توجد نتائج مطابقة للبحث.</p>
             <div class="pai-field-policy-list">
                 @foreach (var field in Model.FieldPolicies)
                 {
+                    <details class="pai-record" data-pai-record data-pai-search-text="@field.DisplayLabel @field.DocumentType @field.FieldKey">
+                        <summary><span><strong>@field.DisplayLabel</strong><code>@field.DocumentType / @field.FieldKey</code></span><span class="zy-badge">@(field.Requirement == "Required" ? "مطلوب" : "اختياري")</span><span class="pai-record-hint">تعديل</span></summary>
                     <form method="post"
                           asp-page-handler="SaveFieldPolicy"
                           class="pai-field-policy-row">
@@ -374,9 +410,11 @@
                             </button>
                         </div>
                     </form>
+                    </details>
                 }
             </div>
 
+            <details class="pai-add-section"><summary>إضافة حقل للمراجعة</summary>
             <form method="post"
                   asp-page-handler="SaveFieldPolicy"
                   class="pai-field-add">
@@ -444,6 +482,10 @@
                     إضافة الحقل
                 </button>
             </form>
+            </details>
         </section>
     }
 </div>
+@section Scripts {
+    <script src="~/js/people-ai-workspace.js" asp-append-version="true" defer></script>
+}

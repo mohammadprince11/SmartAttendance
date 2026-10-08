@@ -118,6 +118,14 @@
                     </div>
 
                     <div class="endservice-field full">
+                        <label class="endservice-confirm">
+                            <input asp-for="ImmediateAccountClosure" />
+                            <span>إيقاف حساب الدخول فوراً، بدون مهلة لعرض إشعار الوداع.</span>
+                        </label>
+                        <p>بدون الإيقاف الفوري: يقتصر الدخول على إشعار الوداع فقط بعد الاعتماد، ويُغلق بنهاية آخر يوم عمل بتوقيت بغداد. الحساب الموقوف مسبقاً لا يُعاد تفعيله.</p>
+                    </div>
+
+                    <div class="endservice-field full">
                         <label asp-for="HrNotes">ملاحظات HR</label>
                         <textarea asp-for="HrNotes" rows="3" placeholder="ملاحظات داخلية اختيارية..."></textarea>
                     </div>

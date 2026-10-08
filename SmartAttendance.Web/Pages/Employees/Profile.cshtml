@@ -1852,7 +1852,15 @@
             <input type="hidden" name="RecordInput.Id" id="rec-Id" value="0" />
             <input type="hidden" name="RecordInput.RecordType" id="rec-RecordType" value="Education" />
             <div class="hrms-grid-2">
-                <div class="hrms-field"><label id="rec-Title-label">العنوان</label><input name="RecordInput.Title" id="rec-Title" required /></div>
+                <div class="hrms-field"><label id="rec-Title-label">العنوان</label><input name="RecordInput.Title" id="rec-Title" required />
+                    <div id="rec-AssetType-field" hidden>
+                    <select name="RecordInput.Title" id="rec-AssetType" class="nxr-native-select" disabled>
+                        <option value="">اختر نوع العهدة</option>
+                        @foreach (var assetType in Model.AssetTypeOptions)
+                        {
+                            <option value="@assetType">@assetType</option>
+                        }
+                    </select></div></div>
                 <div class="hrms-field"><label id="rec-Subtitle-label">تفاصيل</label><input name="RecordInput.Subtitle" id="rec-Subtitle" /></div>
                 <div class="hrms-field"><label>البلد</label><input name="RecordInput.Country" id="rec-Country" /></div>
                 <div class="hrms-field"><label id="rec-RefNo-label">رقم مرجعي</label><input name="RecordInput.RefNo" id="rec-RefNo" /></div>
@@ -1940,6 +1948,16 @@
             document.getElementById('rec-RecordType').value = type;
             document.getElementById('rec-form-title').textContent = cardTitle;
             document.getElementById('rec-Title-label').textContent = titleLabel;
+            var titleInput = document.getElementById('rec-Title');
+            var assetSelect = document.getElementById('rec-AssetType');
+            titleInput.hidden = type === 'Asset';
+            titleInput.disabled = type === 'Asset';
+            titleInput.required = type !== 'Asset';
+            document.getElementById('rec-AssetType-field').hidden = type !== 'Asset';
+            assetSelect.disabled = type !== 'Asset';
+            assetSelect.required = type === 'Asset';
+            assetSelect.querySelectorAll('[data-legacy-option]').forEach(function (o) { o.remove(); });
+            if (typeof window.ZynoraRefreshSelectSystem === 'function') window.ZynoraRefreshSelectSystem();
             document.getElementById('rec-Subtitle-label').textContent = subLabel;
             document.getElementById('rec-RefNo-label').textContent = refLabel || 'رقم مرجعي';
             document.getElementById('rec-Amount-field').hidden = !showAmount;
@@ -1971,6 +1989,17 @@
                         var el = byId['rec-' + k];
                         if (el) el.value = d[k] || '';
                     });
+                    if (d.type === 'Asset') {
+                        var assetSelect = document.getElementById('rec-AssetType');
+                        var currentTitle = d.title || '';
+                        if (currentTitle && !Array.from(assetSelect.options).some(function (o) { return o.value === currentTitle; })) {
+                            var legacyOption = new Option(currentTitle, currentTitle);
+                            legacyOption.dataset.legacyOption = 'true';
+                            assetSelect.add(legacyOption);
+                        }
+                        assetSelect.value = currentTitle;
+                        if (typeof window.ZynoraRefreshSelectSystem === 'function') window.ZynoraRefreshSelectSystem();
+                    }
                     var curCb = document.getElementById('rec-IsCurrent');
                     if (curCb) curCb.checked = d.iscurrent === 'true';
                     var retCb = document.getElementById('rec-IsReturned');

@@ -1,0 +1,60 @@
+/* Scope all layout changes to People AI; the shared identity supplies colors/controls. */
+@layer zynora-hr-admin {
+    .zy-hr-settings-page.pai-shell .pai-tabs { display: flex !important; flex-wrap: wrap !important; gap: var(--sp-2, 8px) !important; padding: var(--sp-2, 8px) !important; background: var(--surface-panel) !important; border: 1px solid var(--border-default) !important; border-radius: var(--radius-lg, 16px) !important; }
+    .zy-hr-settings-page.pai-shell .pai-tabs button { gap: var(--sp-2, 8px) !important; min-block-size: var(--control-h, 44px) !important; padding: var(--sp-2, 8px) var(--sp-3, 12px) !important; border-radius: var(--radius, 12px) !important; background: transparent !important; border-color: transparent !important; color: var(--text-muted) !important; }
+    .zy-hr-settings-page.pai-shell .pai-tabs button[aria-selected="true"] { background: var(--surface-raised) !important; border-color: var(--brand-primary) !important; color: var(--brand-primary) !important; }
+    .zy-hr-settings-page.pai-shell .pai-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    .zy-hr-settings-page.pai-shell :is(.pai-record, .pai-add-section) > summary { display: flex !important; align-items: center !important; gap: var(--sp-3, 12px) !important; min-block-size: max(44px, var(--control-h, 44px)) !important; padding: var(--sp-3, 12px) var(--sp-4, 16px) !important; }
+    .zy-hr-settings-page.pai-shell .pai-list-search { display: grid !important; gap: var(--sp-2, 8px) !important; max-inline-size: 640px !important; }
+    .zy-hr-settings-page.pai-shell .pai-record > form { margin: var(--sp-3, 12px) !important; }
+    .zy-hr-settings-page.pai-shell .pai-add-section > form { margin: var(--sp-4, 16px) !important; padding-block-start: 0 !important; }
+    .zy-hr-settings-page.pai-shell :is(.pai-doc-type-row, .pai-policy-row, .pai-field-policy-row, .pai-field-add, .pai-doc-type-add, .pai-policy-add) { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: var(--sp-4, 16px) !important; }
+    @media (max-width: 900px) {
+        .zy-hr-settings-page.pai-shell :is(.pai-doc-type-row, .pai-policy-row, .pai-field-policy-row, .pai-field-add, .pai-doc-type-add, .pai-policy-add) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 600px) {
+        .zy-hr-settings-page.pai-shell .pai-tabs { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        .zy-hr-settings-page.pai-shell :is(.pai-doc-type-row, .pai-policy-row, .pai-field-policy-row, .pai-field-add, .pai-doc-type-add, .pai-policy-add) { grid-template-columns: minmax(0, 1fr) !important; }
+    }
+}
+.pai-shell .pai-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2, 8px); padding: var(--sp-2, 8px); border: 1px solid var(--border-default); border-radius: var(--radius-lg, 16px); background: var(--surface-panel); }
+.pai-shell .pai-tabs button { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 auto; gap: var(--sp-2, 8px); min-block-size: var(--control-h, 44px); padding: var(--sp-2, 8px) var(--sp-3, 12px); border: 1px solid transparent; border-radius: var(--radius, 12px); background: transparent; color: var(--text-muted); font: inherit; cursor: pointer; }
+.pai-shell .pai-tabs button[aria-selected="true"] { background: var(--surface-raised); border-color: var(--brand-primary); color: var(--brand-primary); font-weight: 700; }
+.pai-shell .pai-tabs button span { font-size: var(--fs-small, 13px); }
+.pai-shell .pai-tabs button:focus-visible, .pai-shell summary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+.pai-shell [hidden] { display: none !important; }
+/* Important identity-layer layout rules must not reveal inactive tab panels. */
+@layer zynora-hr-settings {
+    .zy-hr-settings-page.pai-shell [hidden] { display: none !important; }
+}
+.pai-shell .pai-grid { grid-template-columns: minmax(0, 1fr); }
+.pai-shell :is(.pai-record, .pai-add-section) { min-inline-size: 0; border: 1px solid var(--border-default); border-radius: var(--radius, 12px); background: var(--surface-panel); }
+.pai-shell :is(.pai-record, .pai-add-section) > summary { display: flex; align-items: center; gap: var(--sp-3, 12px); padding: var(--sp-3, 12px) var(--sp-4, 16px); cursor: pointer; list-style: none; }
+.pai-shell summary::-webkit-details-marker { display: none; }
+.pai-shell :is(.pai-record, .pai-add-section, .pai-advanced) > summary::after { content: '+'; font-size: var(--fs-section, 18px); color: var(--color-primary-text); margin-inline-start: auto; flex-shrink: 0; }
+.pai-shell :is(.pai-record, .pai-add-section, .pai-advanced)[open] > summary::after { content: '−'; }
+.pai-shell .pai-record summary > span:first-child { display: grid; gap: var(--sp-1, 4px); flex: 1; min-inline-size: 0; overflow-wrap: anywhere; }
+.pai-shell .pai-record summary :is(code, small), .pai-shell .pai-record-hint { color: var(--text-muted); font-size: var(--fs-small, 13px); }
+.pai-shell .pai-record code { direction: ltr; text-align: end; overflow-wrap: anywhere; }
+.pai-shell .pai-record[open] > summary { border-block-end: 1px solid var(--border-default); }
+.pai-shell .pai-list-search { display: grid; gap: var(--sp-2, 8px); max-inline-size: 640px; font-size: var(--fs-small, 13px); }
+.pai-shell .pai-list-search input { inline-size: 100%; min-inline-size: 0; min-block-size: var(--control-h, 44px); padding-inline: var(--sp-3, 12px); border: 1px solid var(--border-default); border-radius: var(--radius, 12px); background: var(--surface-input); color: var(--text-default); font: inherit; }
+.pai-shell .pai-list-search input:focus { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+.pai-shell .pai-advanced > summary { cursor: pointer; margin-block-end: 0; }
+.pai-shell .pai-advanced[open] .pai-readiness { margin-block-start: var(--sp-4, 16px); }
+.pai-shell .pai-add-section > form { margin: var(--sp-4, 16px); padding-block-start: 0; border-block-start: 0; }
+.pai-shell .pai-record > form { margin: var(--sp-3, 12px); }
+.pai-shell :is(.pai-doc-type-row, .pai-policy-row, .pai-field-policy-row) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pai-shell :is(.pai-field-add, .pai-doc-type-add, .pai-policy-add) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pai-shell :is(input:not([type="checkbox"]):not([type="hidden"]), select, label) { min-inline-size: 0; max-inline-size: 100%; }
+.pai-shell .pai-field-actions { flex-wrap: wrap; }
+.pai-shell .pai-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--sp-3, 12px); color: var(--text-muted); font-size: var(--fs-small, 13px); }
+@media (max-width: 900px) {
+    .pai-shell :is(.pai-doc-type-row, .pai-policy-row, .pai-field-policy-row, .pai-field-add, .pai-doc-type-add, .pai-policy-add) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .pai-shell .pai-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pai-shell .pai-tabs button { padding: var(--sp-2, 8px); font-size: var(--fs-small, 13px); }
+    .pai-shell :is(.pai-doc-type-row, .pai-policy-row, .pai-field-policy-row, .pai-field-add, .pai-doc-type-add, .pai-policy-add) { grid-template-columns: minmax(0, 1fr); }
+    .pai-shell .pai-record-hint { display: none; }
+}

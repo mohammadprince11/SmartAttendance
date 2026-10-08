@@ -17,6 +17,7 @@ public static class FormBuilder
 
     public const string FormTypeRequest = "Request";
     public const string FormTypeSurvey = "Survey";
+    public const string FormTypeSatisfaction = "Satisfaction";
     public const string FormTypeExitInterview = "ExitInterview";
     public const string FormTypeTraining = "Training";
 
@@ -24,6 +25,7 @@ public static class FormBuilder
     {
         (FormTypeRequest, "طلب مخصص"),
         (FormTypeSurvey, "استبيان عام"),
+        (FormTypeSatisfaction, "استبيان رضا الموظفين"),
         (FormTypeExitInterview, "مقابلة نهاية خدمة"),
         (FormTypeTraining, "استبيان تدريب")
     };
@@ -33,7 +35,7 @@ public static class FormBuilder
 
     /// <summary>سؤال التقييم لا معنى له بطلب — الأنواع تُرشَّح بنوع النموذج.</summary>
     public static bool IsSurveyLike(string? formType) =>
-        formType is FormTypeSurvey or FormTypeExitInterview or FormTypeTraining;
+        formType is FormTypeSurvey or FormTypeSatisfaction or FormTypeExitInterview or FormTypeTraining;
 
     // ── أنواع الحقول ───────────────────────────────────────────────────────────
 

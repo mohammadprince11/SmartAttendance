@@ -20,7 +20,6 @@ public static class HrLookups
         new LookupCategory("sponsors", "الكفلاء"),
         new LookupCategory("assettypes", "أنواع العهد"),
         new LookupCategory("nationalities", "الجنسيات"),
-        new LookupCategory("salaryitems", "عناصر الراتب (العلاوات)"),
         new LookupCategory("contracttypes", "أنواع العقود")
     };
 

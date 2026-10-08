@@ -20,7 +20,8 @@ public sealed record AccountSecurityState(
     bool IsLockedOut,
     string Role,
     string? SecurityStamp,
-    bool MustChangePassword = false)
+    bool MustChangePassword = false,
+    bool FarewellOnly = false)
 {
     public static readonly AccountSecurityState Missing =
         new(false, false, false, string.Empty, null);

@@ -6,12 +6,15 @@
 <link rel="stylesheet" href="~/css/pages/employeecodeschemapage-a9096eb988.css" asp-append-version="true" />
 
 <link rel="stylesheet" href="~/css/hrms-core.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/hr-admin-identity.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/pages/hr-settings-identity.css" asp-append-version="true" />
 
-<div class="hrms-page" dir="rtl">
+<div class="hrms-page zy-hr-admin-page zy-hr-settings-page zy-employee-code-settings" dir="rtl">
+    <nav class="zy-breadcrumb"><a asp-page="./Index">إعدادات الموارد البشرية</a><span>مخطط رمز الموظف</span></nav>
     <div class="page-header">
         <div>
             <h1>مخطط رمز الموظف التلقائي</h1>
-            <p>مقاطع نمط كيان: [بادئة ثابتة] + [رقم متسلسل بعدد أرقام]. عند التفعيل، ترك حقل الكود فارغاً بصفحة إضافة الموظف يولّد الرقم التالي تلقائياً.</p>
+            <p>رمز الموظف في زينورا: بادئة ثابتة يليها رقم متسلسل. عند التفعيل، ترك حقل الكود فارغاً بصفحة إضافة الموظف يولّد الرقم التالي تلقائياً.</p>
         </div>
     </div>
 
@@ -20,29 +23,29 @@
         <div class="hrms-badge approved zyu-961915113e90">@Model.Message</div>
     }
 
-    <div class="hrms-card zyu-38a83b070ae3">
-        <form method="post" class="hrms-page zyu-2c3d836b9c3c">
+    <div class="hrms-table-card">
+        <form method="post" class="zy-code-form">
             <div class="hrms-field">
-                <label>البادئة الثابتة (المقطع الأول)</label>
-                <input name="prefix" value="@Model.Schema.Prefix" placeholder="مثال: EMP-" dir="ltr" />
+                <label for="code-prefix">البادئة الثابتة (المقطع الأول)</label>
+                <input id="code-prefix" name="prefix" value="@Model.Schema.Prefix" placeholder="مثال: EMP-" dir="ltr" />
             </div>
             <div class="hrms-field">
-                <label>عدد أرقام التسلسل (المقطع الثاني)</label>
-                <input name="digits" type="number" min="1" max="12" value="@Model.Schema.Digits" />
+                <label for="code-digits">عدد أرقام التسلسل (المقطع الثاني)</label>
+                <input id="code-digits" name="digits" type="number" min="1" max="12" value="@Model.Schema.Digits" />
             </div>
             <div class="hrms-field">
-                <label>آخر رقم تسلسلي (الرقم الجاي = هذا + 1)</label>
-                <input name="lastNumber" type="number" min="0" value="@Model.Schema.LastNumber" />
+                <label for="code-last-number">آخر رقم تسلسلي (الرقم التالي = هذا + 1)</label>
+                <input id="code-last-number" name="lastNumber" type="number" min="0" value="@Model.Schema.LastNumber" />
             </div>
             <label class="hrms-toggle">
                 <input type="checkbox" name="isActive" value="true" checked="@(Model.Schema.IsActive ? "checked" : null)" />
                 تفعيل التوليد التلقائي
             </label>
             <div class="hrms-field">
-                <label>معاينة الرمز التالي</label>
-                <input value="@Model.Preview" readonly dir="ltr" class="zyu-e9e321d8308f" />
+                <label for="code-preview">معاينة الرمز التالي</label>
+                <input id="code-preview" value="@Model.Preview" readonly dir="ltr" class="zyu-e9e321d8308f" />
             </div>
-            <button type="submit" class="hrms-btn-primary">حفظ المخطط</button>
+            <footer class="nxhs-actions"><button type="submit" class="hrms-btn-primary">حفظ المخطط</button></footer>
         </form>
     </div>
 </div>

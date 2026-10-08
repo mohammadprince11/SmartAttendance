@@ -150,7 +150,7 @@ public class NotificationRuleGeneratorTests
     [Fact]
     public void MapRuleName_Null_ForUnsupportedRule()
     {
-        Assert.Null(NotificationRuleGenerator.MapRuleName("مخالفات الموظفين"));
-        Assert.Null(NotificationRuleGenerator.MapRuleName("سن التقاعد"));
+        Assert.Null(NotificationRuleGenerator.MapRuleName("الإجراءات التأديبية المتجاهلة"));
+        Assert.Null(NotificationRuleGenerator.MapRuleName("مشاركة التقارير"));
     }
 }

@@ -469,3 +469,4 @@
 .zyw [hidden] {
     display: none !important;
 }
+.zy-disciplinary-article-text { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -5,10 +5,11 @@
 @inject IThemeContextService ThemeContextService
 @{
     ViewData["Title"] = "لائحة المخالفات";
+    if (Model.IsWorkspaceRequest) { Layout = null; }
 
     // هوية الشركة تلزم **معاينة الورقة** بتبويب المصمّم وحده (شعار وترويسة).
-    var brandTheme = await ThemeContextService.GetCurrentAsync(default);
-    var brandName = string.IsNullOrWhiteSpace(brandTheme.DisplayName) ? "ZYNORA HR" : brandTheme.DisplayName!;
+    var brandTheme = Model.Tab == "designer" ? await ThemeContextService.GetCurrentAsync(default) : null;
+    var brandName = string.IsNullOrWhiteSpace(brandTheme?.DisplayName) ? "ZYNORA HR" : brandTheme.DisplayName!;
     var brandSymbol = new string(brandName.Where(char.IsLetterOrDigit).Take(1).ToArray()).ToUpperInvariant();
     if (string.IsNullOrEmpty(brandSymbol)) { brandSymbol = "Z"; }
 
@@ -31,21 +32,14 @@
    لا `Tajawal` لأن غلاف الصفحة القديم يورّثه لكل ما بالداخل. والمصمّم وحده
    يحتاجها (ورقة A4 · طبقات · منتقي ملف)، فحُصرت به. *@
 @section Styles {
-<link rel="stylesheet" href="~/css/pages/index-387bf545e8.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
-    @if (activeTab == "library")
-    {
-        <link rel="stylesheet" href="~/css/zynora-conditions.css" asp-append-version="true" />
-    }
-    @if (activeTab == "designer")
-    {
-        <link rel="stylesheet" href="~/css/zynora-disciplinary-rules.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/zynora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/zynora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
-    }
+    <partial name="_WorkspaceStyles" model="Model" />
+}
+@if (Model.IsWorkspaceRequest)
+{
+    <partial name="_WorkspaceStyles" model="Model" />
 }
 
-<section class="zyw zy-scope">
+<section class="zyw zy-scope zy-disciplinary-workspace" data-disciplinary-workspace>
 
     <header class="zyw-head">
         <div>
@@ -53,11 +47,26 @@
             <p>ما الذي يُعدّ مخالفة، وماذا يترتّب عليها بالتكرار — قبل أن تُسجَّل على أحد.</p>
         </div>
         <div class="zyw-totals">
+            @if (activeTab == "articles")
+            {
+                <span><b>@Model.Articles.Count</b> قاعدة مكتوبة</span>
+            }
+            else if (activeTab == "designer")
+            {
+                <span><b>@Model.TextBlocks.Count</b> طبقة نص</span>
+            }
+            else if (activeTab == "templates")
+            {
+                <span><b>@Model.MessageTemplates.Count</b> قالب رسالة</span>
+            }
+            else
+            {
             <span><b>@Model.Categories.Count</b> فئة</span>
             <span>·</span>
             <span><b>@Model.ViolationTypes.Count</b> مخالفة</span>
             <span>·</span>
             <span><b>@Model.PenaltyRules.Count</b> جزاء</span>
+            }
         </div>
     </header>
 
@@ -73,7 +82,8 @@
         <div class="zy-card" role="alert">@Model.BlockedMessage</div>
     }
 
-    @* روابط لا أزرار: كل تبويب يحمّل بياناته من الخادم (المصمّم يحتاج طبقاته). *@
+    <p class="zy-disciplinary-status" data-disciplinary-status role="status" aria-live="polite" hidden></p>
+    @* روابط حقيقية للتوافق بدون JavaScript؛ التنقّل المحسّن يحدّث هذه الشاشة فقط. *@
     <nav class="zyw-tabs" aria-label="أقسام لائحة المخالفات">
         <a class="zyw-tab" aria-selected="@Sel("library")" asp-page="./Index" asp-route-tab="library" asp-route-categoryId="@selectedCategory">المخالفات والجزاءات</a>
         <a class="zyw-tab" aria-selected="@Sel("articles")" asp-page="./Index" asp-route-tab="articles">قواعد اللائحة</a>
@@ -82,57 +92,18 @@
     </nav>
 
     <main>
-        <section>
+        <section class="zy-disciplinary-content">
             @if (activeTab == "library")
             {
-                @* الخطوة صفر: بلا لائحة لا يمكن تسجيل مخالفة أصلاً. *@
                 @if (Model.Categories.Count == 0)
                 {
-                    <article class="zy-card">
-                        <div class="zyw-queue-head">
-                            <h2>ابدأ اللائحة</h2>
-                            <span class="zy-pill">فارغة</span>
-                        </div>
-                        <p class="zyw-row-meta">
-                            نموذج تسجيل المخالفة يفرض اختيار فئة ونوع — وبلا لائحة يبقى معطّلاً.
-                            اكتب فئاتك بنفسك بالشبكة أدناه، أو ابدأ من <b>مثالٍ جاهز</b> ثم عدّله.
-                        </p>
-                        <p class="zyw-row-meta">
-                            المثال أبوابٌ أربعة (أ · ب · ج · ت) ومخالفاتها وسلالم جزاءاتها —
-                            <b>كلّها قابلة للتعديل والحذف</b>، ولا شيء فيها ثابت.
-                        </p>
-                        <form method="post" asp-page-handler="AddSample">
-                            <div class="zyw-form-actions">
-                                <button type="submit" class="btn-primary" data-zyconfirm="إضافة المثال الجاهز؟">
-                                    ابدأ بمثال جاهز
-                                </button>
-                            </div>
-                        </form>
+                    <article class="zy-card zy-empty">
+                        <h2>ابدأ لائحتك</h2>
+                        <p>لا توجد فئات أو مخالفات جاهزة. أضف فئاتك، ثم مخالفاتك، ثم سلّم الجزاءات لكل مخالفة.</p>
+                        <p>كل المحتوى يُكتب من قبلك؛ لن يستورد النظام لائحة شركة أخرى.</p>
                     </article>
                 }
-                @* ⚠️ **لا زرّ «مثال» بعد أن تصير للشركة لائحتها.**
 
-                   كان يقف بأعلى الشاشة دائماً فيغري بنقرةٍ تُعيد ما حُذف عمداً،
-                   واحتاج آلةً كاملة تتذكّر «المستبعَد» لتمنع ذلك. والأبسط أن
-                   يظهر حيث ينفع وحده: **الشاشة الفارغة**. من عنده لائحته لا
-                   يحتاج مثالاً، ومن أراده لاحقاً يحذف فئاته ويبدأ من جديد. *@
-
-                @if (Model.Categories.Any(c => !c.Name.StartsWith("أ ") && !c.Name.StartsWith("ب ")
-                                            && !c.Name.StartsWith("ج ") && !c.Name.StartsWith("ت ")))
-                {
-                    <article class="zy-card">
-                        <p class="zyw-row-meta">
-                            عندك أبوابٌ خارج ترقيم اللائحة — تُدمج بنظيراتها فتُنقل مخالفاتها ولا تضيع.
-                        </p>
-                        <div class="zyw-form-actions">
-                            <form method="post" asp-page-handler="MergeDuplicates">
-                                <button type="submit" class="btn-secondary" data-zyconfirm="دمج الفئات المكرّرة؟">
-                                    ادمج الفئات المكرّرة
-                                </button>
-                            </form>
-                        </div>
-                    </article>
-                }
 
                 @* ══════════ شبكتان محرَّرتان — نمطٌ منقول عن كيان بعد فحصٍ حيّ ══════════
 
@@ -457,52 +428,77 @@
 
             else if (activeTab == "articles")
             {
-                @* موادّ اللائحة، **ولكلٍّ حالة إنفاذها الصريحة**. مادّةٌ تُعرض كأنها
-                   منفَّذة وهي نصٌّ فقط أسوأ من غيابها: يطمئنّ إليها من يقرأ الشاشة
-                   وهي لا تمنع شيئاً — وهو عين ما كانت عليه راية «موافقة اللجنة». *@
                 <article class="zy-card">
                     <div class="zyw-queue-head">
-                        <h2>قواعد اللائحة الانضباطية</h2>
-                        <span class="zy-pill">@SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Articles.Length مادّة</span>
+                        <h2>قواعد اللائحة</h2>
+                        <span class="zy-pill">@Model.Articles.Count قاعدة</span>
                     </div>
-                    <p class="zyw-row-meta">
-                        نصّ الموادّ كما وردت بالوثيقة الرسمية، وبجانب كلٍّ منها <b>ما يفعله النظام بها فعلاً</b>:
-                        هل تمنع إجراءً، أم تُنبّه فقط، أم تُحتسب داخل المحرّك، أم هي نصٌّ مرجعيّ بلا أثر تلقائيّ.
-                    </p>
-
-                    <div class="zyw-table-wrap">
-                        <table class="zyw-table">
-                            <thead>
+                    <p class="zyw-row-meta">اكتب مواد لائحتك ورقم وعنوان كل قاعدة. هذه نصوص مرجعية؛ التطبيق الآلي يُضبط من المخالفات وسلّم الجزاءات، ولا يُستنتج من النص.</p>
+                    @if (Model.Articles.Count == 0)
+                    {
+                        <p class="zy-empty">لا توجد قواعد مكتوبة بعد.</p>
+                    }
+                    @if (Model.CanEditArticles)
+                    {
+                        @* Whole-document save: intentionally not data-zyw-grid, whose
+                           changed-row filter would silently discard untouched articles. *@
+                        <form method="post" asp-page-handler="SaveArticles" data-disciplinary-articles>
+                            <input type="hidden" name="articlesVersion" value="@Model.ArticlesVersion" />
+                            <div class="zyw-table-wrap">
+                                <table class="zyw-table">
+                                    <thead><tr><th>رقم القاعدة</th><th>العنوان</th><th>النص</th><th>إزالة</th></tr></thead>
+                                    <tbody data-zyw-rows>
+                                        @foreach (var rule in Model.Articles)
+                                        {
+                                            <tr>
+                                                <td><input name="articleNumber" value="@rule.Number" maxlength="60" aria-label="رقم القاعدة" /></td>
+                                                <td><input name="articleTitle" value="@rule.Title" maxlength="180" aria-label="عنوان القاعدة" /></td>
+                                                <td><textarea name="articleText" rows="4" maxlength="4000" aria-label="نص القاعدة">@rule.Text</textarea></td>
+                                                <td><button type="button" class="btn-secondary" data-zyw-remove>إزالة</button></td>
+                                            </tr>
+                                        }
+                                        <tr>
+                                            <td><input name="articleNumber" maxlength="60" aria-label="رقم قاعدة جديدة" /></td>
+                                            <td><input name="articleTitle" maxlength="180" aria-label="عنوان قاعدة جديدة" /></td>
+                                            <td><textarea name="articleText" rows="4" maxlength="4000" aria-label="نص قاعدة جديدة"></textarea></td>
+                                            <td><button type="button" class="btn-secondary" data-zyw-remove>إزالة</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <template data-zyw-template>
                                 <tr>
-                                    <th class="zyu-1ba51881f300">المادة</th>
-                                    <th class="zyu-3cab7ef27d09">الموضوع</th>
-                                    <th>النصّ</th>
-                                    <th class="zyu-5a5f7abe4163">الإنفاذ</th>
-                                    <th>أين</th>
+                                    <td><input name="articleNumber" maxlength="60" aria-label="رقم قاعدة جديدة" /></td>
+                                    <td><input name="articleTitle" maxlength="180" aria-label="عنوان قاعدة جديدة" /></td>
+                                    <td><textarea name="articleText" rows="4" maxlength="4000" aria-label="نص قاعدة جديدة"></textarea></td>
+                                    <td><button type="button" class="btn-secondary" data-zyw-remove>إزالة</button></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var article in SmartAttendance.Web.Infrastructure.Hrms.DisciplinaryPolicyPack.Articles)
-                                {
-                                    <tr>
-                                        <td><b>@article.Number</b></td>
-                                        <td>@article.Title</td>
-                                        <td class="zyu-386c1b610660">@article.Text</td>
-                                        <td>
-                                            <span class="zy-pill">@Model.EnforcementLabel(article.State)</span>
-                                        </td>
-                                        <td class="zyu-386c1b610660">@article.Where</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                            </template>
+                            <p class="zyw-row-meta">إزالة الصف لا تُحفظ إلا عند ضغط حفظ القواعد. الحد الأقصى 100 قاعدة.</p>
+                            <div class="zyw-form-actions">
+                                <button type="button" class="btn-secondary" data-zyw-add>+ قاعدة جديدة</button>
+                                <button type="submit" class="btn-primary" data-zyconfirm="حفظ القواعد وتطبيق إزالة الصفوف التي أزلتها؟">حفظ القواعد</button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="zyw-row-meta">تعديل قواعد اللائحة متاح لمدير النظام.</p>
+                        @foreach (var rule in Model.Articles)
+                        {
+                            <details class="zy-card">
+                                <summary>@rule.Number — @rule.Title</summary>
+                                <p class="zy-disciplinary-article-text">@rule.Text</p>
+                            </details>
+                        }
+                    }
                 </article>
             }
 
+
             else if (activeTab == "designer")
             {
-                <section class="zy-card">
+                <section class="zy-card zy-disciplinary-designer" data-disciplinary-designer>
                     <header class="zyw-queue-head">
                         <div>
 
@@ -514,9 +510,13 @@
                         </div>
                     </header>
 
+                    <nav class="zyw-tabs" aria-label="أدوات مصمم الفورمة">
+                        <button type="button" class="zyw-tab" data-designer-tab="background" aria-selected="true">١. إعدادات الفورمة</button>
+                        <button type="button" class="zyw-tab" data-designer-tab="text" aria-selected="false">٢. طبقات النص</button>
+                    </nav>
                     <section class="nxpen-designer-grid">
                         <div class="nxpen-designer-panel">
-                    <section class="zy-card nxpen-a4-form-card" data-nxpen-a4-form-upload>
+                    <section class="zy-card nxpen-a4-form-card" data-designer-panel="background" data-nxpen-a4-form-upload>
                         <header>
                             <h3>&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1575;&#1604;&#1588;&#1585;&#1603;&#1577; A4</h3>
                             <small>&#1575;&#1585;&#1601;&#1593; &#1601;&#1608;&#1585;&#1605;&#1577; &#1601;&#1575;&#1585;&#1594;&#1577; &#1603;&#1575;&#1605;&#1604;&#1577; &#1576;&#1602;&#1610;&#1575;&#1587; A4. &#1610;&#1583;&#1593;&#1605; PDF &#1571;&#1608; &#1589;&#1608;&#1585;&#1577;. &#1575;&#1604;&#1606;&#1589;&#1608;&#1589; &#1587;&#1578;&#1592;&#1607;&#1585; &#1601;&#1608;&#1602;&#1607;&#1575;.</small>
@@ -533,7 +533,7 @@
                         </form>
                     </section>
 
-                            <section class="zy-card">
+                            <section class="zy-card" data-designer-panel="background">
                                 <header>
                                     <h3>صور الهيدر والفوتر</h3>
                                     <small>يفضل استخدام صورة عريضة للهيدر والفوتر بعرض صفحة A4.</small>
@@ -554,9 +554,11 @@
                                 </form>
                             </section>
 
-                            <section class="zy-card nxpen-main-text-card">
+                            <details class="zy-card nxpen-main-text-card" data-designer-panel="text">
+                                <summary>
+                                    إعدادات متقدمة: إنشاء النصوص الأساسية
+                                </summary>
                                 <header>
-                                    <h3>تعديل النص كطبقات مستقلة</h3>
                                     <small>
                                         كل سطر داخل الورقة صار Text Layer مستقل مثل Word:
                                         العنوان، اسم الموظف، الكود، القسم، تاريخ المخالفة، العقوبة، والأثر المالي.
@@ -587,13 +589,10 @@
                                         <button type="submit">إنشاء / تحديث طبقات النص الأساسية</button>
                                     </footer>
                                 </form>
-                            </section>
+                            </details>
 
-                            <section class="zy-card">
-                                <header>
-                                    <h3>إضافة طبقة نص جديدة</h3>
-                                    <small>استخدم هذا الخيار لإضافة أي نص جديد فوق الهيدر أو المتن أو الفوتر.</small>
-                                </header>
+                            <details class="zy-card" data-designer-panel="text">
+                                <summary>إضافة طبقة نص جديدة</summary>
 
                                 <form method="post" asp-page-handler="CreateTextBlock" class="zyw-form-grid">
                                     <div>
@@ -657,9 +656,9 @@
                                         <button type="submit">إضافة صندوق نص إضافي</button>
                                     </footer>
                                 </form>
-                            </section>
+                            </details>
 
-                            <section class="zy-card">
+                            <section class="zy-card" data-designer-panel="text">
                                 <header>
                                     <h3>صناديق النص الحالية</h3>
                                     <small>يمكن تعديل كل صندوق نص بشكل كامل.</small>
@@ -668,7 +667,7 @@
                                 <div class="nxpen-edit-list">
                                     @foreach (var block in Model.TextBlocks)
                                     {
-                                        <details class="nxpen-edit-item @(block.IsActive ? "" : "disabled")" data-layer-details="@block.Id">
+                                        <details class="nxpen-edit-item @(block.IsActive ? "" : "disabled")" data-layer-details="@block.Id" name="disciplinary-layer">
                                             <summary>
                                                 <span>@block.Area</span>
                                                 <strong>@block.Text</strong>
@@ -756,19 +755,23 @@
                                 <h3>معاينة واضحة للفورمة</h3>
                                 <small>هذه المعاينة تظهر الهيدر والفوتر وصناديق النص كما ستظهر في فورمة الموظف.</small>
                             </header>
-                        <div class="nxpen-drag-help" data-nxpen-drag-help>Drag any text directly on the paper. Hold Shift to move without snap. Save the layer after moving.</div>
+                        <div class="nxpen-drag-help" data-nxpen-drag-help>اسحب النص داخل الورقة لتغيير مكانه، ثم احفظ طبقة النص. اضغط Shift لإيقاف الالتقاط.</div>
 
+                            @if (Model.Settings.A4FormFileType == "Pdf")
+                            {
+                                <p class="zy-disciplinary-pdf-status" data-disciplinary-pdf-status role="status" aria-live="polite">
+                                    جاري تحميل معاينة الصفحة الأولى من الفورمة…
+                                </p>
+                            }
+                            <div class="nxpen-a4-viewport" data-disciplinary-paper-viewport>
                             <div class="nxpen-a4-paper">
+                                @if (Model.Settings.A4FormFileType == "Pdf" && !string.IsNullOrWhiteSpace(Model.Settings.A4FormFilePath))
+                                {
+                                    <canvas data-disciplinary-pdf="@Url.Page("/DisciplinaryRules/Index", "A4FormPreview")" hidden aria-label="معاينة الصفحة الأولى من فورمة PDF"></canvas>
+                                }
                              @if (!string.IsNullOrWhiteSpace(Model.Settings.A4FormFilePath) && Model.Settings.A4FormFileType != "Pdf")
 {
-    <img class="nxpen-a4-form-layer" src="@Model.Settings.A4FormFilePath" alt="A4 Form" />
-}
-else if (Model.Settings.A4FormFileType == "Pdf")
-{
-    <div class="nxpen-a4-pdf-note">
-        تم رفع ملف PDF بنجاح، لكن المعاينة داخل المصمم تحتاج تحويل PDF إلى صورة A4.
-        حالياً ارفع الفورمة كصورة PNG / JPG حتى تظهر كخلفية.
-    </div>
+    <img class="nxpen-a4-form-layer" src="@Url.Page("/DisciplinaryRules/Index", "A4FormPreview")" alt="A4 Form" />
 }
                                 <div class="nxpen-a4-section nxpen-a4-header">
                                     @if (!string.IsNullOrWhiteSpace(Model.Settings.HeaderImagePath))
@@ -816,6 +819,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                                     }
                                 </div>
                             </div>
+                            </div>
                         </section>
                     </section>
                 </section>
@@ -830,6 +834,8 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                         </div>
                         <p class="zyw-row-meta">النوع هو غرض الكتاب: إشعار عقوبة · إحالة للجنة · لفت نظر.</p>
 
+                        <details class="zy-disciplinary-create">
+                        <summary>إضافة نوع قالب</summary>
                         <form method="post" asp-page-handler="CreateTemplateType">
                             <div class="zyw-form-grid">
                                 <div class="zyw-field">
@@ -850,6 +856,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                             </div>
                         </form>
 
+                        </details>
                         <div class="zyw-list">
                             @foreach (var templateType in Model.TemplateTypes)
                             {
@@ -896,12 +903,15 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                         <p class="zyw-row-meta">
                             تُكتب داخل نصّ القالب فيستبدلها النظام ببيانات الموظف والمخالفة عند التوليد.
                         </p>
+                        <details class="zy-disciplinary-create">
+                        <summary>عرض متغيّرات القالب</summary>
                         <div class="zyw-checks">
                             @foreach (var token in Model.TemplateTokens)
                             {
                                 <span class="zy-pill">@token</span>
                             }
                         </div>
+                        </details>
                     </article>
                 </div>
 
@@ -914,6 +924,8 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                         نصّ الكتاب الذي يصل الموظف. الهيدر والفوتر يأتيان من تهيئة المخالفات لا من هنا.
                     </p>
 
+                    <details class="zy-disciplinary-create" open="@(Model.MessageTemplates.Count == 0)">
+                    <summary>إضافة قالب رسالة</summary>
                     <form method="post" asp-page-handler="CreateTemplate">
                         <div class="zyw-form-grid">
                             <div class="zyw-field">
@@ -947,6 +959,7 @@ else if (Model.Settings.A4FormFileType == "Pdf")
                         </div>
                     </form>
 
+                    </details>
                     @if (Model.MessageTemplates.Count == 0)
                     {
                         <div class="zyw-empty">لا قوالب بعد — أضف واحداً ليصدر إشعار العقوبة بنصٍّ ثابت.</div>
@@ -1001,27 +1014,31 @@ else if (Model.Settings.A4FormFileType == "Pdf")
             }
         </section>
     </main>
-</section>
-
-<script src="~/js/zynora-disciplinary-rules.js" asp-append-version="true"></script>
+<script data-disciplinary-script data-disciplinary-once src="~/js/zynora-disciplinary-tools.js" asp-append-version="true"></script>
 
 @if (activeTab == "library")
 {
     @* كتالوج المعايير **مرّةً واحدة للصفحة**: كان يُنسخ بكل صفّ (4KB × 79 = 336KB). *@
     <script type="application/json" id="zy-criteria-catalog">@Html.Raw(Model.CriteriaJson)</script>
-    <script src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
-    <script src="~/js/zynora-grid-editor.js" asp-append-version="true" defer></script>
+    <script data-disciplinary-script data-disciplinary-once src="~/js/zynora-conditions.js" asp-append-version="true" defer></script>
+}
+@if (activeTab == "library" || activeTab == "articles")
+{
+    <script data-disciplinary-script data-disciplinary-once src="~/js/zynora-grid-editor.js" asp-append-version="true" defer></script>
 }
 
 
 
 
 
-<script src="~/js/zynora-a4-custom-file-picker-v13-1.js" asp-append-version="true" defer></script>
+@if (activeTab == "designer")
+{
+<script data-disciplinary-script data-disciplinary-once src="~/js/zynora-disciplinary-pdf.js" asp-append-version="true" defer></script>
+<script data-disciplinary-script src="~/js/zynora-a4-custom-file-picker-v13-1.js" asp-append-version="true" defer></script>
 
 
-<!-- ZYNORA_REMOVE_DISCIPLINARY_PREVIEW_START -->
-<script src="~/js/zynora-disciplinary-remove-preview.js" asp-append-version="true"></script>
-<!-- ZYNORA_REMOVE_DISCIPLINARY_PREVIEW_END --><!-- ZYNORA_REMOVE_DISCIPLINARY_HEADER_FOOTER_START -->
-<script src="/js/zynora-disciplinary-remove-header-footer.js"></script>
-<!-- ZYNORA_REMOVE_DISCIPLINARY_HEADER_FOOTER_END -->
+}
+</section>
+@section Scripts {
+    <script src="~/js/zynora-disciplinary-workspace.js" asp-append-version="true" defer></script>
+}

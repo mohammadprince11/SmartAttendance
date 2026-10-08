@@ -6,7 +6,9 @@
 
 @{
     ViewData["Title"] = "قوالب الموافقات";
-    var modules = ApprovalTemplateStore.RequestTypes.GroupBy(t => t.Module);
+    var modules = ApprovalTemplateStore.RequestTypes
+        .GroupBy(t => ApprovalTemplateCapabilities.For(t.Key)?.Module ?? t.Module)
+        .OrderBy(module => Array.IndexOf(ApprovalTemplateCapabilities.Modules.ToArray(), module.Key));
     var templatesJson = JsonSerializer.Serialize(Model.Templates.Select(t => new
     {
         t.Id, t.Name, t.NameEn, t.IsActive, t.HasConditions,
@@ -25,13 +27,24 @@
 <link rel="stylesheet" href="~/css/pages/hr-settings-identity.css" asp-append-version="true" />
 
 
-<section class="nxhs-page nxhs-simple zy-hr-admin-page zy-hr-settings-page" dir="rtl">
+<section class="nxhs-page nxhs-simple zy-hr-admin-page zy-hr-settings-page zy-approval-simple zy-approval-workspace" dir="rtl">
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>قوالب الموافقات</h1>
+        <p class="nxhs-helper">@(Model.IsEditor ? "حدد شروط التطبيق وتسلسل الموافقة وقواعد الطلب، ثم احفظ القالب." : Model.SelectedType != null ? "رتّب القوالب حسب أولوية التنفيذ أو افتح قالباً لتعديله." : "اختر نوع الطلب لعرض قوالب الموافقة وإدارتها.")</p>
+        @if (Model.SelectedType != null)
+        {
+            <nav class="apt-breadcrumb" aria-label="مسار قوالب الموافقات">
+                <a asp-page="./ApprovalTemplates" asp-route-CompanyId="@Model.CompanyId" asp-route-Audience="@Model.Audience">أنواع الطلبات</a>
+                <span aria-hidden="true">/</span>
+                <a asp-page="./ApprovalTemplates" asp-route-CompanyId="@Model.CompanyId" asp-route-Type="@Model.Type">@Model.SelectedType.Label</a>
+                @if (Model.IsEditor) { <span aria-hidden="true">/</span><span>@(Model.EditorId > 0 ? "تعديل القالب" : "قالب جديد")</span> }
+            </nav>
+        }
     </header>
-    <form method="get" class="nxhs-panel zyu-89ef3b666a67">
+    <form method="get" class="nxhs-panel zyu-89ef3b666a67 apt-company-filter">
         <input type="hidden" name="Type" value="@Model.Type" />
+        <input type="hidden" name="Audience" value="@Model.Audience" />
         <label>الشركة</label>
         <select name="CompanyId" onchange="this.form.submit()" required>
             @foreach (var company in Model.Companies)
@@ -46,47 +59,49 @@
         <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
     }
 
-    <section class="nxhs-panel apt-delegations" id="approval-delegations">
-        <header class="nxhs-search-head">
-            <div><h2>التفويض المؤقت</h2><p class="nxhs-helper">ينتهي آلياً حسب المنطقة الزمنية للشركة (@Model.CompanyTimeZoneId)، ويُختم القرار باسم المنفذ والمفوِّض.</p></div>
-        </header>
-        <form method="post" asp-page-handler="CreateDelegation" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" class="apt-delegation-form">
-            <label>المفوِّض<select name="delegatorUserName" required><option value="">اختر</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select></label>
-            <label>المفوَّض إليه<select name="delegateUserName" required><option value="">اختر</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select></label>
-            <label>من<input type="datetime-local" name="startsAt" required /></label>
-            <label>إلى<input type="datetime-local" name="endsAt" required /></label>
-            <button type="submit" class="nxhs-modal-delete">حفظ التفويض</button>
-        </form>
-        @if(Model.Delegations.Count>0)
-        {
-            <div class="nxhs-table-wrap"><table class="nxhs-table"><thead><tr><th>من</th><th>إلى</th><th>النافذة</th><th>الحالة</th><th></th></tr></thead><tbody>
-            @foreach(var delegation in Model.Delegations)
-            {
-                <tr><td>@delegation.DelegatorUserName</td><td>@delegation.DelegateUserName</td><td>@Model.CompanyTime(delegation.StartsAt) — @Model.CompanyTime(delegation.EndsAt)</td><td>@(delegation.IsActive&&delegation.EndsAt>DateTime.UtcNow?"نشط":"منتهٍ")</td><td>
-                @if(delegation.IsActive&&delegation.EndsAt>DateTime.UtcNow){<form method="post" asp-page-handler="RevokeDelegation" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" data-zyconfirm="إلغاء التفويض؟"><input type="hidden" name="id" value="@delegation.Id" /><button class="nxhs-delete-trigger">إلغاء</button></form>}
-                </td></tr>
-            }
-            </tbody></table></div>
-        }
-    </section>
-
-    <div class="apt-layout">
+    @if (Model.SelectedType == null)
+    {
+    <div class="apt-layout apt-catalog-view">
         <aside class="nxhs-panel apt-catalog">
+            <nav class="apt-audience-tabs" aria-label="مصدر الطلب" data-active-audience="@Model.Audience">
+                <button type="button" data-audience="All" aria-pressed="@(Model.Audience == "All" ? "true" : "false")">كل الموديولات</button>
+                <button type="button" data-audience="SelfService" aria-pressed="@(Model.Audience == "SelfService" ? "true" : "false")">طلبات الخدمة الذاتية</button>
+                <button type="button" data-audience="Supervisor" aria-pressed="@(Model.Audience == "Supervisor" ? "true" : "false")">طلبات المشرفين</button>
+            </nav>
+            <nav class="apt-module-nav" aria-label="أقسام قوالب الموافقات">
+                @foreach (var module in modules)
+                {
+                    var visibleCount = module.Count(type => ApprovalTemplateNavigation.VisibleIn(type.Key, Model.Audience));
+                    <button type="button" aria-controls="apt-module-@Array.IndexOf(ApprovalTemplateCapabilities.Modules.ToArray(), module.Key)" aria-pressed="false" hidden="@(visibleCount == 0)">@module.Key <span data-module-type-count>@visibleCount نوع</span></button>
+                }
+            </nav>
+            <p id="aptCatalogPrompt" class="zy-empty">اختر القسم لعرض أنواع الطلبات الخاصة به.</p>
+            <label class="apt-catalog-search" id="aptCatalogSearchWrap" hidden>بحث ضمن القسم المختار<input type="search" id="aptCatalogSearch" placeholder="اكتب اسم الطلب…" disabled /></label>
             @foreach (var module in modules)
             {
-                <h3>@module.Key</h3>
-                foreach (var type in module)
+                <section class="apt-catalog-module" id="apt-module-@Array.IndexOf(ApprovalTemplateCapabilities.Modules.ToArray(), module.Key)" hidden>
+                <header class="apt-module-head"><h2>@module.Key</h2><span data-module-summary>@module.Count(type => ApprovalTemplateNavigation.VisibleIn(type.Key, Model.Audience)) نوع طلب · @module.Where(type => ApprovalTemplateNavigation.VisibleIn(type.Key, Model.Audience)).Sum(type => Model.Counts.GetValueOrDefault(type.Key)) قالب</span></header>
+                <div class="apt-type-grid">
+                @foreach (var type in module)
                 {
                     var count = Model.Counts.TryGetValue(type.Key, out var c) ? c : 0;
-                    <a href="?Type=@type.Key&CompanyId=@Model.CompanyId" class="@(type.Key == Model.Type ? "active" : "")">
-                        <span>@type.Label</span>
-                        <span class="apt-count">@count</span>
+                    var definition = ApprovalTemplateCapabilities.For(type.Key);
+                    <a asp-page="./ApprovalTemplates" asp-route-Type="@type.Key" asp-route-CompanyId="@Model.CompanyId" class="apt-type-card" data-audience="@ApprovalTemplateNavigation.AudienceFor(type.Key)" data-template-count="@count" data-label="@type.Label @module.Key @definition?.Description">
+                        <span class="apt-type-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 5H5v14h14V9M9 5h6l4 4M9 5v4h10M8 13h8M8 16h6" /></svg></span>
+                        <span><strong>@type.Label</strong><small class="apt-type-description">@definition?.Description</small><small>@count قالب</small></span>
                     </a>
                 }
+                </div>
+                </section>
             }
+            <p id="aptCatalogEmpty" class="zy-empty" hidden>لا يوجد نوع طلب يطابق البحث.</p>
         </aside>
-
-        <section class="nxhs-panel">
+    </div>
+    }
+    @if (Model.SelectedType != null && !Model.IsEditor)
+    {
+        <section class="nxhs-panel apt-template-list">
+            <p class="apt-help">@Model.Capabilities?.Module · @Model.Capabilities?.Description</p>
             <header class="nxhs-search-head">
                 <h2>قوالب «@Model.SelectedType?.Label»</h2>
                 <div class="zyu-667bbbde05a1">
@@ -101,7 +116,7 @@
                             </button>
                         </form>
                     }
-                    <button type="button" class="nxhs-modal-delete zyu-a5a382098f38" onclick="aptOpen(0)">+ قالب جديد</button>
+                    <a class="zy-btn zy-btn--primary" asp-page="./ApprovalTemplates" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" asp-route-EditorId="0">+ إنشاء قالب جديد</a>
                 </div>
             </header>
             <p class="nxhs-helper">اسحب الصفوف لترتيب أولوية التنفيذ — المحرك يختار أول قالب نشط تنطبق شروطه.</p>
@@ -128,7 +143,7 @@
                                 <td>@(template.HasConditions ? "نعم" : "—")</td>
                                 <td>@(template.IsActive ? "نشط" : "متوقف")</td>
                                 <td class="zyu-eb99a4c193ed">
-                                    <button type="button" class="nxhs-modal-cancel" onclick="aptOpen(@template.Id)">تعديل</button>
+                                    <a class="zy-btn zy-btn--secondary" asp-page="./ApprovalTemplates" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" asp-route-EditorId="@template.Id">تعديل</a>
                                     <form method="post" asp-page-handler="Delete" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" class="zyu-6b8b63d565c4"
                                           data-zyconfirm="حذف القالب «@template.Name»؟">
                                         <input type="hidden" name="id" value="@template.Id" />
@@ -145,27 +160,61 @@
                 </table>
             </div>
 
-            <div class="apt-sim">
-                <h3 class="zyu-43af29035fa2">محاكاة: أي قالب ينطبق؟</h3>
+            <details class="apt-sim apt-secondary">
+                <summary>اختبار القالب على موظف <span class="apt-summary-note">اختياري · لا يغيّر بيانات الطلب</span></summary>
                 <div class="zyu-39c68df36fcc">
                     <input id="aptSimEmp" type="number" min="1" placeholder="رقم الموظف (Id)" class="zyu-ce4214af0040" />
                     <button type="button" class="nxhs-modal-cancel" onclick="aptSimulate()">فحص</button>
                 </div>
                 <div id="aptSimResult" class="apt-sim-result"></div>
-            </div>
+            </details>
         </section>
-    </div>
+    }
 
-    <div class="apt-backdrop" id="aptBackdrop" onclick="aptClose()"></div>
-    <aside class="apt-slide" id="aptSlide">
+    @if (!Model.IsEditor)
+    {
+    <details class="nxhs-panel apt-delegations apt-secondary" id="approval-delegations">
+        <summary>التفويض المؤقت <span class="apt-summary-note">اختياري · لإسناد الموافقة لشخص آخر خلال فترة محددة</span></summary>
+        <header class="nxhs-search-head">
+            <div><p class="nxhs-helper">ينتهي آلياً حسب المنطقة الزمنية للشركة (@Model.CompanyTimeZoneId)، ويُختم القرار باسم المنفذ والمفوِّض.</p></div>
+        </header>
+        <form method="post" asp-page-handler="CreateDelegation" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" class="apt-delegation-form">
+            <label>المفوِّض<select name="delegatorUserName" required><option value="">اختر</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select></label>
+            <label>المفوَّض إليه<select name="delegateUserName" required><option value="">اختر</option>@foreach(var user in Model.Users){<option value="@user">@user</option>}</select></label>
+            <label>من<input type="datetime-local" name="startsAt" required /></label>
+            <label>إلى<input type="datetime-local" name="endsAt" required /></label>
+            <button type="submit" class="nxhs-modal-delete">حفظ التفويض</button>
+        </form>
+        @if(Model.Delegations.Count>0)
+        {
+            <div class="nxhs-table-wrap"><table class="nxhs-table"><thead><tr><th>من</th><th>إلى</th><th>النافذة</th><th>الحالة</th><th></th></tr></thead><tbody>
+            @foreach(var delegation in Model.Delegations)
+            {
+                <tr><td>@delegation.DelegatorUserName</td><td>@delegation.DelegateUserName</td><td>@Model.CompanyTime(delegation.StartsAt) — @Model.CompanyTime(delegation.EndsAt)</td><td>@(delegation.IsActive&&delegation.EndsAt>DateTime.UtcNow?"نشط":"منتهٍ")</td><td>
+                @if(delegation.IsActive&&delegation.EndsAt>DateTime.UtcNow){<form method="post" asp-page-handler="RevokeDelegation" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" data-zyconfirm="إلغاء التفويض؟"><input type="hidden" name="id" value="@delegation.Id" /><button class="nxhs-delete-trigger">إلغاء</button></form>}
+                </td></tr>
+            }
+            </tbody></table></div>
+        }
+    </details>
+    }
+
+    @if (Model.IsEditor)
+    {
+    <section class="nxhs-panel apt-editor" id="aptSlide">
         <h2 id="aptSlideTitle">قالب جديد</h2>
+        <section class="apt-type-context" aria-label="تفاصيل نوع الطلب">
+            <strong>@Model.Capabilities?.Module / @Model.SelectedType?.Label</strong>
+            <p>@Model.Capabilities?.Description</p>
+            <p class="nxhs-helper">القالب يحدد الموافقات فقط؛ لا يغير حسابات الرواتب أو أرصدة الإجازات. تعديله لا يغيّر مسار الطلبات التي سبق تقديمها.</p>
+        </section>
         <form method="post" asp-page-handler="Save" asp-route-Type="@Model.Type" asp-route-CompanyId="@Model.CompanyId" id="aptForm">
             <input type="hidden" name="Id" id="f_Id" value="0" />
             <div class="apt-form-grid">
-                <label class="full">اسم القالب (عربي)
+                <label>اسم القالب (عربي)
                     <input name="Name" id="f_Name" required />
                 </label>
-                <label class="full">Template Name (EN)
+                <label>اسم القالب (إنجليزي)
                     <input name="NameEn" id="f_NameEn" dir="ltr" />
                 </label>
                 <label class="nxhs-check-line"><input type="checkbox" name="IsActive" id="f_IsActive" value="true" checked /> <b>نشط</b></label>
@@ -191,38 +240,74 @@
                         @foreach (var workType in Model.WorkTypes) { <option value="@workType">@workType</option> }
                     </select>
                 </label>
+                <label hidden="@(Model.Capabilities?.NumericLabel == null && !Model.ShowLegacyNumeric)">@(Model.Capabilities?.NumericLabel ?? "قيمة شرط محفوظ سابقاً") من (شامل)
+                    <input type="number" name="CondMinAmount" id="f_CondMinAmount" min="0" step="0.01" />
+                </label>
+                <label hidden="@(Model.Capabilities?.NumericLabel == null && !Model.ShowLegacyNumeric)">@(Model.Capabilities?.NumericLabel ?? "قيمة شرط محفوظ سابقاً") إلى (شامل)
+                    <input type="number" name="CondMaxAmount" id="f_CondMaxAmount" min="0" step="0.01" />
+                </label>
+                <label class="full" hidden="@(Model.Capabilities?.ChangedField != true && !Model.ShowLegacyChangedField)">عند تغيير حقل معين
+                    <select name="CondChangedFieldKey" id="f_CondChangedFieldKey"><option value="">أي حقل</option>@foreach(var field in DataChangeRequestStore.Catalog){<option value="@field.Key">@field.Label</option>}</select>
+                </label>
+                <p class="nxhs-helper full">الشروط المحددة تُطبّق معاً. اترك الحقل فارغاً إذا لم ترغب بتقييد القالب به.</p>
+                @if ((Model.ShowLegacyNumeric && Model.Capabilities?.NumericLabel == null) || (Model.ShowLegacyChangedField && Model.Capabilities?.ChangedField != true))
+                {
+                    <p class="nxhs-alert full">هذا القالب يحتوي شروطاً محفوظة من الواجهة القديمة. راجع ملاءمتها لهذا النوع قبل الحفظ؛ لا يتم حذفها تلقائياً.</p>
+                }
             </div>
 
             <h3 class="zyu-6ace034d1de1">لجنة الموافقة (بالترتيب)</h3>
             <p class="apt-help">يمكن إعادة استخدام مجموعات أعضاء ثابتة أو توثيق لجنة خارجية. <a asp-page="/Approvals/Committees" asp-route-CompanyId="@Model.CompanyId">إدارة اللجان</a></p>
+            <div class="apt-committee-panes">
+            <section class="apt-committee-available" aria-label="أصحاب الموافقة المتاحون">
+            <h4>أضف صاحب موافقة</h4>
             <div class="zyu-a66c33606303">
-                <select id="aptStepType" onchange="aptStepTypeChanged()">
+                <label>نوع صاحب الموافقة
+                <select id="aptStepType" aria-label="نوع صاحب الموافقة" onchange="aptStepTypeChanged()">
                     <option value="DirectManager">المدير المباشر</option>
                     <option value="Role">دور</option>
                     <option value="User">مستخدم محدد</option>
                     <option value="CommitteeGroup">مجموعة لجنة داخلية</option>
                     <option value="ExternalCommittee">لجنة خارجية</option>
                 </select>
-                <select id="aptStepRole" class="zyu-6aa34d7432e7">
+                </label>
+                <label data-apt-step-choice="Role" hidden>الدور
+                <select id="aptStepRole" aria-label="الدور" class="zyu-6aa34d7432e7">
                     <option value="HR Manager">HR Manager</option>
                     <option value="HR Officer">HR Officer</option>
                     <option value="Branch Manager">Branch Manager</option>
                     <option value="Admin">Admin</option>
                 </select>
-                <select id="aptStepUser" class="zyu-6aa34d7432e7">
+                </label>
+                <label data-apt-step-choice="User" hidden>المستخدم
+                <select id="aptStepUser" aria-label="المستخدم" class="zyu-6aa34d7432e7">
                     @foreach (var user in Model.Users) { <option value="@user">@user</option> }
                 </select>
-                <select id="aptStepCommitteeGroup" class="zyu-6aa34d7432e7">
+                </label>
+                <label data-apt-step-choice="CommitteeGroup" hidden>مجموعة اللجنة
+                <select id="aptStepCommitteeGroup" aria-label="مجموعة اللجنة" class="zyu-6aa34d7432e7">
                     @foreach (var group in Model.CommitteeGroups) { <option value="@group.Id">@group.Name</option> }
                 </select>
-                <select id="aptStepExternalCommittee" class="zyu-6aa34d7432e7">
+                </label>
+                <label data-apt-step-choice="ExternalCommittee" hidden>اللجنة الخارجية
+                <select id="aptStepExternalCommittee" aria-label="اللجنة الخارجية" class="zyu-6aa34d7432e7">
                     @foreach (var committee in Model.ExternalCommittees) { <option value="@committee.Id">@committee.Name</option> }
                 </select>
+                </label>
                 <button type="button" class="nxhs-modal-cancel" onclick="aptAddStep()">+ إضافة خطوة</button>
                 <label class="nxhs-check-line"><input type="checkbox" id="aptParallel" /> <b>موازية مع الخطوة السابقة</b></label>
             </div>
-            <div class="apt-steps" id="aptSteps"></div>
+            </section>
+            <section class="apt-committee-selected" aria-label="تسلسل الموافقات المحدد">
+            <h4>لجنة الموافقة المختارة</h4>
+            <div class="apt-steps" id="aptSteps" aria-live="polite"></div>
+            <p id="aptStepsEmpty" class="nxhs-helper">لم تضف صاحب موافقة بعد.</p>
+            </section>
+            </div>
+            <p class="nxhs-helper">أسهم الترتيب تنقل مرحلة الموافقة كاملةً، مع الحفاظ على أعضاء المرحلة المتوازية.</p>
 
+            <details class="apt-editor-section">
+            <summary>المشاهدون وإشعارات القالب <span class="apt-summary-note">اختياري</span></summary>
             <h3 class="zyu-6ace034d1de1">مشاهدون (بلا صلاحية قرار — يستلمون جميع أحداث الطلب)</h3>
             <select name="Watchers" id="f_Watchers" multiple size="4" class="zyu-b7aa1ec0049d">
                 @foreach (var user in Model.Users) { <option value="@user">@user</option> }
@@ -245,19 +330,13 @@
                 </tbody>
             </table>
 
+            </details>
+            <details class="apt-editor-section">
+            <summary>التذكير والتصعيد <span class="apt-summary-note">اختياري · متابعة التأخر بالقرار</span></summary>
             <h3 class="zyu-6ace034d1de1">التصعيد وقواعد الطلب</h3>
             <div class="apt-form-grid">
                 <label>تذكير بعد (ساعات)
                     <input type="number" name="ReminderHours" id="f_ReminderHours" min="1" />
-                </label>
-                <label>@(Model.Type == "LeaveRequest" ? "عدد الأيام من" : "المبلغ من")
-                    <input type="number" name="CondMinAmount" id="f_CondMinAmount" min="0" step="0.01" />
-                </label>
-                <label>@(Model.Type == "LeaveRequest" ? "عدد الأيام إلى" : "المبلغ إلى")
-                    <input type="number" name="CondMaxAmount" id="f_CondMaxAmount" min="0" step="0.01" />
-                </label>
-                <label class="full">عند تغيير حقل معين
-                    <select name="CondChangedFieldKey" id="f_CondChangedFieldKey"><option value="">أي حقل</option>@foreach(var field in DataChangeRequestStore.Catalog){<option value="@field.Key">@field.Label</option>}</select>
                 </label>
                 <label>تصعيد بعد (أيام بلا قرار)
                     <input type="number" name="EscalationDays" id="f_EscalationDays" min="1" />
@@ -272,6 +351,11 @@
                         <option value="Admin">Admin</option>
                     </select>
                 </label>
+            </div>
+            </details>
+            <details class="apt-editor-section">
+            <summary>قواعد الطلب <span class="apt-summary-note">الإلغاء، التعليق والمرفقات</span></summary>
+            <div class="apt-form-grid">
                 <label>منع إلغاء الطلب بعد (أيام)
                     <input type="number" name="CancelLimitDays" id="f_CancelLimitDays" min="1" />
                 </label>
@@ -280,12 +364,14 @@
                 <label class="nxhs-check-line"><input type="checkbox" name="AttachReq" id="f_AttachReq" value="true" /> <b>المرفق مطلوب عند تقديم الطلب</b></label>
             </div>
 
+            </details>
             <footer class="nxhs-actions zyu-92c18f6bdac1">
                 <button type="submit">حفظ القالب</button>
                 <button type="button" class="nxhs-modal-cancel" onclick="aptClose()">إلغاء</button>
             </footer>
         </form>
-    </aside>
+    </section>
+    }
 </section>
 
 <script src="~/js/zynora-hr-settings-v16.js" asp-append-version="true" defer></script>
@@ -302,10 +388,12 @@
 
         function aptStepTypeChanged() {
             var t = document.getElementById("aptStepType").value;
-            document.getElementById("aptStepRole").style.display = t === "Role" ? "" : "none";
-            document.getElementById("aptStepUser").style.display = t === "User" ? "" : "none";
-            document.getElementById("aptStepCommitteeGroup").style.display = t === "CommitteeGroup" ? "" : "none";
-            document.getElementById("aptStepExternalCommittee").style.display = t === "ExternalCommittee" ? "" : "none";
+            ["Role", "User", "CommitteeGroup", "ExternalCommittee"].forEach(function (type) {
+                var select = document.getElementById("aptStep" + type);
+                var field = select.closest("[data-apt-step-choice]");
+                if (field) field.hidden = t !== type;
+                else select.style.display = t === type ? "" : "none";
+            });
         }
 
         function aptAddHidden(row, name, value) {
@@ -331,6 +419,7 @@
                 type === "CommitteeGroup" ? aptSelectedText("aptStepCommitteeGroup") :
                 type === "ExternalCommittee" ? aptSelectedText("aptStepExternalCommittee") : "المدير المباشر");
             if ((type === "CommitteeGroup" && !committeeGroupId) || (type === "ExternalCommittee" && !externalCommitteeId)) return;
+            if ((type === "User" && !user) || (type === "Role" && !role)) return;
 
             var wrap = document.getElementById("aptSteps");
             var previous = wrap.lastElementChild;
@@ -352,17 +441,54 @@
             aptAddHidden(row, "StepCommitteeGroup", type === "CommitteeGroup" ? committeeGroupId : "");
             aptAddHidden(row, "StepExternalCommittee", type === "ExternalCommittee" ? externalCommitteeId : "");
             aptAddHidden(row, "StepStage", stage);
+            var actions = document.createElement("span");
+            actions.className = "apt-step-actions";
+            [-1, 1].forEach(function (direction) {
+                var move = document.createElement("button");
+                move.type = "button";
+                move.textContent = direction < 0 ? "↑" : "↓";
+                move.setAttribute("aria-label", direction < 0 ? "تقديم مرحلة الموافقة" : "تأخير مرحلة الموافقة");
+                move.addEventListener("click", function () { aptMoveStage(row, direction); });
+                actions.appendChild(move);
+            });
             var remove = document.createElement("button");
             remove.type = "button";
             remove.textContent = "×";
+            remove.setAttribute("aria-label", "إزالة " + display + " من اللجنة");
             remove.addEventListener("click", function () { row.remove(); aptNumber(); });
-            row.appendChild(remove);
+            actions.appendChild(remove);
+            row.appendChild(actions);
             wrap.appendChild(row);
             aptNumber();
         }
 
+        function aptMoveStage(row, direction) {
+            var wrap = document.getElementById("aptSteps");
+            var groups = [];
+            Array.from(wrap.children).forEach(function (item) {
+                var stage = item.querySelector('[name="StepStage"]').value;
+                var last = groups[groups.length - 1];
+                if (!last || last.stage !== stage) groups.push({ stage: stage, rows: [item] });
+                else last.rows.push(item);
+            });
+            var index = groups.findIndex(function (group) { return group.rows.includes(row); });
+            var next = index + direction;
+            if (next < 0 || next >= groups.length) return;
+            var moved = groups.splice(index, 1)[0];
+            groups.splice(next, 0, moved);
+            groups.forEach(function (group, i) {
+                group.rows.forEach(function (item) {
+                    item.querySelector('[name="StepStage"]').value = i + 1;
+                    wrap.appendChild(item);
+                });
+            });
+            aptNumber();
+            row.querySelector('button').focus();
+        }
+
         function aptNumber() {
             var rows = document.querySelectorAll("#aptSteps .apt-step .num");
+            document.getElementById("aptStepsEmpty").hidden = rows.length > 0;
             rows.forEach(function (n, i) {
                 var row=n.closest('.apt-step');
                 var stage=row.querySelector('input[name="StepStage"]').value;
@@ -418,15 +544,100 @@
             }
             aptToggleConds();
             aptStepTypeChanged();
-            document.getElementById("aptSlide").classList.add("open");
-            document.getElementById("aptBackdrop").classList.add("open");
+            document.getElementById("f_Name").focus();
         }
 
         function aptClose() {
-            document.getElementById("aptSlide").classList.remove("open");
-            document.getElementById("aptBackdrop").classList.remove("open");
+            window.location.assign("?Type=" + encodeURIComponent(aptType) + "&CompanyId=@Model.CompanyId");
         }
-        document.addEventListener("keydown", function (e) { if (e.key === "Escape") aptClose(); });
+        if (document.getElementById("aptForm")) {
+            aptOpen(@(Model.EditorId ?? 0));
+            aptNumber();
+            document.getElementById("aptForm").addEventListener("submit", function (event) {
+                if (!document.querySelector("#aptSteps .apt-step")) {
+                    event.preventDefault();
+                    document.getElementById("aptStepsEmpty").textContent = "أضف صاحب موافقة واحداً على الأقل قبل الحفظ.";
+                    document.getElementById("aptStepType").focus();
+                    return;
+                }
+                document.querySelector('#aptForm button[type="submit"]').disabled = true;
+            });
+        }
+        var catalogSearch = document.getElementById("aptCatalogSearch");
+        var selectedCatalogModule = null;
+        var catalogAudienceTabs = document.querySelector(".apt-audience-tabs");
+        var catalogAudience = catalogAudienceTabs ? catalogAudienceTabs.dataset.activeAudience : "All";
+        function aptMatchesAudience(card) {
+            return catalogAudience === "All" || card.dataset.audience === catalogAudience;
+        }
+        function aptFilterCatalog() {
+            if (!selectedCatalogModule) return;
+            var query = catalogSearch.value.trim().normalize("NFKC");
+            var matches = 0;
+            selectedCatalogModule.querySelectorAll(".apt-type-card").forEach(function (card) {
+                card.hidden = !aptMatchesAudience(card) || !card.dataset.label.normalize("NFKC").includes(query);
+                if (!card.hidden) matches++;
+            });
+            document.getElementById("aptCatalogEmpty").hidden = matches > 0;
+        }
+        function aptRefreshAudience() {
+            document.querySelectorAll(".apt-module-nav button").forEach(function (button) {
+                var module = document.getElementById(button.getAttribute("aria-controls"));
+                var cards = Array.from(module.querySelectorAll(".apt-type-card")).filter(aptMatchesAudience);
+                button.hidden = cards.length === 0;
+                button.querySelector("[data-module-type-count]").textContent = cards.length + " نوع";
+                module.querySelector("[data-module-summary]").textContent = cards.length + " نوع طلب · " + cards.reduce(function (total, card) {
+                    return total + Number(card.dataset.templateCount || 0);
+                }, 0) + " قالب";
+                if (button.hidden && selectedCatalogModule === module) selectedCatalogModule = null;
+            });
+            document.querySelectorAll(".apt-catalog-module").forEach(function (module) {
+                module.hidden = module !== selectedCatalogModule;
+            });
+            document.querySelectorAll(".apt-module-nav button").forEach(function (button) {
+                button.setAttribute("aria-pressed", document.getElementById(button.getAttribute("aria-controls")) === selectedCatalogModule ? "true" : "false");
+            });
+            document.getElementById("aptCatalogPrompt").hidden = !!selectedCatalogModule;
+            document.getElementById("aptCatalogSearchWrap").hidden = !selectedCatalogModule;
+            catalogSearch.disabled = !selectedCatalogModule;
+            document.getElementById("aptCatalogEmpty").hidden = true;
+            aptFilterCatalog();
+        }
+        if (catalogSearch) {
+            aptRefreshAudience();
+            catalogAudienceTabs.querySelectorAll("button[data-audience]").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    catalogAudience = button.dataset.audience;
+                    catalogAudienceTabs.dataset.activeAudience = catalogAudience;
+                    catalogAudienceTabs.querySelectorAll("button[data-audience]").forEach(function (item) {
+                        item.setAttribute("aria-pressed", item === button ? "true" : "false");
+                    });
+                    document.querySelector('.apt-company-filter input[name="Audience"]').value = catalogAudience;
+                    catalogSearch.value = "";
+                    aptRefreshAudience();
+                    var url = new URL(window.location.href);
+                    url.searchParams.set("Audience", catalogAudience);
+                    window.history.replaceState(window.history.state, "", url);
+                });
+            });
+            catalogSearch.addEventListener("input", aptFilterCatalog);
+            document.querySelectorAll(".apt-module-nav button").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    selectedCatalogModule = document.getElementById(button.getAttribute("aria-controls"));
+                    document.querySelectorAll(".apt-catalog-module").forEach(function (module) {
+                        module.hidden = module !== selectedCatalogModule;
+                    });
+                    document.querySelectorAll(".apt-module-nav button").forEach(function (item) {
+                        item.setAttribute("aria-pressed", item === button ? "true" : "false");
+                    });
+                    document.getElementById("aptCatalogPrompt").hidden = true;
+                    document.getElementById("aptCatalogSearchWrap").hidden = false;
+                    catalogSearch.disabled = false;
+                    catalogSearch.value = "";
+                    aptFilterCatalog();
+                });
+            });
+        }
 
         // سحب وإفلات لترتيب الأولوية (نفس نمط باني التقارير) + حفظ فوري.
         (function () {

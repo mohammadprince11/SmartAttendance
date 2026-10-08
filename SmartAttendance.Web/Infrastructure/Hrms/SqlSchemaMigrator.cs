@@ -3917,6 +3917,10 @@ BEGIN
         ON ApprovalEffectJobs (CompletedAtUtc, NextAttemptAtUtc, LockedUntilUtc);
 END;
 """),
+        new("20261007-01-notification-rule-mail-outbox",
+            SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleMailOutbox.MigrationSql),
+        new("20261007-02-end-service-access-schedule",
+            SmartAttendance.Web.Infrastructure.Security.EndServiceAccessStore.MigrationSql),
     };
 
     /// <summary>

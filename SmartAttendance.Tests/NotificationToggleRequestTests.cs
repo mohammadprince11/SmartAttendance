@@ -10,6 +10,13 @@ namespace SmartAttendance.Tests;
 public sealed class NotificationToggleRequestTests
 {
     [Fact]
+    public async Task JsonToggle_RejectsInvalidId_BeforeDatabaseAccess()
+    {
+        using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().Options);
+        Assert.IsType<BadRequestResult>(await CreateModel(db).OnPostToggleRuleAsync(0, true));
+    }
+
+    [Fact]
     public async Task JsonToggle_RequiresExplicitDesiredState_BeforeDatabaseAccess()
     {
         using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().Options);
@@ -43,6 +50,8 @@ public sealed class NotificationToggleRequestTests
     [InlineData(1, "المشرفين", -1, "كل الموظفين")]
     [InlineData(1, "", 0, "كل الموظفين")]
     [InlineData(1, "المشرفين", 0, "")]
+    [InlineData(1, "المشرفين", 367, "كل الموظفين")]
+    [InlineData(1, "unknown", 0, "كل الموظفين")]
     public async Task JsonDetails_RejectsInvalidValues_BeforeDatabaseAccess(int id, string audience, int days, string items)
     {
         using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().Options);

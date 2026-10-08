@@ -25,7 +25,15 @@ public class ApprovalTemplatesModel : PageModel
     }
 
     [BindProperty(SupportsGet = true)]
-    public string Type { get; set; } = "LeaveRequest";
+    public string Type { get; set; } = string.Empty;
+    [BindProperty(SupportsGet = true)] public int? EditorId { get; set; }
+    [BindProperty(SupportsGet = true)] public string Audience { get; set; } = "All";
+    public bool IsEditor => SelectedType != null && EditorId.HasValue;
+    public ApprovalTemplateCapabilities.Definition? Capabilities => ApprovalTemplateCapabilities.For(Type);
+    public bool ShowLegacyNumeric => Templates.Any(template => template.Id == EditorId &&
+        (template.CondMinAmount.HasValue || template.CondMaxAmount.HasValue));
+    public bool ShowLegacyChangedField => Templates.Any(template => template.Id == EditorId &&
+        !string.IsNullOrWhiteSpace(template.CondChangedFieldKey));
     [BindProperty(SupportsGet = true)] public int? CompanyId { get; set; }
     public List<Option> Companies { get; set; } = new();
 
@@ -46,17 +54,27 @@ public class ApprovalTemplatesModel : PageModel
     public async Task OnGetAsync()
     {
         var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
-        Companies = (await _dbContext.Companies.AsNoTracking().Where(company => !company.IsDeleted && company.IsActive)
-            .OrderBy(company => company.Name).Select(company => new Option(company.Id,company.Name)).ToListAsync())
-            .Where(company => scope.Allows(company.Id)).ToList();
+        var allowedCompanyIds = scope.AllowedCompanyIds.ToArray();
+        Companies = await _dbContext.Companies.AsNoTracking()
+            .Where(company => !company.IsDeleted && company.IsActive &&
+                (scope.IsUnrestricted || allowedCompanyIds.Contains(company.Id)))
+            .OrderBy(company => company.Name).Select(company => new Option(company.Id,company.Name)).ToListAsync();
         CompanyId = CompanySelectionContext.Resolve(HttpContext, CompanyId, Companies.Select(company => company.Id).ToArray());
         if (CompanyId is not > 0 || !scope.Allows(CompanyId.Value)) return;
-        SelectedType = ApprovalTemplateStore.RequestTypes.FirstOrDefault(t => t.Key.Equals(Type, StringComparison.OrdinalIgnoreCase))
-                       ?? ApprovalTemplateStore.RequestTypes[0];
-        Type = SelectedType.Key;
+        SelectedType = ApprovalTemplateStore.RequestTypes.FirstOrDefault(t => t.Key.Equals(Type, StringComparison.OrdinalIgnoreCase));
+        Type = SelectedType?.Key ?? string.Empty;
+        Audience = ApprovalTemplateNavigation.NormalizeAudience(Audience);
+        if (SelectedType != null) Audience = ApprovalTemplateNavigation.AudienceFor(Type);
 
         Counts = await ApprovalTemplateStore.CountsAsync(_dbContext, scope, CompanyId.Value);
-        Templates = await ApprovalTemplateStore.ListAsync(_dbContext, CompanyId.Value, Type);
+        if (SelectedType != null) Templates = await ApprovalTemplateStore.ListAsync(_dbContext, CompanyId.Value, Type);
+        // IDs are resolved only against this company's selected request type, never globally.
+        if (EditorId < 0 || (EditorId > 0 && !Templates.Any(template => template.Id == EditorId)))
+        {
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            EditorId = null;
+            TempData["SuccessMessage"] = "القالب غير موجود ضمن نوع الطلب والشركة المحددين.";
+        }
         await LoadLookupsAsync(scope);
         Delegations = await ApprovalDelegationStore.ListAsync(_dbContext, scope, CompanyId.Value);
     }
@@ -313,7 +331,7 @@ public class ApprovalTemplatesModel : PageModel
             });
         }
 
-        if (ApprovalTemplateStore.Validate(template) is { } validationError)
+        if ((ApprovalTemplateStore.Validate(template) ?? ApprovalTemplateCapabilities.ValidateConditions(template)) is { } validationError)
         {
             TempData["SuccessMessage"] = validationError;
             return RedirectToPage(new { Type, CompanyId });

@@ -15,3 +15,82 @@
 .zyu-5a5f7abe4163 { width:110px; }
 
 .zyu-386c1b610660 { white-space:normal; }
+
+.zy-disciplinary-workspace { min-width: 0; }
+.zy-disciplinary-workspace > main { min-width: 0; }
+.zy-disciplinary-content { display: grid; gap: var(--zy-space-4); min-width: 0; }
+.zy-disciplinary-workspace .zyw-table-wrap { max-width: 100%; overflow-x: auto; }
+.zy-disciplinary-workspace .zyw-form-grid > * { min-width: 0; }
+.zy-disciplinary-workspace .zyw-checks input[type="checkbox"] {
+    width: 18px; height: 18px; min-height: 18px; padding: 0;
+    flex: 0 0 18px; accent-color: var(--zy-primary);
+}
+.zy-disciplinary-status { margin: 0; color: var(--zy-text-muted); }
+.zy-disciplinary-workspace[aria-busy="true"] > main { opacity: .65; }
+.zy-disciplinary-create { margin-block: var(--zy-space-3); }
+.zy-disciplinary-create > summary,
+.zy-disciplinary-designer .nxpen-designer-panel > details > summary {
+    cursor: pointer; color: var(--zy-text); font-weight: 700; padding-block: var(--zy-space-2);
+}
+.zy-disciplinary-create[open] > form { margin-block-start: var(--zy-space-3); }
+.zy-disciplinary-designer { display: grid; gap: var(--zy-space-3); min-width: 0; }
+.zy-disciplinary-designer [data-designer-panel][hidden] { display: none !important; }
+.zy-disciplinary-designer .nxpen-designer-grid {
+    display: grid; grid-template-columns: minmax(320px, .85fr) minmax(0, 1.15fr);
+    gap: var(--zy-space-4); align-items: start; min-width: 0;
+}
+.zy-disciplinary-designer .nxpen-designer-panel { display: grid; gap: var(--zy-space-3); min-width: 0; }
+.zy-disciplinary-designer .nxpen-designer-panel .zy-card {
+    background: var(--zy-surface); color: var(--zy-text); border-color: var(--zy-border);
+    border-radius: var(--zy-radius-lg); box-shadow: none; min-width: 0;
+}
+.zy-disciplinary-designer .nxpen-designer-panel header { margin-block-end: var(--zy-space-3); }
+.zy-disciplinary-designer .nxpen-designer-panel h3 { color: var(--zy-text); margin: 0 0 var(--zy-space-2); }
+.zy-disciplinary-designer .nxpen-designer-panel small { color: var(--zy-text-muted); }
+.zy-disciplinary-designer .zyw-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.zy-disciplinary-designer .zyw-form-grid > .wide { grid-column: 1 / -1; }
+.zy-disciplinary-designer .zyw-form-grid > div > label { display: block; margin-block-end: 6px; color: var(--zy-text-muted); }
+.zy-disciplinary-designer .nxpen-edit-list { gap: var(--zy-space-2); }
+.zy-disciplinary-designer .nxpen-edit-item { background: var(--zy-surface); border-color: var(--zy-border); border-radius: var(--zy-radius-lg); }
+.zy-disciplinary-designer .nxpen-edit-item > form { padding: var(--zy-space-3); }
+.zy-disciplinary-designer .nxpen-edit-item summary { grid-template-columns: auto minmax(0, 1fr); }
+.zy-disciplinary-designer .nxpen-edit-item summary strong { color: var(--zy-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zy-disciplinary-designer .nxpen-edit-item summary small { grid-column: 2; text-align: start; }
+.zy-disciplinary-designer .nxpen-edit-item summary > span { background: var(--zy-primary-soft); color: var(--zy-text); border-color: var(--zy-border); }
+.zy-disciplinary-designer .nxpen-live-preview {
+    min-width: 0; max-width: 100%; max-height: calc(100vh - 150px); overflow: auto;
+    position: sticky; inset-block-start: 100px; padding: var(--zy-space-3);
+    background: var(--zy-surface); border: 1px solid var(--zy-border); border-radius: var(--zy-radius-lg);
+}
+.zy-disciplinary-designer .nxpen-live-preview > header h3 { color: var(--zy-text); }
+.zy-disciplinary-designer .nxpen-live-preview .nxpen-a4-paper { display: grid !important; }
+.zy-disciplinary-designer .nxpen-live-preview > header small { color: var(--zy-text-muted); }
+.zy-disciplinary-designer .nxpen-drag-help { background: var(--zy-primary-soft); border-color: var(--zy-border); color: var(--zy-text-muted); }
+.zy-disciplinary-designer .nxpen-text-block { touch-action: none; }
+/* Keep typography and positions in one 480px logical A4 coordinate space.
+   Only the viewport shrinks, so narrow screens cannot reflow the title. */
+.zy-disciplinary-designer .nxpen-a4-viewport {
+    position: relative; width: 100%; max-width: 480px;
+    aspect-ratio: 210 / 297; margin-inline: auto; overflow: hidden;
+}
+.zy-disciplinary-designer .nxpen-a4-viewport > .nxpen-a4-paper {
+    position: absolute !important; inset-block-start: 0; inset-inline-start: 0;
+    width: 480px; min-width: 480px; max-width: none; margin: 0;
+    transform: scale(var(--nxpen-preview-scale, 1)); transform-origin: top right;
+}
+[dir="ltr"] .zy-disciplinary-designer .nxpen-a4-viewport > .nxpen-a4-paper {
+    transform-origin: top left;
+}
+.zy-disciplinary-pdf-status {
+    margin: var(--zy-space-2) 0; padding: var(--zy-space-3); color: var(--zy-text);
+    background: var(--zy-primary-soft); border: 1px solid var(--zy-border); border-radius: var(--zy-radius-lg);
+}
+@media (max-width: 1100px) {
+    .zy-disciplinary-designer .nxpen-designer-grid { grid-template-columns: minmax(0, 1fr); }
+    .zy-disciplinary-designer .nxpen-live-preview { position: static; }
+}
+@media (max-width: 600px) {
+    .zy-disciplinary-workspace .zyw-queue { grid-template-columns: minmax(0, 1fr); }
+    .zy-disciplinary-workspace .zyw-form-grid { grid-template-columns: minmax(0, 1fr); }
+    .zy-disciplinary-workspace .zyw-tab { flex: 1 1 auto; }
+}

@@ -4,7 +4,7 @@ using SmartAttendance.Web.Infrastructure.Hrms;
 namespace SmartAttendance.Web.Infrastructure.Notifications;
 
 /// <summary>
-/// خدمة خلفية تشغّل مولّد مركز الإشعارات مرّة كل يوم (بتوقيت بغداد، بعد الساعة الهدف)
+/// خدمة خلفية تفحص أحداث العمليات كل دقيقة والتذكيرات الزمنية مرة يومياً بعد الساعة الهدف
 /// مع «لحاق» عند الإقلاع. تعتمد على <see cref="NotificationRuleGenerator"/> الذي يمنع
 /// التكرار بجدول أحداث، فإعادة التشغيل آمنة. تُنشئ نطاقاً لكل دورة وتبتلع الأخطاء لئلا
 /// تُسقط المضيف. تعمل دائماً (قناة داخل النظام لا تحتاج SMTP)؛ وتدفع Web-Push إن كان مُفعَّلاً.
@@ -31,7 +31,7 @@ public sealed class NotificationRuleGeneratorService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("مولّد مركز الإشعارات يعمل (فحص كل ساعة، إطلاق يومي بعد {Hour}:00 بتوقيت بغداد).", RunAtHour);
+        _logger.LogInformation("مولّد مركز الإشعارات يعمل (أحداث العمليات كل دقيقة، أحداث التقويم يومياً بعد {Hour}:00 بتوقيت بغداد).", RunAtHour);
 
         // لحاق أولي عند الإقلاع (بعد مهلة قصيرة لتسخين المضيف)
         try { await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken); }
@@ -39,7 +39,7 @@ public sealed class NotificationRuleGeneratorService : BackgroundService
 
         await TickAsync(stoppingToken);
 
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             await TickAsync(stoppingToken);
@@ -54,8 +54,7 @@ public sealed class NotificationRuleGeneratorService : BackgroundService
             var today = DateOnly.FromDateTime(baghdadNow.DateTime);
 
             // يُطلق مرّة واحدة لكل يوم، بعد الساعة الهدف
-            if (today <= _lastRunDate || baghdadNow.Hour < RunAtHour)
-                return;
+            var includeCalendarEvents = today > _lastRunDate && baghdadNow.Hour >= RunAtHour;
 
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -63,19 +62,17 @@ public sealed class NotificationRuleGeneratorService : BackgroundService
             // القفل على مستوى القاعدة لا العملية. حراسة جدول الأحداث وحدها لا تكفي:
             // نمطها «اقرأ ثم اكتب» فنسختان تقرآن «لم يُولَّد بعد» معاً ثم تكتبان.
             // و`_lastRunDate` حقل داخل العملية — لا يرى النسخ الأخرى إطلاقاً.
-            var ran = await SqlDistributedLock.TryRunAsync(db, "ZYNORA.NotificationRuleGenerator", async () =>
-            {
-                var result = await NotificationRuleGenerator.GenerateAsync(db, _webPush, today, stoppingToken);
+            var result = await NotificationRuleGenerator.GenerateAsync(db, _webPush, today, stoppingToken,
+                includeCalendarEvents: includeCalendarEvents);
 
-                if (result.NewEvents > 0)
-                    _logger.LogInformation(
-                        "مولّد الإشعارات ({Date}): {Events} حدث جديد، {Created} إشعار، {Push} دفعة Web-Push.",
-                        today, result.NewEvents, result.NotificationsCreated, result.PushDelivered);
-            }, stoppingToken);
+            if (result.NewEvents > 0)
+                _logger.LogInformation(
+                    "مولّد الإشعارات ({Date}): {Events} حدث جديد، {Created} إشعار، {Push} دفعة Web-Push.",
+                    today, result.NewEvents, result.NotificationsCreated, result.PushDelivered);
 
             // يُختم اليوم فقط عند التشغيل الفعليّ. ختمُه عند التخطّي يجعل هذه النسخة
             // تظنّ اليوم مُنجزاً، فلو تعطّلت النسخة المالكة قبل أن تُنجز لضاع اليوم كله.
-            if (ran) _lastRunDate = today;
+            if (result.LockAcquired && includeCalendarEvents) _lastRunDate = today;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

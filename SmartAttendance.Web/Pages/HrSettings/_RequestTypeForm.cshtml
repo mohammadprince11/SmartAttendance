@@ -68,7 +68,7 @@
         <b class="zyu-fdf4b98d8103">من يحقّ له هذا الطلب؟</b>
         <p class="zyu-88cd4ba25145">اتركه بلا شروط ليتاح للجميع. مثال: «الجنس يساوي أنثى» لإجازة الأمومة.</p>
         <input type="hidden" name="conditions" id="rtcond-in-@(t.Id)" value="@t.ConditionsJson" />
-        <div class="zyc" data-zy-conditions data-input="#rtcond-in-@(t.Id)" data-criteria="@ViewData["CriteriaJson"]"></div>
+        <div class="zyc" data-zy-conditions data-input="#rtcond-in-@(t.Id)" data-criteria="@ViewData["CriteriaJson"]" data-empty-text="بلا شروط — هذا النوع متاح لجميع الموظفين ضمن صلاحياتهم."></div>
     </div>
 
     <div class="rtc-actions">

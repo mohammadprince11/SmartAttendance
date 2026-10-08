@@ -405,6 +405,10 @@
     position: relative !important;
 }
 
+.nxpen-a4-paper:has(.nxpen-a4-form-layer) canvas.nxpen-a4-form-layer {
+    object-fit: contain !important;
+}
+
 .nxpen-a4-paper:has(.nxpen-a4-form-layer) {
     position: relative !important;
     overflow: hidden !important;
