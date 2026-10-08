@@ -75,7 +75,7 @@ public sealed class AuthController : ControllerBase
         // رسالة موحّدة عند أي فشل (لا نكشف السبب)
         const string generic = "بيانات الدخول غير صحيحة أو الحساب غير متاح.";
 
-        if (user is null || !user.IsActive || user.IsLockedOut(utcNow))
+        if (user is null || !user.IsActive || user.FarewellOnly || user.IsLockedOut(utcNow))
         {
             SimplePasswordHasher.PerformDummyVerification(body.Password);
             return Unauthorized(new { message = generic });
@@ -239,7 +239,7 @@ public sealed class AuthController : ControllerBase
             _db,
             TenantContext.GetTenantId(User) ?? 0,
             username.Trim());
-        if (user is null || !user.IsActive)
+        if (user is null || !user.IsActive || user.FarewellOnly)
             return Unauthorized(new { message = "الحساب غير متاح." });
 
         if (!SimplePasswordHasher.Verify(

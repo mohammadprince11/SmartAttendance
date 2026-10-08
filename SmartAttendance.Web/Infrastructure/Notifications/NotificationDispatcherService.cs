@@ -52,6 +52,7 @@ public sealed class NotificationDispatcherService : BackgroundService
                 // إن كانت نسخة أخرى تسلّم فهذه التكّة مؤدّاة لا ناقصة.
                 await SqlDistributedLock.TryRunAsync(db, "ZYNORA.NotificationDispatcher", async () =>
                 {
+                    await NotificationRuleMailOutbox.DispatchAsync(db, _sender, _options.BatchSize, stoppingToken);
                     var (sent, failed) = await NotificationDispatcher.DispatchPendingAsync(
                         db, _sender, _options.BatchSize, _options.MaxAttempts, stoppingToken);
                     if (sent > 0 || failed > 0)

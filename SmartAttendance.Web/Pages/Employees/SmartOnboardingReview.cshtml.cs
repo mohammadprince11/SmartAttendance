@@ -226,6 +226,7 @@ public sealed class SmartOnboardingReviewModel : PageModel
     public List<SmartAttendance.Application.Branches.ViewModels.BranchListViewModel> Branches { get; private set; } = [];
     public List<SmartAttendance.Application.Departments.ViewModels.DepartmentListViewModel> Departments { get; private set; } = [];
     public List<PositionOptionViewModel> Positions { get; private set; } = [];
+    public List<HrLookupOptions.Option> NationalityOptions { get; private set; } = [];
     public List<string> ReligionOptions { get; private set; } = [];
     public List<string> WorkTypeOptions { get; private set; } = [];
     public List<string> GradeOptions { get; private set; } = [];
@@ -1185,6 +1186,7 @@ WHERE selectedCompany.Id = @CompanyId
             .OrderBy(x => x.Name)
             .ToList();
 
+
         ReligionOptions =
             await HrLookups.ValuesAsync(_db, "religions");
         WorkTypeOptions =
@@ -1212,6 +1214,7 @@ WHERE selectedCompany.Id = @CompanyId
             InitializeFinalizeDefaults();
         }
 
+        NationalityOptions = await HrLookupOptions.NationalitiesAsync(_db, Finalize.Nationality);
         await LoadEmployeeNameTranslationsAsync(
             preservePostedValues: !initializeFinalize);
     }
@@ -2506,9 +2509,7 @@ END;
         Finalize.Country =
             ZynoraEmployeeLookups.NormalizePrimaryCountry(
                 Finalize.Country);
-        Finalize.Nationality =
-            ZynoraEmployeeLookups.NormalizePrimaryNationality(
-                Finalize.Nationality);
+        Finalize.Nationality = HrLookupOptions.PreserveNationality(Finalize.Nationality);
         Finalize.EmploymentStatus =
             Clean(Finalize.EmploymentStatus) ?? "Active";
     }

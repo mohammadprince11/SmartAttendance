@@ -17,7 +17,8 @@ public sealed class PeopleAiSurfaceTests
 
         Assert.Contains("[Authorize(Roles = RoleRouteCatalog.Admin)]", model);
         Assert.Contains("CloudProcessingAllowed: false", model);
-        Assert.Contains("Local Only", page);
+        // The localized label remains explicit after the settings layout audit.
+        Assert.Contains("معالجة محلية فقط", page);
         Assert.Contains("DuplicateScope", page);
         Assert.Contains("SaveDocumentType", page);
         Assert.Contains("DeleteDocumentType", page);

@@ -27,7 +27,7 @@
 
     @* إضافة تبويبة جديدة *@
     <details class="rtc-newcat">
-        <summary class="zyu-26c23d555801">➕ تبويبة جديدة</summary>
+        <summary class="zyu-26c23d555801">+ تبويبة جديدة</summary>
         <form method="post" asp-page-handler="SaveCategory" class="rtc-inline zyu-0ee7f66ad9c0">
             <input type="hidden" name="id" value="0" />
             <input type="text" name="name" placeholder="اسم التبويب (عربي)" required />
@@ -41,7 +41,8 @@
     @foreach (var cat in Model.Categories)
     {
         var catTypes = Model.Types.Where(x => x.CategoryId == cat.Id).ToList();
-        <div class="rtc-cat">
+        <details class="rtc-cat zy-request-category">
+            <summary><strong>@cat.Name</strong><span class="rtc-badge">@catTypes.Count نوع</span><span class="rtc-badge">@(cat.IsActive ? "مفعّل" : "معطّل")</span></summary>
             <div class="rtc-cat-head">
                 <div class="rtc-cat-title">
                     @cat.Name
@@ -98,12 +99,12 @@
             }
 
             <details class="rtc-addtype">
-                <summary>➕ نوع جديد في «@cat.Name»</summary>
+                <summary>+ نوع جديد في «@cat.Name»</summary>
                 <div class="rtc-body">
                     <partial name="_RequestTypeForm" model="new RequestTypeStore.ReqType { CategoryId = cat.Id }" />
                 </div>
             </details>
-        </div>
+        </details>
     }
 </div>
 

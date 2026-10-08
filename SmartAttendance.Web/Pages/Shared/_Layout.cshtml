@@ -449,7 +449,7 @@
                                 <details class="ky-acc" @(IsUnder("/DisciplinaryRules") || IsUnder("/HrSettings") || IsUnder("/Documents/Templates") ? "open" : "")>
                                     <summary><span>إعدادات الموارد البشرية</span><span class="ky-acc-chev"></span></summary>
                                     @*
-                                        ترتيب كيان بإعداداته: طلبات مخصصة · إعدادات المخالفات ▾ ·
+                                        ترتيب الإعدادات: طلبات مخصصة · إعدادات المخالفات ·
                                         فترة التجربة · فترة الإنذار · الخدمة الذاتية · إقرارات ▾ ·
                                         أسباب الإيقاف · مركز الإشعارات. ثم إعداداتنا التي لا نظير لها.
 
@@ -462,14 +462,9 @@
                                             <span>طلبات الموظفين المخصصة</span>
                                         </a>
 
-                                        <details class="ky-acc" @(IsUnder("/DisciplinaryRules") ? "open" : "")>
-                                            <summary><span>إعدادات المخالفات</span><span class="ky-acc-chev"></span></summary>
-                                            <div class="ky-acc-body">
-                                                <a asp-page="/DisciplinaryRules/Index" class="zynora-nav-link @(IsUnder("/DisciplinaryRules") ? "active zynora-active" : "")">
-                                                    <span>قائمة المخالفات وقواعدها</span>
-                                                </a>
-                                            </div>
-                                        </details>
+                                        <a asp-page="/DisciplinaryRules/Index" class="zynora-nav-link @(IsUnder("/DisciplinaryRules") ? "active zynora-active" : "")">
+                                            <span>إعدادات المخالفات</span>
+                                        </a>
 
                                         <details class="ky-acc" @(IsUnder("/Acknowledgments") ? "open" : "")>
                                             <summary><span>إقرارات الموظفين</span><span class="ky-acc-chev"></span></summary>

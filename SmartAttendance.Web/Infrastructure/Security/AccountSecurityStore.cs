@@ -29,7 +29,8 @@ public static class AccountSecurityStore
         ApplicationDbContext dbContext,
         IMemoryCache cache,
         int tenantId,
-        string? username)
+        string? username,
+        HttpContext? requestContext = null)
     {
         if (tenantId <= 0 || string.IsNullOrWhiteSpace(username))
         {
@@ -40,12 +41,27 @@ public static class AccountSecurityStore
 
         if (cache.TryGetValue<AccountSecurityState>(key, out var cached) && cached is not null)
         {
-            return cached;
+            return await ApplyEndServiceAsync(dbContext, tenantId, username, cached, requestContext);
         }
 
         var state = await ReadStateAsync(dbContext, tenantId, username);
         cache.Set(key, state, StateCacheLifetime);
-        return state;
+        return await ApplyEndServiceAsync(dbContext, tenantId, username, state, requestContext);
+    }
+
+    private static async Task<AccountSecurityState> ApplyEndServiceAsync(
+        ApplicationDbContext db, int tenantId, string username, AccountSecurityState state, HttpContext? requestContext)
+    {
+        // Deliberately uncached: a new termination restricts an already open cookie/token
+        // immediately, and the absolute cutoff is evaluated even before the closure worker runs.
+        var schedule = requestContext is null
+            ? await EndServiceAccessStore.GetAsync(db, tenantId, username)
+            : await EndServiceAccessStore.GetForRequestAsync(db, requestContext, tenantId, username);
+        return schedule is null ? state : state with
+        {
+            FarewellOnly = true,
+            IsActive = EndServiceAccessPolicy.AllowsAccess(state.IsActive, schedule.AccessEndsAtUtc, DateTimeOffset.UtcNow)
+        };
     }
 
     public static void InvalidateCache(IMemoryCache cache, int tenantId, string? username)

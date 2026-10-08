@@ -40,7 +40,7 @@ public partial class IndexModel : PageModel
     public List<UpdateEmployee> Employees { get; private set; } = new();
     public List<DepartmentOption> Departments { get; private set; } = new();
     public List<string> PositionOptions { get; private set; } = new(); // ZYNORA_FIX14G_LOOKUP_PROPERTIES
-    public List<string> NationalityOptions { get; private set; } = new();
+    public List<HrLookupOptions.Option> NationalityOptions { get; private set; } = new();
     public List<EmployeeLookupOption> ManagerOptions { get; private set; } = new();
     public List<UpdateSection> Sections { get; private set; } = BuildSections();
     public UpdateSection ActiveSection => Sections.FirstOrDefault(x => x.Key == ActiveSectionKey) ?? Sections[0];
@@ -462,9 +462,10 @@ Tab = NormalizeTab(tab);
 
         await LoadProfileAssignmentOptionsAsync(SelectedEmployeeId);
         Departments = ProfileDepartments;
-        NationalityOptions = await LoadNationalityOptionsAsync();
+
         ManagerOptions = await LoadActiveManagersAsync(SelectedEmployeeId);
         CurrentValues = await BuildCurrentValuesAsync(SelectedEmployeeId);
+        NationalityOptions = await HrLookupOptions.NationalitiesAsync(_dbContext, FieldValue("Nationality"));
         OpenBatches = await LoadBatchesAsync(SelectedEmployeeId, "Open");
         HistoryBatches = await LoadBatchesAsync(SelectedEmployeeId, "Locked");
         if (!CanViewFinancial)
@@ -629,52 +630,7 @@ DROP TABLE #PositionOptions;
             reader => HrmsDatabase.GetString(reader, "Name"));
     }
 
-    private async Task<List<string>> LoadNationalityOptionsAsync()
-    {
-        return await HrmsDatabase.QueryAsync(
-            _dbContext,
-            """
-CREATE TABLE #NationalityOptions
-(
-    [Name] nvarchar(400) COLLATE DATABASE_DEFAULT NOT NULL
-);
 
-IF OBJECT_ID(N'dbo.Nationalities', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Nationalities', N'Name') IS NOT NULL
-BEGIN
-    INSERT INTO #NationalityOptions ([Name])
-    EXEC(N'SELECT DISTINCT LTRIM(RTRIM([Name])) AS [Name] FROM [dbo].[Nationalities] WHERE LTRIM(RTRIM(ISNULL([Name], N''''))) <> N''''');
-END;
-
-IF OBJECT_ID(N'dbo.HrNationalities', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.HrNationalities', N'Name') IS NOT NULL
-BEGIN
-    INSERT INTO #NationalityOptions ([Name])
-    EXEC(N'SELECT DISTINCT LTRIM(RTRIM([Name])) AS [Name] FROM [dbo].[HrNationalities] WHERE LTRIM(RTRIM(ISNULL([Name], N''''))) <> N''''');
-END;
-
-IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL
-BEGIN
-    INSERT INTO #NationalityOptions ([Name])
-    SELECT DISTINCT LTRIM(RTRIM(e.[Nationality]))
-    FROM [dbo].[Employees] e
-    WHERE LTRIM(RTRIM(ISNULL(e.[Nationality], N''))) <> N''
-      AND NOT EXISTS
-      (
-          SELECT 1
-          FROM #NationalityOptions existing
-          WHERE existing.[Name] = LTRIM(RTRIM(e.[Nationality]))
-      );
-END;
-
-SELECT [Name]
-FROM #NationalityOptions
-GROUP BY [Name]
-ORDER BY [Name];
-
-DROP TABLE #NationalityOptions;
-""",
-            null,
-            reader => HrmsDatabase.GetString(reader, "Name"));
-    }
 
     private async Task<List<EmployeeLookupOption>> LoadActiveManagersAsync(int currentEmployeeId)
     {

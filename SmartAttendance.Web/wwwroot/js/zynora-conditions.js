@@ -44,11 +44,13 @@
     }
 
     var sharedCache = null;
+    var sharedNode = null;
 
     /// الكتالوج المبثوث مرّةً واحدة بالصفحة — يُقرأ ويُخزَّن فلا يُحلَّل مرّتين.
     function sharedCriteria() {
-        if (sharedCache !== null) return sharedCache;
         var node = document.getElementById('zy-criteria-catalog');
+        if (sharedCache !== null && sharedNode === node) return sharedCache;
+        sharedNode = node;
         sharedCache = node ? node.textContent : '';
         return sharedCache;
     }
@@ -269,6 +271,14 @@
                 if (String(item.value) === String(rule.value)) option.selected = true;
                 node.appendChild(option);
             });
+            // A disabled/deleted reference must not erase an existing saved rule.
+            if (rule.value && !options.some(function (item) { return String(item.value) === String(rule.value); })) {
+                var legacy = document.createElement('option');
+                legacy.value = rule.value;
+                legacy.textContent = rule.value;
+                legacy.selected = true;
+                node.appendChild(legacy);
+            }
         } else if (multi) {
             node = el('input', 'zyc-value');
             node.type = 'text';

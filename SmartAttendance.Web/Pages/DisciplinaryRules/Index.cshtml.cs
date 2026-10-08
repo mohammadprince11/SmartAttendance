@@ -32,6 +32,8 @@ public class IndexModel : PageModel
     }
 
     public string Tab { get; private set; } = "setup";
+    public bool IsWorkspaceRequest => Request.Method == "GET"
+        && Request.Headers["X-Zynora-Workspace"] == "disciplinary";
     public int SelectedCategoryId { get; private set; }
     public List<ViolationCategory> Categories { get; private set; } = new();
     public List<ViolationType> ViolationTypes { get; private set; } = new();
@@ -40,6 +42,9 @@ public class IndexModel : PageModel
     public List<MessageTemplate> MessageTemplates { get; private set; } = new();
     public List<TemplateType> TemplateTypes { get; private set; } = new();
     public List<FormTextBlock> TextBlocks { get; private set; } = new();
+    public List<DisciplinaryArticles.Article> Articles { get; private set; } = new();
+    public string ArticlesVersion { get; private set; } = string.Empty;
+    public bool CanEditArticles { get; private set; }
 
     /// <summary>كتالوج معايير الشروط لباني «معايير الاستحقاق» — نفس الكتالوج بكل الشاشات.</summary>
     public string CriteriaJson { get; private set; } = "[]";
@@ -139,6 +144,9 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string? tab, int? categoryId)
     {
+        if (string.Equals(tab, "articles", StringComparison.OrdinalIgnoreCase)
+            && (TenantContext.GetTenantId(User) is null || User.Identity?.IsAuthenticated != true))
+            return Challenge();
         // «التهيئة» انتقلت إلى شاشة المخالفات حيث تُستعمل (تبويب `setup`)، فبقاؤها
         // هنا يعني مكانين لنفس النموذج — والمكانان يفترقان مع أول تعديل.
         // والمسار يبقى حيّاً بإعادة توجيه: الروابط والمفضّلات القديمة لا تُكسر.
@@ -151,42 +159,63 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    /// <summary>
-    /// إضافة المثال الجاهز — أبوابٌ ومخالفاتٌ وسلالم جزاءات يُبدأ منها ثم تُعدَّل.
-    ///
-    /// ⚠️ **يُعرض بالشاشة الفارغة وحدها.** كان زرّاً دائماً بأعلى الشاشة، فكانت
-    /// نقرةٌ واحدة تُعيد أبواباً حذفها المستخدم عمداً — واحتاج ذلك آلةً كاملة
-    /// تتذكّر «المستبعَد» لتمنعه. وإظهاره حيث ينفع وحده أبسط من حراسته.
-    /// </summary>
-    public async Task<IActionResult> OnPostAddSampleAsync()
+    public async Task<IActionResult> OnPostSaveArticlesAsync(string[]? articleNumber,
+        string[]? articleTitle, string[]? articleText, string? articlesVersion)
     {
-        var result = await DisciplinaryPolicyImporter.ImportAsync(_dbContext);
-        StatusMessage = result.Message;
-        return RedirectToPage(new { tab = "library" });
+        if (User.Identity?.IsAuthenticated != true) return Challenge();
+        var tenantId = TenantContext.GetTenantId(User);
+        if (tenantId is null || !RoleRouteCatalog.IsAdmin(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+            || (await _companyScope.GetAsync(HttpContext.RequestAborted)).IsDeniedAll) return Forbid();
+        if (!ModelState.IsValid) return BadRequest("بيانات القواعد غير صحيحة.");
+        try
+        {
+            Articles = DisciplinaryArticles.Validate(articleNumber, articleTitle, articleText);
+        }
+        catch (ArgumentException exception)
+        {
+            // Preserve the submitted rows on validation errors; never echo raw HTML.
+            Articles = Enumerable.Range(0, Math.Min(articleNumber?.Length ?? 0, DisciplinaryArticles.MaxArticles))
+                .Select(i => new DisciplinaryArticles.Article(articleNumber![i] ?? "",
+                    articleTitle is not null && i < articleTitle.Length ? articleTitle[i] ?? "" : "",
+                    articleText is not null && i < articleText.Length ? articleText[i] ?? "" : "")).ToList();
+            Tab = "articles"; CanEditArticles = true; ArticlesVersion = articlesVersion ?? "";
+            BlockedMessage = exception.Message;
+            return Page();
+        }
+        if (!await DisciplinaryArticles.SaveAsync(_dbContext, tenantId.Value, Articles, articlesVersion ?? ""))
+        {
+            Tab = "articles"; CanEditArticles = true; ArticlesVersion = articlesVersion ?? "";
+            BlockedMessage = "تغيّرت القواعد من نافذة أخرى. احتفظ بنصوصك وافتح الصفحة مجدداً قبل الحفظ.";
+            Response.StatusCode = StatusCodes.Status409Conflict;
+            return Page();
+        }
+        StatusMessage = "تم حفظ قواعد اللائحة.";
+        return RedirectToPage(new { tab = "articles" });
     }
 
-    /// <summary>دمج ما خلّفه البذر الافتراضي القديم بفئات اللائحة المرقّمة.</summary>
-    public async Task<IActionResult> OnPostMergeDuplicatesAsync()
+    // Runtime uploads are not in MapStaticAssets' build-time manifest. This handler
+    // inherits the page's access gate and serves only its configured shared blank form.
+    // It accepts no filename/id/path, does not seed schema and never writes settings.
+    public async Task<IActionResult> OnGetA4FormPreviewAsync()
     {
-        StatusMessage = await DisciplinaryPolicyImporter.MergeDuplicateCategoriesAsync(_dbContext);
-        return RedirectToPage(new { tab = "library" });
+        if (User.Identity?.IsAuthenticated != true) return Challenge();
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (scope.IsDeniedAll) return Forbid();
+        var paths = await HrmsDatabase.QueryAsync(_dbContext,
+            "SELECT [Value] FROM DisciplinarySettings WHERE [Key] = 'A4FormFilePath';",
+            command => { }, reader => HrmsDatabase.GetString(reader, "Value"));
+        var asset = DisciplinaryFormPreview.Resolve(_environment.WebRootPath, paths.SingleOrDefault());
+        if (asset is null) return NotFound();
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers.XContentTypeOptions = "nosniff";
+        return new PhysicalFileResult(asset.FullPath, asset.ContentType) { EnableRangeProcessing = true };
     }
 
-    /// <summary>
-    /// ⚠️ **البذر الافتراضي العامّ لم يعد يُعرض بالشاشة** بعد أن صار للشركة لائحتها
-    /// الرسمية: كان ينشئ «مخالفات نظام العمل» بجانب «ب — مخالفات نظام العمل»
-    /// فيحتار المسجِّل أيّهما يختار وتتوزّع الحالات على بابين لنفس الباب.
-    ///
-    /// المعالج يبقى حيّاً لعميلٍ بلا لائحةٍ رسمية بعد (المنتج White-Label)، ولا
-    /// يُستدعى إلا من مسارٍ صريح.
-    /// </summary>
-    public async Task<IActionResult> OnPostSeedLibraryAsync()
-    {
-        await DisciplinarySchema.EnsureAsync(_dbContext);
-        await SeedDefaultLibraryAsync(false);
-        StatusMessage = "تم تحميل / تحديث مكتبة إعدادات المخالفات الأولية.";
-        return RedirectToPage(new { tab = "setup" });
-    }
+    // Retire even direct/old POSTs: no preset policy may be reintroduced.
+    public IActionResult OnPostAddSample() => StatusCode(StatusCodes.Status410Gone);
+    public IActionResult OnPostSeedLibrary() => StatusCode(StatusCodes.Status410Gone);
+    public IActionResult OnPostMergeDuplicates() => StatusCode(StatusCodes.Status410Gone);
+
 
 
     /// <summary>
@@ -230,11 +259,11 @@ public class IndexModel : PageModel
         {
             await UpsertSettingAsync("A4FormFilePath", saved.Path);
             await UpsertSettingAsync("A4FormFileType", saved.Type);
-            StatusMessage = "A4 form saved.";
+            StatusMessage = "تم حفظ فورمة A4 بنجاح.";
         }
         else
         {
-            StatusMessage = "Choose an A4 form as PNG, JPG, WEBP, or PDF.";
+            StatusMessage = "اختر ملف فورمة A4 بصيغة PNG أو JPG أو WEBP أو PDF.";
         }
 
         return RedirectToPage(new { tab = "designer" });
@@ -435,13 +464,13 @@ WHERE Id = @Id;
     public string BuildTextBlockStyle(FormTextBlock block)
     {
         var fontWeight = block.IsBold ? "900" : "700";
-        return $"right:{block.XPercent:0.##}%;top:{block.YPercent:0.##}%;width:{block.WidthPercent:0.##}%;font-family:'{block.FontFamily}',Tahoma,Arial,sans-serif;font-size:{block.FontSize}px;color:{block.FontColor};font-weight:{fontWeight};text-align:{block.TextAlign};";
+        return $"inset-inline-start:{block.XPercent:0.##}%;top:{block.YPercent:0.##}%;width:{block.WidthPercent:0.##}%;font-family:'{block.FontFamily}',Tahoma,Arial,sans-serif;font-size:{block.FontSize}px;color:{block.FontColor};font-weight:{fontWeight};text-align:{block.TextAlign};";
     }
 
     public string BuildMainBodyStyle()
     {
         var fontWeight = Settings.MainBodyIsBold ? "900" : "700";
-        return $"right:{Settings.MainBodyXPercent:0.##}%;top:{Settings.MainBodyYPercent:0.##}%;width:{Settings.MainBodyWidthPercent:0.##}%;font-family:'{Settings.MainBodyFontFamily}',Tahoma,Arial,sans-serif;font-size:{Settings.MainBodyFontSize}px;color:{Settings.MainBodyFontColor};font-weight:{fontWeight};text-align:{Settings.MainBodyTextAlign};";
+        return $"inset-inline-start:{Settings.MainBodyXPercent:0.##}%;top:{Settings.MainBodyYPercent:0.##}%;width:{Settings.MainBodyWidthPercent:0.##}%;font-family:'{Settings.MainBodyFontFamily}',Tahoma,Arial,sans-serif;font-size:{Settings.MainBodyFontSize}px;color:{Settings.MainBodyFontColor};font-weight:{fontWeight};text-align:{Settings.MainBodyTextAlign};";
     }
 
     public async Task<IActionResult> OnPostCreateCategoryAsync(string name, string? description, int displayOrder = 10)
@@ -1134,21 +1163,52 @@ VALUES
 
     private async Task LoadPageAsync(string? tab, int? categoryId)
     {
-        await DisciplinarySchema.EnsureAsync(_dbContext);
-        // ZYNORA: auto seed disabled for clean database reset.
         Tab = NormalizeTab(tab);
+        if (Tab == "articles")
+        {
+            var tenantId = TenantContext.GetTenantId(User);
+            if (tenantId is null || (await _companyScope.GetAsync(HttpContext.RequestAborted)).IsDeniedAll)
+                return;
+            CanEditArticles = RoleRouteCatalog.IsAdmin(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value);
+            try
+            {
+                var document = await DisciplinaryArticles.LoadAsync(_dbContext, tenantId.Value);
+                Articles = document.Articles;
+                ArticlesVersion = document.Version;
+            }
+            catch (Exception exception) when (exception is System.Text.Json.JsonException or ArgumentException)
+            {
+                CanEditArticles = false;
+                BlockedMessage = "تعذّر قراءة القواعد المحفوظة. لم تُحذف أو تُستبدل؛ يلزم فحصها قبل التعديل.";
+            }
+            return;
+        }
+        // GET is read-only. Existing schema is provisioned explicitly, not on each
+        // tab navigation. Non-library tabs do not need catalogue rows or counts.
+        if (Tab == "designer")
+        {
+            Settings = await LoadSettingsAsync();
+            TextBlocks = await LoadTextBlocksAsync();
+            return;
+        }
+        if (Tab == "templates")
+        {
+            TemplateTypes = await LoadTemplateTypesAsync();
+            MessageTemplates = await LoadMessageTemplatesAsync();
+            return;
+        }
+        if (Tab != "library") return;
         SelectedCategoryId = categoryId.GetValueOrDefault();
-        Settings = await LoadSettingsAsync();
         Categories = await LoadCategoriesAsync();
         if (SelectedCategoryId > 0 && Categories.All(x => x.Id != SelectedCategoryId)) SelectedCategoryId = 0;
         ViolationTypes = await LoadViolationTypesAsync();
         PenaltyRules = await LoadPenaltyRulesAsync();
-        TemplateTypes = await LoadTemplateTypesAsync();
-        MessageTemplates = await LoadMessageTemplatesAsync();
-        TextBlocks = await LoadTextBlocksAsync();
-        CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
+        if (Categories.Count > 0)
+            CriteriaJson = await HrConditionOptions.BuildCatalogJsonAsync(_dbContext);
 
         // وجهة الخصم وأسباب الإيقاف: قوائم يملكها مودلان آخران — تُقرأ ولا تُنسَخ.
+        if (OpenTypeId > 0)
+        {
         DeductionItems = (await SalaryItemStore.ListAsync(
                 _dbContext, await _companyScope.GetAsync(HttpContext.RequestAborted)))
             .Where(x => x.IsActive && string.Equals(x.ItemType, "Deduction", StringComparison.OrdinalIgnoreCase))
@@ -1156,7 +1216,9 @@ VALUES
             .ToList();
 
         TerminationReasons = await SmartAttendance.Web.Infrastructure.HrSettings.HrSettingsStore.LoadTerminationReasonsAsync(_dbContext);
+        }
 
+        if (ViolationTypes.Count == 0) return;
         _casesByViolation = (await HrmsDatabase.QueryAsync(
                 _dbContext,
                 """
@@ -1171,131 +1233,7 @@ GROUP BY ViolationTypeId;
             .ToDictionary(x => x.Id, x => x.Cases);
     }
 
-    private async Task SeedDefaultLibraryAsync(bool onlyIfEmpty)
-    {
-var count = await HrmsDatabase.ScalarAsync<int>(_dbContext, "SELECT COUNT(1) FROM DisciplinaryViolationCategories;");
-        if (onlyIfEmpty && count > 0) { await SeedTemplateTypesAndSettingsAsync(); return; }
 
-        await HrmsDatabase.ExecuteAsync(_dbContext,
-            """
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات الحضور والانصراف')
-    INSERT INTO DisciplinaryViolationCategories(Name, Description, DisplayOrder) VALUES(N'مخالفات الحضور والانصراف', N'التأخير، الغياب، الخروج المبكر، ونسيان البصمة.', 10);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات المظهر العام')
-    INSERT INTO DisciplinaryViolationCategories(Name, Description, DisplayOrder) VALUES(N'مخالفات المظهر العام', N'الزي الرسمي، النظافة الشخصية، والمظهر اللائق بالعمل.', 20);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات نظام العمل')
-    INSERT INTO DisciplinaryViolationCategories(Name, Description, DisplayOrder) VALUES(N'مخالفات نظام العمل', N'الالتزام بالإجراءات الداخلية وأصول ومعدات الشركة.', 30);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات سلوكية')
-    INSERT INTO DisciplinaryViolationCategories(Name, Description, DisplayOrder) VALUES(N'مخالفات سلوكية', N'التعامل، الاحترام، الانضباط، وتقبل التوجيه.', 40);
-
-DECLARE @Attendance int = (SELECT TOP 1 Id FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات الحضور والانصراف');
-DECLARE @Appearance int = (SELECT TOP 1 Id FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات المظهر العام');
-DECLARE @WorkSystem int = (SELECT TOP 1 Id FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات نظام العمل');
-DECLARE @Behavior int = (SELECT TOP 1 Id FROM DisciplinaryViolationCategories WHERE Name = N'مخالفات سلوكية');
-
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationTypes WHERE Name = N'التأخر عن موعد الدوام الرسمي')
-    INSERT INTO DisciplinaryViolationTypes(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee)
-    VALUES(@Attendance, N'التأخر عن موعد الدوام الرسمي', N'تأخر الموظف عن وقت بداية الدوام حسب الشفت المعتمد.', N'B', 6, N'Monthly', 1, 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationTypes WHERE Name = N'عدم الالتزام بالزي والمظهر العام')
-    INSERT INTO DisciplinaryViolationTypes(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee)
-    VALUES(@Appearance, N'عدم الالتزام بالزي والمظهر العام', N'عدم الالتزام بالزي أو المظهر المهني المطلوب في موقع العمل.', N'A', 3, N'Monthly', 1, 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationTypes WHERE Name = N'الإهمال في المحافظة على أصول الشركة')
-    INSERT INTO DisciplinaryViolationTypes(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee)
-    VALUES(@WorkSystem, N'الإهمال في المحافظة على أصول الشركة', N'عدم المحافظة على أصول الشركة أو استخدامها بطريقة تعرضها للتلف أو الضياع.', N'B', 12, N'Monthly', 1, 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationTypes WHERE Name = N'استخدام معدات زملاء العمل دون إذن أو عدم إعادتها')
-    INSERT INTO DisciplinaryViolationTypes(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee)
-    VALUES(@WorkSystem, N'استخدام معدات زملاء العمل دون إذن أو عدم إعادتها', N'استخدام معدات زملاء العمل دون إذن، أو إتلافها عمدًا، أو عدم إعادتها.', N'B', 12, N'Monthly', 1, 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryViolationTypes WHERE Name = N'سوء التعامل أو المشادة داخل العمل')
-    INSERT INTO DisciplinaryViolationTypes(CategoryId, Name, Description, Severity, ValidityMonths, CountingPeriod, IncludeInEvaluation, ShowToEmployee)
-    VALUES(@Behavior, N'سوء التعامل أو المشادة داخل العمل', N'سلوك غير لائق أو مشادة تؤثر على بيئة العمل.', N'C', 12, N'SixMonths', 1, 1);
-
-DECLARE @Late int = (SELECT TOP 1 Id FROM DisciplinaryViolationTypes WHERE Name = N'التأخر عن موعد الدوام الرسمي');
-DECLARE @AssetCare int = (SELECT TOP 1 Id FROM DisciplinaryViolationTypes WHERE Name = N'الإهمال في المحافظة على أصول الشركة');
-
-IF @Late IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DisciplinaryPenaltyRules WHERE ViolationTypeId = @Late)
-BEGIN
-    INSERT INTO DisciplinaryPenaltyRules(ViolationTypeId, OccurrenceFrom, OccurrenceTo, CountingPeriod, PenaltyAction, FinancialImpactType, FinancialValue, ValidityMonths, CalculationMode)
-    VALUES
-    (@Late, 1, 1, N'Monthly', N'خصم نصف يوم من الراتب', N'Days', 0.50, 6, N'Cumulative'),
-    (@Late, 2, 2, N'Monthly', N'خصم ثلاثة أرباع يوم من الراتب', N'Days', 0.75, 6, N'Cumulative'),
-    (@Late, 3, 3, N'Monthly', N'خصم يوم كامل من الراتب', N'Days', 1.00, 6, N'Cumulative'),
-    (@Late, 4, 999, N'Monthly', N'رفع للإدارة مع استمرار الخصم حسب القرار', N'Days', 1.00, 12, N'Cumulative');
-END;
-
-IF @AssetCare IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DisciplinaryPenaltyRules WHERE ViolationTypeId = @AssetCare)
-BEGIN
-    INSERT INTO DisciplinaryPenaltyRules(ViolationTypeId, OccurrenceFrom, OccurrenceTo, CountingPeriod, PenaltyAction, FinancialImpactType, FinancialValue, ValidityMonths, CalculationMode)
-    VALUES
-    (@AssetCare, 1, 1, N'Monthly', N'خصم يوم من الراتب', N'Days', 1.00, 12, N'Cumulative'),
-    (@AssetCare, 2, 2, N'Monthly', N'خصم يومين من الراتب', N'Days', 2.00, 12, N'Cumulative'),
-    (@AssetCare, 3, 999, N'Monthly', N'إنذار نهائي ورفع للإدارة', N'None', 0.00, 12, N'Cumulative');
-END;
-
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryMessageTemplates WHERE TemplateType = N'PenaltyNotice')
-BEGIN
-    INSERT INTO DisciplinaryMessageTemplates(Name, TemplateType, Subject, Body, IsDefault, IsActive)
-    VALUES(N'قالب إشعار عقوبة افتراضي', N'PenaltyNotice', N'إشعار مخالفة وجزاء - {EmployeeName}',
-N'السيد/ة: {EmployeeName}
-الرقم الوظيفي: {EmployeeCode}
-القسم: {Department}
-
-نود إعلامكم بأنه تم تسجيل مخالفة بحقكم بتاريخ {ViolationDate}
-وذلك بسبب: {ViolationName}
-
-فئة المخالفة:
-{ViolationCategory}
-
-وصف المخالفة:
-{ViolationDescription}
-
-وبناءً على لائحة الجزاءات المعتمدة، تقرر تطبيق العقوبة التالية:
-{PenaltyAction}
-
-الأثر المالي:
-{FinancialImpact}
-
-يرجى الالتزام بتعليمات الشركة لتجنب تكرار المخالفة.
-
-قسم الموارد البشرية', 1, 1);
-END;
-""");
-        await SeedTemplateTypesAndSettingsAsync();
-    }
-
-    private async Task SeedTemplateTypesAndSettingsAsync()
-    {
-await HrmsDatabase.ExecuteAsync(_dbContext,
-            """
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'PenaltyNotice')
-    INSERT INTO DisciplinaryTemplateTypes(Name, Code, Description, IsActive) VALUES(N'إشعار عقوبة', N'PenaltyNotice', N'القالب الأساسي لإشعار الموظف بالمخالفة والجزاء.', 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'Warning')
-    INSERT INTO DisciplinaryTemplateTypes(Name, Code, Description, IsActive) VALUES(N'إنذار', N'Warning', N'قالب الإنذارات الرسمية.', 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'SalaryDeduction')
-    INSERT INTO DisciplinaryTemplateTypes(Name, Code, Description, IsActive) VALUES(N'استقطاع راتب', N'SalaryDeduction', N'قالب المخالفات التي ينتج عنها أثر مالي.', 1);
-IF NOT EXISTS (SELECT 1 FROM DisciplinaryTemplateTypes WHERE Code = N'FinalWarning')
-    INSERT INTO DisciplinaryTemplateTypes(Name, Code, Description, IsActive) VALUES(N'إنذار نهائي', N'FinalWarning', N'قالب الإنذار النهائي أو إنذار الفصل.', 1);
-""");
-        await UpsertSettingIfMissingAsync("RequiresCommitteeApproval", "false");
-        await UpsertSettingIfMissingAsync("AllowEmployeeAppeal", "true");
-        await UpsertSettingIfMissingAsync("AppealWindowDays", "3");
-        await UpsertSettingIfMissingAsync("DefaultTemplateType", "PenaltyNotice");
-        await UpsertSettingIfMissingAsync("ApprovingAuthorityName", "قسم الموارد البشرية");
-        await UpsertSettingIfMissingAsync("DocumentNumberFormat", "DISC-{yyyy}-{0000}");
-        await UpsertSettingIfMissingAsync("FormHeader", "");
-        await UpsertSettingIfMissingAsync("FormFooter", "");
-        await UpsertSettingIfMissingAsync("HeaderImagePath", "");
-        await UpsertSettingIfMissingAsync("FooterImagePath", "");
-        await UpsertSettingIfMissingAsync("A4FormFilePath", "");
-        await UpsertSettingIfMissingAsync("A4FormFileType", "");
-        await UpsertSettingIfMissingAsync("MainBodyText", DefaultMainBodyText);
-        await UpsertSettingIfMissingAsync("MainBodyXPercent", "8");
-        await UpsertSettingIfMissingAsync("MainBodyYPercent", "8");
-        await UpsertSettingIfMissingAsync("MainBodyWidthPercent", "84");
-        await UpsertSettingIfMissingAsync("MainBodyFontFamily", "Tahoma");
-        await UpsertSettingIfMissingAsync("MainBodyFontSize", "13");
-        await UpsertSettingIfMissingAsync("MainBodyFontColor", "#0b1d31");
-        await UpsertSettingIfMissingAsync("MainBodyIsBold", "true");
-        await UpsertSettingIfMissingAsync("MainBodyTextAlign", "right");
-}
 
     private async Task SeedBodyTextLayersAsync()
     {
@@ -1326,19 +1264,7 @@ VALUES
 """);
     }
 
-    private async Task UpsertSettingIfMissingAsync(string key, string value)
-    {
-        await HrmsDatabase.ExecuteAsync(_dbContext,
-            """
-IF NOT EXISTS (SELECT 1 FROM DisciplinarySettings WHERE [Key] = @Key)
-    INSERT INTO DisciplinarySettings([Key], [Value], UpdatedAt) VALUES(@Key, @Value, SYSUTCDATETIME());
-""",
-            command =>
-            {
-                HrmsDatabase.AddParameter(command, "@Key", key);
-                HrmsDatabase.AddParameter(command, "@Value", value);
-            });
-    }
+
 
     private async Task UpsertSettingAsync(string key, string value)
     {
@@ -1359,7 +1285,18 @@ ELSE
     private async Task<DisciplinarySettings> LoadSettingsAsync()
     {
         var items = await HrmsDatabase.QueryAsync(_dbContext,
-            "SELECT [Key], ISNULL([Value], '') AS [Value] FROM DisciplinarySettings;",
+            """
+SELECT [Key], ISNULL([Value], '') AS [Value]
+FROM DisciplinarySettings
+WHERE [Key] IN (
+    N'RequiresCommitteeApproval', N'AllowEmployeeAppeal', N'AppealWindowDays',
+    N'DefaultTemplateType', N'ApprovingAuthorityName', N'DocumentNumberFormat',
+    N'FormHeader', N'FormFooter', N'HeaderImagePath', N'FooterImagePath',
+    N'A4FormFilePath', N'A4FormFileType', N'MainBodyText', N'MainBodyXPercent',
+    N'MainBodyYPercent', N'MainBodyWidthPercent', N'MainBodyFontFamily',
+    N'MainBodyFontSize', N'MainBodyFontColor', N'MainBodyIsBold', N'MainBodyTextAlign'
+);
+""",
             command => { },
             reader => new KeyValuePair<string, string>(HrmsDatabase.GetString(reader, "Key"), HrmsDatabase.GetString(reader, "Value")));
         var map = items.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
@@ -1584,14 +1521,6 @@ await HrmsDatabase.ExecuteAsync(_dbContext, "UPDATE DisciplinaryMessageTemplates
     // الافتراضي صار «المخالفات والجزاءات»: تبويب «التهيئة» انتقل لشاشة المخالفات.
     private static string NormalizeTab(string? tab) => tab switch { "designer" => "designer", "templates" => "templates", "articles" => "articles", _ => "library" };
 
-    /// <summary>تسمية حالة إنفاذ المادّة بالعربية — تُقرأ حكماً لا مصطلحاً.</summary>
-    public string EnforcementLabel(DisciplinaryPolicyPack.Enforcement state) => state switch
-    {
-        DisciplinaryPolicyPack.Enforcement.Blocks => "🔒 يمنع",
-        DisciplinaryPolicyPack.Enforcement.Warns => "⚠️ يُنبّه",
-        DisciplinaryPolicyPack.Enforcement.Computed => "⚙️ محسوبة",
-        _ => "📄 نصّ مرجعيّ"
-    };
     private static string NormalizeSeverity(string? value) => value switch { "A" => "A", "B" => "B", "C" => "C", "FinalWarning" => "FinalWarning", _ => "B" };
     private static string NormalizePeriod(string? value) => value switch { "Monthly" => "Monthly", "SixMonths" => "SixMonths", "Yearly" => "Yearly", "Contract" => "Contract", _ => "Monthly" };
     private static string NormalizeFinancialType(string? value) => value switch { "Days" => "Days", "Hours" => "Hours", "Amount" => "Amount", _ => "None" };

@@ -117,6 +117,11 @@
         // فيصل للخادم أمرُ حذفٍ بلا هدف.
         if (event.submitter && event.submitter.hasAttribute('data-zyw-delete')) return;
 
+        form.querySelectorAll('[data-zyw-disabled-clean]').forEach(function (field) {
+            field.disabled = false;
+            field.removeAttribute('data-zyw-disabled-clean');
+        });
+
         var kept = 0;
 
         form.querySelectorAll('[data-zyw-rows] > tr').forEach(function (row) {
@@ -126,13 +131,20 @@
             if (changed || isNewRow(row) || isMarkedForDelete(row)) { kept++; return; }
 
             row.querySelectorAll('input, select, textarea').forEach(function (field) {
-                field.disabled = true;
+                if (!field.disabled) {
+                    field.setAttribute('data-zyw-disabled-clean', '');
+                    field.disabled = true;
+                }
             });
         });
 
         // شبكةٌ بلا تغييرٍ واحد: لا داعي لدورةٍ كاملة تعيد تحميل الصفحة.
         if (kept === 0) {
             event.preventDefault();
+            form.querySelectorAll('[data-zyw-disabled-clean]').forEach(function (field) {
+                field.disabled = false;
+                field.removeAttribute('data-zyw-disabled-clean');
+            });
             window.alert('لا تغييرات للحفظ.');
         }
     });
@@ -157,10 +169,13 @@
         if (select) syncPenaltyFields(select);
     });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        var selects = document.querySelectorAll('[data-zyw-action-type]');
+    function init(scope) {
+        var selects = (scope || document).querySelectorAll('[data-zyw-action-type]');
         for (var i = 0; i < selects.length; i++) syncPenaltyFields(selects[i]);
 
-        document.querySelectorAll('[data-zyw-grid]').forEach(stampRows);
-    });
+        (scope || document).querySelectorAll('[data-zyw-grid]').forEach(stampRows);
+    }
+    window.ZynoraGridEditor = { init: init };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(document); });
+    else init(document);
 })();

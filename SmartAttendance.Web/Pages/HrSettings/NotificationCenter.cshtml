@@ -22,84 +22,258 @@
     <header class="nxhs-titlebar">
         <a asp-page="./Index">إعدادات الموارد البشرية</a>
         <h1>مركز الإشعارات</h1>
-        <form method="post" asp-page-handler="GenerateNow" class="nxhs-generate-now">
-            <button type="submit" title="يشغّل المولّد الآن للقواعد الزمنية المفعّلة (عيد ميلاد · ذكرى عمل · قرب انتهاء عقد · قرب انتهاء فترة تجربة)">
-                توليد الآن
-            </button>
-        </form>
     </header>
+    <section class="zy-card zy-notification-toolbar">
+        <form method="get">
+            <label for="notification-company">الشركة</label>
+            <select id="notification-company" name="companyId" data-zynora-select="true">
+                @foreach (var company in Model.Companies)
+                {
+                    <option value="@company.Id" selected="@(company.Id == Model.CompanyId)">@company.Name</option>
+                }
+            </select>
+            <button type="submit" class="zy-btn zy-btn--secondary">عرض</button>
+        </form>
+        <label for="notification-search">البحث عن إشعار</label>
+        <input id="notification-search" type="search" placeholder="اسم الإشعار…" autocomplete="off" />
+        <span id="notification-search-count" role="status" aria-live="polite"></span>
+        <p>الحفظ تلقائي للشركة المعروضة فقط. البريد يصل للموظفين والمشرفين المرتبطين بملف موظف وبعنوان بريد صالح.</p>
+        @if (!Model.EmailAvailable)
+        {
+            <p>قناة البريد غير جاهزة. اضبط SMTP بشكل آمن قبل تفعيل البريد؛ إشعارات النظام لا تحتاجه.</p>
+        }
+    </section>
 
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="nxhs-alert">@TempData["SuccessMessage"]</div>
     }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="nxhs-alert" role="alert">@TempData["ErrorMessage"]</div>
+    }
 
     <section class="nxhs-panel nxhs-notification-panel">
         @foreach (var rule in Model.Rules)
         {
+            var connected = SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGenerator.MapRuleName(SmartAttendance.Web.Pages.HrSettings.NotificationCenterModel.DisplayName(rule.Name)) is not null;
+            var kind = SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGenerator.MapRuleName(SmartAttendance.Web.Pages.HrSettings.NotificationCenterModel.DisplayName(rule.Name));
+            var operationEvent = kind.HasValue && SmartAttendance.Web.Infrastructure.Notifications.NotificationEventSources.Describe(kind.Value) is not null;
+            var settings = Model.Settings[rule.Id];
+            var audiences = SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleCatalog.Audiences(rule.Name);
+            var hasDays = SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleCatalog.HasDays(rule.Name);
+            var normalizedAudience = rule.Audience == "الموظف" ? "الموظف نفسه" : rule.Audience;
             <article class="nxhs-notification-item @(rule.IsEnabled ? "is-open" : "")" data-rule="@rule.Id">
                 <header>
-                    <h3>@rule.Name</h3>
+                    <h3>@SmartAttendance.Web.Pages.HrSettings.NotificationCenterModel.DisplayName(rule.Name)</h3>
 
                     <form method="post" asp-page-handler="ToggleRule" class="nxhs-switch-form">
                         <input type="hidden" name="id" value="@rule.Id" />
-                        <button type="submit" class="nxhs-switch-button @(rule.IsEnabled ? "on" : "")" aria-label="تبديل الإشعار" role="switch" aria-checked="@(rule.IsEnabled ? "true" : "false")">
+                        <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="isEnabled" value="@(!rule.IsEnabled ? "true" : "false")" />
+                        <button type="submit" disabled="@(!connected && !rule.IsEnabled)" class="nxhs-switch-button @(rule.IsEnabled ? "on" : "")" aria-label="تبديل الإشعار" role="switch" aria-checked="@(rule.IsEnabled ? "true" : "false")">
                             <span></span>
                         </button>
                     </form>
                     <span class="zy-notification-save-status" role="status" aria-live="polite"></span>
                 </header>
+                @if (!connected)
+                {
+                    @if (rule.Name == "رفض الموظفين")
+                    {
+                        <p>رضا الموظفين يعني تعبئة استبيان رضا الموظف، وليس رفض مرشّح. الربط بهذا الحدث لم يكتمل بعد؛ إعداد الاسم القديم محفوظ ولا يُرسل إشعاراً.</p>
+                    }
+                    else
+                    {
+                    <p>غير مرتبط بمصدر أحداث بعد؛ الإعداد المحفوظ وحده لا يرسل إشعاراً. ربط هذه القاعدة لم يُنجز بعد.</p>
+                    }
+                }
+                @if (operationEvent)
+                {
+                    <p>مرتبط بحدث العملية؛ يُرسل بعد تسجيلها خلال دورة الفحص (نحو دقيقة)، ولا يعيد إرسال السجلات القديمة عند التفعيل.</p>
+                }
+                @if (kind == SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGenerator.RuleKind.Poll)
+                {
+                    <p>عند نشر تصويت تابع للشركة: للمصوّتين المستهدفين، أو لهم وللمشرفين مرة واحدة. التصويت المشترك بدون شركة لا يُرسل تلقائياً، ومتغير اسم الموظف يبقى فارغاً لأنه حدث جماعي.</p>
+                }
+                @if (connected && !SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleCatalog.AllowsSettings(rule.Name, settings))
+                {
+                    <p role="status">الإعداد السابق محفوظ لكنه لا يطابق خيارات هذه القاعدة؛ صحّح المستلمين والأيام قبل الإرسال.</p>
+                }
+                @if (rule.Name is "رفض الموظفين" or "إنشاء صلاحية الوثيقة")
+                {
+                    <p>تم تصحيح معنى القاعدة؛ لا نستخدم تفعيل الاسم القديم للمعنى الجديد. فعّلها صراحةً بعد مراجعة الإعدادات.</p>
+                }
 
                 @* التفاصيل تُرندر دائماً وتُخفى للمعطلة — حتى يُظهرها التبديل بلا إعادة تحميل *@
-                <form method="post" asp-page-handler="UpdateRule" class="nxhs-notification-details" hidden="@(!rule.IsEnabled)">
+                <details class="zy-notification-config" open="@rule.IsEnabled">
+                <summary>إعدادات المستلمين والقنوات والقالب</summary>
+                <form method="post" asp-page-handler="UpdateRule" class="nxhs-notification-details">
                     <input type="hidden" name="id" value="@rule.Id" />
+                    <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                    <input type="hidden" name="selectedItems" value="كل الموظفين" />
 
                     <div class="nxhs-notif-grid">
                         <label>
-                            <span>تذكير</span>
+                            <span>المستلمون</span>
                             <select data-zynora-select="true" name="audience">
-                                <option selected="@(rule.Audience == "المشرفين")">المشرفين</option>
-                                <option selected="@(rule.Audience == "المدير المباشر والمشرفون")">المدير المباشر والمشرفون</option>
-                                <option selected="@(rule.Audience == "الموظف")">الموظف</option>
+                                @if (!audiences.Contains(normalizedAudience))
+                                {
+                                    <option value="@rule.Audience" selected>إعداد سابق غير مطابق: @rule.Audience</option>
+                                }
+                                @foreach (var audience in audiences)
+                                {
+                                    var available = SmartAttendance.Web.Infrastructure.Notifications.NotificationRoutingPolicy.ValidAudience(audience);
+                                    <option value="@audience" disabled="@(!available)" selected="@(normalizedAudience == audience)">@(available ? audience : audience + " — الربط غير متاح بعد")</option>
+                                }
                             </select>
                         </label>
 
+                        @if (hasDays)
+                        {
                         <label>
                             <span>عدد الأيام</span>
-                            <input name="daysBefore" type="number" min="0" value="@rule.DaysBefore" />
+                            <input name="daysBefore" type="number" min="0" max="366" value="@rule.DaysBefore" />
                         </label>
+                        }
+                        else
+                        {
+                            <input type="hidden" name="daysBefore" value="0" />
+                        }
+                        @if (kind == SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGenerator.RuleKind.Welcome)
+                        {
+                            <label><span>الترحيب على أساس</span><select name="welcomeBasis" data-zynora-select="true">
+                                @foreach (var basis in SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleCatalog.WelcomeBases)
+                                {
+                                    <option value="@basis.Value" selected="@(settings.WelcomeBasis == basis.Value)">@basis.Label</option>
+                                }
+                            </select></label>
+                        }
+                        else
+                        {
+                            <input type="hidden" name="welcomeBasis" value="@settings.WelcomeBasis" />
+                        }
 
                         <label class="wide">
                             <span>الوصف</span>
-                            <b>@rule.TriggerDescription</b>
+                            <b>@(rule.Name == "مقابلات نهاية الخدمة" ? "عند تعبئة استبيان مقابلة نهاية الخدمة" : rule.Name == "رفض الموظفين" ? "عند تعبئة استبيان من نوع رضا الموظفين" : rule.Name == "إنشاء صلاحية الوثيقة" ? "قبل تاريخ انتهاء صلاحية مستند الموظف" : rule.TriggerDescription)</b>
                         </label>
+
+                        <fieldset class="zy-notification-channels">
+                            <legend>قنوات الإرسال</legend>
+                            <label><input type="checkbox" name="inApp" value="true" checked="@settings.InApp" /> إشعار داخل النظام</label>
+                            <input type="hidden" name="inApp" value="false" />
+                            <label><input type="checkbox" name="email" value="true" checked="@settings.Email" disabled="@(!Model.EmailAvailable && !settings.Email)" /> البريد الإلكتروني</label>
+                            <input type="hidden" name="email" value="false" />
+                        </fieldset>
 
                         <label>
-                            <span>العناصر</span>
-                            <select data-zynora-select="true" name="selectedItems">
-                                <option selected="@(rule.SelectedItems == "كل العناصر المختارة")">كل العناصر المختارة</option>
-                                <option selected="@(rule.SelectedItems == "كل الموظفين")">كل الموظفين</option>
-                                <option selected="@(rule.SelectedItems == "كل الوثائق")">كل الوثائق</option>
-                            </select>
+                            <span>اسم مستخدم المشرف (لجمهور المشرفين، فارغ = الجميع)</span>
+                            <input name="supervisorName" value="@rule.SupervisorName" placeholder="اسم المستخدم، وليس الاسم الشخصي" />
                         </label>
-
-                        <label>
-                            <span>اختر المستخدم المشرف</span>
-                            <input name="supervisorName" value="@rule.SupervisorName" placeholder="اسم المشرف" />
+                        <details class="wide zy-notification-group">
+                            <summary>الموظفون المحددون / مجموعة الموظفين (لا تُستخدم مع جمهور جميع الموظفين)</summary>
+                            <label>بحث لإضافة موظف إلى المجموعة<input type="search" data-group-search placeholder="حرفان على الأقل، اسم الموظف أو الكود" maxlength="100" autocomplete="off" /></label>
+                            <div class="zy-notification-group-results" role="status" aria-live="polite"></div>
+                            <div class="zy-notification-members">
+                                @foreach (var employee in Model.Employees.Where(e => settings.GroupMembers.Contains(e.Id)))
+                                {
+                                    <label><input type="checkbox" name="groupMembers" value="@employee.Id" checked="@settings.GroupMembers.Contains(employee.Id)" /> @employee.Name</label>
+                                }
+                            </div>
+                        </details>
+                        <label class="wide">
+                            <span>عنوان القالب (فارغ = عنوان النظام الأصلي)</span>
+                            <input name="titleTemplate" maxlength="200" value="@settings.TitleTemplate" />
                         </label>
+                        <label class="wide">
+                            <span>نص الإشعار (فارغ = النص الأصلي)</span>
+                            <textarea name="bodyTemplate" maxlength="4000" rows="4">@settings.BodyTemplate</textarea>
+                        </label>
+                        <p class="wide">المتغيرات المتاحة: {{EmployeeName}}، {{RuleName}}، {{Date}}، {{Message}}. النص عادي، ولا يدعم HTML أو بيانات مالية حساسة.</p>
+                        <div class="wide zy-notification-preview">
+                            <button type="button" class="zy-btn zy-btn--secondary" data-notification-preview>معاينة ببيانات تجريبية</button>
+                            <pre hidden role="status" aria-live="polite"></pre>
+                        </div>
 
-                        <button type="submit">حفظ</button>
+                        <noscript><button type="submit">حفظ</button></noscript>
                     </div>
                 </form>
+                </details>
             </article>
         }
     </section>
+    <div class="zy-empty" id="notification-search-empty" hidden>لا إشعارات تطابق البحث.</div>
 </section>
 
 <script src="~/js/zynora-hr-settings-v16.js" asp-append-version="true" defer></script>
 
 @section Scripts {
     <script>
+        document.querySelectorAll("[data-group-search]").forEach(function (search) {
+            var timer, revision = 0;
+            search.addEventListener("input", function () {
+                clearTimeout(timer);
+                var current = ++revision;
+                var group = search.closest(".zy-notification-group");
+                var results = group.querySelector(".zy-notification-group-results");
+                results.textContent = "";
+                if (search.value.trim().length < 2) return;
+                timer = setTimeout(async function () {
+                    var url = new URL(window.location.href);
+                    url.search = "";
+                    url.searchParams.set("handler", "SearchEmployees");
+                    url.searchParams.set("companyId", search.closest("form").elements.companyId.value);
+                    url.searchParams.set("search", search.value.trim());
+                    try {
+                        var response = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } });
+                        if (!response.ok || response.redirected) throw new Error("search failed");
+                        var rows = await response.json();
+                        if (current !== revision) return;
+                        results.textContent = rows.length ? "" : "لا نتائج ضمن الشركة.";
+                        rows.forEach(function (row) {
+                            var button = document.createElement("button");
+                            button.type = "button"; button.className = "zy-btn zy-btn--secondary";
+                            button.textContent = row.name;
+                            button.addEventListener("click", function () {
+                                var members = group.querySelector(".zy-notification-members");
+                                var existing = Array.from(members.querySelectorAll("input")).find(function (input) { return input.value === String(row.id); });
+                                if (existing) { existing.checked = true; existing.dispatchEvent(new Event("change", { bubbles: true })); return; }
+                                var label = document.createElement("label"), checkbox = document.createElement("input");
+                                checkbox.type = "checkbox"; checkbox.name = "groupMembers"; checkbox.value = row.id; checkbox.checked = true;
+                                label.append(checkbox, document.createTextNode(" " + row.name)); members.append(label);
+                                checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+                            });
+                            results.append(button);
+                        });
+                    } catch (_) { if (current === revision) results.textContent = "تعذّر البحث، حاول مجدداً."; }
+                }, 300);
+            });
+        });
+        var notificationSearch = document.getElementById("notification-search");
+        notificationSearch.addEventListener("input", function () {
+            var text = notificationSearch.value.trim();
+            var count = 0;
+            document.querySelectorAll(".nxhs-notification-item").forEach(function (card) {
+                card.hidden = !card.querySelector("h3").textContent.includes(text);
+                if (!card.hidden) count++;
+            });
+            document.getElementById("notification-search-count").textContent = count + " إشعار";
+            document.getElementById("notification-search-empty").hidden = count !== 0;
+        });
+        document.querySelectorAll("[data-notification-preview]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                var form = button.closest("form");
+                var output = button.parentElement.querySelector("pre");
+                var ruleName = form.closest("article").querySelector("h3").textContent;
+                var values = { EmployeeName: "موظف تجريبي", RuleName: ruleName, Date: "2026-10-07", Message: "نص الحدث التجريبي" };
+                function render(value, fallback) {
+                    return (value || fallback).replace(/\{\{([^{}]+)\}\}/g, function (match, key) { return values[key] || "[متغير غير مدعوم]"; });
+                }
+                output.textContent = render(form.elements.titleTemplate.value, ruleName) + "\n\n" + render(form.elements.bodyTemplate.value, values.Message);
+                output.hidden = false;
+            });
+        });
         // استجابة فورية، ثم تثبيت الحالة المطلوبة على الخادم بدون redirect.
         // لا نعيد POST تلقائياً عند الفشل: قد يكون الحفظ نجح وانقطع الرد فقط.
         document.querySelectorAll(".nxhs-switch-form").forEach(function (form) {
@@ -108,7 +282,9 @@
                 e.preventDefault();
                 if (saving) return;
                 var button = form.querySelector(".nxhs-switch-button");
+                if (button.disabled) return;
                 var article = form.closest(".nxhs-notification-item");
+                if (article.notificationDetailsPending) return;
                 var details = article.querySelector(".nxhs-notification-details");
                 var status = article.querySelector(".zy-notification-save-status");
                 var previous = button.classList.contains("on");
@@ -126,7 +302,7 @@
                     button.setAttribute("aria-checked", String(enabled));
                     article.classList.toggle("is-open", enabled);
                     if (details) {
-                        details.hidden = !enabled;
+                        article.querySelector(".zy-notification-config").open = enabled;
                         details.classList.toggle("reveal", enabled);
                     }
                 }
@@ -156,21 +332,77 @@
             });
         });
 
-        // حفظ التفاصيل يعيد التحميل (redirect) — نحفظ موضع التمرير ونرجعه حتى لا تقفز الصفحة.
-        // المستند هو مالك التمرير (zynora-global-scroll-system.css) — و`.zynora-content`
-        // لم يعد مُمرِّراً فـ scrollTop عليه صفر دائماً.
-        var scroller = document.scrollingElement || document.documentElement;
+        // حفظ تلقائي متسلسل لكل قاعدة؛ لا إعادة POST تلقائية بعد رد غير مؤكد.
+        var unsavedForms = new Set();
         document.querySelectorAll(".nxhs-notification-details").forEach(function (form) {
-            form.addEventListener("submit", function () {
-                try { sessionStorage.setItem("nxhs-notif-scroll", scroller.scrollTop); } catch (e) { }
+            var article = form.closest(".nxhs-notification-item");
+            var toggle = article.querySelector(".nxhs-switch-button");
+            var status = article.querySelector(".zy-notification-save-status");
+            var timer, saving = false, queued = false, uncertain = false;
+            function snapshot() { return JSON.stringify(Array.from(new FormData(form).entries())); }
+            var confirmed = snapshot();
+            function changed() {
+                if (snapshot() === confirmed && !saving && !uncertain) { unsavedForms.delete(form); return; }
+                unsavedForms.add(form);
+                clearTimeout(timer);
+                timer = setTimeout(save, 600);
+            }
+            async function save() {
+                clearTimeout(timer);
+                if (saving) { queued = true; return; }
+                if (toggle.hasAttribute("aria-busy")) { timer = setTimeout(save, 150); return; }
+                var sent = snapshot();
+                if (sent === confirmed && !uncertain) { unsavedForms.delete(form); return; }
+                if (!form.reportValidity()) {
+                    status.classList.add("is-error");
+                    status.textContent = "صحّح الحقول غير الصالحة حتى يتم الحفظ تلقائياً.";
+                    return;
+                }
+                saving = true;
+                queued = false;
+                article.notificationDetailsPending = true;
+                toggle.setAttribute("aria-busy", "true");
+                toggle.setAttribute("aria-disabled", "true");
+                status.classList.remove("is-error");
+                status.textContent = "جارٍ الحفظ…";
+                var succeeded = false;
+                try {
+                    var response = await fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin", headers: { "Accept": "application/json" } });
+                    if (!response.ok || response.redirected) {
+                        var failure = await response.json().catch(function () { return {}; });
+                        throw new Error(failure.message || "تعذّر تأكيد الحفظ. تحقق من الاتصال ثم عدّل الحقل للمحاولة مجدداً.");
+                    }
+                    var result = await response.json();
+                    if (result.saved !== true) throw new Error("Invalid confirmation");
+                    confirmed = sent;
+                    uncertain = false;
+                    succeeded = true;
+                    status.textContent = "تم الحفظ";
+                    if (snapshot() === confirmed) unsavedForms.delete(form);
+                } catch (error) {
+                    uncertain = true;
+                    clearTimeout(timer);
+                    status.classList.add("is-error");
+                    status.textContent = error.message || "تعذّر تأكيد الحفظ. أبقِ الصفحة مفتوحة ثم عدّل الحقل للمحاولة مجدداً.";
+                } finally {
+                    saving = false;
+                    article.notificationDetailsPending = false;
+                    toggle.removeAttribute("aria-busy");
+                    toggle.removeAttribute("aria-disabled");
+                    // أحدث التعديلات فقط، بعد تأكيد الطلب السابق، لتجنب الكتابة بترتيب معكوس.
+                    if (succeeded && (queued || snapshot() !== confirmed)) timer = setTimeout(save, 0);
+                }
+            }
+            form.addEventListener("input", changed);
+            form.addEventListener("change", changed);
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                unsavedForms.add(form);
+                save();
             });
         });
-        try {
-            var savedScroll = sessionStorage.getItem("nxhs-notif-scroll");
-            if (savedScroll !== null) {
-                scroller.scrollTop = parseInt(savedScroll, 10) || 0;
-                sessionStorage.removeItem("nxhs-notif-scroll");
-            }
-        } catch (e) { }
+        window.addEventListener("beforeunload", function (e) {
+            if (unsavedForms.size) { e.preventDefault(); e.returnValue = ""; }
+        });
     </script>
 }

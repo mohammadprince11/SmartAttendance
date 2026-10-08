@@ -353,7 +353,14 @@ WHERE u.TenantId = @TenantId AND u.Username = @Username;
                     "EmployeeName")
             });
 
-        return users.FirstOrDefault();
+        var user = users.FirstOrDefault();
+        if (user is not null)
+        {
+            var schedule = await EndServiceAccessStore.GetAsync(dbContext, tenantId, username);
+            user.FarewellOnly = schedule is not null;
+            user.IsActive = EndServiceAccessPolicy.AllowsAccess(user.IsActive, schedule?.AccessEndsAtUtc, DateTimeOffset.UtcNow);
+        }
+        return user;
     }
 
     public static async Task RecordFailedLoginAsync(
@@ -706,6 +713,8 @@ VALUES
         public string Role { get; set; } = string.Empty;
 
         public bool IsActive { get; set; }
+
+        public bool FarewellOnly { get; set; }
 
         public int FailedLoginAttempts { get; set; }
 

@@ -35,13 +35,7 @@ public static class HrConditionOptions
         ("gender", "Gender"),
         ("maritalstatus", "MaritalStatus"),
         ("employmentstatus", "EmploymentStatus"),
-        ("country", "Country"),
-        ("religion", "Religion"),
-        ("nationality", "Nationality"),
-        ("contracttype", "ContractType"),
-        ("worktype", "WorkType"),
-        ("jobgrade", "JobGrade"),
-        ("sponsor", "SponsorName")
+        ("country", "Country")
     };
 
     private static readonly (string Criterion, string Table)[] ReferenceTables =
@@ -76,6 +70,15 @@ public static class HrConditionOptions
         {
             var rows = await SafeAsync(() => LoadDistinctAsync(db, column), new List<Option>());
             if (rows.Count > 0) options[criterion] = rows;
+        }
+
+        foreach (var (criterion, category) in HrLookupOptions.ConditionCategories)
+        {
+            var rows = await SafeAsync(
+                () => HrLookups.LoadAsync(db, category, activeOnly: true),
+                new List<HrLookups.LookupItem>());
+            options[criterion] = HrLookupOptions.BuildConditionOptions(category, rows)
+                .Select(x => new Option(x.Value, x.Label)).ToList();
         }
 
         var payload = criteria.Select(criterion => new

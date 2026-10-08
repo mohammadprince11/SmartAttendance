@@ -1,0 +1,14 @@
+@model SmartAttendance.Web.Pages.DisciplinaryRules.IndexModel
+<link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+@if (Model.Tab == "library")
+{
+    <link rel="stylesheet" data-disciplinary-style href="~/css/zynora-conditions.css" asp-append-version="true" />
+}
+@if (Model.Tab == "designer")
+{
+    <link rel="stylesheet" data-disciplinary-style href="~/css/zynora-disciplinary-rules.css" asp-append-version="true" />
+    <link rel="stylesheet" data-disciplinary-style href="~/css/zynora-a4-custom-file-picker-v13-1.css" asp-append-version="true" />
+    <link rel="stylesheet" data-disciplinary-style href="~/css/zynora-disciplinary-designer-preview-safe-v1.css" asp-append-version="true" />
+}
+<link rel="stylesheet" data-disciplinary-style href="~/css/pages/index-387bf545e8.css" asp-append-version="true" />
+<meta data-disciplinary-style-anchor />

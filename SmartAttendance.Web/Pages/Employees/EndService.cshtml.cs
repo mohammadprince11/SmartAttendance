@@ -2,16 +2,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
+using SmartAttendance.Web.Infrastructure.Security;
 
 namespace SmartAttendance.Web.Pages.Employees;
 
 public class EndServiceModel : PageModel
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ICompanyScopeProvider _companyScope;
 
-    public EndServiceModel(ApplicationDbContext dbContext)
+    public EndServiceModel(ApplicationDbContext dbContext, ICompanyScopeProvider companyScope)
     {
         _dbContext = dbContext;
+        _companyScope = companyScope;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -24,10 +27,13 @@ public class EndServiceModel : PageModel
     public DateOnly? LastWorkingDate { get; set; }
 
     [BindProperty]
+    public bool ImmediateAccountClosure { get; set; }
+
+    [BindProperty]
     public string Reason { get; set; } = string.Empty;
 
     [BindProperty]
-    public string HrNotes { get; set; } = string.Empty;
+    public string? HrNotes { get; set; }
 
     [BindProperty]
     public bool ClearanceAssets { get; set; }
@@ -92,6 +98,13 @@ public class EndServiceModel : PageModel
             return Page();
         }
 
+        if (!await EndServiceAccessStore.IsReadyAsync(_dbContext))
+        {
+            ErrorMessage = "يلزم تطبيق هجرة توقيت إيقاف الحساب قبل اعتماد إنهاء الخدمة.";
+            return Page();
+        }
+        var timing = EndServiceAccessPolicy.Plan(LastWorkingDate!.Value, ImmediateAccountClosure, DateTimeOffset.UtcNow);
+
         var userName = User.Identity?.Name ?? "System";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
         var status = MapEmploymentStatus(EndServiceType);
@@ -108,7 +121,8 @@ public class EndServiceModel : PageModel
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 
-IF EXISTS (SELECT 1 FROM Employees WHERE Id = @EmployeeId AND ISNULL(IsActive, 0) = 1)
+IF EXISTS (SELECT 1 FROM Employees WITH (UPDLOCK, HOLDLOCK)
+           WHERE Id = @EmployeeId AND CompanyId = @CompanyId AND IsDeleted = 0 AND ISNULL(IsActive, 0) = 1)
 BEGIN
     INSERT INTO EmployeeEndServices
     (
@@ -153,6 +167,10 @@ BEGIN
         GETDATE()
     );
 
+    INSERT EndServiceAccessSchedules
+        (EndServiceId, EmployeeId, CompanyId, NotificationEligibleAtUtc, AccessEndsAtUtc, Immediate)
+    VALUES (CONVERT(int, SCOPE_IDENTITY()), @EmployeeId, @CompanyId, @NotifyAt, @AccessEnds, @Immediate);
+
     UPDATE Employees
     SET
         IsActive = 0,
@@ -162,7 +180,7 @@ BEGIN
         ServiceEndReason = @Reason,
         ServiceEndNotes = @HrNotes,
         ClearanceStatus = @ClearanceStatus
-    WHERE Id = @EmployeeId;
+    WHERE Id = @EmployeeId AND CompanyId = @CompanyId;
 
     IF OBJECT_ID('AuditLogs', 'U') IS NOT NULL
     BEGIN
@@ -193,6 +211,10 @@ COMMIT TRANSACTION;",
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@EmployeeId", Id);
+                HrmsDatabase.AddParameter(command, "@CompanyId", Employee.CompanyId);
+                HrmsDatabase.AddParameter(command, "@NotifyAt", timing.NotificationEligibleAtUtc.UtcDateTime);
+                HrmsDatabase.AddParameter(command, "@AccessEnds", timing.AccessEndsAtUtc.UtcDateTime);
+                HrmsDatabase.AddParameter(command, "@Immediate", timing.Immediate);
                 HrmsDatabase.AddParameter(command, "@EmployeeNo", Employee.EmployeeNo);
                 HrmsDatabase.AddParameter(command, "@EmployeeName", Employee.FullName);
                 HrmsDatabase.AddParameter(command, "@EndServiceType", EndServiceType);
@@ -211,7 +233,7 @@ COMMIT TRANSACTION;",
                 HrmsDatabase.AddParameter(command, "@CreatedBy", userName);
                 HrmsDatabase.AddParameter(command, "@IpAddress", ipAddress);
                 HrmsDatabase.AddParameter(command, "@OldValues", "IsActive: True");
-                HrmsDatabase.AddParameter(command, "@NewValues", $"IsActive: False; EmploymentStatus: {status}; ServiceEndDate: {LastWorkingDate:yyyy-MM-dd}; Type: {EndServiceType}");
+                HrmsDatabase.AddParameter(command, "@NewValues", $"IsActive: False; EmploymentStatus: {status}; ServiceEndDate: {LastWorkingDate:yyyy-MM-dd}; Type: {EndServiceType}; AccessEndsAtUtc: {timing.AccessEndsAtUtc:O}; FarewellOnly: True; Immediate: {timing.Immediate}");
             });
 
         TempData["SuccessMessage"] = "تم إنهاء خدمة الموظف مع الحفاظ على كامل التاريخ الوظيفي والحضور والسجلات.";
@@ -231,6 +253,9 @@ COMMIT TRANSACTION;",
             ModelState.AddModelError(nameof(LastWorkingDate), "حدد آخر يوم عمل.");
         }
 
+        if (LastWorkingDate == DateOnly.MaxValue)
+            ModelState.AddModelError(nameof(LastWorkingDate), "اختر تاريخاً يسمح بتحديد نهاية اليوم.");
+
         if (LastWorkingDate.HasValue && Employee?.HireDate != null && LastWorkingDate.Value < Employee.HireDate.Value)
         {
             ModelState.AddModelError(nameof(LastWorkingDate), "آخر يوم عمل لا يمكن أن يكون قبل تاريخ التعيين.");
@@ -249,11 +274,14 @@ COMMIT TRANSACTION;",
 
     private async Task<EmployeeEndServiceCard?> LoadEmployeeAsync()
     {
+        var scope = await _companyScope.GetAsync(HttpContext.RequestAborted);
+        if (scope.IsDeniedAll) return null;
         var rows = await HrmsDatabase.QueryAsync(
             _dbContext,
-            @"
+            $@"
 SELECT TOP 1
     e.Id,
+    e.CompanyId,
     e.EmployeeNo,
     e.FullName,
     e.HireDate,
@@ -266,12 +294,13 @@ SELECT TOP 1
 FROM Employees e
 LEFT JOIN Departments d ON e.DepartmentId = d.Id
 LEFT JOIN Branches b ON e.BranchId = b.Id
-LEFT JOIN Companies c ON b.CompanyId = c.Id
-WHERE e.Id = @Id;",
+LEFT JOIN Companies c ON e.CompanyId = c.Id
+WHERE e.Id = @Id AND e.IsDeleted = 0 AND {scope.ToSqlPredicate("e.CompanyId")};",
             command => HrmsDatabase.AddParameter(command, "@Id", Id),
             reader => new EmployeeEndServiceCard
             {
                 Id = HrmsDatabase.GetInt(reader, "Id"),
+                CompanyId = HrmsDatabase.GetInt(reader, "CompanyId"),
                 EmployeeNo = HrmsDatabase.GetString(reader, "EmployeeNo"),
                 FullName = HrmsDatabase.GetString(reader, "FullName"),
                 HireDate = HrmsDatabase.GetDateOnly(reader, "HireDate"),
@@ -337,6 +366,7 @@ WHERE e.Id = @Id;",
 
     public class EmployeeEndServiceCard
     {
+        public int CompanyId { get; set; }
         public int Id { get; set; }
 
         public string EmployeeNo { get; set; } = string.Empty;

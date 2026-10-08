@@ -33,6 +33,9 @@ public sealed class UnifiedPageDesignContractTests
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}Culture{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Select(path => new { path, source = File.ReadAllText(path) })
             .Where(page => Regex.IsMatch(page.source, @"Layout\s*=\s*null", RegexOptions.IgnoreCase))
+            // This page emits an authenticated workspace fragment only for its explicit GET header,
+            // not a standalone document. The full shell keeps the unified contract (tested below).
+            .Where(page => !page.path.EndsWith(Path.Combine("DisciplinaryRules", "Index.cshtml"), StringComparison.OrdinalIgnoreCase))
             .Where(page => !page.source.Contains("zy-ui-contract", StringComparison.Ordinal)
                            || !page.source.Contains("zynora-unified-pages.css", StringComparison.Ordinal)
                            || !page.source.Contains("zynora-unified-pages.js", StringComparison.Ordinal))
@@ -41,6 +44,21 @@ public sealed class UnifiedPageDesignContractTests
 
         Assert.True(uncovered.Length == 0,
             "Standalone HTML pages missing the unified contract: " + string.Join(", ", uncovered));
+    }
+
+    [Fact]
+    public void DisciplinaryWorkspaceFragment_UsesExistingShellContractAndGetOnlyHeader()
+    {
+        var page = ReadWeb("Pages", "DisciplinaryRules", "Index.cshtml");
+        var model = ReadWeb("Pages", "DisciplinaryRules", "Index.cshtml.cs");
+        var layout = ReadWeb("Pages", "Shared", "_Layout.cshtml");
+        Assert.Contains("if (Model.IsWorkspaceRequest) { Layout = null; }", page, StringComparison.Ordinal);
+        Assert.Contains("Request.Method == \"GET\"", model, StringComparison.Ordinal);
+        Assert.Contains("Request.Headers[\"X-Zynora-Workspace\"] == \"disciplinary\"", model, StringComparison.Ordinal);
+        Assert.Contains("data-disciplinary-workspace", page, StringComparison.Ordinal);
+        Assert.Contains("zy-ui-contract", layout, StringComparison.Ordinal);
+        Assert.Contains("zynora-unified-pages.css", layout, StringComparison.Ordinal);
+        Assert.Contains("zynora-unified-pages.js", layout, StringComparison.Ordinal);
     }
 
     [Fact]

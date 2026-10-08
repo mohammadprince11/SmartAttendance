@@ -1,5 +1,70 @@
 /* HR settings only. Keep form contracts, hidden controls, tabs and drawer lifecycle intact. */
 @layer zynora-hr-settings {
+    /* Separate catalog, type list and full-page editor, with the Zynora palette. */
+    .zy-hr-settings-page.zy-approval-workspace .apt-catalog-view { grid-template-columns: minmax(0, 1fr) !important; }
+    .zy-approval-workspace .apt-audience-tabs { display: flex; flex-wrap: wrap; gap: 8px; border-block-end: 1px solid var(--border-default); margin-block-end: 24px; }
+    .zy-approval-workspace .apt-audience-tabs button { border-radius: 8px 8px 0 0; padding: 12px 20px; cursor: pointer; }
+    .zy-hr-settings-page.zy-approval-workspace.zy-approval-simple .apt-audience-tabs button[aria-pressed="true"] { background: var(--color-primary-soft) !important; color: var(--color-primary-text) !important; border-block-end: 3px solid var(--brand-primary) !important; }
+    .zy-approval-workspace .apt-catalog-search { display: grid; gap: 8px; max-inline-size: 480px; margin-block-end: 24px; }
+    .zy-approval-workspace .apt-catalog-module { margin-block-start: 24px; }
+    .zy-approval-workspace .apt-module-nav { display: flex; flex-wrap: wrap; gap: 12px; margin-block-end: 20px; }
+    .zy-approval-workspace .apt-module-nav button { display: flex; align-items: center; border: 1px solid var(--border-default); background: var(--surface-raised); color: var(--text-default); gap: 12px; padding: 12px 20px; border-radius: 12px; cursor: pointer; font: inherit; }
+    .zy-hr-settings-page.zy-approval-workspace.zy-approval-simple .apt-module-nav button[aria-pressed="true"] { background: var(--color-primary-soft) !important; border-color: var(--brand-primary) !important; border-block-end: 3px solid var(--brand-primary) !important; color: var(--color-primary-text) !important; }
+    .zy-approval-workspace .apt-module-nav button:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+    .zy-approval-workspace .apt-module-nav span, .zy-approval-workspace .apt-module-head > span { color: var(--text-muted); font-size: 12px; }
+    .zy-approval-workspace .apt-module-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin-block-end: 12px; }
+    .zy-approval-workspace .apt-type-context { background: var(--surface-raised); padding: 20px; border-radius: 12px; border: 1px solid var(--border-default); margin-block-end: 24px; }
+    .zy-approval-workspace .apt-type-context p { margin-block: 12px 0; line-height: 1.8; }
+    .zy-approval-workspace .apt-type-description { min-block-size: 42px; line-height: 1.7; }
+    .zy-approval-workspace .apt-type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .zy-approval-workspace .apt-type-card { display: flex; justify-content: start; gap: 16px; padding: 20px; min-block-size: 100px; border: 1px solid var(--border-default); background: var(--surface-raised); border-radius: 12px; }
+    .zy-approval-workspace .apt-type-card:hover { border-color: var(--brand-primary); background: var(--color-primary-soft); }
+    .zy-approval-workspace .apt-type-card strong { font-size: 14px; line-height: 1.7; }
+    .zy-approval-workspace .apt-type-card > span:last-child { flex: 1; text-align: start; }
+    .zy-approval-workspace .apt-type-card small { display: block; color: var(--text-muted); margin-block-start: 4px; }
+    .zy-approval-workspace .apt-type-icon { display: grid; place-items: center; inline-size: 40px; block-size: 40px; flex: none; background: var(--color-primary-soft); color: var(--color-primary-text); border-radius: 10px; font-size: 22px; }
+    .zy-approval-workspace .apt-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block-start: 16px; font-size: 13px; }
+    .zy-approval-workspace .apt-editor { max-inline-size: 1100px !important; margin-inline: auto !important; }
+    .zy-approval-workspace .apt-editor > h2 { margin-block: 0 24px; }
+    .zy-approval-workspace .apt-committee-panes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-block-start: 16px; }
+    .zy-approval-workspace .apt-committee-panes > section { padding: 16px; border: 1px solid var(--border-default); border-radius: 12px; min-inline-size: 0; }
+    .zy-approval-workspace .apt-committee-panes h4 { margin-block: 0 16px; font-size: 14px; }
+    .zy-approval-workspace .apt-committee-available > div { display: grid; gap: 16px; }
+    .zy-approval-workspace .apt-form-grid { gap: 24px; }
+    .zy-approval-workspace .apt-editor .nxhs-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: end; margin-block-start: 24px; }
+    .zy-approval-workspace .apt-editor .nxhs-actions button[type="submit"] { background: var(--brand-primary); color: var(--color-on-primary); }
+    .zy-approval-workspace .apt-step .apt-step-actions { display: flex; gap: 8px; margin-inline-start: auto; }
+    .zy-approval-workspace .apt-step button { margin: 0; min-inline-size: 36px; min-block-size: 36px; }
+    .zy-approval-workspace [hidden] { display: none !important; }
+    @media (max-width: 1100px) { .zy-approval-workspace .apt-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 650px) {
+        .zy-approval-workspace .apt-type-grid, .zy-approval-workspace .apt-form-grid, .zy-approval-workspace .apt-committee-panes { grid-template-columns: minmax(0, 1fr); }
+        .zy-approval-workspace .apt-type-card { min-block-size: 88px; }
+        .zy-approval-workspace .apt-matrix { font-size: 11px; }
+        .zy-approval-workspace .apt-matrix :is(th, td) { padding: 8px 4px; }
+    }
+    /* Approval templates: task first; secondary tools and advanced settings are disclosed on demand. */
+    .zy-approval-simple .apt-company-filter { display: grid !important; grid-template-columns: auto minmax(0, 360px) !important; justify-content: start; gap: 16px !important; }
+    .zy-approval-simple .apt-company-filter > label { white-space: nowrap; }
+    .zy-approval-simple .apt-catalog h2 { margin-block: 0 8px; font-size: 16px; }
+    .zy-approval-simple .apt-catalog-group { margin-block-start: 12px; border-block-start: 1px solid var(--border-default); }
+    .zy-approval-simple :is(.apt-catalog-group, .apt-secondary, .apt-editor-section) > summary { cursor: pointer; padding-block: 14px; color: var(--text-default); font-size: 14px; font-weight: 600; line-height: 1.7; }
+    .zy-approval-simple summary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; border-radius: 4px; }
+    .zy-approval-simple .apt-summary-note { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+    .zy-approval-simple .apt-catalog a { margin-block: 4px; font-weight: 500; }
+    .zy-approval-simple .apt-catalog a.active { font-weight: 700; }
+    .zy-approval-simple .apt-template-list > .nxhs-search-head { align-items: start; }
+    .zy-approval-simple .apt-template-list > .nxhs-search-head > div { display: flex; flex-wrap: wrap; gap: 8px; }
+    .zy-approval-simple .apt-secondary:not([open]) { padding-block: 4px !important; }
+    .zy-approval-simple .apt-secondary > summary { list-style-position: inside; }
+    .zy-approval-simple .apt-sim > div { margin-block-start: 12px; }
+    .zy-approval-simple .apt-editor-section { margin-block-start: 20px; padding-inline: 16px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--surface-raised); }
+    .zy-approval-simple .apt-editor-section[open] { padding-block-end: 16px; }
+    .zy-approval-simple .apt-slide .nxhs-actions { position: sticky; inset-block-end: -24px; background: var(--surface-panel); border-block-start: 1px solid var(--border-default); padding-block: 16px; margin-block-start: 24px; z-index: 1; }
+    @media (max-width: 650px) {
+        .zy-approval-simple .apt-company-filter { grid-template-columns: minmax(0, 1fr) !important; }
+        .zy-approval-simple .apt-catalog { padding: 16px !important; }
+    }
     .zy-hr-settings-page { padding: 0 !important; --nxhs-green: var(--status-success); --nxhs-red: var(--status-danger); }
     .zy-hr-settings-page :is(.page-header, .rtc-head, .lp-head, .pai-head,
         .hrms-table-card, .rtc-cat, .rtc-newcat, .lp-card, .lp-company, .pai-card, .pai-company) {
@@ -38,7 +103,9 @@
     }
     .zy-hr-settings-page :is(.nxhs-field-row, .nxhs-team-access-row) { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) !important; gap: 16px !important; }
     .zy-hr-settings-page .nxhs-duration-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important; }
-    .zy-hr-settings-page :is(.nxhs-option-row, .nxhs-segment) { flex-direction: row !important; justify-content: flex-start !important; }
+    .zy-hr-settings-page :is(.nxhs-option-row, .nxhs-segment) { flex-direction: row !important; }
+    .zy-hr-settings-page .nxhs-segment { justify-content: flex-start !important; }
+    .zy-hr-settings-page .nxhs-option-row { justify-content: space-between !important; gap: 16px !important; }
     .zy-hr-settings-page .nxhs-segment { position: relative; }
     .zy-hr-settings-page :is(label, label b, label span) { overflow-wrap: anywhere; }
     .zy-hr-settings-page .nxhs-segment { block-size: 44px !important; height: 44px !important; min-height: 44px !important; max-height: 44px !important; inline-size: max-content !important; max-inline-size: 100% !important; background: var(--surface-input) !important; border-color: var(--border-default) !important; border-radius: 10px !important; }
@@ -79,6 +146,28 @@
     .zy-hr-settings-page .nxhs-inline-add { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 16px !important; }
     .zy-hr-settings-page .nxhs-inline-add > button { justify-self: start; }
     .zy-hr-settings-page .nxhs-notif-grid .wide { grid-column: 1 / -1; }
+    .zy-hr-settings-page .zy-notification-toolbar { padding: var(--sp-4); margin-block-end: var(--sp-4); }
+    .zy-hr-settings-page .zy-notification-toolbar form { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+    .zy-hr-settings-page .zy-notification-config > summary,
+    .zy-hr-settings-page .zy-notification-group > summary { cursor: pointer; padding-block: var(--sp-3); }
+    .zy-hr-settings-page .zy-notification-channels { border: 1px solid var(--border-default); border-radius: var(--sp-3); padding: var(--sp-3); }
+    .zy-hr-settings-page .zy-notification-channels label,
+    .zy-hr-settings-page .zy-notification-members label { display: flex; align-items: center; gap: var(--sp-2); padding-block: var(--sp-2); }
+    .zy-hr-settings-page .zy-notification-members { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--sp-3); max-block-size: 20rem; overflow: auto; }
+    .zy-hr-settings-page .zy-notification-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--sp-4); background: var(--surface-input); color: var(--text-default); border: 1px solid var(--border-default); border-radius: var(--sp-3); }
+    .zy-hr-settings-page .nxhs-notification-item[hidden],
+    .zy-hr-settings-page #notification-search-empty[hidden] { display: none !important; }
+    .zy-hr-settings-page .zy-notification-toolbar { padding: var(--sp-4); margin-block-end: var(--sp-4); }
+    .zy-hr-settings-page .zy-notification-toolbar form { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+    .zy-hr-settings-page .zy-notification-config > summary,
+    .zy-hr-settings-page .zy-notification-group > summary { cursor: pointer; padding-block: var(--sp-3); }
+    .zy-hr-settings-page .zy-notification-channels { border: 1px solid var(--border-default); border-radius: var(--sp-3); padding: var(--sp-3); }
+    .zy-hr-settings-page .zy-notification-channels label,
+    .zy-hr-settings-page .zy-notification-members label { display: flex; align-items: center; gap: var(--sp-2); padding-block: var(--sp-2); }
+    .zy-hr-settings-page .zy-notification-members { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--sp-3); max-block-size: 20rem; overflow: auto; }
+    .zy-hr-settings-page .zy-notification-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--sp-4); background: var(--surface-input); color: var(--text-default); border: 1px solid var(--border-default); border-radius: var(--sp-3); }
+    .zy-hr-settings-page .nxhs-notification-item[hidden],
+    .zy-hr-settings-page #notification-search-empty[hidden] { display: none !important; }
     .zy-hr-settings-page .nxhs-search-head input[type="search"] { max-inline-size: 360px !important; }
     .zy-hr-settings-page :is(button:not(.nxcs-trigger):not(.nxcs-option):not(.nxhs-switch-button), .rtc-btn, .lp-back, .hrms-tab) {
         background: var(--surface-raised) !important; background-image: none !important; box-shadow: none !important;
@@ -132,8 +221,25 @@
     }
     .zy-hr-settings-page .nxhs-switch-button.on span { inset-inline-start: 26px !important; background: var(--color-on-primary) !important; }
     .zy-hr-settings-page .nxhs-switch-button[aria-busy="true"] { cursor: progress !important; }
-    .zy-hr-settings-page .zy-notification-save-status { color: var(--text-muted); font-size: 12px; }
-    .zy-hr-settings-page .zy-notification-save-status.is-error { color: var(--color-danger); }
+    /* Two columns keep the switch at inline-end (left in RTL), even with long titles. */
+    .zy-hr-settings-page .nxhs-notification-item > header {
+        display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important;
+        align-items: center !important; gap: 12px !important; position: relative;
+    }
+    .zy-hr-settings-page .nxhs-notification-item > header > h3 { min-inline-size: 0; margin: 0 !important; overflow-wrap: anywhere; }
+    .zy-hr-settings-page .nxhs-switch-form { margin: 0 !important; padding: 0 !important; justify-self: end; }
+    /* Keep quiet success/pending announcements accessible, without a legacy empty pill. */
+    .zy-hr-settings-page .zy-notification-save-status {
+        position: absolute !important; inline-size: 1px !important; block-size: 1px !important;
+        padding: 0 !important; margin: 0 !important; border: 0 !important;
+        overflow: hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important;
+        background: transparent !important; box-shadow: none !important;
+    }
+    .zy-hr-settings-page .zy-notification-save-status.is-error {
+        position: static !important; grid-column: 1 / -1; inline-size: auto !important; block-size: auto !important;
+        overflow: visible !important; clip-path: none !important; white-space: normal !important;
+        color: var(--color-danger) !important; font-size: 12px; overflow-wrap: anywhere;
+    }
     .zy-hr-settings-page :is(.apt-slide, .nxhs-delete-dialog) { background: var(--surface-panel) !important; background-image: none !important; border-color: var(--border-default) !important; color: var(--text-default) !important; box-shadow: none !important; padding: 24px !important; }
     .zy-hr-settings-page .apt-slide { inset-inline-start: auto !important; inset-inline-end: 0 !important; inline-size: min(640px, 100vw) !important; transition-duration: 200ms !important; }
     .zy-hr-settings-page :is(.apt-backdrop, .nxhs-delete-backdrop) { background: color-mix(in srgb, var(--surface-input) 75%, transparent) !important; }
@@ -153,6 +259,86 @@
             .rtc-grid, .lp-grid, .nxhs-notif-grid, .nxhs-permission-grid, .apt-delegation-form, .apt-form-grid, .zy-hr-lookup-fields,
             .pai-fields, .pai-readiness, .pai-policy-row, .pai-policy-add, .pai-field-policy-row, .pai-field-add, .pai-doc-type-row, .pai-doc-type-add) { grid-template-columns: minmax(0, 1fr) !important; }
         .zy-hr-settings-page .nxhs-unit-segment { min-width: 0 !important; }
-        .zy-hr-settings-page .nxhs-option-row { flex-wrap: wrap !important; }
+        .zy-hr-settings-page .nxhs-option-row { flex-wrap: nowrap !important; }
     }
 }
+/* Audit corrections: token-only controls, compact forms and real table columns.
+   The earlier identity layer owns important overrides of the legacy shell. */
+@layer zynora-hr-admin {
+    .zy-hr-settings-page :is(.hrms-tabs .hrms-tab.active, .pai-tabs button[aria-selected="true"], .apt-audience-tabs button[aria-pressed="true"], .apt-module-nav button[aria-pressed="true"]) {
+        background: var(--color-primary-soft) !important; color: var(--text-default) !important;
+        border-color: var(--brand-primary) !important; border-block-end-width: 3px !important; box-shadow: none !important; font-weight: 700 !important;
+    }
+    .zy-hr-settings-page :is(.nxhs-actions, .lp-actions, .pai-actions, .pai-field-actions, .rtc-actions) { justify-content: flex-end !important; }
+    .zy-hr-settings-page .nxhs-segment input:checked + label { color: var(--text-default) !important; }
+    .zy-hr-settings-page .nxhs-notice-panel .nxhs-subbox { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: var(--sp-4, 16px) !important; }
+    .zy-hr-settings-page .nxhs-notice-panel .nxhs-subbox > h3 { grid-column: 1 / -1; margin: 0 !important; }
+    .zy-hr-settings-page .nxhs-notice-panel .nxhs-field-row { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: var(--sp-2, 8px) !important; margin: 0 !important; }
+    .zy-hr-settings-page .nxhs-self-panel { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: var(--sp-4, 16px) !important; }
+    .zy-hr-settings-page .nxhs-self-panel .nxhs-setting-section { margin: 0 !important; }
+    .zy-hr-settings-page .nxhs-self-panel .nxhs-setting-section:has(.nxhs-permission-grid),
+    .zy-hr-settings-page .nxhs-self-panel > footer { grid-column: 1 / -1; }
+    .zy-hr-settings-page .nxhs-self-panel .nxhs-field-row { grid-template-columns: minmax(0, 1fr) !important; }
+    .zy-hr-settings-page.zy-employee-code-settings .zy-code-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4, 16px); }
+    .zy-hr-settings-page.zy-employee-code-settings .hrms-field { display: grid; gap: var(--sp-2, 8px); min-inline-size: 0; margin: 0; }
+    .zy-hr-settings-page.zy-employee-code-settings .hrms-toggle { display: flex; gap: var(--sp-3, 12px); align-items: center; background: var(--surface-raised); border-radius: var(--radius, 12px); padding: var(--sp-3, 12px); }
+    .zy-hr-settings-page.zy-employee-code-settings footer { grid-column: 1 / -1; }
+    .zy-hr-settings-page.zy-employee-code-settings footer button { inline-size: auto !important; width: auto !important; }
+    .zy-hr-settings-page .nxhs-edit-table { table-layout: fixed; min-inline-size: 1050px !important; }
+    .zy-hr-settings-page .nxhs-edit-table th:first-child { inline-size: 25%; }
+    .zy-hr-settings-page .nxhs-edit-table th:last-child { inline-size: 190px; }
+    .zy-hr-settings-page .nxhs-edit-table td > :is(input, select, .nxcs) { inline-size: 100% !important; min-inline-size: 0 !important; }
+    .zy-hr-settings-page .zy-reason-actions { display: flex; align-items: center; gap: var(--sp-2, 8px); flex-wrap: wrap; }
+    .zy-hr-settings-page .zy-reason-actions form { margin: 0; }
+    .zy-hr-settings-page .zy-reason-actions .nxhs-delete-trigger { color: var(--status-danger) !important; border-color: var(--status-danger) !important; }
+    .zy-hr-settings-page :is(.zy-reason-actions .zy-btn--primary, .lp-actions button, .pai-actions button[type="submit"], .pai-field-actions button[type="submit"]:not(.pai-danger)) { background: var(--color-primary-strong) !important; color: var(--color-on-primary) !important; border-color: var(--color-primary-strong) !important; }
+    .zy-hr-settings-page .pai-field-actions .pai-danger { background: var(--surface-raised) !important; color: var(--status-danger) !important; border-color: var(--status-danger) !important; }
+    .zy-hr-settings-page .zy-policy-disclosure { border: 1px solid var(--border-default); border-radius: var(--radius-lg, 16px); background: var(--surface-panel); overflow: clip; }
+    .zy-hr-settings-page .zy-policy-disclosure > summary { display: flex; align-items: center; gap: var(--sp-4, 16px); padding: var(--sp-4, 16px) var(--sp-5, 24px); cursor: pointer; list-style: none; }
+    .zy-hr-settings-page .zy-policy-disclosure > summary > span:first-child { flex: 1; display: grid; gap: var(--sp-1, 4px); }
+    .zy-hr-settings-page .zy-policy-disclosure summary small { color: var(--text-muted); }
+    .zy-hr-settings-page .zy-policy-disclosure > summary::after { content: '+'; font-size: var(--fs-section, 18px); }
+    .zy-hr-settings-page .zy-policy-disclosure[open] > summary::after { content: '−'; }
+    .zy-hr-settings-page .zy-request-category > summary { display: flex; align-items: center; gap: var(--sp-3, 12px); cursor: pointer; list-style: none; }
+    .zy-hr-settings-page .zy-request-category > summary > strong { flex: 1; }
+    .zy-hr-settings-page .zy-request-category > summary::after { content: '+'; }
+    .zy-hr-settings-page .zy-request-category[open] > summary::after { content: '−'; }
+    .zy-hr-settings-page .zy-request-category .rtc-cat-title { display: none !important; }
+    .zy-hr-settings-page .zy-request-category .rtc-cat-head { justify-content: flex-end !important; margin-block: var(--sp-4, 16px); }
+    .zy-hr-settings-page .zy-policy-disclosure .lp-card { border: 0 !important; border-block-start: 1px solid var(--border-default) !important; border-radius: 0 !important; }
+    .zy-hr-settings-page .zy-policy-disclosure .lp-card-head { display: none !important; }
+    .zy-hr-settings-page .lp-grid { align-items: start !important; }
+    .zy-hr-settings-page .lp-grid .lp-check { min-block-size: 44px; align-self: end; }
+    .zy-hr-settings-page .lp-flags { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4, 16px); }
+    .zy-hr-settings-page .zy-notification-toolbar { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-3, 12px) var(--sp-5, 24px); align-items: end; }
+    .zy-hr-settings-page .zy-notification-toolbar form { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-2, 8px); grid-row: 1 / 3; }
+    .zy-hr-settings-page .zy-notification-toolbar form > label { grid-column: 1 / -1; }
+    .zy-hr-settings-page .zy-notification-toolbar > :is(p, span) { grid-column: 1 / -1; margin: 0 !important; }
+    .zy-hr-settings-page .zy-notification-toolbar > label { margin: 0 !important; }
+    .zy-hr-settings-page .nxhs-notif-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; align-items: start !important; }
+    .zy-hr-settings-page.zy-approval-workspace .apt-editor { max-inline-size: 100% !important; inline-size: 100%; }
+    .zy-hr-settings-page.zy-approval-workspace .apt-form-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: var(--sp-4, 16px) !important; }
+    .zy-hr-settings-page.zy-approval-workspace .apt-committee-available label { display: grid; gap: var(--sp-2, 8px); min-inline-size: 0; }
+    .zy-hr-settings-page.zy-approval-workspace [hidden] { display: none !important; }
+    .zy-hr-settings-page.zy-approval-workspace .apt-type-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)) !important; }
+    .zy-hr-settings-page :is(summary, a, button):focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+    @media (max-width: 1100px) {
+        .zy-hr-settings-page .nxhs-notice-panel .nxhs-subbox,
+        .zy-hr-settings-page.zy-employee-code-settings .zy-code-form,
+        .zy-hr-settings-page .lp-flags { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (max-width: 650px) {
+        .zy-hr-settings-page .nxhs-notice-panel .nxhs-subbox,
+        .zy-hr-settings-page .nxhs-self-panel,
+        .zy-hr-settings-page.zy-employee-code-settings .zy-code-form,
+        .zy-hr-settings-page .zy-notification-toolbar,
+        .zy-hr-settings-page .nxhs-notif-grid,
+        .zy-hr-settings-page .lp-flags,
+        .zy-hr-settings-page.zy-approval-workspace .apt-form-grid { grid-template-columns: minmax(0, 1fr) !important; }
+        .zy-hr-settings-page .zy-notification-toolbar form { grid-row: auto; }
+    }
+}
+/* Typed approval conditions use the same control tokens and responsive form rhythm. */
+.apt-condition-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; align-items: end; gap: var(--sp-3, 12px); margin-block: var(--sp-3, 12px); }
+.apt-condition-row label { display: grid; gap: var(--sp-2, 8px); min-inline-size: 0; }
+@media (max-width: 700px) { .apt-condition-row { grid-template-columns: 1fr; } }
