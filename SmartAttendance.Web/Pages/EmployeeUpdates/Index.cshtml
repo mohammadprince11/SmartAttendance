@@ -205,13 +205,13 @@
                                                         <option value="">&#x0627;&#x062E;&#x062A;&#x0631; &#x0627;&#x0644;&#x062C;&#x0646;&#x0633;&#x064A;&#x0629;</option>
                                                         @foreach (var nationality in Model.NationalityOptions)
                                                         {
-                                                            if (Model.FieldValue(field.Key).Equals(nationality, System.StringComparison.OrdinalIgnoreCase))
+                                                            if (Model.FieldValue(field.Key).Equals(nationality.Value, System.StringComparison.OrdinalIgnoreCase))
                                                             {
-                                                                <option value="@nationality" selected>@nationality</option>
+                                                                <option value="@nationality.Value" selected>@nationality.Label</option>
                                                             }
                                                             else
                                                             {
-                                                                <option value="@nationality">@nationality</option>
+                                                                <option value="@nationality.Value">@nationality.Label</option>
                                                             }
                                                         }
                                                     </select>

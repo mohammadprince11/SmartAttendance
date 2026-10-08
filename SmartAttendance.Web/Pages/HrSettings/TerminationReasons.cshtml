@@ -47,7 +47,7 @@
                 <thead>
                     <tr>
                         <th>الاسم</th>
-                        <th>اختياري</th>
+                        <th>الإلزامية</th>
                         <th>النسبة المستحقة</th>
                         <th>يطلب من الخدمة الذاتية</th>
                         <th>الحالة</th>
@@ -58,31 +58,35 @@
                     @foreach (var reason in Model.Reasons)
                     {
                         <tr>
-                            <td colspan="6">
-                                <div class="nxhs-reason-shell">
-                                    <form method="post" asp-page-handler="Update" class="nxhs-reason-row">
-                                        <input type="hidden" name="id" value="@reason.Id" />
-
-                                        <input name="name" value="@reason.Name" />
-
-                                        <select data-zynora-select="true" name="isMandatory">
+                            <td>
+                                        <input name="name" value="@reason.Name" form="reason-@reason.Id" aria-label="اسم السبب" />
+                            </td>
+                            <td>
+                                        <select data-zynora-select="true" name="isMandatory" form="reason-@reason.Id" aria-label="الإلزامية">
                                             <option value="false" selected="@(!reason.IsMandatory)">اختياري</option>
                                             <option value="true" selected="@reason.IsMandatory">إلزامي</option>
                                         </select>
-
-                                        <input name="endOfServicePercent" type="number" min="0" max="100" step="1" value="@reason.EndOfServicePercent.ToString("0")" />
-
-                                        <select data-zynora-select="true" name="requiresSelfService">
+                            </td>
+                            <td>
+                                        <input name="endOfServicePercent" type="number" min="0" max="100" step="1" value="@reason.EndOfServicePercent.ToString("0")" form="reason-@reason.Id" aria-label="النسبة المستحقة" />
+                            </td>
+                            <td>
+                                        <select data-zynora-select="true" name="requiresSelfService" form="reason-@reason.Id" aria-label="يطلب من الخدمة الذاتية">
                                             <option value="true" selected="@reason.RequiresSelfService">نعم</option>
                                             <option value="false" selected="@(!reason.RequiresSelfService)">لا</option>
                                         </select>
-
-                                        <select data-zynora-select="true" name="isActive">
+                            </td>
+                            <td>
+                                        <select data-zynora-select="true" name="isActive" form="reason-@reason.Id" aria-label="الحالة">
                                             <option value="true" selected="@reason.IsActive">نشط</option>
                                             <option value="false" selected="@(!reason.IsActive)">متوقف</option>
                                         </select>
-
-                                        <button type="submit">حفظ</button>
+                            </td>
+                            <td>
+                                <div class="zy-reason-actions">
+                                    <form method="post" asp-page-handler="Update" id="reason-@reason.Id">
+                                        <input type="hidden" name="id" value="@reason.Id" />
+                                        <button type="submit" class="zy-btn--primary">حفظ</button>
                                     </form>
 
                                     <button type="button"

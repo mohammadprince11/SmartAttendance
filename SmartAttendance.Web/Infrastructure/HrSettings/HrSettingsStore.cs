@@ -169,16 +169,33 @@ ORDER BY DisplayOrder, Id;
             });
     }
 
-    public static async Task ToggleNotificationRuleAsync(ApplicationDbContext db, int id, bool isEnabled)
+    public static async Task ToggleNotificationRuleAsync(ApplicationDbContext db, int id, bool isEnabled, bool operationEvent = false)
     {
         await EnsureTablesAsync(db);
 
         await ExecuteAsync(db,
-            "UPDATE ZynoraNotificationRules SET IsEnabled = @IsEnabled WHERE Id = @Id;",
+            """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+DECLARE @Previous bit;
+SELECT @Previous = IsEnabled FROM ZynoraNotificationRules WITH (UPDLOCK, HOLDLOCK) WHERE Id = @Id;
+UPDATE ZynoraNotificationRules SET IsEnabled = @IsEnabled,
+    DaysBefore = CASE WHEN @OperationEvent = 1 AND @IsEnabled = 1 THEN 0 ELSE DaysBefore END WHERE Id = @Id;
+IF @IsEnabled = 1 AND @Previous = 0
+BEGIN
+    UPDATE ZynoraNotificationEvents SET CreatedAt = SYSUTCDATETIME() WHERE EventKey = @ActivationKey;
+    IF @@ROWCOUNT = 0
+        INSERT INTO ZynoraNotificationEvents(EventKey, RuleKind, SubjectEmployeeId)
+        VALUES (@ActivationKey, N'RuleActivation', 0);
+END;
+COMMIT TRANSACTION;
+""",
             command =>
             {
                 Add(command, "@Id", id);
                 Add(command, "@IsEnabled", isEnabled);
+                Add(command, "@OperationEvent", operationEvent);
+                Add(command, "@ActivationKey", SmartAttendance.Web.Infrastructure.Notifications.NotificationEventSources.ActivationKey(id));
             });
     }
 

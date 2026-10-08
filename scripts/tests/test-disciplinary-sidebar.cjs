@@ -1,0 +1,14 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const source = fs.readFileSync(path.join(__dirname, '../../SmartAttendance.Web/Pages/Shared/_Layout.cshtml'), 'utf8');
+const links = source.match(/<a\b[^>]*asp-page="\/DisciplinaryRules\/Index"[^>]*>[\s\S]*?<\/a>/g) || [];
+assert.equal(links.length, 1, 'Single sidebar entry for disciplinary settings');
+assert(links[0].includes('<span>إعدادات المخالفات</span>'), 'Direct link keeps settings label');
+assert(links[0].includes('IsUnder("/DisciplinaryRules")'), 'All disciplinary tabs keep active sidebar state');
+assert(links[0].includes('zynora-nav-link'), 'Uses existing sidebar link style');
+assert(!source.includes('<summary><span>إعدادات المخالفات</span>'), 'No nested accordion');
+assert(!source.includes('<span>قائمة المخالفات وقواعدها</span>'), 'No redundant child entry');
+assert(source.includes('IsUnder("/DisciplinaryRules") || IsUnder("/HrSettings")'), 'HR settings parent remains expanded');
+console.log('Disciplinary sidebar: 7 checks passed.');

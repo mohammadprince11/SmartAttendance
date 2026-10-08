@@ -1,0 +1,2 @@
+# Preserve upstream license files verbatim; their whitespace is not authored here.
+SmartAttendance.Web/wwwroot/vendor/pdfjs-5.6.205/**/LICENSE* whitespace=-blank-at-eol,-blank-at-eof

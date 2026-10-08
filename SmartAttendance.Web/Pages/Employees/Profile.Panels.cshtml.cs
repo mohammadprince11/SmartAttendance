@@ -29,6 +29,7 @@ public partial class ProfileModel
 {
     public List<EmployeeDependent> Dependents { get; set; } = new();
     public List<EmployeeFileRecord> FileRecords { get; set; } = new();
+    public List<string> AssetTypeOptions { get; set; } = new();
     public EmployeeFinancialInfo? FinancialInfo { get; set; }
 
     // ---- العلاوات (نمط كيان: عنصر راتب + مبلغ + نطاق + حالة مشتقة) ----
@@ -155,6 +156,7 @@ public partial class ProfileModel
         await HrLookups.EnsureSchemaAsync(_dbContext);
 
         ContractTypeOptions = await HrLookups.ValuesAsync(_dbContext, "contracttypes");
+        AssetTypeOptions = await HrLookups.ValuesAsync(_dbContext, "assettypes");
 
         await EmployeeContractSchema.EnsureAsync(_dbContext);
         Contracts = await _dbContext.EmployeeContracts.AsNoTracking()

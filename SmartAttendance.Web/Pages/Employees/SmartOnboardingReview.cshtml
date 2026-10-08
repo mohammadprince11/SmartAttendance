@@ -916,7 +916,7 @@
                             <span>الجنسية</span>
                             <select asp-for="Finalize.Nationality">
                                 <option value="">—</option>
-                                @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryNationalities)
+                                @foreach (var option in Model.NationalityOptions)
                                 {
                                     <option value="@option.Value">@option.Label</option>
                                 }

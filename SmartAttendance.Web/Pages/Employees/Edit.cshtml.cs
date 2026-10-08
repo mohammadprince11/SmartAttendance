@@ -107,6 +107,7 @@ public class EditModel : PageModel
     public List<EmployeeProfileDynamicSection> ProfileDynamicSections { get; set; } = new();
     public string? ErrorMessage { get; set; }
 
+    public List<HrLookupOptions.Option> NationalityOptions { get; set; } = new();
     public List<string> ReligionOptions { get; set; } = new();
     public List<string> WorkTypeOptions { get; set; } = new();
     public List<string> GradeOptions { get; set; } = new();
@@ -172,6 +173,7 @@ public class EditModel : PageModel
 
     private async Task LoadLookupsAsync()
     {
+        NationalityOptions = await HrLookupOptions.NationalitiesAsync(_dbContext, Employee.Nationality);
         ReligionOptions = await HrLookups.ValuesAsync(_dbContext, "religions");
         WorkTypeOptions = await HrLookups.ValuesAsync(_dbContext, "worktypes");
         GradeOptions = await HrLookups.ValuesAsync(_dbContext, "grades");

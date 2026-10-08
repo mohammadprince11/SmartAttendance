@@ -232,11 +232,11 @@
                     <select asp-for="Employee.Nationality" class="nxr-native-select">
                         <option value="">اختر الجنسية</option>
                         @if (!string.IsNullOrWhiteSpace(Model.Employee.Nationality) &&
-                             !SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.IsKnownPrimaryNationality(Model.Employee.Nationality))
+                             !Model.NationalityOptions.Any(x => x.Value.Equals(Model.Employee.Nationality, StringComparison.OrdinalIgnoreCase)))
                         {
                             <option value="@Model.Employee.Nationality">@Model.Employee.Nationality</option>
                         }
-                        @foreach (var option in SmartAttendance.Web.Infrastructure.Ui.ZynoraEmployeeLookups.PrimaryNationalities)
+                        @foreach (var option in Model.NationalityOptions)
                         {
                             <option value="@option.Value">@option.Label</option>
                         }

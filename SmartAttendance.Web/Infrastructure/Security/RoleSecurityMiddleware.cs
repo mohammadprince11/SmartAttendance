@@ -68,6 +68,14 @@ public class RoleSecurityMiddleware
             return;
         }
 
+        // Minimal standalone page. The preceding end-service guard checks the
+        // authenticated account's tenant/employee and permits only GET + logout.
+        if (path == "/account/farewell" && HttpMethods.IsGet(context.Request.Method))
+        {
+            await _next(context);
+            return;
+        }
+
         // A role grants actions inside a purchased module; it never grants the
         // module itself. Resolve the module from the server route and fail closed
         // when the current tenant's license does not include it.
@@ -91,7 +99,8 @@ public class RoleSecurityMiddleware
                 dbContext,
                 cache,
                 TenantContext.GetTenantId(context.User) ?? 0,
-                username);
+                username,
+                context);
 
             if (securityState.Exists && securityState.MustChangePassword)
             {

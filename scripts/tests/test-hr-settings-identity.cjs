@@ -8,7 +8,8 @@ const root = path.resolve(__dirname, '../..');
 const web = path.join(root, 'SmartAttendance.Web');
 const read = p => fs.readFileSync(path.join(web, p), 'utf8');
 const shell = [...read('Pages/Shared/_Layout.cshtml').matchAll(/href="~\/css\/([^"]+)"/g)].map(m => m[1]);
-const views = ['NoticePeriod','SelfServiceSettings','TerminationReasons','NotificationCenter','Lookups','ApprovalTemplates','RequestTypes','LeavePolicies','PeopleAI/Index'];
+// ApprovalTemplates has separate full-page workspace tests, not the legacy drawer contract.
+const views = ['NoticePeriod','SelfServiceSettings','TerminationReasons','NotificationCenter','Lookups','RequestTypes','LeavePolicies','PeopleAI/Index'];
 const contract = s => (s.match(/(?:asp-(?!append-version)[\w-]+|name|id|type|value|method|enctype|required|data-[\w-]+|onchange|onclick)\s*=\s*"[^"]*"/g)||[]).sort();
 const fields = '<label>اسم الإعداد<input name="sample" value="إعداد تجريبي"></label><label>الاختيار<select name="choice"><option value="a">الأول</option><option value="b">الثاني</option></select></label>';
 const check = '<label class="nxhs-check-line pai-check lp-check"><input type="checkbox" name="enabled">تفعيل الخيار</label><input type="hidden" name="postValue" value="false">';
@@ -19,13 +20,15 @@ const fixtures = {
   NoticePeriod: '<form class="nxhs-panel"><header><h2>فترة الإنذار</h2></header><div class="nxhs-duration-row">'+fields+radio+'</div><section class="nxhs-subbox"><h3>الاستثناءات</h3><label class="nxhs-field-row">اختيار<select><option>العطل الرسمية</option></select></label></section>'+check+actions+'</form>',
   SelfServiceSettings: '<form class="nxhs-panel nxhs-self-panel"><section class="nxhs-setting-section"><h2>إعدادات الخدمة الذاتية</h2><div class="nxhs-permission-grid">'+check+'</div><div class="nxhs-field-row">'+fields+'</div></section>'+actions+'</form>',
   TerminationReasons: '<section class="nxhs-panel"><header class="nxhs-search-head"><h2>أسباب الإيقاف</h2></header><form class="nxhs-inline-add">'+fields+check+actions+'</form>'+table+'</section><div class="nxhs-delete-modal" hidden><div class="nxhs-delete-backdrop"></div><section class="nxhs-delete-dialog"><h2>تأكيد</h2></section></div>',
-  NotificationCenter: '<section class="nxhs-panel nxhs-notification-panel"><article class="nxhs-notification-item"><header><h3>إشعار تجريبي</h3><form class="nxhs-switch-form"><button type="submit" class="nxhs-switch-button" role="switch" aria-checked="false"><span></span></button></form></header><form class="nxhs-notification-details" hidden><div class="nxhs-notif-grid">'+fields+check+actions+'</div></form></article></section>',
+  NotificationCenter: '<section class="nxhs-panel nxhs-notification-panel"><article class="nxhs-notification-item"><header><h3>إشعار تجريبي</h3><form class="nxhs-switch-form"><button type="submit" class="nxhs-switch-button" role="switch" aria-checked="false"><span></span></button></form><span class="zy-notification-save-status" role="status"></span></header><form class="nxhs-notification-details" hidden><div class="nxhs-notif-grid">'+fields+check+actions+'</div></form></article></section>',
   Lookups: '<div class="hrms-tabs"><button class="hrms-tab active">قائمة</button><button class="hrms-tab">أخرى</button></div><section class="hrms-table-card"><form class="zy-hr-lookup-form"><div class="zy-hr-lookup-fields">'+fields+check+'</div>'+actions+'</form>'+table+'</section>',
   ApprovalTemplates: '<div class="apt-layout"><aside class="nxhs-panel apt-catalog"><h3>الطلبات</h3><a class="active" href="#">طلب تجريبي</a></aside><section class="nxhs-panel"><h2>القوالب</h2>'+table+'<form class="apt-delegation-form">'+fields+check+actions+'</form></section></div><div class="apt-backdrop"></div><aside class="apt-slide"><form class="apt-form-grid">'+fields+check+'<select multiple name="watchers"><option>اختبار</option></select>'+actions+'</form></aside>',
   RequestTypes: '<details class="rtc-newcat"><summary>تبويبة جديدة</summary><form class="rtc-inline">'+fields+actions+'</form></details><section class="rtc-cat"><h2>أنواع الطلبات</h2><details class="rtc-type" open><summary>نوع تجريبي</summary><form class="rtc-form"><div class="rtc-grid">'+fields+'</div><div class="rtc-toggles">'+check+'</div>'+actions+'</form></details></section>',
   LeavePolicies: '<form class="lp-company"><label>الشركة<select><option>شركة اختبار</option></select></label></form><div class="lp-list"><form class="lp-card"><h2>سياسة الإجازات</h2><div class="lp-grid">'+fields+check+'</div>'+actions+'</form></div>',
   'PeopleAI/Index': '<section class="pai-grid"><form class="pai-card"><header class="pai-card-head"><h2>السياسة العامة</h2></header><div class="pai-fields">'+fields+check+'</div>'+actions+'</form><section class="pai-card"><h2>حالة البنية</h2><div class="pai-readiness"><span>مهيأ</span></div></section></section><section class="pai-card"><h2>حقول المراجعة</h2><form class="pai-field-policy-row">'+fields+check+actions+'</form></section>'
 };
+fixtures.NoticePeriod += '<div class="nxhs-option-row"><strong>استثناء أيام العطل الرسمية</strong><div class="nxhs-segment"><input type="radio" id="holiday-yes" name="holiday" checked><label for="holiday-yes">نعم</label><input type="radio" id="holiday-no" name="holiday"><label for="holiday-no">لا</label></div></div>';
+fixtures.NotificationCenter = fixtures.NotificationCenter.replace(actions, '');
 (async()=>{
   const browser = await chromium.launch({channel:'msedge',headless:true});
   let checks=0;
@@ -33,7 +36,12 @@ const fixtures = {
     for (const view of views) {
       const sourcePath='SmartAttendance.Web/Pages/HrSettings/'+view+'.cshtml';
       const source=fs.readFileSync(path.join(root,sourcePath),'utf8');
-      assert.deepEqual(contract(source),contract(execFileSync('git',['show','97d19f71:'+sourcePath],{cwd:root,encoding:'utf8'})),view+'/form-contract');
+      const baseline = process.env.HR_SETTINGS_BASELINE
+        ? fs.readFileSync(path.join(process.env.HR_SETTINGS_BASELINE,sourcePath),'utf8')
+        : execFileSync('git',['show','97d19f71:'+sourcePath],{cwd:root,encoding:'utf8'});
+      // Navigation and disclosure metadata are presentation only. Keep every POST field/handler.
+      const submittedMarkup = s => view === 'PeopleAI/Index' ? (s.match(/<form\b[\s\S]*?<\/form>/g)||[]).join('\n') : s.replace(/asp-page="\.\/Index"/g,'').replace(/id="reason-@reason.Id"/g,'');
+      assert.deepEqual(contract(submittedMarkup(source)),contract(submittedMarkup(baseline)),view+'/form-contract');
       assert(source.includes('zy-hr-admin-page zy-hr-settings-page'),view+'/scope');
       assert(!source.includes('<style'),view+'/no-inline-style');
       const pageCss=[...source.matchAll(/href="~\/css\/([^"]+)"/g)].map(m=>m[1]);
@@ -41,10 +49,18 @@ const fixtures = {
       const styles=[...shell.slice(0,split),...pageCss,...shell.slice(split)].map(f=>read('wwwroot/css/'+f)).join('\n');
       const cls=view==='Lookups'?'hrms-page':view==='RequestTypes'?'rtc-wrap':view==='LeavePolicies'?'lp-page':view==='PeopleAI/Index'?'pai-shell':'nxhs-page nxhs-simple';
       const header=view==='Lookups'?'page-header':view==='RequestTypes'?'rtc-head':view==='LeavePolicies'?'lp-head':view==='PeopleAI/Index'?'pai-head':'nxhs-titlebar';
+      // Published notification cards now include a search toolbar and a native
+      // configuration disclosure. Exercise their current script, not the old shell.
+      const fixtureHtml = view === 'NotificationCenter' && source.includes('id="notification-search"')
+        ? '<input id="notification-search" hidden><span id="notification-search-count" hidden></span><p id="notification-search-empty" hidden></p>' + fixtures[view]
+          .replace('<form class="nxhs-notification-details" hidden>', '<details class="zy-notification-config"><summary>إعدادات الإشعار</summary><form class="nxhs-notification-details">')
+          .replace('</form></article>', '</form></details></article>')
+        : fixtures[view];
+      if(process.env.HR_SETTINGS_VIEW && process.env.HR_SETTINGS_VIEW!==view) continue;
       for(const theme of ['dark','light']) for(const width of [390,900,1800]) {
         const page=await browser.newPage({viewport:{width,height:1100}});
         await page.route('**/*',r=>r.abort());
-        await page.setContent('<!doctype html><html lang="ar" dir="rtl" data-ready="true" data-theme="'+theme+'"><head><style>'+styles+'</style></head><body class="zy-app"><main class="zynora-content zy-scope zy-ui-contract"><section class="'+cls+' zy-hr-admin-page zy-hr-settings-page"><header class="'+header+'"><h1>إعدادات الموارد البشرية</h1></header>'+fixtures[view]+'</section></main></body></html>');
+        await page.setContent('<!doctype html><html lang="ar" dir="rtl" data-ready="true" data-theme="'+theme+'"><head><style>'+styles+'</style></head><body class="zy-app"><main class="zynora-content zy-scope zy-ui-contract"><section class="'+cls+' zy-hr-admin-page zy-hr-settings-page"><header class="'+header+'"><h1>إعدادات الموارد البشرية</h1></header>'+fixtureHtml+'</section></main></body></html>');
         await page.addScriptTag({content:read('wwwroot/js/zynora-select-system.js')});
         await page.waitForTimeout(500);
         const key=view+'/'+theme+'/'+width;
@@ -53,19 +69,63 @@ const fixtures = {
         const card=page.locator('.nxhs-panel,.hrms-table-card,.rtc-cat,.lp-card,.pai-card').first();
         assert.deepEqual(await card.evaluate(el=>{const s=getComputedStyle(el);return [s.backgroundColor,s.backgroundImage]}),[theme==='dark'?'rgb(15, 26, 46)':'rgb(255, 255, 255)','none'],key+'/card-palette');
         if(view==='NotificationCenter') {
+          assert(source.includes('<noscript><button type="submit">حفظ</button></noscript>'),key+'/non-js-save-fallback-only');
+          assert.equal(await page.locator('.nxhs-notification-details button[type="submit"]').count(),0,key+'/no-manual-save-button');
           assert(await page.locator('.nxhs-notification-details').isHidden(),key+'/disabled-details-hidden');
-          await page.evaluate(()=>{window.fetch=async()=>new Response('',{status:200})});
+          await page.evaluate(()=>{window.requests=[]; window.fetch=(url,options)=>{window.requests.push({state:options.body.get('isEnabled'),accept:options.headers.Accept});return new Promise(resolve=>window.finishSave=()=>resolve(Response.json({isEnabled:true})))} });
           const behavior=[...source.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n');
           await page.addScriptTag({content:behavior});
           const toggle=page.locator('.nxhs-switch-button');
           const geometry=()=>toggle.evaluate(el=>{const r=el.getBoundingClientRect(),t=el.querySelector('span').getBoundingClientRect();return {w:r.width,h:r.height,radius:getComputedStyle(el).borderRadius,thumb:t.width,x:t.x-r.x,fits:t.x>=r.x&&t.right<=r.right&&t.y>=r.y&&t.bottom<=r.bottom}});
           const off=await geometry();
+          const aligned=()=>toggle.evaluate(el=>{const h=el.closest('header'),r=h.getBoundingClientRect(),s=getComputedStyle(h),b=el.getBoundingClientRect();return Math.abs(b.x-(r.x+parseFloat(s.paddingLeft)))<2});
+          assert(await aligned(),key+'/toggle-at-far-left');
+          const quietStatus=()=>page.locator('.zy-notification-save-status').evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.position==='absolute'&&s.clipPath==='inset(50%)'&&r.width<=1&&r.height<=1&&s.backgroundColor==='rgba(0, 0, 0, 0)'});
+          assert(await quietStatus(),key+'/no-empty-status-pill');
+          await page.locator('.nxhs-notification-item h3').evaluate(el=>el.textContent='إشعار تجريبي بعنوان طويل لاختبار عدم تحريك مفتاح التفعيل عند التفاف العنوان على الهاتف');
+          assert(await aligned(),key+'/long-title-toggle-alignment');
           assert.deepEqual([off.w,off.h,off.thumb],[52,28,22],key+'/switch-dimensions');
           assert(off.fits&&parseFloat(off.radius)>=28,key+'/switch-capsule');
           await toggle.click(); await page.waitForTimeout(200);
+          assert.equal(await toggle.getAttribute('aria-busy'),'true',key+'/saving-visible');
+          assert.equal(await toggle.evaluate(el=>getComputedStyle(el).cursor),'progress',key+'/no-prohibited-cursor');
+          assert.equal(await toggle.evaluate(el=>el.disabled),false,key+'/keyboard-focus-retained');
+          assert.equal(await page.locator('.zy-notification-save-status').textContent(),'جارٍ الحفظ…',key+'/saving-status');
+          assert(await quietStatus(),key+'/pending-status-accessible-not-painted');
+          assert(await aligned(),key+'/pending-toggle-stays-left');
+          assert(await page.locator('.nxhs-notification-details').isVisible(),key+'/opens-before-server-responds');
+          await page.locator('.nxhs-switch-form').dispatchEvent('submit');
+          assert.deepEqual(await page.evaluate(()=>window.requests),[{state:'true',accept:'application/json'}],key+'/single-idempotent-request');
+          await page.evaluate(()=>window.finishSave());
+          await page.waitForFunction(()=>!document.querySelector('.nxhs-switch-button').hasAttribute('aria-busy'));
           assert.equal(await toggle.getAttribute('aria-checked'),'true',key+'/switch-on-accessible');
+          assert(await quietStatus(),key+'/success-status-not-painted');
           const on=await geometry(); assert(on.fits&&Math.abs(on.x-off.x)>=23,key+'/thumb-moves-inside-track');
           assert(await page.locator('.nxhs-notification-details').isVisible(),key+'/details-visible');
+          // Execute the real autosave script against delayed synthetic responses, never a server.
+          await page.evaluate(()=>{window.detailRequests=[];window.fetch=(url,options)=>{window.detailRequests.push(options.body.get('sample'));return new Promise(resolve=>window.detailReply=()=>resolve(Response.json({saved:true})))}});
+          const detailInput=page.locator('input[name="sample"]');
+          await detailInput.fill('قيمة أولى');
+          await page.waitForFunction(()=>window.detailRequests.length===1);
+          await detailInput.fill('قيمة ثانية'); await page.waitForTimeout(700);
+          assert.deepEqual(await page.evaluate(()=>window.detailRequests),['قيمة أولى'],key+'/details-serialized');
+          await page.locator('.nxhs-switch-form').dispatchEvent('submit'); assert.equal(await toggle.getAttribute('aria-checked'),'true',key+'/no-toggle-during-details-save');
+          await page.evaluate(()=>window.detailReply());
+          await page.waitForFunction(()=>window.detailRequests.length===2);
+          assert.deepEqual(await page.evaluate(()=>window.detailRequests),['قيمة أولى','قيمة ثانية'],key+'/latest-value-queued');
+          await page.evaluate(()=>window.detailReply());
+          await page.waitForFunction(()=>!document.querySelector('.nxhs-switch-button').hasAttribute('aria-busy'));
+          await detailInput.dispatchEvent('change'); await page.waitForTimeout(700);
+          assert.equal(await page.evaluate(()=>window.detailRequests.length),2,key+'/unchanged-details-not-resent');
+          await page.evaluate(()=>{window.fetch=async()=>{throw new Error('offline')}});
+          await detailInput.fill('قيمة غير مؤكدة');
+          await page.waitForFunction(()=>document.querySelector('.zy-notification-save-status').classList.contains('is-error'));
+          assert(await page.evaluate(()=>{const e=new Event('beforeunload',{cancelable:true});window.dispatchEvent(e);return e.defaultPrevented}),key+'/unsaved-exit-warning');
+          await page.evaluate(()=>{window.fetch=async()=>Response.json({saved:true})});
+          // Reverting to the last acknowledged value must still save after a lost acknowledgement.
+          await detailInput.fill('قيمة ثانية');
+          await page.waitForFunction(()=>document.querySelector('.zy-notification-save-status').textContent==='تم الحفظ');
+          assert(!await page.evaluate(()=>{const e=new Event('beforeunload',{cancelable:true});window.dispatchEvent(e);return e.defaultPrevented}),key+'/confirmed-exit-no-warning');
         }
         if(view==='RequestTypes') { assert.equal(await page.locator('.rtc-newcat').evaluate(el=>el.open),false,key+'/category-initially-collapsed'); await page.locator('.rtc-newcat > summary').click(); }
         const field=page.locator('input[name="sample"]').first();
@@ -80,7 +140,8 @@ const fixtures = {
         await page.locator('.nxcs-panel .nxcs-option').last().click();
         assert.equal(await page.locator('select[name="choice"]').first().inputValue(),'b',key+'/select-working');
         if(view==='NoticePeriod') {
-          const segment=page.locator('.nxhs-segment');
+          const segment=page.locator('.nxhs-segment').first();
+          assert(await page.locator('.nxhs-option-row').evaluate(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el),t=el.querySelector('.nxhs-segment').getBoundingClientRect();return Math.abs(t.x-r.x-parseFloat(s.paddingLeft)-parseFloat(s.borderLeftWidth))<2}),key+'/option-control-at-far-left');
           assert(Math.abs((await segment.boundingBox()).height-44)<0.5,key+'/segment-height');
           assert(await segment.evaluate(el=>{const r=el.getBoundingClientRect();return [...el.querySelectorAll('label')].every(l=>{const s=getComputedStyle(l),b=l.getBoundingClientRect();return s.alignItems==='center'&&s.justifyContent==='center'&&b.y>=r.y&&b.bottom<=r.bottom+1&&l.scrollWidth<=l.clientWidth})}),key+'/segment-labels-centered-unclipped');
           await page.locator('label[for="month"]').click();assert(await page.locator('#month').isChecked(),key+'/radio-working');
@@ -96,13 +157,30 @@ const fixtures = {
         }
         if(process.env.HR_SETTINGS_SCREENSHOTS&&theme==='dark'&&width===1800) await page.screenshot({path:path.join(process.env.HR_SETTINGS_SCREENSHOTS,'settings-'+view.replaceAll('/','-')+'.png'),fullPage:true});
         if(view==='NotificationCenter') {
+          await page.evaluate(()=>{window.fetch=async()=>Response.json({saved:true})});
+          await page.locator('.nxhs-notification-details').dispatchEvent('submit');
+          await page.waitForFunction(()=>!document.querySelector('.nxhs-switch-button').hasAttribute('aria-busy'));
+          await page.evaluate(()=>{window.fetch=async(url,options)=>Response.json({isEnabled:options.body.get('isEnabled')==='true'})});
           await page.locator('.nxhs-switch-button').focus(); await page.keyboard.press('Space'); await page.waitForTimeout(200);
           assert.equal(await page.locator('.nxhs-switch-button').getAttribute('aria-checked'),'false',key+'/switch-off-keyboard');
           assert(await page.locator('.nxhs-notification-details').isHidden(),key+'/details-hidden-after-off');
+          for(const failure of ['http','network','html','redirect']) {
+            await page.evaluate(failure=>{window.fetch=async()=>{if(failure==='network') throw new Error('offline'); if(failure==='http') return new Response('',{status:500}); if(failure==='redirect') return {ok:true,redirected:true}; return new Response('<html>login</html>',{status:200})}},failure);
+            await page.locator('.nxhs-switch-button').click();
+            await page.waitForFunction(()=>document.querySelector('.zy-notification-save-status').classList.contains('is-error'));
+            assert.equal(await page.locator('.nxhs-switch-button').getAttribute('aria-checked'),'false',key+'/'+failure+'-rollback');
+            assert(await page.locator('.nxhs-notification-details').isHidden(),key+'/'+failure+'-details-rollback');
+            assert.equal(await page.locator('.nxhs-notification-details').evaluate(el=>el.inert),false,key+'/'+failure+'-unlocked');
+            assert(!await page.locator('.nxhs-switch-button').getAttribute('aria-busy'),key+'/'+failure+'-busy-cleared');
+            assert(await page.locator('.zy-notification-save-status').evaluate(el=>getComputedStyle(el).clipPath==='none'&&el.getBoundingClientRect().height>1),key+'/'+failure+'-error-visible');
+            assert(await page.locator('.nxhs-switch-button').evaluate(el=>{const h=el.closest('header'),r=h.getBoundingClientRect(),s=getComputedStyle(h);return Math.abs(el.getBoundingClientRect().x-r.x-parseFloat(s.paddingLeft))<2}),key+'/'+failure+'-toggle-stays-left');
+          }
         }
         checks++; await page.close();
       }
     }
-    console.log('PASS: '+checks+' full-shell HR settings fixtures; all 9 form contracts preserved; themes, responsive layout, controls, radio, drawer and hidden values.');
+    if (!process.env.HR_SETTINGS_VIEW || process.env.HR_SETTINGS_VIEW === 'ApprovalTemplates')
+      process.stdout.write(execFileSync(process.execPath,[path.join(__dirname,'test-approval-workspace.cjs')],{cwd:root,encoding:'utf8'}));
+    console.log('PASS: '+checks+' full-shell HR settings fixtures; 8 legacy form contracts preserved; approval workspace separately tested; themes, responsive layout, controls, radio and hidden values.');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

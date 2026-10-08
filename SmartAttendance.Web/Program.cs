@@ -275,7 +275,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                         context.HttpContext.RequestServices
                             .GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
                         tenantId.Value,
-                        username);
+                        username,
+                        context.HttpContext);
                 }
                 catch (Exception ex)
                 {
@@ -545,6 +546,7 @@ else
 // مولّد مركز الإشعارات (كرون يومي): يقرأ قواعد المركز المفعّلة ويُطلق فعلياً عبر
 // صندوق داخل النظام + Web-Push. يعمل دائماً (لا يحتاج SMTP) ويمنع التكرار بجدول أحداث.
 builder.Services.AddHostedService<SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleGeneratorService>();
+builder.Services.AddHostedService<EndServiceAccessService>();
 
 // Webhooks: صندوق صادر durable يعمل حتى إن لم توجد اشتراكات؛ الأسرار محمية
 // بـData Protection، والتحويلات ممنوعة كي لا تتجاوز سياسة عنوان الوجهة.
@@ -732,6 +734,7 @@ app.UseMiddleware<SmartAttendance.Web.Infrastructure.Observability.RequestMetric
 app.UseRateLimiter();
 
 app.UseAuthentication();
+app.UseMiddleware<EndServiceAccessMiddleware>();
 app.UseMiddleware<RoleSecurityMiddleware>();
 
 app.UseAuthorization();
@@ -739,7 +742,10 @@ app.UseAuthorization();
 // الأصول الساكنة تُخدَم كنقاط نهاية بـ.NET 10، فسياسة التفويض الاحتياطية تشملها
 // وتردّ 401 على CSS وJS وعامل خدمة الـPWA — أي أن صفحة الدخول نفسها تفقد تنسيقها
 // وتطبيق الموظف ينكسر. إعفاؤها صريح: الحماية على البيانات لا على ملفات الواجهة.
-app.MapStaticAssets().AllowAnonymous();
+// Public packaged assets must remain available to the standalone farewell page.
+// Short-circuit static endpoints before account middleware; protected uploads
+// continue through their authorized handlers, not through this asset mapping.
+app.MapStaticAssets().ShortCircuit().AllowAnonymous();
 
 app.MapGet("/.well-known/assetlinks.json", (IConfiguration configuration) =>
 {

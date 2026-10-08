@@ -51,11 +51,12 @@ public sealed class ApiTokenAuthHandler : AuthenticationHandler<AuthenticationSc
             _db,
             _cache,
             identity.TenantId,
-            identity.Username);
+            identity.Username,
+            Context);
         var decision = SessionSecurityValidator.Evaluate(
             identity.SecurityStamp, identity.Role, account);
 
-        if (decision == SessionSecurityDecision.Reject)
+        if (decision == SessionSecurityDecision.Reject || account.FarewellOnly)
             return AuthenticateResult.Fail("انتهت صلاحية التوكن — يلزم تسجيل دخول جديد.");
 
         // التوكن سليم لكن مطالباته بائتة: نبني الهوية بالدور الحالي لا المخزَّن.
