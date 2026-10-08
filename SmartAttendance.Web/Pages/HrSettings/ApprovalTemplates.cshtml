@@ -11,7 +11,7 @@
         .OrderBy(module => Array.IndexOf(ApprovalTemplateCapabilities.Modules.ToArray(), module.Key));
     var templatesJson = JsonSerializer.Serialize(Model.Templates.Select(t => new
     {
-        t.Id, t.Name, t.NameEn, t.IsActive, t.HasConditions,
+        t.Id, t.Name, t.NameEn, t.IsActive, t.HasConditions, t.ConditionsJson,
         t.CondBranchId, t.CondDepartmentId, t.CondWorkType,t.CondMinAmount,t.CondMaxAmount,t.CondChangedFieldKey,
         t.AutoRejectUnknownCommittee, t.CancelLimitDays,
         t.CommentRequiredOnReject, t.AttachmentRequiredOnRequest,
@@ -250,6 +250,16 @@
                     <select name="CondChangedFieldKey" id="f_CondChangedFieldKey"><option value="">أي حقل</option>@foreach(var field in DataChangeRequestStore.Catalog){<option value="@field.Key">@field.Label</option>}</select>
                 </label>
                 <p class="nxhs-helper full">الشروط المحددة تُطبّق معاً. اترك الحقل فارغاً إذا لم ترغب بتقييد القالب به.</p>
+                @if (ApprovalTemplateConditions.Fields(Model.Type).Count > 0)
+                {
+                    <section class="full apt-request-conditions" aria-label="شروط نوع الطلب">
+                        <h4>شروط خاصة بهذا الطلب</h4>
+                        <p class="nxhs-helper">يجب تحقق جميع الشروط. القيم غير المتوفرة في الطلب لا تطابق الشرط.</p>
+                        <input type="hidden" name="ConditionsJson" id="f_ConditionsJson" />
+                        <div id="aptRequestConditions"></div>
+                        <button type="button" class="zy-btn zy-btn--secondary" onclick="aptAddCondition()">إضافة شرط</button>
+                    </section>
+                }
                 @if ((Model.ShowLegacyNumeric && Model.Capabilities?.NumericLabel == null) || (Model.ShowLegacyChangedField && Model.Capabilities?.ChangedField != true))
                 {
                     <p class="nxhs-alert full">هذا القالب يحتوي شروطاً محفوظة من الواجهة القديمة. راجع ملاءمتها لهذا النوع قبل الحفظ؛ لا يتم حذفها تلقائياً.</p>
@@ -391,6 +401,7 @@
             ["Role", "User", "CommitteeGroup", "ExternalCommittee"].forEach(function (type) {
                 var select = document.getElementById("aptStep" + type);
                 var field = select.closest("[data-apt-step-choice]");
+                // Hide the field, including the enhanced dropdown, not just its native select.
                 if (field) field.hidden = t !== type;
                 else select.style.display = t === type ? "" : "none";
             });
@@ -496,9 +507,64 @@
             });
         }
 
+        var aptConditionFields = @Html.Raw(JsonSerializer.Serialize(Model.ConditionFields));
+        function aptSyncConditions() {
+            var host = document.getElementById("aptRequestConditions");
+            if (!host) return;
+            document.getElementById("f_ConditionsJson").value = JSON.stringify(Array.from(host.children).map(function (row) {
+                return { Field: row.querySelector('[data-part="field"]').value,
+                    Operator: row.querySelector('[data-part="operator"]').value,
+                    Value: row.querySelector('[data-part="value"]').value };
+            }));
+        }
+        function aptAddCondition(saved) {
+            var host = document.getElementById("aptRequestConditions");
+            if (!host || host.children.length >= 20) return;
+            var row = document.createElement("div"); row.className = "apt-condition-row";
+            function select(part, label, options) {
+                var wrapper = document.createElement("label"); wrapper.textContent = label;
+                var control = document.createElement("select"); control.dataset.part = part;
+                options.forEach(function (item) { control.add(new Option(item[1], item[0])); });
+                wrapper.append(control); row.append(wrapper); return control;
+            }
+            var field = select("field", "الحقل", aptConditionFields.map(function (f) { return [f.Key, f.Label]; }));
+            var operator = select("operator", "المقارنة", [["eq","يساوي"],["ne","لا يساوي"],["gt","أكبر من"],["ge","أكبر أو يساوي"],["lt","أقل من"],["le","أقل أو يساوي"]]);
+            var label = document.createElement("label"); label.textContent = "القيمة";
+            var value = document.createElement("input"); value.dataset.part = "value"; value.required = true;
+            label.append(value); row.append(label);
+            var remove = document.createElement("button"); remove.type = "button"; remove.className = "zy-btn zy-btn--secondary"; remove.textContent = "إزالة";
+            remove.onclick = function () { row.remove(); aptSyncConditions(); }; row.append(remove);
+            function fieldChanged() {
+                var definition = aptConditionFields.find(function (f) { return f.Key === field.value; });
+                if (!definition) throw new Error("حقل شرط غير متاح");
+                value.remove();
+                value = document.createElement(definition.Kind === "select" ? "select" : "input");
+                value.dataset.part = "value"; value.required = true;
+                if (definition.Kind === "select") {
+                    value.add(new Option("اختر…", ""));
+                    definition.Options.forEach(function (o) { value.add(new Option(o.Label, o.Value)); });
+                } else {
+                    value.type = definition.Kind; value.min = definition.Kind === "number" ? "0" : "";
+                    value.step = field.value === "InstallmentCount" ? "1" : "0.01";
+                }
+                label.append(value);
+                Array.from(operator.options).forEach(function (o) { o.disabled = definition.Kind === "select" && !["eq","ne"].includes(o.value); });
+                if (operator.selectedOptions[0].disabled) operator.value = "eq";
+                value.oninput = aptSyncConditions; value.onchange = aptSyncConditions;
+                aptSyncConditions();
+            }
+            if (saved && saved.Field) { field.value = saved.Field; operator.value = saved.Operator; }
+            host.append(row); fieldChanged();
+            if (saved && saved.Value !== undefined) value.value = saved.Value;
+            field.onchange = function () { value.value = ""; fieldChanged(); };
+            operator.onchange = aptSyncConditions; value.oninput = aptSyncConditions;
+            aptSyncConditions();
+        }
         function aptOpen(id) {
             var form = document.getElementById("aptForm");
             form.reset();
+            var conditionHost = document.getElementById("aptRequestConditions");
+            if (conditionHost) conditionHost.replaceChildren();
             document.getElementById("aptSteps").innerHTML = "";
             document.getElementById("f_Id").value = id || 0;
             document.getElementById("aptSlideTitle").textContent = id ? "تعديل القالب" : "قالب جديد";
@@ -507,6 +573,15 @@
                 var t = aptTemplates.find(function (x) { return x.Id === id; });
                 if (t) {
                     document.getElementById("f_Name").value = t.Name || "";
+                    if (conditionHost && t.ConditionsJson) {
+                        try { JSON.parse(t.ConditionsJson).forEach(aptAddCondition); }
+                        catch (error) {
+                            conditionHost.replaceChildren();
+                            document.getElementById("f_ConditionsJson").value = t.ConditionsJson;
+                            var warning = document.createElement("p"); warning.textContent = "تعذر قراءة الشروط المحفوظة؛ لن تُحذف تلقائياً. راجعها قبل الحفظ.";
+                            conditionHost.append(warning);
+                        }
+                    }
                     document.getElementById("f_NameEn").value = t.NameEn || "";
                     document.getElementById("f_IsActive").checked = !!t.IsActive;
                     document.getElementById("f_HasConditions").checked = !!t.HasConditions;

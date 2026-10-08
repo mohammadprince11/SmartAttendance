@@ -3921,6 +3921,11 @@ END;
             SmartAttendance.Web.Infrastructure.Notifications.NotificationRuleMailOutbox.MigrationSql),
         new("20261007-02-end-service-access-schedule",
             SmartAttendance.Web.Infrastructure.Security.EndServiceAccessStore.MigrationSql),
+        new("20261008-01-approval-typed-conditions", """
+IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL
+   AND COL_LENGTH('ApprovalTemplates','ConditionsJson') IS NULL
+    ALTER TABLE ApprovalTemplates ADD ConditionsJson nvarchar(max) NULL;
+"""),
     };
 
     /// <summary>

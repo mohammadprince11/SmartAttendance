@@ -338,3 +338,7 @@
         .zy-hr-settings-page .zy-notification-toolbar form { grid-row: auto; }
     }
 }
+/* Typed approval conditions use the same control tokens and responsive form rhythm. */
+.apt-condition-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; align-items: end; gap: var(--sp-3, 12px); margin-block: var(--sp-3, 12px); }
+.apt-condition-row label { display: grid; gap: var(--sp-2, 8px); min-inline-size: 0; }
+@media (max-width: 700px) { .apt-condition-row { grid-template-columns: 1fr; } }

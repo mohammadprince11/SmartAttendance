@@ -50,6 +50,7 @@ public class ApprovalTemplatesModel : PageModel
     public List<ApprovalCommitteeStore.ExternalRow> ExternalCommittees { get; set; } = new();
     public List<ApprovalDelegationStore.Row> Delegations { get; set; } = new();
     public string CompanyTimeZoneId { get; set; } = "UTC";
+    public IReadOnlyList<ApprovalTemplateConditions.Field> ConditionFields { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -76,6 +77,14 @@ public class ApprovalTemplatesModel : PageModel
             TempData["SuccessMessage"] = "القالب غير موجود ضمن نوع الطلب والشركة المحددين.";
         }
         await LoadLookupsAsync(scope);
+        ConditionFields = ApprovalTemplateConditions.Fields(Type);
+        if (ConditionFields.Any(f => f.Key == "RequestTypeId"))
+        {
+            var requestTypes = await RequestTypeStore.ListTypesAsync(_dbContext);
+            var options = requestTypes.Where(t => ApprovalWorkflowEngine.ResolveRequestTypeKeyFromEffectCode(RequestTypeEffectCatalog.EffectiveCode(t)) == Type)
+                .Select(t => new ApprovalTemplateConditions.Option(t.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), t.Name)).ToArray();
+            ConditionFields = ConditionFields.Select(f => f.Key == "RequestTypeId" ? f with { Options = options } : f).ToArray();
+        }
         Delegations = await ApprovalDelegationStore.ListAsync(_dbContext, scope, CompanyId.Value);
     }
 
@@ -261,6 +270,7 @@ public class ApprovalTemplatesModel : PageModel
             NameEn = NullIfEmpty(form["NameEn"]),
             IsActive = form["IsActive"] == "true",
             HasConditions = form["HasConditions"] == "true",
+            ConditionsJson = NullIfEmpty(form["ConditionsJson"]),
             CondBranchId = ParseNullableInt(form["CondBranchId"]),
             CondDepartmentId = ParseNullableInt(form["CondDepartmentId"]),
             CondWorkType = NullIfEmpty(form["CondWorkType"]),
@@ -293,6 +303,7 @@ public class ApprovalTemplatesModel : PageModel
             template.CondMinAmount=null;
             template.CondMaxAmount=null;
             template.CondChangedFieldKey=null;
+            template.ConditionsJson=null;
         }
 
         var stepTypes = form["StepType"];

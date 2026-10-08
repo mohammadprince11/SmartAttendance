@@ -52,6 +52,7 @@ public static class ApprovalTemplateStore
         public bool IsActive { get; set; } = true;
         public int Priority { get; set; }
         public bool HasConditions { get; set; }
+        public string? ConditionsJson { get; set; }
         public int? CondBranchId { get; set; }
         public int? CondDepartmentId { get; set; }
         public string? CondWorkType { get; set; }
@@ -202,6 +203,19 @@ END;
         if (!scope.Allows(template.CompanyId)) throw new UnauthorizedAccessException();
         var validationError = Validate(template);
         if (validationError is not null) throw new ArgumentException(validationError, nameof(template));
+        if (template.HasConditions && !string.IsNullOrWhiteSpace(template.ConditionsJson))
+        {
+            var conditions = System.Text.Json.JsonSerializer.Deserialize<List<ApprovalTemplateConditions.Condition>>(template.ConditionsJson)!;
+            var typeConditions = conditions.Where(c => c.Field == "RequestTypeId").ToArray();
+            if (typeConditions.Length > 0)
+            {
+                var requestTypes = await RequestTypeStore.ListTypesAsync(dbContext);
+                var allowedIds = requestTypes.Where(t => ApprovalWorkflowEngine.ResolveRequestTypeKeyFromEffectCode(RequestTypeEffectCatalog.EffectiveCode(t)) == template.RequestType)
+                    .Select(t => t.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToHashSet();
+                if (typeConditions.Any(c => !allowedIds.Contains(c.Value)))
+                    throw new ArgumentException("نوع الطلب في الشرط غير متاح لهذا القالب.", nameof(template));
+            }
+        }
         await EnsureAsync(dbContext);
         var referencedUsers=template.Steps.Where(step=>step.ApproverType=="User").Select(step=>step.UserName)
             .Concat(template.Watchers.Select(watcher=>watcher.UserName)).Append(template.EscalationAlternateUser)
@@ -273,7 +287,7 @@ WHERE c.CompanyId=@CompanyId AND c.IsActive=1 AND c.Id IN ({string.Join(",", par
                 """
 UPDATE ApprovalTemplates SET
     Name = @Name, NameEn = @NameEn, IsActive = @IsActive,
-    HasConditions = @HasConditions, CondBranchId = @CondBranchId,
+    HasConditions = @HasConditions, ConditionsJson=@ConditionsJson, CondBranchId = @CondBranchId,
     CondDepartmentId = @CondDepartmentId, CondWorkType = @CondWorkType,
     CondMinAmount=@CondMinAmount,CondMaxAmount=@CondMaxAmount,CondChangedFieldKey=@CondChangedFieldKey,
     AutoRejectUnknownCommittee = @AutoReject, CancelLimitDays = @CancelLimitDays,
@@ -293,13 +307,13 @@ DELETE FROM ApprovalTemplateWatchers WHERE TemplateId=@Id;
                 dbContext,
                 """
 INSERT INTO ApprovalTemplates
-(CompanyId,RequestType, Name, NameEn, IsActive, Priority, HasConditions, CondBranchId, CondDepartmentId, CondWorkType,CondMinAmount,CondMaxAmount,CondChangedFieldKey,
+(CompanyId,RequestType, Name, NameEn, IsActive, Priority, HasConditions, ConditionsJson, CondBranchId, CondDepartmentId, CondWorkType,CondMinAmount,CondMaxAmount,CondChangedFieldKey,
  AutoRejectUnknownCommittee, CancelLimitDays, CommentRequiredOnReject, AttachmentRequiredOnRequest,
  ReminderHours,EscalationDays, EscalationTo, EscalationAlternateUser,NotifyJson)
 VALUES
 (@CompanyId,@RequestType, @Name, @NameEn, @IsActive,
  (SELECT ISNULL(MAX(Priority), 0) + 1 FROM ApprovalTemplates WHERE CompanyId=@CompanyId AND RequestType = @RequestType),
- @HasConditions, @CondBranchId, @CondDepartmentId, @CondWorkType,@CondMinAmount,@CondMaxAmount,@CondChangedFieldKey,
+ @HasConditions, @ConditionsJson, @CondBranchId, @CondDepartmentId, @CondWorkType,@CondMinAmount,@CondMaxAmount,@CondChangedFieldKey,
  @AutoReject, @CancelLimitDays, @CommentReq, @AttachReq, @ReminderHours,@EscDays, @EscTo,@EscAltUser,@NotifyJson);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
@@ -358,6 +372,8 @@ VALUES (@TemplateId, @StepOrder, @StageOrder, @ApproverType, @RoleName, @UserNam
         if (!RequestTypes.Any(type => type.Key.Equals(template.RequestType, StringComparison.OrdinalIgnoreCase)))
             return "نوع الطلب غير معروف.";
         if (string.IsNullOrWhiteSpace(template.Name)) return "اسم القالب مطلوب.";
+        if (template.HasConditions && ApprovalTemplateConditions.Validate(template.RequestType, template.ConditionsJson) is { } conditionError)
+            return conditionError;
         if (template.Steps.Count == 0) return "لجنة الموافقة يجب أن تحتوي خطوة واحدة على الأقل.";
         if(template.ReminderHours is >0&&template.EscalationDays is >0&&template.ReminderHours>=template.EscalationDays*24)
             return "مهلة التذكير يجب أن تسبق مهلة التصعيد.";
@@ -427,6 +443,7 @@ DELETE FROM ApprovalTemplates WHERE Id=@Id AND CompanyId=@CompanyId;
         ApplicationDbContext dbContext, int companyId, string requestType, int? branchId, int? departmentId, string? workType,int? requestId=null)
     {
         var templates = await ListAsync(dbContext, companyId, requestType);
+        IReadOnlyDictionary<string, decimal?>? conditionValues = null;
         foreach (var template in templates.Where(t => t.IsActive))
         {
             if (!template.HasConditions) return template;
@@ -461,7 +478,17 @@ SELECT @Found;
 """,command=>{HrmsDatabase.AddParameter(command,"@Id",requestId.Value);HrmsDatabase.AddParameter(command,"@Field",template.CondChangedFieldKey);})>0;
             }
 
-            if (branchOk && departmentOk && workTypeOk&&amountOk&&changedFieldOk) return template;
+            var typedConditionsOk = true;
+            if (!string.IsNullOrWhiteSpace(template.ConditionsJson))
+            {
+                if (requestId is not > 0) typedConditionsOk = false;
+                else
+                {
+                    conditionValues ??= await ApprovalTemplateConditions.LoadAsync(dbContext, companyId, requestType, requestId.Value);
+                    typedConditionsOk = ApprovalTemplateConditions.Matches(requestType, template.ConditionsJson, conditionValues);
+                }
+            }
+            if (branchOk && departmentOk && workTypeOk&&amountOk&&changedFieldOk&&typedConditionsOk) return template;
         }
         return null;
     }
@@ -505,6 +532,7 @@ SELECT @Amount;
         IsActive = HrmsDatabase.GetBool(reader, "IsActive"),
         Priority = HrmsDatabase.GetInt(reader, "Priority"),
         HasConditions = HrmsDatabase.GetBool(reader, "HasConditions"),
+        ConditionsJson = HrmsDatabase.GetString(reader, "ConditionsJson"),
         CondBranchId = HrmsDatabase.GetNullableInt(reader, "CondBranchId"),
         CondDepartmentId = HrmsDatabase.GetNullableInt(reader, "CondDepartmentId"),
         CondWorkType = HrmsDatabase.GetString(reader, "CondWorkType"),
@@ -559,6 +587,7 @@ SELECT @Amount;
         HrmsDatabase.AddParameter(command, "@NameEn", (object?)template.NameEn ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@IsActive", template.IsActive ? 1 : 0);
         HrmsDatabase.AddParameter(command, "@HasConditions", template.HasConditions ? 1 : 0);
+        HrmsDatabase.AddParameter(command, "@ConditionsJson", template.HasConditions ? (object?)template.ConditionsJson ?? DBNull.Value : DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CondBranchId", (object?)template.CondBranchId ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CondDepartmentId", (object?)template.CondDepartmentId ?? DBNull.Value);
         HrmsDatabase.AddParameter(command, "@CondWorkType", (object?)template.CondWorkType ?? DBNull.Value);
