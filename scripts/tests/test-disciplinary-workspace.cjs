@@ -11,7 +11,10 @@ const baseline = process.env.DISCIPLINARY_BASELINE_VIEW
   : require('node:child_process').execFileSync('git', ['show', 'HEAD:SmartAttendance.Web/Pages/DisciplinaryRules/Index.cshtml'], {cwd:root, encoding:'utf8'});
 const names = text => [...text.matchAll(/<(?:input|select|textarea|button)\b[^>]*\bname="([^"]+)"/g)].map(m => m[1]).sort();
 const articleFields = new Set(['articleNumber', 'articleTitle', 'articleText', 'articlesVersion']);
-assert.deepEqual(names(source).filter(name => !articleFields.has(name)), names(baseline), 'existing library/designer fields retained; user article editor is additive');
+// HEAD may already include the user article editor after its source is committed.
+// Compare the same legacy-field subset on both sides, while requiring all article fields.
+assert.deepEqual(names(source).filter(name => !articleFields.has(name)), names(baseline).filter(name => !articleFields.has(name)), 'existing library/designer fields retained; user article editor is additive');
+for (const field of articleFields) assert(names(source).includes(field), `article editor retains ${field}`);
 assert(source.includes('data-disciplinary-workspace'));
 assert(read('Pages/DisciplinaryRules/_WorkspaceStyles.cshtml').includes('data-disciplinary-style'));
 let checks = 3;
