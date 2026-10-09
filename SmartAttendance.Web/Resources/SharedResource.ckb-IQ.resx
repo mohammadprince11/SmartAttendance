@@ -936,4 +936,23 @@
   <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {0}." xml:space="preserve"><value>سوپاس بۆ ساڵەکانی بەخشینت و هیواخوازین لە بەرواری {0} خانەنشینبوونێکی خۆش هەبێت.</value></data>
   <data name="نشكرك على عطائك. آخر يوم عمل: {0}. نتمنى لك النجاح في مسيرتك القادمة." xml:space="preserve"><value>سوپاس بۆ بەشدارییەکانت. دوایین ڕۆژی کار: {0}. هیواخوازین لە هەنگاوی داهاتووت سەرکەوتوو بیت.</value></data>
   <data name="يسرنا انضمامك بمنصب {0} اعتباراً من {1}. نتمنى لك بداية موفقة." xml:space="preserve"><value>دڵخۆشین بە پەیوەستبوونت وەک {0} لە بەرواری {1}. هیواخوازین دەستپێکێکی سەرکەوتوو هەبێت.</value></data>
+  <data name="بدون صورة" xml:space="preserve"><value>بەبێ وێنە</value></data>
+  <data name="اختر موظفاً من الشركة بالاسم أو الكود." xml:space="preserve"><value>کارمەندێکی کۆمپانیا بە ناو یان کۆد هەڵبژێرە.</value></data>
+  <data name="تظهر فقط الصور المرتبطة بهذا القالب، إضافة إلى تصميمه الجاهز إن وجد." xml:space="preserve"><value>تەنها وێنە پەیوەستەکان بە ئەم قاڵبە پیشان دەدرێن، لەگەڵ دیزاینی ئامادەی خۆی ئەگەر هەبێت.</value></data>
+  <data name="نوع الإعلان" xml:space="preserve"><value>جۆری ڕاگەیاندن</value></data>
+  <data name="اختر نوع الإعلان" xml:space="preserve"><value>جۆری ڕاگەیاندن هەڵبژێرە</value></data>
+  <data name="غير مرتبط بنوع إعلان" xml:space="preserve"><value>بە جۆرێکی ڕاگەیاندن پەیوەست نییە</value></data>
+  <data name="حفظ الربط" xml:space="preserve"><value>پاشەکەوتکردنی پەیوەندی</value></data>
+  <data name="اختر نوع إعلان فعالاً لربط التصميم به." xml:space="preserve"><value>جۆرێکی چالاکی ڕاگەیاندن هەڵبژێرە بۆ پەیوەستکردنی دیزاینەکە.</value></data>
+  <data name="القالب يحتوي 30 تصميماً. أزل ربط أحد التصاميم أولاً." xml:space="preserve"><value>قاڵبەکە 30 دیزاینی هەیە. سەرەتا پەیوەندی یەکێکیان لاببە.</value></data>
+  <data name="تغيّر ربط التصاميم. أعد تحميل الصفحة وحاول مجدداً." xml:space="preserve"><value>پەیوەندی دیزاینەکان گۆڕاوە. پەڕەکە نوێ بکەرەوە و دووبارە هەوڵ بدەرەوە.</value></data>
+  <data name="تم حفظ ربط التصميم بنوع الإعلان." xml:space="preserve"><value>پەیوەندی دیزاینەکە بە جۆری ڕاگەیاندن پاشەکەوت کرا.</value></data>
+  <data name="التسلسل" xml:space="preserve"><value>ژمارە</value></data>
+  <data name="فئة الإعلان" xml:space="preserve"><value>پۆلی ڕاگەیاندن</value></data>
+  <data name="تاريخ الإعلان" xml:space="preserve"><value>بەرواری ڕاگەیاندن</value></data>
+  <data name="لا إعلانات بعد. أنشئ أول إعلان." xml:space="preserve"><value>هێشتا ڕاگەیاندن نییە. یەکەم ڕاگەیاندنت دروست بکە.</value></data>
+  <data name="لغة الترجمة" xml:space="preserve"><value>زمانی وەرگێڕان</value></data>
+  <data name="إضافة لغة أخرى" xml:space="preserve"><value>زیادکردنی زمانێکی تر</value></data>
+  <data name="أدخل الترجمة لكل لغة. عند عدم توفرها تظهر اللغة الأساسية. خيارات التصويت مشتركة بين جميع اللغات." xml:space="preserve"><value>وەرگێڕانی هەر زمانێک بنووسە. ئەگەر بەردەست نەبوو، زمانی سەرەکی پیشان دەدرێت. هەڵبژاردەکانی دەنگدان لە هەموو زمانەکاندا هاوبەشن.</value></data>
+  <data name="لغة أخرى" xml:space="preserve"><value>زمانێکی تر</value></data>
 </root>

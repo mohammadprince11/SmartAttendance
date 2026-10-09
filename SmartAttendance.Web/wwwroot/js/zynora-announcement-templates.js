@@ -10,23 +10,49 @@
   const control = (type, value = '') => { const e = document.createElement('input'); e.type = type; e.value = value; return e; };
   const labeled = (title, e) => { const l = text('label', title); l.append(e); return l; };
   const select = options => { const e = document.createElement('select'); options.forEach(([v,l]) => {const o=text('option',l);o.value=v;e.append(o)}); return e; };
-  let current;
+  let current, subjectPosition=data.subjectPosition||'', subjectEnglishName=data.subjectEnglishName||'';
+  function syncSubjectPosition(){q('fields').querySelectorAll('[data-subject-position]').forEach(e=>e.value=subjectPosition);}
   function populate(restore = false) {
+    if(q('template').value==='__free'){current=null;return;}
     current = templates.find(x => x.Definition.Key === q('template').value)?.Definition;
     q('fields').replaceChildren(); q('preview-language').replaceChildren();
     if (!current) { q('errors').textContent=L('لا توجد قوالب فعالة. فعّل قالباً أو أنشئ قالباً جديداً.');q('compose').querySelector('button[type=submit]').disabled=true;return; }
-    current.Fields.forEach(f => {const input=control(f.Type,restore?(data.values[f.Key]||''):'');input.name=`Values[${f.Key}]`;input.required=f.Required;input.maxLength=500;q('fields').append(labeled(L(f.Label)+(f.Required?' *':L(' — اختياري')),input));});
+    const subject=q('subject');
+    const needsSubject=current.Fields.some(f=>f.Key==='person');
+    if(subject){subject.hidden=!needsSubject;subject.querySelector('.zyep-code').required=needsSubject;}
+    current.Fields.filter(f=>f.Key!=='person').forEach(f => {
+      let input;
+      if(f.Key==='newPosition'){
+        input=select([['',L('اختر المنصب الجديد')],...(data.positions||[]).map(p=>[String(p.Id),p.Name])]);
+        input.name='NewPositionId';input.id='zys-new-position';if(restore)input.value=String(data.newPositionId||'');
+      }else{
+        input=control(f.Type,restore?(data.values[f.Key]||''):'');input.name=`Values[${f.Key}]`;input.maxLength=500;
+        if(needsSubject && ['position','oldPosition'].includes(f.Key)){input.readOnly=true;input.dataset.subjectPosition='true';input.value=subjectPosition;input.placeholder=L('يظهر تلقائياً بعد اختيار الموظف');}
+      }
+      input.required=f.Required;q('fields').append(labeled(L(f.Label)+(f.Required?' *':L(' — اختياري')),input));
+    });
     Object.keys(current.Languages).forEach(lang => {const o=text('option',lang);o.value=lang;q('preview-language').append(o)});
-    [...q('design').options].forEach(o => {o.hidden=!o.value.startsWith('builtin:') && current.DesignIds.length>0 && !current.DesignIds.includes(o.value)});
-    const builtin={birthday:'newborn','newborn-boy':'newborn','newborn-girl':'newborn','employee-of-month':'promotion',anniversary:'promotion',retirement:'farewell'}[current.Key]||current.Key;
-    q('design').value=`builtin:${builtin}`;
-    if(!q('design').value)q('design').selectedIndex=0;
-    if(restore){if(data.design)q('design').value=data.design;q('fit').value=data.fit;q('position').value=data.position;q('placement').value=data.placement;}
+    const allowedAsset=asset=>(data.builtinAssets||[]).includes(asset) && asset===data.defaultAssets?.[current.Key];
+    const allowedDesign=value=>!value || (value.startsWith('builtin:') ? allowedAsset(value.slice(8)) : current.DesignIds.includes(value));
+    // Remove unrelated options, rather than hiding them: the shared custom dropdown clones options.
+    if(!data.designOptions)data.designOptions=[...q('design').options].map(o=>({value:o.value,label:o.textContent}));
+    q('design').replaceChildren();
+    data.designOptions.filter(o=>allowedDesign(o.value)).forEach(o=>{const option=text('option',o.label);option.value=o.value;q('design').append(option)});
+    q('design').value='';
+    const defaultAsset=data.defaultAssets?.[current.Key];
+    if((!restore || data.useDefaultDesign) && allowedAsset(defaultAsset))q('design').value='builtin:'+defaultAsset;
+    if(restore){if(data.design && allowedDesign(data.design))q('design').value=data.design;q('fit').value=data.fit;q('position').value=data.position;q('placement').value=data.placement;}
     render();
   }
   function render() {
     if(!current)return;
-    const values={};q('fields').querySelectorAll('input').forEach(e=>values[e.name.slice(7,-1)]=e.value);
+    const values={};q('fields').querySelectorAll('input[name^="Values["]').forEach(e=>values[e.name.slice(7,-1)]=e.value);
+    const newPosition=q('new-position');if(newPosition?.value)values.newPosition=newPosition.selectedOptions[0].textContent;
+    const subject=q('subject');
+    if(subject && !subject.hidden && subject.querySelector('.zyep-id').value){
+      const english=q('preview-language').value.split('-')[0].toLowerCase()==='en';
+      values.person=english && subjectEnglishName.trim()?subjectEnglishName.trim():subject.querySelector('.zyep-name').value;
+    }
     if(values.joiningDate){const j=new Date(values.joiningDate+'T00:00:00Z'),now=new Date(data.today+'T00:00:00Z');let years=now.getUTCFullYear()-j.getUTCFullYear();if(now.getUTCMonth()<j.getUTCMonth()||(now.getUTCMonth()===j.getUTCMonth()&&now.getUTCDate()<j.getUTCDate()))years--;values.years=String(Math.max(0,years));}
     const t=current.Languages[q('preview-language').value]||Object.values(current.Languages)[0];
     const replace=s=>s.replace(/\{([^{}]+)\}/g,(_,key)=>values[key]||'…');
@@ -35,11 +61,20 @@
     const language=data.languages?.find(l=>l.Code.toLowerCase()===code.toLowerCase())||data.languages?.find(l=>l.Code.split('-')[0]===code.split('-')[0]);
     q('preview').dir=language?.Direction||(code.match(/^(ar|ku|ckb|fa|he)/)?'rtl':'ltr');
     q('preview').className=`zys-visual zys-${q('fit').value} zys-${q('position').value} zys-${q('placement').value}`;
-    const d=q('design').value;q('image').src=d.startsWith('builtin:')?`/brand/announcement-studio/art/${d.slice(8)}.png`:`/Engagement/Studio?handler=Image&CompanyId=${data.companyId}&id=${encodeURIComponent(d)}`;
-    q('errors').textContent=values.startDate && values.endDate && values.endDate<values.startDate?L('تاريخ النهاية يجب ألا يسبق البداية.'):'';
+    const d=q('design').value;
+    const isBuiltin=d.startsWith('builtin:');
+    const showImage=!!d && (isBuiltin ? (data.builtinAssets||[]).includes(d.slice(8)) && d.slice(8)===data.defaultAssets?.[current.Key] : current.DesignIds.includes(d));
+    q('image').hidden=!showImage;
+    q('image').style.display=showImage?'':'none';
+    if(showImage)q('image').src=isBuiltin?`/brand/announcement-studio/art/${d.slice(8)}.png`:`/Engagement/Studio?handler=Image&CompanyId=${data.companyId}&id=${encodeURIComponent(d)}`;
+    else q('image').removeAttribute('src');
+    q('errors').textContent=values.startDate && values.endDate && values.endDate<values.startDate?L('تاريخ النهاية يجب ألا يسبق البداية.'):
+      values.newPosition && values.newPosition===values.oldPosition?L('المنصب الجديد يجب أن يختلف عن المنصب الحالي.'):'';
   }
-  q('template').addEventListener('change',()=>populate());q('compose').addEventListener('input',render);q('preview-language').addEventListener('change',render);
-  q('compose').addEventListener('submit',e=>{if(q('errors').textContent){e.preventDefault();return}q('compose').querySelector('button[type=submit]').disabled=true;});
+  q('template')?.addEventListener('change',()=>populate());q('compose')?.addEventListener('input',render);q('preview-language')?.addEventListener('change',render);
+  q('compose')?.addEventListener('change',render);
+  q('subject')?.addEventListener('zyep:change',e=>{subjectPosition=e.detail?.positionName||'';subjectEnglishName=e.detail?.englishName||'';syncSubjectPosition();render();});
+  q('compose')?.addEventListener('submit',e=>{if(q('errors').textContent){e.preventDefault();return}q('compose').querySelector('button[type=submit]').disabled=true;});
   const builder=q('builder');
   if(builder){
     function fieldRow(f={Key:'',Label:'',Type:'text',Required:true}){
@@ -64,6 +99,5 @@
       if(duplicate){e.preventDefault();alert(L('رمز اللغة مكرر.'));return}q('json').value=JSON.stringify(definition);
     });
   }
-  if(data.templateKey)q('template').value=data.templateKey;
-  populate(true);
+  if(q('template')){if(data.templateKey)q('template').value=data.templateKey;populate(true);}
 })();

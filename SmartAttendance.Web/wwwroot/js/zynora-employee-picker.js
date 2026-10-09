@@ -21,7 +21,9 @@
     }
 
     function fetchEmployees(q, root) {
-        return fetch(ENDPOINT + '?q=' + encodeURIComponent(q || '')
+        var studio = root && root.closest('[data-subject-endpoint]');
+        var endpoint = studio ? studio.getAttribute('data-subject-endpoint') : ENDPOINT;
+        return fetch(endpoint + (endpoint.indexOf('?') >= 0 ? '&' : '?') + 'q=' + encodeURIComponent(q || '')
             + (includesInactive(root) ? '&includeInactive=true' : ''), {
             headers: { 'Accept': 'application/json' }
         }).then(function (r) {
@@ -82,19 +84,32 @@
 
         modal = { back: back, search: search, count: count, list: list, foot: foot, target: null, mode: 'single' };
 
-        function hide() { back.classList.remove('open'); modal.target = null; }
+        function hide() {
+            var target = modal.target;
+            back.classList.remove('open');
+            modal.target = null;
+            if (back.closest('dialog.zy-poll-dialog')) {
+                document.body.appendChild(back);
+                if (target && target.isConnected) target.querySelector('.zyepm-add, .zyep-open')?.focus();
+            }
+        }
         done.addEventListener('click', hide);
         close.addEventListener('click', hide);
         back.addEventListener('click', function (e) { if (e.target === back) hide(); });
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && back.classList.contains('open')) hide();
+            if (e.key === 'Escape' && back.classList.contains('open')) {
+                if (back.closest('dialog.zy-poll-dialog')) { e.preventDefault(); e.stopPropagation(); }
+                hide();
+            }
         });
 
         var timer = null;
         function run() {
             var q = search.value;
+            var target = modal.target;
             count.textContent = 'جارٍ البحث…';
-            fetchEmployees(q, modal.target).then(function (data) {
+            fetchEmployees(q, target).then(function (data) {
+                if (modal.target !== target || search.value !== q) return;
                 // العدّاد ظاهر كما عندهم: «مجموع النتائج: (925)» — لكن عندنا سقف
                 // صفحة. فحين يُبتَر نُعلن السقف («+50» ونداء بالتضييق) بدل أن
                 // نعرض حجم الصفحة كأنه المجموع.
@@ -209,6 +224,9 @@
 
     function open(root, mode) {
         var m = ensureModal();
+        var pollDialog = root.closest('dialog.zy-poll-dialog[open]');
+        (pollDialog || document.body).appendChild(m.back);
+        if (pollDialog) pollDialog.addEventListener('close', m.hide, { once: true });
         m.target = root;
         m.mode = mode || 'single';
         m.back.classList.toggle('is-multi', m.mode === 'multi');
@@ -238,11 +256,13 @@
                 clearTimeout(t);
                 root.querySelector('.zyep-id').value = '';
                 root.querySelector('.zyep-name').value = '';
+                root.dispatchEvent(new CustomEvent('zyep:change', { detail: null, bubbles: true }));
                 var v = code.value.trim();
                 if (!v) { code.classList.remove('zyep-bad'); return; }
 
                 t = setTimeout(function () {
                     fetchEmployees(v, root).then(function (data) {
+                        if (code.value.trim() !== v) return;
                         var hit = data.items.filter(function (e) { return e.code === v; })[0];
                         if (hit) { code.classList.remove('zyep-bad'); apply(root, hit); }
                         else { code.classList.add('zyep-bad'); code.title = 'لا موظف بهذا الرمز'; }

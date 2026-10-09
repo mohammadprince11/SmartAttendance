@@ -23,6 +23,7 @@ public sealed class AnnouncementManagementScope
 
 public sealed class AnnouncementCreateRequest
 {
+    public AnnouncementImageUpload? ImageUpload { get; init; }
     public Guid? RequestId { get; init; }
     public IReadOnlyList<StudioRendered> Translations { get; init; } = Array.Empty<StudioRendered>();
     public string? PresentationJson { get; init; }
@@ -65,6 +66,9 @@ public sealed class AnnouncementCreateRequest
 
 public sealed class AnnouncementManagementItem
 {
+    public string Revision { get; init; } = string.Empty;
+    public IReadOnlyList<StudioRendered> Translations { get; init; } = Array.Empty<StudioRendered>();
+    public string? PresentationJson { get; init; }
     public int Id { get; init; }
 
     public string Title { get; init; } = string.Empty;
@@ -86,6 +90,13 @@ public sealed class AnnouncementManagementItem
     public int RecipientCount { get; init; }
 
     public bool IsLegacy { get; init; }
+}
+
+public sealed class AnnouncementUpdateRequest
+{
+    public int Id { get; set; }
+    public string? Revision { get; set; }
+    public List<FreeAnnouncementText> Translations { get; set; } = new();
 }
 
 public sealed class EmployeeAnnouncementItem

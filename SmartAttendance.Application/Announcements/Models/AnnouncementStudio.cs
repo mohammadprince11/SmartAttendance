@@ -13,13 +13,39 @@ public sealed class StudioTemplate
     public Dictionary<string, StudioText> Languages { get; set; } = new();
     public List<Guid> DesignIds { get; set; } = [];
 }
-public sealed record StudioPresentation(Guid DesignId, string Fit, string Position, string TextPlacement, string? AssetKey = null);
+public sealed record StudioPresentation(Guid DesignId, string Fit, string Position, string TextPlacement, string? AssetKey = null, string? PrimaryLanguage = null);
 public sealed record StudioRendered(string LanguageCode, string Title, string Body);
 
 /// <summary>One renderer for the live preview and persisted publication. Templates contain text, never HTML.</summary>
 public static class AnnouncementStudio
 {
-    public static readonly string[] BuiltinAssets = ["welcome", "promotion", "newborn", "marriage", "holiday", "farewell", "custom", "condolence", "circular"];
+    // Newly approved artwork only. Retired unversioned sample assets must never return.
+    public static readonly string[] BuiltinAssets = ["zynora-v1-birthday", "zynora-v1-newborn", "zynora-v1-marriage", "zynora-v1-condolence", "zynora-v1-employee-of-month", "zynora-v1-welcome", "zynora-v1-farewell", "zynora-v1-holiday", "zynora-v1-anniversary", "zynora-v1-retirement", "zynora-v1-promotion"];
+    public static string? DefaultAsset(string templateKey)
+    {
+        var key = templateKey is "newborn-boy" or "newborn-girl" ? "newborn" : templateKey;
+        var asset = "zynora-v1-" + key;
+        return BuiltinAssets.Contains(asset) ? asset : null;
+    }
+    public static bool IsDesignAllowed(StudioTemplate template, Guid designId, string? asset)
+        => asset != null
+            ? designId == Guid.Empty && asset == DefaultAsset(template.Key) && BuiltinAssets.Contains(asset)
+            : designId == Guid.Empty || template.DesignIds.Contains(designId);
+    public static string AssetLabel(string asset) => asset switch
+    {
+        "zynora-v1-birthday" => "عيد ميلاد",
+        "zynora-v1-newborn" => "مولود جديد",
+        "zynora-v1-marriage" => "زواج موظف",
+        "zynora-v1-condolence" => "تعزية",
+        "zynora-v1-employee-of-month" => "موظف الشهر",
+        "zynora-v1-welcome" => "الترحيب بموظف جديد",
+        "zynora-v1-farewell" => "وداع موظف",
+        "zynora-v1-holiday" => "إعلان عطلة",
+        "zynora-v1-anniversary" => "ذكرى عمل",
+        "zynora-v1-retirement" => "تقاعد موظف",
+        "zynora-v1-promotion" => "ترقية موظف",
+        _ => ""
+    };
     public static bool ValidLanguage(string code) => Regex.IsMatch(code, "^[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$");
     public static string? Validate(StudioTemplate template)
     {
@@ -48,7 +74,7 @@ public static class AnnouncementStudio
         return null;
     }
 
-    public static List<StudioRendered> Render(StudioTemplate template, IReadOnlyDictionary<string, string> values, DateOnly today)
+    public static List<StudioRendered> Render(StudioTemplate template, IReadOnlyDictionary<string, string> values, DateOnly today, string? englishPersonName = null)
     {
         var error = Validate(template);
         if (error != null) throw new ArgumentException(error);
@@ -75,8 +101,13 @@ public static class AnnouncementStudio
             years = (today.Year - joining.Year - (today < joining.AddYears(today.Year - joining.Year) ? 1 : 0)).ToString(CultureInfo.InvariantCulture);
         }
         normalized["years"] = years;
-        string Replace(string text) => Regex.Replace(text, "\\{([^{}]+)\\}", m => normalized.GetValueOrDefault(m.Groups[1].Value) ?? "");
-        return template.Languages.Select(x => new StudioRendered(x.Key, Replace(x.Value.Title), Replace(x.Value.Body)))
+        var englishName = englishPersonName?.Trim();
+        if (englishName?.Length > 500) throw new ArgumentException("قيمة الحقل طويلة: اسم الموظف");
+        string Replace(string text, string language) => Regex.Replace(text, "\\{([^{}]+)\\}", m =>
+            m.Groups[1].Value == "person" && normalized.ContainsKey("person") &&
+            language.Split('-')[0].Equals("en", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(englishName)
+                ? englishName : normalized.GetValueOrDefault(m.Groups[1].Value) ?? "");
+        return template.Languages.Select(x => new StudioRendered(x.Key, Replace(x.Value.Title, x.Key), Replace(x.Value.Body, x.Key)))
             .Select(x => x.Title.Length <= 250 ? x : throw new ArgumentException("عنوان الإعلان الناتج أكثر من 250 حرفاً."))
             .ToList();
     }
@@ -97,6 +128,7 @@ public static class AnnouncementStudio
             Make("condolence", "تعزية", [Person(), new("relation", "صلة المتوفى"), new("date", "تاريخ الوفاة", "date", false)], "خالص التعازي إلى {person}", "نتقدم إليك بخالص التعازي بوفاة {relation}. تاريخ الوفاة: {date}.", "Our condolences, {person}", "Our deepest condolences on the loss of your {relation}. Date: {date}."),
             Make("employee-of-month", "موظف الشهر", [Person(), new("month", "الشهر والسنة", "month")], "موظف الشهر: {person}", "نبارك تكريمك موظف الشهر {month} تقديراً لجهودك المميزة.", "Employee of the month: {person}", "Congratulations on being our employee of the month for {month}. Thank you for your outstanding work."),
             Make("welcome", "الترحيب بموظف جديد", [Person(), new("position", "المنصب"), new("date", "تاريخ المباشرة", "date")], "أهلاً بك {person}!", "يسرنا انضمامك بمنصب {position} اعتباراً من {date}. نتمنى لك بداية موفقة.", "Welcome aboard, {person}!", "We welcome you as {position}, starting {date}. Wishing you a successful journey with us."),
+            Make("promotion", "ترقية موظف", [Person(), new("oldPosition", "المنصب الحالي"), new("newPosition", "المنصب الجديد"), new("date", "تاريخ الترقية", "date")], "مبارك الترقية {person}!", "نبارك لك الترقية من منصب {oldPosition} إلى منصب {newPosition} اعتباراً من {date}. نتمنى لك مزيداً من النجاح والتقدم.", "Congratulations on your promotion, {person}!", "Congratulations on your promotion from {oldPosition} to {newPosition}, effective {date}. Wishing you continued success."),
             Make("farewell", "وداع موظف", [Person(), new("date", "آخر يوم عمل", "date")], "نتمنى لك التوفيق {person}!", "نشكرك على عطائك. آخر يوم عمل: {date}. نتمنى لك النجاح في مسيرتك القادمة.", "Best wishes, {person}!", "Thank you for your contribution. Last working day: {date}. We wish you success in your next chapter."),
             Make("holiday", "إعلان عطلة", [new("occasion", "اسم العطلة"), new("startDate", "من تاريخ", "date"), new("endDate", "إلى تاريخ", "date")], "إعلان عطلة: {occasion}", "تكون مكاتبنا مغلقة من {startDate} إلى {endDate} بمناسبة {occasion}.", "Holiday announcement: {occasion}", "Our offices will be closed from {startDate} through {endDate} for {occasion}."),
             Make("anniversary", "ذكرى عمل", [Person(), new("joiningDate", "تاريخ المباشرة", "date")], "ذكرى عمل سعيدة {person}!", "نحتفل بمرور {years} سنة منذ انضمامك بتاريخ {joiningDate}. شكراً لعطائك.", "Happy work anniversary, {person}!", "Celebrating {years} years since you joined us on {joiningDate}. Thank you for your contribution."),

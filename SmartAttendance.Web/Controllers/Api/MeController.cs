@@ -1821,6 +1821,8 @@ SELECT CAST(SCOPE_IDENTITY() AS int);
 
     public sealed class PollItemDto
     {
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? ContentTranslationsJson { get; set; }
         public int Id { get; set; }
         public string Title { get; set; } = "";
         public string Question { get; set; } = "";
@@ -1872,7 +1874,7 @@ WHERE e.Id = @EmployeeId
             _db,
             """
 SELECT TOP 10
-       p.Id, p.Title, ISNULL(p.Question, N'') AS Question,
+       p.Id, p.Title, ISNULL(p.Question, N'') AS Question, p.ContentTranslationsJson,
        ISNULL(p.Category, N'استطلاع') AS Category, p.PublishDate,
        CASE WHEN EXISTS
        (
@@ -1882,6 +1884,8 @@ SELECT TOP 10
        THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS HasVoted
 FROM EmployeePolls p
 WHERE p.IsPublished = 1
+  AND (p.StartsOn IS NULL OR p.StartsOn <= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
+  AND (p.EndsOn IS NULL OR p.EndsOn >= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
   AND (p.CompanyId IS NULL
        OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
   AND
@@ -1908,6 +1912,7 @@ ORDER BY p.PublishDate DESC, p.Id DESC;
             },
             reader => new PollItemDto
             {
+                ContentTranslationsJson = HrmsDatabase.GetString(reader, "ContentTranslationsJson"),
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Title = HrmsDatabase.GetString(reader, "Title"),
                 Question = HrmsDatabase.GetString(reader, "Question"),
@@ -1931,6 +1936,13 @@ ORDER BY DisplayOrder, Id;
                     HrmsDatabase.GetInt(reader, "Id"),
                     HrmsDatabase.GetString(reader, "OptionText"),
                     HrmsDatabase.GetInt(reader, "DisplayOrder")));
+            var translation = PollTranslations.Resolve(poll.ContentTranslationsJson, System.Globalization.CultureInfo.CurrentUICulture.Name, poll.Options.Count);
+            if (translation != null)
+            {
+                poll.Title = translation.Title;
+                poll.Question = translation.Question;
+                poll.Options = poll.Options.Select((option, i) => option with { Text = translation.Options[i] }).ToList();
+            }
         }
 
         return Ok(polls);
@@ -1960,6 +1972,8 @@ INNER JOIN EmployeePollOptions o
        AND o.Id = @OptionId
 WHERE p.Id = @PollId
   AND p.IsPublished = 1
+  AND (p.StartsOn IS NULL OR p.StartsOn <= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
+  AND (p.EndsOn IS NULL OR p.EndsOn >= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
   AND (p.CompanyId IS NULL
        OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
   AND

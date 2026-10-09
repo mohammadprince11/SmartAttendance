@@ -7,12 +7,54 @@ namespace SmartAttendance.Tests;
 
 public sealed class AnnouncementStudioTests
 {
+    [Fact] public void DesignsMustBeExplicitlyLinkedToTheSelectedTemplate()
+    {
+        var id = Guid.NewGuid();
+        var birthday = AnnouncementStudio.Defaults().Single(t => t.Key == "birthday");
+        var marriage = AnnouncementStudio.Defaults().Single(t => t.Key == "marriage");
+        Assert.True(AnnouncementStudio.IsDesignAllowed(birthday, Guid.Empty, "zynora-v1-birthday"));
+        Assert.False(AnnouncementStudio.IsDesignAllowed(birthday, Guid.Empty, "zynora-v1-marriage"));
+        Assert.False(AnnouncementStudio.IsDesignAllowed(birthday, id, null));
+        birthday.DesignIds.Add(id);
+        Assert.True(AnnouncementStudio.IsDesignAllowed(birthday, id, null));
+        Assert.False(AnnouncementStudio.IsDesignAllowed(marriage, id, null));
+        Assert.False(AnnouncementStudio.IsDesignAllowed(birthday, id, "zynora-v1-birthday"));
+        Assert.True(AnnouncementStudio.IsDesignAllowed(birthday, Guid.Empty, null));
+        var custom = new StudioTemplate { Key = "custom" };
+        Assert.False(AnnouncementStudio.IsDesignAllowed(custom, Guid.Empty, "zynora-v1-birthday"));
+        Assert.All(new[]{"newborn-boy", "newborn-girl"}, key => Assert.True(AnnouncementStudio.IsDesignAllowed(new StudioTemplate {Key=key}, Guid.Empty, "zynora-v1-newborn")));
+    }
+    [Fact] public void RetiredNewbornArtworkIsNotAvailable()
+    {
+        Assert.DoesNotContain("newborn", AnnouncementStudio.BuiltinAssets);
+        Assert.Equal(11, AnnouncementStudio.BuiltinAssets.Length);
+        Assert.All(AnnouncementStudio.BuiltinAssets, key => Assert.StartsWith("zynora-v1-", key));
+        Assert.All(AnnouncementStudio.Defaults(), t => Assert.Contains(AnnouncementStudio.DefaultAsset(t.Key), AnnouncementStudio.BuiltinAssets));
+        Assert.Null(AnnouncementStudio.DefaultAsset("custom"));
+        Assert.Contains(AnnouncementStudio.Defaults(), t => t.Key == "newborn-boy");
+        Assert.Contains(AnnouncementStudio.Defaults(), t => t.Key == "newborn-girl");
+    }
     [Fact] public void DefaultsAreCompleteAndDistinct()
     {
         var all = AnnouncementStudio.Defaults();
-        Assert.Equal(11, all.Count);
+        Assert.Equal(12, all.Count);
         Assert.Equal(all.Count, all.Select(x => x.Key).Distinct().Count());
         foreach(var t in all) { Assert.Null(AnnouncementStudio.Validate(t)); Assert.Contains("ar",t.Languages.Keys); Assert.Contains("en",t.Languages.Keys); }
+    }
+    [Fact] public void CreateValidationAcceptsNewArtworkAndNoImageButRejectsRetiredAssets()
+    {
+        var validate = typeof(SmartAttendance.Infrastructure.Services.AnnouncementService).GetMethod("ValidateCreateRequest", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        string? Check(string? asset, Guid designId = default)
+        {
+            var request = new AnnouncementCreateRequest { Title = "Synthetic", Body = "Synthetic body", AllEmployees = true,
+                PresentationJson = JsonSerializer.Serialize(new StudioPresentation(designId, "contain", "center", "above", asset)) };
+            return (string?)validate.Invoke(null, [request]);
+        }
+        Assert.Null(Check(null));
+        Assert.Null(Check(null, Guid.NewGuid()));
+        foreach(var asset in AnnouncementStudio.BuiltinAssets) Assert.Null(Check(asset));
+        foreach(var asset in new[]{"newborn","welcome","holiday","../../old-image"}) Assert.NotNull(Check(asset));
+        Assert.NotNull(Check("zynora-v1-birthday", Guid.NewGuid()));
     }
     [Theory]
     [InlineData("date", "2026-02-30")]
@@ -99,6 +141,49 @@ public sealed class AnnouncementStudioTests
         catalog[source.Body]="Invalid {unknown}";
         Assert.False(SmartAttendance.Web.Infrastructure.Localization.AnnouncementTemplateDictionary.Apply(t,"en-US",catalog));
         Assert.Equal("On {date}.",t.Languages["en"].Body);
+    }
+    [Fact] public void PromotionHasRequiredPositionsDateAndDedicatedArtwork()
+    {
+        var t = AnnouncementStudio.Defaults().Single(t => t.Key == "promotion");
+        Assert.Equal(new[] { "person", "oldPosition", "newPosition", "date" }, t.Fields.Select(f => f.Key));
+        Assert.All(t.Fields, f => Assert.True(f.Required));
+        Assert.Equal("date", t.Fields.Single(f => f.Key == "date").Type);
+        Assert.True(AnnouncementStudio.IsDesignAllowed(t, Guid.Empty, "zynora-v1-promotion"));
+        Assert.False(AnnouncementStudio.IsDesignAllowed(t, Guid.Empty, "zynora-v1-welcome"));
+        var values = new Dictionary<string,string> { ["person"]="Synthetic Employee", ["oldPosition"]="Analyst", ["newPosition"]="Manager", ["date"]="2026-10-09" };
+        var rendered = AnnouncementStudio.Render(t, values, new(2026,10,9));
+        Assert.Contains("from Analyst to Manager", rendered.Single(r => r.LanguageCode == "en").Body);
+        values.Remove("newPosition");
+        Assert.Throws<ArgumentException>(() => AnnouncementStudio.Render(t, values, new(2026,10,9)));
+    }
+    [Theory]
+    [InlineData("en")]
+    [InlineData("en-US")]
+    [InlineData("en-GB")]
+    public void EmployeeNameFollowsSnapshotLanguage(string language)
+    {
+        var template = new StudioTemplate { Key="example", Name="Example", Fields=[new("person", "Name")],
+            Languages=new() { ["ar"]=new("{person}","{person}"), [language]=new("{person}","{person}"), ["fr"]=new("{person}","{person}") } };
+        var values = new Dictionary<string,string> { ["person"]="موظف افتراضي" };
+        var rendered = AnnouncementStudio.Render(template, values, new(2026,10,9), "  Synthetic English Name  ");
+        Assert.Equal("Synthetic English Name", rendered.Single(r=>r.LanguageCode==language).Title);
+        Assert.Equal("Synthetic English Name", rendered.Single(r=>r.LanguageCode==language).Body);
+        Assert.Equal("موظف افتراضي", rendered.Single(r=>r.LanguageCode=="ar").Title);
+        Assert.Equal("موظف افتراضي", rendered.Single(r=>r.LanguageCode=="fr").Title);
+        Assert.Equal("موظف افتراضي", values["person"]);
+        Assert.All(AnnouncementStudio.Render(template, values, new(2026,10,9), " "), r=>Assert.Equal("موظف افتراضي", r.Title));
+    }
+    [Fact] public void EnglishEmployeeNameUsesRecordedPartsAndDoesNotInterpretTokens()
+    {
+        var subject = new StudioModel.SubjectDetail(1, "TEST", "موظف افتراضي", null, " Synthetic ", null, " ", " Employee ");
+        Assert.Equal("Synthetic Employee", subject.EnglishName);
+        var empty = subject with { FirstNameEn=null, LastNameEn=null };
+        Assert.Equal("", empty.EnglishName);
+        var t=AnnouncementStudio.Defaults().Single(t=>t.Key=="marriage");
+        var values=new Dictionary<string,string> { ["person"]="موظف افتراضي", ["date"]="2026-10-09" };
+        var rendered=AnnouncementStudio.Render(t, values, new(2026,10,9), "Synthetic {date}");
+        Assert.Contains("Synthetic {date}", rendered.Single(r=>r.LanguageCode=="en").Title);
+        Assert.Throws<ArgumentException>(()=>AnnouncementStudio.Render(t, values, new(2026,10,9), new string('x',501)));
     }
     private static StudioTemplate Custom(StudioField field)=>new(){Key="example",Name="Example",Fields=[field],Languages=new(){["ar"]=new("{event}","{event}")}};
 }

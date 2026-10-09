@@ -1,0 +1,44 @@
+@model SmartAttendance.Web.Pages.Engagement.StudioModel
+@using System.Globalization
+@inject SmartAttendance.Web.Infrastructure.Localization.ILocalizationDictionaryService Dictionary
+@{
+    var catalog = await Dictionary.GetCatalogAsync(CultureInfo.CurrentUICulture.Name, Context.RequestAborted);
+    string L(string key) => catalog.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : key;
+}
+<section id="zys-free" class="zys-free" hidden="@(!Model.FreeFormActive && Model.TemplateKey != "__free")">
+    <div class="zys-layout">
+        <form id="zys-free-compose" class="zy-card" method="post" asp-page="Studio" asp-page-handler="FreeCompose" enctype="multipart/form-data">
+            <input type="hidden" name="Embed" value="@Model.Embed.ToString().ToLowerInvariant()" />
+            <h2>@L("إعلان حر")</h2>
+            <p>@L("اكتب إعلان الشركة بدون قالب أو اختيار موظف. أضف الترجمة للغات النظام التي تحتاجها؛ لا تُترجم النصوص تلقائياً.")</p>
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+            <input type="hidden" name="RequestId" value="@Model.RequestId" />
+            <label>@L("اللغة الأساسية")<select name="FreePrimaryLanguage" id="zys-free-primary">
+                @foreach (var language in Model.FreeLanguages) { <option value="@language.Code" selected="@(Model.FreePrimaryLanguage==language.Code)">@(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName=="en" ? language.EnglishName : language.NativeName) · @language.Code</option> }
+            </select></label>
+            <p>@L("إذا لم توجد ترجمة بلغة المستخدم، يظهر نص الإعلان باللغة الأساسية.")</p>
+            <label>@L("لغة التحرير")<select id="zys-free-edit-language">@foreach(var language in Model.FreeLanguages){<option value="@language.Code" selected="@(Model.FreePrimaryLanguage==language.Code)">@(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName=="en" ? language.EnglishName : language.NativeName) · @language.Code</option>}</select></label>
+            <div class="zys-free-translations">
+            @for (var i = 0; i < Model.FreeLanguages.Count; i++)
+            {
+                var language = Model.FreeLanguages[i];
+                var saved = Model.FreeTexts.FirstOrDefault(t => string.Equals(t.LanguageCode, language.Code, StringComparison.OrdinalIgnoreCase));
+                <div class="zys-free-language-panel" data-free-language="@language.Code" data-free-direction="@language.Direction" hidden="@(language.Code!=Model.FreePrimaryLanguage)">
+                    <input type="hidden" name="FreeTexts[@i].LanguageCode" value="@language.Code" />
+                    <label>@L("عنوان الإعلان")<input data-free-title name="FreeTexts[@i].Title" maxlength="250" value="@saved?.Title" dir="@language.Direction" /></label>
+                    <label>@L("نص الإعلان")<textarea data-free-body name="FreeTexts[@i].Body" maxlength="20000" rows="7" dir="@language.Direction">@saved?.Body</textarea></label>
+                </div>
+            }
+            </div>
+            <p>@L("الترجمات اختيارية. أكمل العنوان والنص لكل لغة تضيفها، حتى 12 لغة للإعلان الواحد.")</p>
+            <label>@L("صورة الإعلان — اختيارية، PNG أو JPEG حتى 5 ميغابايت")<input id="zys-free-image" name="FreeImage" type="file" accept="image/png,image/jpeg" /></label>
+            <partial name="_EmployeePickerMulti" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel { Label = L("موظفون محددون — اتركه فارغاً لكل موظفي الشركة"), Name = "EmployeeIds" })" />
+            <div class="zys-actions"><div class="zys-publish-options"><label class="zys-check"><input type="checkbox" name="CommentsEnabled" value="true" checked="@Model.CommentsEnabled" />@L("السماح بالتعليقات")</label><input type="hidden" name="CommentsEnabled" value="false" /><label class="zys-check"><input type="checkbox" name="PublishNow" value="true" checked="@Model.PublishNow" />@L("نشر فوراً")</label><input type="hidden" name="PublishNow" value="false" /></div><button type="submit" class="zy-btn zy-btn--primary">@L("حفظ الإعلان الحر")</button></div>
+        </form>
+        <section class="zy-card zys-free-preview" aria-label="@L("المعاينة")">
+            <h2>@L("المعاينة المباشرة")</h2>
+            <label>@L("اللغة")<select id="zys-free-preview-language">@foreach(var language in Model.FreeLanguages){<option value="@language.Code">@(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName=="en" ? language.EnglishName : language.NativeName) · @language.Code</option>}</select></label>
+            <article id="zys-free-preview" data-zy-no-localize aria-live="polite"><h3 id="zys-free-title"></h3><p id="zys-free-body"></p><img id="zys-free-image-preview" hidden alt="@L("صورة الإعلان")" /></article>
+        </section>
+    </div>
+</section>

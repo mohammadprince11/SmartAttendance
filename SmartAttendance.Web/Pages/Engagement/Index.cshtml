@@ -1,10 +1,15 @@
 @page
 @model SmartAttendance.Web.Pages.Engagement.IndexModel
+@using System.Globalization
+@using SmartAttendance.Web.Pages.Engagement
+@inject SmartAttendance.Web.Infrastructure.Localization.ILocalizationDictionaryService Dictionary
 @{
+    var catalog = await Dictionary.GetCatalogAsync(CultureInfo.CurrentUICulture.Name, HttpContext.RequestAborted);
+    string L(string key) => catalog.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : key;
     ViewData["Title"] = "تفاعل الموظف";
 
     // التبويب من الرابط، وافتراضه «ما ينتظرك» — والخاصية `string?` عمداً (انظر النموذج).
-    var tab = string.IsNullOrWhiteSpace(Model.Tab) ? "work" : Model.Tab;
+    var tab = string.IsNullOrWhiteSpace(Model.Tab) || Model.Tab.Equals("announcements", StringComparison.OrdinalIgnoreCase) ? "work" : Model.Tab;
 
     string TabClass(string key) => tab.Equals(key, StringComparison.OrdinalIgnoreCase) ? "true" : "false";
     bool IsTab(string key) => tab.Equals(key, StringComparison.OrdinalIgnoreCase);
@@ -12,6 +17,8 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/zynora-workscreen.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-announcement-management.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/zynora-announcement-templates.css" asp-append-version="true" />
 }
 
 <section class="zyw zy-scope" dir="rtl">
@@ -19,7 +26,7 @@
     <header class="zyw-head">
         <div>
             <h1>تفاعل الموظف</h1>
-            <p>التواصل وصوت الموظف والحالات والتقدير — بشاشة واحدة.</p>
+            <p>الإعلانات وصوت الموظف والحالات — بشاشة واحدة.</p>
         </div>
 
         @* الأرقام سياقٌ لا بطولة: سطرٌ واحد بدل أربع بطاقات كانت تُعاد ثلاث مرات. *@
@@ -39,15 +46,15 @@
         <div class="zy-card" role="status">@Model.StatusMessage</div>
     }
 
+    <div class="zyw-tabs-box zy-card">
     <nav class="zyw-tabs" role="tablist" aria-label="أقسام تفاعل الموظف">
         <button type="button" class="zyw-tab" role="tab" data-zyw-tab="work" aria-selected="@TabClass("work")">
-            ما ينتظرك
-            @if (Model.PendingWorkCount > 0)
+            @L("الإعلانات")
+            @if (Model.TotalAnnouncements > 0)
             {
-                <span class="zyw-tab-count">@Model.PendingWorkCount</span>
+                <span class="zyw-tab-count">@Model.TotalAnnouncements</span>
             }
         </button>
-        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="announcements" aria-selected="@TabClass("announcements")">الإعلانات</button>
         <button type="button" class="zyw-tab" role="tab" data-zyw-tab="polls" aria-selected="@TabClass("polls")">الاستطلاعات</button>
         <button type="button" class="zyw-tab" role="tab" data-zyw-tab="cases" aria-selected="@TabClass("cases")">
             الحالات
@@ -56,17 +63,19 @@
                 <span class="zyw-tab-count">@Model.CasesNeedingAction.Count</span>
             }
         </button>
-        <button type="button" class="zyw-tab" role="tab" data-zyw-tab="recognition" aria-selected="@TabClass("recognition")">التقدير</button>
     </nav>
+    <div class="zyw-ann-create-footer" data-create-for="work" hidden="@(!IsTab("work"))">
+        <a asp-page="Studio" asp-route-Embed="true" class="zy-btn zy-btn--primary" data-ann-create>@L("إعلان جديد")</a>
+    </div>
+    <div class="zyw-ann-create-footer" data-create-for="polls" hidden="@(!IsTab("polls"))"><button type="button" class="zy-btn zy-btn--primary" data-ann-open="zy-poll-create">@L("استطلاع جديد")</button></div>
+    </div>
+    <dialog id="zy-ann-create" class="zy-ann-dialog zy-ann-create" aria-labelledby="zy-ann-create-title">
+        <div class="zy-ann-dialog-head"><h2 id="zy-ann-create-title">@L("إعلان جديد")</h2><button type="button" class="zy-btn" data-ann-close>@L("إغلاق")</button></div>
+        <iframe title="@L("إعلان جديد")" data-ann-frame></iframe>
+    </dialog>
 
     @* ==================================================== ما ينتظرك (الافتراضي) *@
     <section class="zyw-panel" data-zyw-panel="work" role="tabpanel" hidden="@(!IsTab("work"))">
-        @if (Model.PendingWorkCount == 0)
-        {
-            <div class="zyw-empty">
-                لا شيء ينتظر إجراءً الآن — كل الحالات مُعالَجة ولا مسوّدات معلّقة.
-            </div>
-        }
 
         <div class="zyw-queue">
             @if (Model.CasesNeedingAction.Count > 0)
@@ -86,34 +95,6 @@
                                 </div>
                                 <div class="zyw-item-actions">
                                     <button type="button" class="btn-secondary" data-zyw-goto="cases">فتح</button>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </article>
-            }
-
-            @if (Model.DraftAnnouncementRows.Count > 0)
-            {
-                <article class="zy-card">
-                    <div class="zyw-queue-head">
-                        <h2>إعلانات لم تُنشر</h2>
-                        <span class="zy-pill">@Model.DraftAnnouncementRows.Count</span>
-                    </div>
-                    <div class="zyw-list">
-                        @foreach (var item in Model.DraftAnnouncementRows.Take(6))
-                        {
-                            <div class="zyw-item">
-                                <div class="zyw-item-main">
-                                    <strong>@item.Title</strong>
-                                    <small>@item.Category · @Model.TargetText(item)</small>
-                                </div>
-                                <div class="zyw-item-actions">
-                                    <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementToggle">
-                                        <input type="hidden" name="id" value="@item.Id" />
-                                        <input type="hidden" name="publish" value="true" />
-                                        <button type="submit" class="btn-primary">نشر</button>
-                                    </form>
                                 </div>
                             </div>
                         }
@@ -170,145 +151,75 @@
                 </article>
             }
         </div>
-    </section>
-
-    @* ==================================================================== الإعلانات *@
-    <section class="zyw-panel" data-zyw-panel="announcements" role="tabpanel" hidden="@(!IsTab("announcements"))">
-        <article class="zy-card">
-            <div class="zyw-queue-head"><h2>إعلان جديد</h2><a asp-page="Studio" class="btn-secondary">القوالب والتصاميم والمعاينة</a></div>
-
-            <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementCreate" data-zyw-form="announcement">
-                <div class="zyw-form-grid">
-                    <div class="zyw-field zyw-field--wide">
-                        <label for="ann-title">العنوان</label>
-                        <input id="ann-title" name="Announcement.Title" required />
-                    </div>
-
-                    <div class="zyw-field">
-                        <label for="ann-mode">طريقة الكتابة</label>
-                        <select id="ann-mode" name="Announcement.UseTemplateMode" data-zyw-ann-mode>
-                            <option value="Template">قالب جاهز</option>
-                            <option value="Custom">نصّ حرّ</option>
-                        </select>
-                    </div>
-
-                    <div class="zyw-field">
-                        <label for="ann-template">القالب</label>
-                        <select id="ann-template" name="Announcement.TemplateKey">
-                            @foreach (var template in Model.AnnouncementTemplates)
-                            {
-                                <option value="@template.Key">@template.Name</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="zyw-field">
-                        <label for="ann-category">التصنيف</label>
-                        <input id="ann-category" name="Announcement.Category" value="عام" />
-                    </div>
-
-                    @* حقول القالب: يملؤها المحرّك بالنصّ الجاهز (ترقية · شكر · ترحيب…) *@
-                    <div class="zyw-field" data-zyw-ann-template-field>
-                        <label for="ann-person">اسم الموظف</label>
-                        <input id="ann-person" name="Announcement.PersonName" />
-                    </div>
-                    <div class="zyw-field" data-zyw-ann-template-field>
-                        <label for="ann-secondary">اسم ثانٍ (إن لزم)</label>
-                        <input id="ann-secondary" name="Announcement.SecondaryName" />
-                    </div>
-                    <div class="zyw-field" data-zyw-ann-template-field>
-                        <label for="ann-dept-name">القسم</label>
-                        <input id="ann-dept-name" name="Announcement.DepartmentName" />
-                    </div>
-                    <div class="zyw-field" data-zyw-ann-template-field>
-                        <label for="ann-date">التاريخ المعتمد</label>
-                        <input id="ann-date" name="Announcement.EffectiveDateText" />
-                    </div>
-
-                    <div class="zyw-field zyw-field--wide" data-zyw-ann-body-field hidden>
-                        <label for="ann-body">النصّ</label>
-                        <textarea id="ann-body" name="Announcement.Body" rows="4"></textarea>
-                    </div>
-
-                    <div class="zyw-field">
-                        <label for="ann-target">الاستهداف</label>
-                        <select id="ann-target" name="Announcement.TargetType" data-zyw-target="announcement">
-                            <option value="All">كل الموظفين</option>
-                            <option value="Department">قسم</option>
-                            <option value="Branch">موقع عمل</option>
-                            @* ⚠️ القيمة `Employee` بالمفرد — والخادم كلّه يقارن بها
-                               (`ValidateTarget` · `BuildTargetValue` · بناء الطلب ·
-                               تسمية الاستهداف). كانت `Employees` بالجمع فلا تطابق
-                               أيّ فرع: الحارس لا يعمل، والمستلمون يصيرون صفراً،
-                               ويُعلَن النجاح. حارس الانحدار: `EngagementTargetTypeTests`. *@
-                            <option value="Employee">موظفون محدّدون</option>
-                        </select>
-                    </div>
-
-                    <div class="zyw-field zyw-target" data-zyw-target-for="announcement" data-zyw-when="Department" hidden>
-                        <label for="ann-dept">القسم المستهدف</label>
-                        <select id="ann-dept" name="Announcement.DepartmentId">
-                            <option value="">—</option>
-                            @foreach (var d in Model.Departments)
-                            {
-                                <option value="@d.Id">@d.Name</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="zyw-field zyw-target" data-zyw-target-for="announcement" data-zyw-when="Branch" hidden>
-                        <label for="ann-branch">موقع العمل المستهدف</label>
-                        <select id="ann-branch" name="Announcement.BranchId">
-                            <option value="">—</option>
-                            @foreach (var b in Model.Branches)
-                            {
-                                <option value="@b.Id">@b.Name</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="zyw-field zyw-field--wide zyw-target" data-zyw-target-for="announcement" data-zyw-when="Employee" hidden>
-                        <partial name="_EmployeePickerMulti" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel {
-                            Label = "الموظفون المستهدفون",
-                            Name = "Announcement.EmployeeIds"
-                        })" />
-                    </div>
-                </div>
-
-                <div class="zyw-form-actions">
-                    <label>
-                        <input type="checkbox" name="Announcement.PublishNow" value="true" checked />
-                        نشر فوراً
-                    </label>
-                    <input type="hidden" name="Announcement.PublishNow" value="false" />
-                    <button type="submit" class="btn-primary">حفظ الإعلان</button>
-                </div>
-            </form>
-        </article>
-
         <article class="zy-card">
             <div class="zyw-queue-head">
                 <h2>الإعلانات</h2>
                 <span class="zy-pill">@Model.TotalAnnouncements</span>
             </div>
 
-            @if (Model.Announcements.Count == 0)
-            {
-                <div class="zyw-empty">لا إعلانات بعد. أنشئ أوّل إعلان من النموذج أعلاه.</div>
-            }
-
-            <div class="zyw-list">
+            <div class="zy-table-wrap zy-ann-table-wrap">
+                <table class="zy-table zy-ann-table zy-ann-list-table">
+                    <colgroup><col class="zy-ann-col-sequence" /><col class="zy-ann-col-category" /><col class="zy-ann-col-title" /><col class="zy-ann-col-date" /></colgroup>
+                    <thead><tr>
+                        <th scope="col">@L("التسلسل")</th>
+                        <th scope="col">@L("فئة الإعلان")</th>
+                        <th scope="col">@L("العنوان")</th>
+                        <th scope="col">@L("تاريخ الإعلان")</th>
+                    </tr></thead>
+                    <tbody>
+                @if (Model.Announcements.Count == 0)
+                {
+                    <tr><td colspan="4" class="zy-ann-empty">@L("لا إعلانات بعد. أنشئ أول إعلان.")</td></tr>
+                }
+                @{ var announcementSequence = 0; }
                 @foreach (var item in Model.Announcements)
                 {
-                    <div class="zyw-row">
+                    <tr class="zy-ann-row" tabindex="0" data-ann-open="zy-ann-@item.Id" aria-haspopup="dialog" aria-label="@item.Title">
+                        <td class="zy-ann-sequence">@(++announcementSequence)</td>
+                        <td>@L(item.Category)</td>
+                        <td class="zy-ann-title-cell">
+                        <span class="zy-ann-title">@item.Title</span>
+                        </td>
+                        <td class="zy-ann-date"><bdi>@Model.DisplayDate(item.PublishDate ?? item.CreatedAt)</bdi></td>
+                    </tr>
+                }
+                    </tbody>
+                </table>
+            </div>
+            @foreach (var item in Model.Announcements)
+            {
+                        <dialog id="zy-ann-@item.Id" class="zy-ann-dialog" aria-labelledby="zy-ann-title-@item.Id">
+                        <div class="zy-ann-dialog-head"><h2 id="zy-ann-title-@item.Id">@L("تفاصيل الإعلان")</h2><button type="button" class="zy-btn" data-ann-close>@L("إغلاق")</button></div>
                         <div class="zyw-item-main">
-                            <strong>@item.Title</strong>
-                            <div class="zyw-row-meta">
+                            <h3 class="zy-ann-detail-title">@item.Title</h3>
+                            <div class="zy-ann-detail-status">
                                 <span class="zy-pill">@Model.AnnouncementStatusText(item.Status)</span>
-                                <small>@item.Category · @Model.TargetText(item) · @Model.DisplayDate(item.PublishDate) · @item.RecipientCount مستلم</small>
                             </div>
+                            <dl class="zy-ann-detail-meta">
+                                <div><dt>@L("فئة الإعلان")</dt><dd>@L(item.Category)</dd></div>
+                                <div><dt>@L("تاريخ الإعلان")</dt><dd><bdi>@Model.DisplayDate(item.PublishDate ?? item.CreatedAt)</bdi></dd></div>
+                                <div><dt>@L("أنشئ بواسطة")</dt><dd>@item.CreatedBy</dd></div>
+                                <div><dt>@L("الاستهداف")</dt><dd>@Model.TargetText(item) · @item.RecipientCount @L("مستلم")</dd></div>
+                            </dl>
                         </div>
+                        <partial name="_ManagedAnnouncementVisual" model="item" />
+                        <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementUpdate" class="zy-ann-edit" hidden>
+                            <input type="hidden" name="AnnouncementEdit.Id" value="@item.Id" />
+                            <input type="hidden" name="AnnouncementEdit.Revision" value="@item.Revision" />
+                            <p>@L("تعديل نصوص الإعلان يحافظ على الصورة والجمهور. عدّل كل ترجمة تحتاجها.")</p>
+                            @for(var i=0;i<item.Translations.Count;i++)
+                            {
+                                var translation=item.Translations[i];
+                                <fieldset><legend>@translation.LanguageCode</legend>
+                                    <input type="hidden" name="AnnouncementEdit.Translations[@i].LanguageCode" value="@translation.LanguageCode" />
+                                    <label>@L("العنوان")<input name="AnnouncementEdit.Translations[@i].Title" value="@translation.Title" maxlength="250" required /></label>
+                                    <label>@L("النص")<textarea name="AnnouncementEdit.Translations[@i].Body" maxlength="20000" required>@translation.Body</textarea></label>
+                                </fieldset>
+                            }
+                            <div class="zyw-item-actions"><button type="submit" class="zy-btn zy-btn--primary">@L("حفظ التعديل")</button><button type="button" class="zy-btn" data-ann-cancel-edit>@L("إلغاء")</button></div>
+                        </form>
                         <div class="zyw-item-actions">
+                            <button type="button" class="btn-secondary" data-ann-edit>@L("تعديل")</button>
                             <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementToggle">
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <input type="hidden" name="publish" value="@((!item.IsPublished).ToString().ToLowerInvariant())" />
@@ -318,34 +229,60 @@
                                 <input type="hidden" name="id" value="@item.Id" />
                                 <button type="submit" class="btn-secondary" data-zyconfirm="أرشفة الإعلان؟">أرشفة</button>
                             </form>
+                            <form method="post" asp-page="/Engagement/Index" asp-page-handler="AnnouncementDelete">
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn-secondary" data-zyconfirm="@L("حذف الإعلان وإيقاف ظهوره للموظفين؟")">@L("حذف")</button>
+                            </form>
                         </div>
-                    </div>
-                }
-            </div>
+                        </dialog>
+            }
         </article>
     </section>
 
     @* ================================================================= الاستطلاعات *@
     <section class="zyw-panel" data-zyw-panel="polls" role="tabpanel" hidden="@(!IsTab("polls"))">
-        <article class="zy-card">
-            <div class="zyw-queue-head"><h2>استطلاع جديد</h2></div>
+        <dialog class="zy-ann-dialog zy-poll-dialog" id="zy-poll-create" aria-labelledby="zy-poll-create-title">
+            <div class="zy-ann-dialog-head"><h2 id="zy-poll-create-title">@L("استطلاع جديد")</h2><button type="button" class="zy-btn" data-ann-close>@L("إغلاق")</button></div>
 
             <form method="post" asp-page="/Engagement/Index" asp-page-handler="PollCreate">
                 <div class="zyw-form-grid">
-                    <div class="zyw-field zyw-field--wide">
-                        <label for="poll-title">العنوان</label>
-                        <input id="poll-title" name="Poll.Title" required />
+                    <input type="hidden" id="poll-primary-language" value="@Model.PollPrimaryLanguage" data-primary-name="@Model.PollLanguages.FirstOrDefault(l => l.Code == Model.PollPrimaryLanguage)?.NativeName" data-language-count="@Model.PollLanguages.Count" />
+                    <div class="zyw-field zyw-field--wide" data-poll-field>
+                        <div class="zy-poll-field-head"><label for="poll-title">@L("العنوان") — <span data-poll-primary-name></span></label><button type="button" class="zy-poll-language-link" data-poll-language-toggle aria-expanded="false"><span aria-hidden="true">🌐</span> @L("لغة أخرى")</button></div>
+                        <input id="poll-title" name="Poll.Title" required maxlength="250" />
+                        <partial name="_PollFieldLanguages" model='new EngagementPageModel.PollFieldLanguages(Model.PollLanguages, Model.PollPrimaryLanguage, "Title", L("العنوان"), 250)' />
+                    </div>
+
+                    <div class="zyw-field zyw-field--wide" data-poll-field>
+                        <div class="zy-poll-field-head"><label for="poll-question">@L("السؤال") — <span data-poll-primary-name></span></label><button type="button" class="zy-poll-language-link" data-poll-language-toggle aria-expanded="false"><span aria-hidden="true">🌐</span> @L("لغة أخرى")</button></div>
+                        <input id="poll-question" name="Poll.Question" required maxlength="4000" />
+                        <partial name="_PollFieldLanguages" model='new EngagementPageModel.PollFieldLanguages(Model.PollLanguages, Model.PollPrimaryLanguage, "Question", L("السؤال"), 4000)' />
                     </div>
 
                     <div class="zyw-field zyw-field--wide">
-                        <label for="poll-question">السؤال</label>
-                        <input id="poll-question" name="Poll.Question" required />
+                        <label>@L("خيارات الإجابة")</label>
+                        <div data-poll-options>
+                            @for (var optionIndex = 1; optionIndex <= 2; optionIndex++)
+                            {
+                                <div class="zy-poll-option" data-poll-field>
+                                    <div class="zy-poll-field-head"><span data-poll-option-caption data-caption-prefix="@L("الخيار")">@L("الخيار") @optionIndex</span><button type="button" class="zy-poll-language-link" data-poll-language-toggle aria-expanded="false"><span aria-hidden="true">🌐</span> @L("لغة أخرى")</button></div>
+                                    <div class="zy-poll-option-main"><input name="Poll.Options" required maxlength="300" aria-label="@L("الخيار") @optionIndex" /><button type="button" class="zy-btn" data-poll-remove>@L("حذف الخيار")</button></div>
+                                    <partial name="_PollFieldLanguages" model='new EngagementPageModel.PollFieldLanguages(Model.PollLanguages, Model.PollPrimaryLanguage, "Options", $"{L("الخيار")} {optionIndex}", 300)' />
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="zy-btn" data-poll-add>@L("إضافة خيار")</button>
                     </div>
-
-                    <div class="zyw-field zyw-field--wide">
-                        <label for="poll-options">الخيارات — خيارٌ بكل سطر</label>
-                        <textarea id="poll-options" name="Poll.OptionsText" rows="4" required></textarea>
-                    </div>
+                    @for (var languageIndex = 0; languageIndex < Model.PollLanguages.Count; languageIndex++)
+                    {
+                        var language = Model.PollLanguages[languageIndex];
+                        <input type="hidden" name="Poll.Translations.Index" value="@languageIndex" data-poll-language-meta="@language.Code" disabled />
+                        <input type="hidden" name="Poll.Translations[@languageIndex].LanguageCode" value="@language.Code" data-poll-language-meta="@language.Code" disabled />
+                    }
+                    <p class="zyw-field--wide zy-poll-language-error" data-poll-language-error hidden role="alert">@L("أكمل عنوان وسؤال وجميع خيارات كل لغة، بدون تكرار الخيارات.")</p>
+                    <div class="zyw-field"><label for="poll-start">@L("تاريخ البداية")</label><input type="date" id="poll-start" name="Poll.StartsOn" /></div>
+                    <div class="zyw-field"><label for="poll-end">@L("تاريخ النهاية")</label><input type="date" id="poll-end" name="Poll.EndsOn" /></div>
+                    <div class="zyw-field zyw-field--wide"><label><input type="checkbox" name="Poll.ConfidentialResults" value="true" checked />@L("نتائج مجمّعة بدون أسماء")</label><input type="hidden" name="Poll.ConfidentialResults" value="false" /><p>@L("تُخفى نتائج الخيارات حتى مشاركة 5 موظفين. يُحفظ سجل المشاركة لمنع التصويت المكرر؛ ليست مجهولة الهوية داخل قاعدة البيانات.")</p></div>
 
                     <div class="zyw-field">
                         <label for="poll-category">التصنيف</label>
@@ -406,7 +343,7 @@
                     <button type="submit" class="btn-primary">حفظ الاستطلاع</button>
                 </div>
             </form>
-        </article>
+        </dialog>
 
         <article class="zy-card">
             <div class="zyw-queue-head">
@@ -414,21 +351,24 @@
                 <span class="zy-pill">@Model.TotalPolls</span>
             </div>
 
-            @if (Model.Polls.Count == 0)
-            {
-                <div class="zyw-empty">لا استطلاعات بعد.</div>
-            }
-
-            <div class="zyw-list">
+            <div class="zy-ann-table-wrap"><table class="zy-table zy-ann-table zy-poll-table"><thead><tr><th scope="col">@L("التسلسل")</th><th scope="col">@L("العنوان")</th><th scope="col">@L("تاريخ البداية")</th><th scope="col">@L("تاريخ النهاية")</th><th scope="col">@L("الحالة")</th><th scope="col">@L("المشاركون")</th></tr></thead><tbody>
+            @if (Model.Polls.Count == 0){<tr><td colspan="6" class="zy-ann-empty">@L("لا استطلاعات بعد. أنشئ أول استطلاع.")</td></tr>}
+            @{ var pollSequence = 0; }
+            @foreach (var item in Model.Polls){<tr class="zy-ann-row" tabindex="0" data-ann-open="zy-poll-@item.Id" aria-haspopup="dialog" aria-label="@item.Title"><td>@(++pollSequence)</td><td>@item.Title</td><td>@Model.DisplayDate(item.StartsOn ?? item.PublishDate)</td><td>@(item.EndsOn.HasValue ? Model.DisplayDate(item.EndsOn) : L("بدون نهاية"))</td><td>@L(item.LifecycleStatus)</td><td>@item.VotesCount</td></tr>}
+            </tbody></table></div>
                 @foreach (var item in Model.Polls)
                 {
-                    <div class="zyw-row">
+                    <dialog class="zy-ann-dialog zy-poll-dialog" id="zy-poll-@item.Id" aria-labelledby="zy-poll-title-@item.Id">
+                        <div class="zy-ann-dialog-head"><h2 id="zy-poll-title-@item.Id">@L("تفاصيل الاستطلاع")</h2><button type="button" class="zy-btn" data-ann-close>@L("إغلاق")</button></div>
                         <div class="zyw-item-main">
-                            <strong>@item.Title</strong>
+                            <h3>@item.Title</h3><p>@item.Question</p>
                             <div class="zyw-row-meta">
-                                <span class="zy-pill">@Model.PublishText(item.IsPublished)</span>
+                                <span class="zy-pill">@L(item.LifecycleStatus)</span>
                                 <small>@item.VotesCount صوت · @item.OptionsCount خيار · @Model.TargetText(item)</small>
                             </div>
+                            <dl class="zy-ann-detail-meta"><div><dt>@L("تاريخ البداية")</dt><dd>@Model.DisplayDate(item.StartsOn ?? item.PublishDate)</dd></div><div><dt>@L("تاريخ النهاية")</dt><dd>@(item.EndsOn.HasValue ? Model.DisplayDate(item.EndsOn) : L("بدون نهاية"))</dd></div></dl>
+                            @if (!SmartAttendance.Web.Infrastructure.Hrms.PollLifecycle.CanShowResults(item.ConfidentialResults, item.VotesCount)){<p>@L("النتائج مخفية لحماية الخصوصية حتى مشاركة 5 موظفين.")</p>}
+                            <ul class="zy-poll-results">@foreach(var option in item.Options){<li><span>@option.Text</span>@if(SmartAttendance.Web.Infrastructure.Hrms.PollLifecycle.CanShowResults(item.ConfidentialResults,item.VotesCount)){<span>@option.Votes / @item.VotesCount</span><progress max="@(Math.Max(1,item.VotesCount))" value="@option.Votes"></progress>}</li>}</ul>
                         </div>
                         <div class="zyw-item-actions">
                             <form method="post" asp-page="/Engagement/Index" asp-page-handler="PollToggle">
@@ -441,9 +381,8 @@
                                 <button type="submit" class="btn-secondary" data-zyconfirm="حذف الاستطلاع وأصواته؟">حذف</button>
                             </form>
                         </div>
-                    </div>
+                    </dialog>
                 }
-            </div>
         </article>
     </section>
 
@@ -513,67 +452,11 @@
         </article>
     </section>
 
-    @* ===================================================================== التقدير *@
-    <section class="zyw-panel" data-zyw-panel="recognition" role="tabpanel" hidden="@(!IsTab("recognition"))">
-        <article class="zy-card">
-            <div class="zyw-queue-head">
-                <h2>التكريم والشكر</h2>
-                <span class="zy-pill">@Model.RecognitionAnnouncements.Count</span>
-            </div>
-
-            @if (Model.RecognitionAnnouncements.Count == 0)
-            {
-                <div class="zyw-empty">
-                    لا تكريمات بعد. تُنشأ من تبويب «الإعلانات» باختيار قالب ترقية أو شكر أو ترحيب.
-                </div>
-            }
-
-            <div class="zyw-list">
-                @foreach (var item in Model.RecognitionAnnouncements)
-                {
-                    <div class="zyw-row">
-                        <div class="zyw-item-main">
-                            <strong>@item.Title</strong>
-                            <div class="zyw-row-meta">
-                                <span class="zy-pill">@Model.TemplateName(item.TemplateKey)</span>
-                                <small>@Model.DisplayDate(item.PublishDate) · @item.RecipientCount مستلم</small>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </article>
-
-        <article class="zy-card">
-            <div class="zyw-queue-head">
-                <h2>الحملات والتعاميم</h2>
-                <span class="zy-pill">@Model.CampaignAnnouncements.Count</span>
-            </div>
-
-            @if (Model.CampaignAnnouncements.Count == 0)
-            {
-                <div class="zyw-empty">لا حملات أو تعاميم منشورة.</div>
-            }
-
-            <div class="zyw-list">
-                @foreach (var item in Model.CampaignAnnouncements)
-                {
-                    <div class="zyw-row">
-                        <div class="zyw-item-main">
-                            <strong>@item.Title</strong>
-                            <div class="zyw-row-meta">
-                                <span class="zy-pill">@item.Category</span>
-                                <small>@Model.DisplayDate(item.PublishDate) · @Model.TargetText(item)</small>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </article>
-    </section>
 </section>
 
 @section Scripts {
+    <script src="~/js/zynora-announcement-dialogs.js" asp-append-version="true" defer></script>
+    <script src="~/js/zynora-poll-management.js" asp-append-version="true" defer></script>
     <script>
         // تبديل التبويب بلا إعادة تحميل، مع إبقاء `?tab=` بالرابط كي تعود إليه
         // إعادةُ التوجيه بعد أي إجراء (النشر/الردّ) فلا تقفز الشاشة لأوّل تبويب.
@@ -590,6 +473,7 @@
                 panels.forEach(function (p) {
                     p.hidden = p.dataset.zywPanel !== key;
                 });
+                document.querySelectorAll('[data-create-for]').forEach(function (footer) { footer.hidden = footer.dataset.createFor !== key; });
 
                 var url = new URL(window.location.href);
                 url.searchParams.set('tab', key);

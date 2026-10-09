@@ -104,7 +104,10 @@ public sealed class AnnouncementService : IAnnouncementService
 
                 return new AnnouncementManagementItem
                 {
+                    PresentationJson = content?.PresentationJson,
                     Id = group.Id,
+                    Revision = Convert.ToBase64String(group.RowVersion),
+                    Translations = group.Contents.Where(c => !c.IsDeleted).Select(c => new StudioRendered(c.LanguageCode, c.Title, c.Body)).ToArray(),
                     Title = content?.Title ?? string.Empty,
                     Body = content?.Body ?? string.Empty,
                     Category = content?.Category ?? "عام",
@@ -161,12 +164,18 @@ public sealed class AnnouncementService : IAnnouncementService
             if (normalized.PresentationJson != null && System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(normalized.PresentationJson)!.DesignId != Guid.Empty)
             {
                 var presentation = System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(normalized.PresentationJson)!;
-                var company = await _dbContext.AnnouncementStudioDesigns.Where(x => x.Id == presentation.DesignId && x.IsActive)
+                var company = normalized.ImageUpload?.CompanyId ?? await _dbContext.AnnouncementStudioDesigns.Where(x => x.Id == presentation.DesignId && x.IsActive)
                     .Select(x => (int?)x.CompanyId).FirstOrDefaultAsync(cancellationToken);
                 if (!company.HasValue || normalized.AllEmployees || normalized.BranchIds.Count > 0 || normalized.DepartmentIds.Count > 0 || normalized.PositionIds.Count > 0 ||
                     normalized.CompanyIds.Any(x => x != company.Value) ||
                     await _dbContext.Employees.CountAsync(x => normalized.EmployeeIds.Contains(x.Id) && x.CompanyId == company.Value, cancellationToken) != normalized.EmployeeIds.Count)
                     return AnnouncementOperationResult.Fail("تصميم الإعلان لا يطابق شركة الجمهور.");
+                if (normalized.ImageUpload is { } upload)
+                    _dbContext.AnnouncementStudioDesigns.Add(new()
+                    {
+                        Id = upload.Id, CompanyId = upload.CompanyId, Name = upload.Name,
+                        ContentType = upload.ContentType, Data = upload.Data, IsActive = true
+                    }); // Saved with the announcement in the same transaction; no orphan on failure/retry.
             }
             var baghdadDate = DateOnly.FromDateTime(GetBaghdadNow().DateTime);
 
@@ -385,6 +394,109 @@ public sealed class AnnouncementService : IAnnouncementService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return AnnouncementOperationResult.Ok("تمت أرشفة الإعلان وإيقاف ظهوره على الحائط.", group.Id);
+    }
+
+    public async Task<AnnouncementOperationResult> UpdateAsync(
+        AnnouncementUpdateRequest request, AnnouncementActorContext actor,
+        AnnouncementManagementScope scope, CancellationToken cancellationToken = default)
+    {
+        var error = ValidateUpdate(request);
+        if (error != null) return AnnouncementOperationResult.Fail(error);
+        var actorUser = await ResolveActorUserAsync(actor.UserName, cancellationToken);
+        if (!await HasPermissionAsync(actor, actorUser, AnnouncementPermissionCodes.Create, cancellationToken))
+            return AnnouncementOperationResult.Fail("ليس لديك صلاحية تعديل الإعلانات.");
+        var group = await DeletionScope(_dbContext.AnnouncementGroups, scope)
+            .Where(g => !g.IsDeleted).Include(g => g.Contents)
+            .SingleOrDefaultAsync(g => g.Id == request.Id, cancellationToken);
+        if (group == null) return AnnouncementOperationResult.Fail("الإعلان غير موجود.");
+        if (group.Status == AnnouncementStatus.Published &&
+            !await HasPermissionAsync(actor, actorUser, AnnouncementPermissionCodes.Publish, cancellationToken))
+            return AnnouncementOperationResult.Fail("ليس لديك صلاحية تعديل الإعلانات.");
+        if (!group.RowVersion.SequenceEqual(Convert.FromBase64String(request.Revision!)))
+            return AnnouncementOperationResult.Fail("تغيّر الإعلان بواسطة مستخدم آخر. أعد فتحه قبل التعديل.");
+        var contents = group.Contents.Where(c => !c.IsDeleted).ToArray();
+        if (contents.Length != request.Translations.Count || contents.Any(c =>
+            !request.Translations.Any(t => string.Equals(t.LanguageCode, c.LanguageCode, StringComparison.OrdinalIgnoreCase))))
+            return AnnouncementOperationResult.Fail("راجع لغات الإعلان قبل حفظ التعديل.");
+        var utcNow = DateTime.UtcNow;
+        foreach (var content in contents)
+        {
+            var text = request.Translations.Single(t => string.Equals(t.LanguageCode, content.LanguageCode, StringComparison.OrdinalIgnoreCase));
+            content.Title = text.Title!.Trim(); content.Body = text.Body!.Trim();
+            content.UpdatedAt = utcNow; content.UpdatedBy = actor.UserName;
+        }
+        group.UpdatedAt = utcNow; group.UpdatedBy = actor.UserName;
+        AddAudit(group, actorUser?.Id, actor, "Update", new { TranslationCount = contents.Length }, utcNow);
+        try { await _dbContext.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException) { return AnnouncementOperationResult.Fail("تغيّر الإعلان بواسطة مستخدم آخر. أعد فتحه قبل التعديل."); }
+        return AnnouncementOperationResult.Ok("تم تعديل الإعلان.", group.Id);
+    }
+
+    private static string? ValidateUpdate(AnnouncementUpdateRequest request)
+    {
+        if (request.Id <= 0 || request.Translations is not { Count: > 0 and <= 12 }) return "راجع نصوص الإعلان.";
+        try { if (Convert.FromBase64String(request.Revision ?? "").Length != 8) return "راجع نصوص الإعلان."; }
+        catch (FormatException) { return "راجع نصوص الإعلان."; }
+        if (request.Translations.Any(t => string.IsNullOrWhiteSpace(t.LanguageCode) || string.IsNullOrWhiteSpace(t.Title) ||
+            string.IsNullOrWhiteSpace(t.Body) || t.Title.Trim().Length > 250 || t.Body.Trim().Length > 20000) ||
+            request.Translations.Select(t => t.LanguageCode).Distinct(StringComparer.OrdinalIgnoreCase).Count() != request.Translations.Count)
+            return "راجع نصوص الإعلان.";
+        return null;
+    }
+
+    // Reuse archive authority; deletion is a retained, audited tombstone, not a purge.
+    public async Task<AnnouncementOperationResult> DeleteAsync(
+        int announcementId,
+        AnnouncementActorContext actor,
+        AnnouncementManagementScope scope,
+        CancellationToken cancellationToken = default)
+    {
+        var actorUser = await ResolveActorUserAsync(actor.UserName, cancellationToken);
+        if (!await HasPermissionAsync(actor, actorUser, AnnouncementPermissionCodes.Archive, cancellationToken))
+            return AnnouncementOperationResult.Fail("ليس لديك صلاحية حذف الإعلانات.");
+
+        var group = await DeletionScope(_dbContext.AnnouncementGroups, scope)
+            .Include(x => x.Channels)
+            .FirstOrDefaultAsync(x => x.Id == announcementId, cancellationToken);
+        if (group == null) return AnnouncementOperationResult.Fail("الإعلان غير موجود.");
+        if (group.IsDeleted) return AnnouncementOperationResult.Ok("تم حذف الإعلان.", group.Id);
+
+        var utcNow = DateTime.UtcNow;
+        group.IsDeleted = true;
+        group.Status = AnnouncementStatus.Archived;
+        group.ArchivedAtUtc = utcNow;
+        group.UpdatedAt = utcNow;
+        group.UpdatedBy = actor.UserName;
+        foreach (var channel in group.Channels.Where(x => !x.IsDeleted))
+        {
+            channel.IsEnabled = false;
+            channel.UpdatedAt = utcNow;
+        }
+        AddAudit(group, actorUser?.Id, actor, "Delete", new { group.IsDeleted, group.Status }, utcNow);
+        // Single SaveChanges transaction preserves content, attachments and audit history.
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return AnnouncementOperationResult.Ok("تم حذف الإعلان.", group.Id);
+    }
+
+    private static IQueryable<AnnouncementGroup> DeletionScope(
+        IQueryable<AnnouncementGroup> query, AnnouncementManagementScope scope)
+    {
+        if (scope.IsUnrestricted) return query;
+        var allowed = scope.AllowedCompanyIds.Where(id => id > 0).Distinct().ToArray();
+        return query.Where(group =>
+            group.AudienceRules.Any(rule => !rule.IsExcluded &&
+                ((rule.CompanyId.HasValue && allowed.Contains(rule.CompanyId.Value)) ||
+                 (rule.Branch != null && allowed.Contains(rule.Branch.CompanyId)) ||
+                 (rule.Department != null && allowed.Contains(rule.Department.CompanyId)) ||
+                 (rule.Position != null && allowed.Contains(rule.Position.CompanyId)) ||
+                 (rule.Employee != null && rule.Employee.CompanyId.HasValue && allowed.Contains(rule.Employee.CompanyId.Value)))) &&
+            !group.AudienceRules.Any(rule => !rule.IsExcluded &&
+                (rule.AudienceType == AnnouncementAudienceType.All ||
+                 (rule.CompanyId.HasValue && !allowed.Contains(rule.CompanyId.Value)) ||
+                 (rule.BranchId.HasValue && (rule.Branch == null || !allowed.Contains(rule.Branch.CompanyId))) ||
+                 (rule.DepartmentId.HasValue && (rule.Department == null || !allowed.Contains(rule.Department.CompanyId))) ||
+                 (rule.PositionId.HasValue && (rule.Position == null || !allowed.Contains(rule.Position.CompanyId))) ||
+                 (rule.EmployeeId.HasValue && (rule.Employee == null || !rule.Employee.CompanyId.HasValue || !allowed.Contains(rule.Employee.CompanyId.Value))))));
     }
 
     public async Task<IReadOnlyList<EmployeeAnnouncementItem>> GetEmployeeFeedAsync(
@@ -933,6 +1045,7 @@ public sealed class AnnouncementService : IAnnouncementService
         return new AnnouncementCreateRequest
         {
             RequestId = request.RequestId,
+            ImageUpload = request.ImageUpload,
             Translations = request.Translations.Select(x => x with { LanguageCode = x.LanguageCode.Trim().ToLowerInvariant() }).ToArray(),
             PresentationJson = request.PresentationJson,
             LanguageCode = string.IsNullOrWhiteSpace(request.LanguageCode)
@@ -962,6 +1075,20 @@ public sealed class AnnouncementService : IAnnouncementService
 
     private static string? ValidateCreateRequest(AnnouncementCreateRequest request)
     {
+        if (request.ImageUpload is { } upload)
+        {
+            StudioPresentation? p;
+            try { p = System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(request.PresentationJson ?? "null"); }
+            catch (System.Text.Json.JsonException) { return "تصميم الإعلان غير صالح."; }
+            var png = upload.Data is { Length: >= 24 } && upload.Data.AsSpan(0,8).SequenceEqual(new byte[] {137,80,78,71,13,10,26,10});
+            var jpeg = upload.Data is { Length: >= 24 } && upload.Data[0] == 255 && upload.Data[1] == 216 && upload.Data[^2] == 255 && upload.Data[^1] == 217;
+            if (upload.Id == Guid.Empty || upload.CompanyId <= 0 || string.IsNullOrWhiteSpace(upload.Name) || upload.Name.Length > 150 ||
+                upload.Data == null || upload.Data.Length > 5242880 ||
+                !(upload.ContentType == "image/png" && png || upload.ContentType == "image/jpeg" && jpeg) ||
+                p == null || p.DesignId != upload.Id || p.AssetKey != null || request.CompanyIds.Count > 1 ||
+                request.CompanyIds.Any(id => id != upload.CompanyId) || request.CompanyIds.Count == 0 && request.EmployeeIds.Count == 0)
+                return "تصميم الإعلان لا يطابق شركة الجمهور.";
+        }
         if (!AnnouncementStudio.ValidLanguage(request.LanguageCode))
         {
             return "لغة الإعلان غير مدعومة.";
@@ -976,7 +1103,9 @@ public sealed class AnnouncementService : IAnnouncementService
             {
                 if (request.PresentationJson.Length > 2000) return "تصميم الإعلان غير صالح.";
                 var p = System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(request.PresentationJson);
-                if (p == null || (p.DesignId == Guid.Empty && !AnnouncementStudio.BuiltinAssets.Contains(p.AssetKey)) || p.Fit is not ("contain" or "cover") || p.Position is not ("center" or "top" or "bottom") || p.TextPlacement is not ("above" or "below" or "overlay"))
+                if (p?.PrimaryLanguage != null && (!AnnouncementStudio.ValidLanguage(p.PrimaryLanguage) ||
+                    !p.PrimaryLanguage.Equals(request.LanguageCode, StringComparison.OrdinalIgnoreCase))) return "لغة الإعلان غير مدعومة.";
+                if (p == null || (!string.IsNullOrEmpty(p.AssetKey) && (p.DesignId != Guid.Empty || !AnnouncementStudio.BuiltinAssets.Contains(p.AssetKey))) || p.Fit is not ("contain" or "cover") || p.Position is not ("center" or "top" or "bottom") || p.TextPlacement is not ("above" or "below" or "overlay"))
                     return "تصميم الإعلان غير صالح.";
             }
             catch (System.Text.Json.JsonException) { return "تصميم الإعلان غير صالح."; }
@@ -1012,10 +1141,15 @@ public sealed class AnnouncementService : IAnnouncementService
             .Where(x => !x.IsDeleted)
             .ToList();
 
+        string? primaryLanguage = null;
+        try { primaryLanguage = System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(activeContents.FirstOrDefault()?.PresentationJson ?? "null")?.PrimaryLanguage; }
+        catch (System.Text.Json.JsonException) { /* Legacy announcements without valid presentation retain their existing fallback. */ }
+
         return activeContents.FirstOrDefault(x =>
                    x.LanguageCode.Equals(requestedLanguage, StringComparison.OrdinalIgnoreCase))
                ?? activeContents.FirstOrDefault(x =>
                    x.LanguageCode.Split('-')[0].Equals(requestedLanguage.Split('-')[0], StringComparison.OrdinalIgnoreCase))
+               ?? activeContents.FirstOrDefault(x => primaryLanguage != null && x.LanguageCode.Equals(primaryLanguage, StringComparison.OrdinalIgnoreCase))
                ?? activeContents.FirstOrDefault(x =>
                    x.LanguageCode.Equals("ar", StringComparison.OrdinalIgnoreCase))
                ?? activeContents.FirstOrDefault();

@@ -182,7 +182,10 @@
         syncInputs(template.key, force);
 
         liveCard.className = `nx-live-card ${template.key}`;
-        artImage.src = `/brand/announcement-studio/art/${template.artKey || 'custom'}.png`;
+        // Legacy sample artwork is retired; the company library is managed in Studio.
+        artImage.hidden = true;
+        artImage.style.display = 'none';
+        artImage.removeAttribute('src');
         artImage.alt = template.key;
 
         liveCategory.textContent = value('category') || template.category;

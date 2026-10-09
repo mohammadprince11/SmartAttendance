@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SmartAttendance.Application.Announcements.Models;
 using SmartAttendance.Web.Infrastructure.Hrms;
 using SmartAttendance.Web.Infrastructure.Security;
@@ -131,6 +132,30 @@ public async Task<IActionResult> OnPostAnnouncementCreateAsync()
         return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
     }
 
+    [BindProperty] public AnnouncementUpdateRequest AnnouncementEdit { get; set; } = new();
+
+    public async Task<IActionResult> OnPostAnnouncementUpdateAsync()
+    {
+        if (!await CanManageAnnouncementAsync(AnnouncementEdit.Id)) return NotFound();
+        var scope = await GetCompanyScopeAsync();
+        var result = await AnnouncementService.UpdateAsync(AnnouncementEdit, BuildAnnouncementActor(),
+            new AnnouncementManagementScope { IsUnrestricted = scope.IsUnrestricted, AllowedCompanyIds = scope.AllowedCompanyIds.ToArray() },
+            HttpContext.RequestAborted);
+        StatusMessage = result.Message;
+        return RedirectToPage("/Engagement/Index", new { tab = "work" });
+    }
+
+    public async Task<IActionResult> OnPostAnnouncementDeleteAsync(int id)
+    {
+        if (!await CanManageAnnouncementAsync(id)) return NotFound();
+        var scope = await GetCompanyScopeAsync();
+        var result = await AnnouncementService.DeleteAsync(id, BuildAnnouncementActor(),
+            new AnnouncementManagementScope { IsUnrestricted = scope.IsUnrestricted, AllowedCompanyIds = scope.AllowedCompanyIds.ToArray() },
+            HttpContext.RequestAborted);
+        StatusMessage = result.Message;
+        return RedirectToPage("/Engagement/Index", new { tab = "announcements" });
+    }
+
     public async Task<IActionResult> OnPostAnnouncementToggleAsync(int id, bool publish)
     {
         if (!await CanManageAnnouncementAsync(id)) return NotFound();
@@ -208,15 +233,18 @@ public async Task<IActionResult> OnPostPollCreateAsync()
 
         var title = Poll.Title?.Trim() ?? string.Empty;
         var question = Poll.Question?.Trim() ?? string.Empty;
-        var options = (Poll.OptionsText ?? string.Empty)
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+        var options = (Poll.Options.Length > 0 ? Poll.Options : (Poll.OptionsText ?? string.Empty)
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
             .Select(x => x.Trim())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(12)
             .ToList();
 
-        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(question) || options.Count < 2)
+        if (!PollLifecycle.ValidDates(Poll.StartsOn, Poll.EndsOn) ||
+            new[] { "Poll.StartsOn", "Poll.EndsOn" }.Any(key => ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0))
+        {
+            StatusMessage = "تاريخ النهاية يجب ألا يسبق البداية. أدخل تاريخاً صحيحاً.";
+            return RedirectToPage("/Engagement/Index", new { tab = "polls" });
+        }
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(question) || question.Length > 4000 || options.Count < 2 || options.Count > 12 || title.Length > 250 || options.Any(o => o.Length is < 1 or > 300) || options.Distinct(StringComparer.OrdinalIgnoreCase).Count() != options.Count)
         {
             StatusMessage = "يرجى إدخال عنوان وسؤال وخيارين على الأقل للاستطلاع.";
             return RedirectToPage("/Engagement/Index", new { tab = "polls" });
@@ -237,24 +265,40 @@ public async Task<IActionResult> OnPostPollCreateAsync()
             return RedirectToPage("/Engagement/Index", new { tab = "polls" });
         }
 
+        await LoadPollLanguagesAsync();
+        string translationsJson;
+        try
+        {
+            translationsJson = PollTranslations.Normalize(PollPrimaryLanguage, Poll.Translations, PollLanguages.Select(l => l.Code), options.Count);
+        }
+        catch (ArgumentException error)
+        {
+            StatusMessage = error.Message;
+            return RedirectToPage("/Engagement/Index", new { tab = "polls" });
+        }
         var targetValue = BuildTargetValue(targetType, Poll.EmployeeIds, Poll.DepartmentId, Poll.BranchId);
         var category = string.IsNullOrWhiteSpace(Poll.Category) ? "استطلاع" : Poll.Category.Trim();
         var isPublished = Poll.PublishNow;
         var user = User.Identity?.Name ?? "HR";
 
+        await using var pollTransaction = await DbContext.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         var pollId = await HrmsDatabase.ScalarAsync<int>(
             DbContext,
             """
 INSERT INTO EmployeePolls
-(Title, Question, Category, TargetType, TargetValue, IsPublished, PublishDate, CreatedBy, CreatedAt)
+(Title, Question, Category, TargetType, TargetValue, IsPublished, PublishDate, CreatedBy, CreatedAt, StartsOn, EndsOn, ConfidentialResults, ContentTranslationsJson)
 VALUES
-(@Title, @Question, @Category, @TargetType, @TargetValue, @IsPublished, SYSUTCDATETIME(), @CreatedBy, SYSUTCDATETIME());
+(@Title, @Question, @Category, @TargetType, @TargetValue, @IsPublished, SYSUTCDATETIME(), @CreatedBy, SYSUTCDATETIME(), @StartsOn, @EndsOn, @ConfidentialResults, @TranslationsJson);
 SELECT CAST(SCOPE_IDENTITY() AS int);
 """,
             command =>
             {
                 HrmsDatabase.AddParameter(command, "@Title", title);
+                HrmsDatabase.AddParameter(command, "@TranslationsJson", translationsJson);
                 HrmsDatabase.AddParameter(command, "@Question", question);
+                HrmsDatabase.AddParameter(command, "@StartsOn", Poll.StartsOn?.Date);
+                HrmsDatabase.AddParameter(command, "@EndsOn", Poll.EndsOn?.Date);
+                HrmsDatabase.AddParameter(command, "@ConfidentialResults", Poll.ConfidentialResults);
                 HrmsDatabase.AddParameter(command, "@Category", category);
                 HrmsDatabase.AddParameter(command, "@TargetType", targetType);
                 HrmsDatabase.AddParameter(command, "@TargetValue", targetValue);
@@ -300,6 +344,7 @@ VALUES ('EmployeePoll', CAST(@PollId AS nvarchar(80)), 'Create Poll', @NewValues
             ConfigTenantScope.OwningCompany(await GetCompanyScopeAsync()));
 
         StatusMessage = isPublished ? "تم نشر الاستطلاع وسيظهر للموظفين حسب الجهة المستهدفة." : "تم حفظ الاستطلاع كمسودة.";
+        await pollTransaction.CommitAsync(HttpContext.RequestAborted);
         return RedirectToPage("/Engagement/Index", new { tab = "polls" });
     }
 

@@ -28,6 +28,18 @@ public interface IAnnouncementService
         AnnouncementActorContext actor,
         CancellationToken cancellationToken = default);
 
+    Task<AnnouncementOperationResult> UpdateAsync(
+        AnnouncementUpdateRequest request,
+        AnnouncementActorContext actor,
+        AnnouncementManagementScope scope,
+        CancellationToken cancellationToken = default);
+
+    Task<AnnouncementOperationResult> DeleteAsync(
+        int announcementId,
+        AnnouncementActorContext actor,
+        AnnouncementManagementScope scope,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<EmployeeAnnouncementItem>> GetEmployeeFeedAsync(
         int employeeId,
         CancellationToken cancellationToken = default);

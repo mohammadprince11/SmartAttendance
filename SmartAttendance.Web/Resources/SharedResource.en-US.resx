@@ -936,4 +936,99 @@
   <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {0}." xml:space="preserve"><value>Thank you for your years of dedication. Wishing you a happy retirement starting {0}.</value></data>
   <data name="نشكرك على عطائك. آخر يوم عمل: {0}. نتمنى لك النجاح في مسيرتك القادمة." xml:space="preserve"><value>Thank you for your contribution. Last working day: {0}. We wish you success in your next chapter.</value></data>
   <data name="يسرنا انضمامك بمنصب {0} اعتباراً من {1}. نتمنى لك بداية موفقة." xml:space="preserve"><value>We welcome you as {0}, starting {1}. Wishing you a successful journey with us.</value></data>
+  <data name="بدون صورة" xml:space="preserve"><value>No image</value></data>
+  <data name="اختر موظفاً من الشركة بالاسم أو الكود." xml:space="preserve"><value>Select a company employee by name or code.</value></data>
+  <data name="تُصغّر الصور الكبيرة تلقائياً إلى 2000 بكسل مع الحفاظ على التناسب وبدون قص. الملف الأصلي لا يتغير." xml:space="preserve"><value>Large images are automatically resized to 2000 pixels, preserving proportions without cropping. Your original file is unchanged.</value></data>
+  <data name="اختر صورة PNG أو JPEG بحد أقصى 5 ميغابايت." xml:space="preserve"><value>Select a PNG or JPEG image up to 5 MB.</value></data>
+  <data name="أبعاد الصورة أكبر من الحد الآمن (100 مليون بكسل)، أو الصورة متحركة. صغّرها وأعد رفعها." xml:space="preserve"><value>The image exceeds the safe dimension limit (100 million pixels), or is animated. Resize it and upload again.</value></data>
+  <data name="تعذّر قراءة الصورة كاملة. تأكد أن الملف غير تالف وأعد رفعه." xml:space="preserve"><value>The complete image could not be decoded. Check that the file is not damaged and upload again.</value></data>
+  <data name="تعذّر تجهيز الصورة للعرض. أعد حفظها كـ PNG أو JPEG." xml:space="preserve"><value>The image could not be prepared for display. Save it as PNG or JPEG and try again.</value></data>
+  <data name="حجم الصورة بعد المعالجة أكبر من الحد المسموح." xml:space="preserve"><value>The processed image exceeds the file size limit.</value></data>
+  <data name="تظهر فقط الصور المرتبطة بهذا القالب، إضافة إلى تصميمه الجاهز إن وجد." xml:space="preserve"><value>Only images linked to this template are shown, along with its built-in design, if available.</value></data>
+  <data name="نوع الإعلان" xml:space="preserve"><value>Announcement type</value></data>
+  <data name="اختر نوع الإعلان" xml:space="preserve"><value>Select announcement type</value></data>
+  <data name="غير مرتبط بنوع إعلان" xml:space="preserve"><value>Not linked to an announcement type</value></data>
+  <data name="حفظ الربط" xml:space="preserve"><value>Save association</value></data>
+  <data name="اختر نوع إعلان فعالاً لربط التصميم به." xml:space="preserve"><value>Select an active announcement type for this design.</value></data>
+  <data name="القالب يحتوي 30 تصميماً. أزل ربط أحد التصاميم أولاً." xml:space="preserve"><value>This template already has 30 designs. Remove one association first.</value></data>
+  <data name="تغيّر ربط التصاميم. أعد تحميل الصفحة وحاول مجدداً." xml:space="preserve"><value>The design associations changed. Reload the page and try again.</value></data>
+  <data name="تم حفظ ربط التصميم بنوع الإعلان." xml:space="preserve"><value>The design association was saved.</value></data>
+  <data name="اختر القالب والصورة والموظف، ثم راجع الإعلان قبل حفظه أو نشره." xml:space="preserve"><value>Select a template, image and employee, then preview the announcement before saving or publishing.</value></data>
+  <data name="إنشاء إعلان من الاستوديو" xml:space="preserve"><value>Create an announcement in Studio</value></data>
+  <data name="إدارة القوالب والتصاميم" xml:space="preserve"><value>Manage templates and designs</value></data>
+  <data name="لا إعلانات بعد. أنشئ أول إعلان." xml:space="preserve"><value>No announcements yet. Create your first announcement.</value></data>
+  <data name="ترقية موظف" xml:space="preserve"><value>Employee promotion</value></data>
+  <data name="المنصب الحالي" xml:space="preserve"><value>Current position</value></data>
+  <data name="المنصب الجديد" xml:space="preserve"><value>New position</value></data>
+  <data name="تاريخ الترقية" xml:space="preserve"><value>Promotion date</value></data>
+  <data name="اختر المنصب الجديد" xml:space="preserve"><value>Select the new position</value></data>
+  <data name="يظهر تلقائياً بعد اختيار الموظف" xml:space="preserve"><value>Filled automatically after selecting an employee</value></data>
+  <data name="لم يُسجل منصب لهذا الموظف. حدّث ملف الموظف أولاً." xml:space="preserve"><value>This employee has no recorded position. Update the employee profile first.</value></data>
+  <data name="اختر المنصب الجديد من مناصب الشركة الفعالة." xml:space="preserve"><value>Select the new position from this company's active positions.</value></data>
+  <data name="المنصب الجديد يجب أن يختلف عن المنصب الحالي." xml:space="preserve"><value>The new position must differ from the current position.</value></data>
+  <data name="مبارك الترقية {person}!" xml:space="preserve"><value>Congratulations on your promotion, {person}!</value></data>
+  <data name="نبارك لك الترقية من منصب {oldPosition} إلى منصب {newPosition} اعتباراً من {date}. نتمنى لك مزيداً من النجاح والتقدم." xml:space="preserve"><value>Congratulations on your promotion from {oldPosition} to {newPosition}, effective {date}. Wishing you continued success.</value></data>
+  <data name="اللغة" xml:space="preserve"><value>Language</value></data>
+  <data name="المعاينة" xml:space="preserve"><value>Preview</value></data>
+  <data name="تعطيل" xml:space="preserve"><value>Disable</value></data>
+  <data name="تفعيل" xml:space="preserve"><value>Enable</value></data>
+  <data name="إعلان حر — نص وصورة وترجمات اختيارية" xml:space="preserve"><value>Free-form announcement — text, image and optional translations</value></data>
+  <data name="اكتب إعلان الشركة بدون قالب أو اختيار موظف. أضف الترجمة للغات النظام التي تحتاجها؛ لا تُترجم النصوص تلقائياً." xml:space="preserve"><value>Write a company announcement without a template or employee selection. Add translations for the system languages you need; text is not translated automatically.</value></data>
+  <data name="اللغة الأساسية" xml:space="preserve"><value>Primary language</value></data>
+  <data name="إذا لم توجد ترجمة بلغة المستخدم، يظهر نص الإعلان باللغة الأساسية." xml:space="preserve"><value>If no translation exists in the user's language, the primary-language announcement is shown.</value></data>
+  <data name="عنوان الإعلان" xml:space="preserve"><value>Announcement title</value></data>
+  <data name="نص الإعلان" xml:space="preserve"><value>Announcement text</value></data>
+  <data name="الترجمات اختيارية. أكمل العنوان والنص لكل لغة تضيفها، حتى 12 لغة للإعلان الواحد." xml:space="preserve"><value>Translations are optional. Complete both title and text for each added language, up to 12 languages per announcement.</value></data>
+  <data name="صورة الإعلان — اختيارية، PNG أو JPEG حتى 5 ميغابايت" xml:space="preserve"><value>Announcement image — optional, PNG or JPEG up to 5 MB</value></data>
+  <data name="حفظ الإعلان الحر" xml:space="preserve"><value>Save free-form announcement</value></data>
+  <data name="صورة الإعلان" xml:space="preserve"><value>Announcement image</value></data>
+  <data name="راجع حقول الإعلان الحر." xml:space="preserve"><value>Review the free-form announcement fields.</value></data>
+  <data name="اختر اللغة الأساسية من لغات النظام." xml:space="preserve"><value>Select a primary language from the system languages.</value></data>
+  <data name="اختر لغة ترجمة من لغات النظام." xml:space="preserve"><value>Select a translation language from the system languages.</value></data>
+  <data name="أكمل عنوان ونص كل ترجمة أضفتها. العنوان حتى 250 حرفاً والنص حتى 20000 حرف." xml:space="preserve"><value>Complete the title and text of every added translation. Titles allow up to 250 characters and text up to 20000.</value></data>
+  <data name="يمكن إضافة 12 لغة كحد أقصى للإعلان الواحد." xml:space="preserve"><value>You can add up to 12 languages per announcement.</value></data>
+  <data name="أكمل عنوان ونص الإعلان باللغة الأساسية." xml:space="preserve"><value>Complete the title and text in the primary language.</value></data>
+  <data name="إعلان حر" xml:space="preserve"><value>Free-form announcement</value></data>
+  <data name="لغة التحرير" xml:space="preserve"><value>Editing language</value></data>
+  <data name="حذف الإعلان وإيقاف ظهوره للموظفين؟" xml:space="preserve"><value>Delete this announcement and stop showing it to employees?</value></data>
+  <data name="ليس لديك صلاحية حذف الإعلانات." xml:space="preserve"><value>You do not have permission to delete announcements.</value></data>
+  <data name="تم حذف الإعلان." xml:space="preserve"><value>The announcement has been deleted.</value></data>
+  <data name="قوالب الإعلانات ولغاتها وصورها حسب نوع المناسبة." xml:space="preserve"><value>Announcement templates, languages and designs by occasion type.</value></data>
+  <data name="الإعلانات" xml:space="preserve"><value>Announcements</value></data>
+  <data name="تفاصيل الإعلان" xml:space="preserve"><value>Announcement details</value></data>
+  <data name="أنشئ بواسطة" xml:space="preserve"><value>Created by</value></data>
+  <data name="حفظ التعديل" xml:space="preserve"><value>Save changes</value></data>
+  <data name="تعديل نصوص الإعلان يحافظ على الصورة والجمهور. عدّل كل ترجمة تحتاجها." xml:space="preserve"><value>Editing announcement text preserves its image and audience. Update each translation as needed.</value></data>
+  <data name="ليس لديك صلاحية تعديل الإعلانات." xml:space="preserve"><value>You do not have permission to edit announcements.</value></data>
+  <data name="تغيّر الإعلان بواسطة مستخدم آخر. أعد فتحه قبل التعديل." xml:space="preserve"><value>Another user changed this announcement. Reopen it before editing.</value></data>
+  <data name="راجع لغات الإعلان قبل حفظ التعديل." xml:space="preserve"><value>Check the announcement languages before saving changes.</value></data>
+  <data name="راجع نصوص الإعلان." xml:space="preserve"><value>Check the announcement text.</value></data>
+  <data name="تم تعديل الإعلان." xml:space="preserve"><value>The announcement has been updated.</value></data>
+  <data name="إعلان جديد" xml:space="preserve"><value>New announcement</value></data>
+  <data name="التسلسل" xml:space="preserve"><value>No.</value></data>
+  <data name="فئة الإعلان" xml:space="preserve"><value>Announcement category</value></data>
+  <data name="تاريخ الإعلان" xml:space="preserve"><value>Announcement date</value></data>
+  <data name="خيارات الإجابة" xml:space="preserve"><value>Answer options</value></data>
+  <data name="الخيار الأول" xml:space="preserve"><value>First option</value></data>
+  <data name="الخيار الثاني" xml:space="preserve"><value>Second option</value></data>
+  <data name="إضافة خيار" xml:space="preserve"><value>Add option</value></data>
+  <data name="حذف الخيار" xml:space="preserve"><value>Remove option</value></data>
+  <data name="تاريخ البداية" xml:space="preserve"><value>Start date</value></data>
+  <data name="تاريخ النهاية" xml:space="preserve"><value>End date</value></data>
+  <data name="نتائج مجمّعة بدون أسماء" xml:space="preserve"><value>Aggregated results without names</value></data>
+  <data name="تُخفى نتائج الخيارات حتى مشاركة 5 موظفين. يُحفظ سجل المشاركة لمنع التصويت المكرر؛ ليست مجهولة الهوية داخل قاعدة البيانات." xml:space="preserve"><value>Option results are hidden until 5 employees participate. Participation records prevent duplicate votes; responses are not anonymous in the database.</value></data>
+  <data name="لا استطلاعات بعد. أنشئ أول استطلاع." xml:space="preserve"><value>No polls yet. Create your first poll.</value></data>
+  <data name="المشاركون" xml:space="preserve"><value>Participants</value></data>
+  <data name="بدون نهاية" xml:space="preserve"><value>No end date</value></data>
+  <data name="مجدول" xml:space="preserve"><value>Scheduled</value></data>
+  <data name="مغلق" xml:space="preserve"><value>Closed</value></data>
+  <data name="تفاصيل الاستطلاع" xml:space="preserve"><value>Poll details</value></data>
+  <data name="النتائج مخفية لحماية الخصوصية حتى مشاركة 5 موظفين." xml:space="preserve"><value>Results are hidden for privacy until 5 employees participate.</value></data>
+  <data name="لغة الترجمة" xml:space="preserve"><value>Translation language</value></data>
+  <data name="إضافة لغة أخرى" xml:space="preserve"><value>Add another language</value></data>
+  <data name="أدخل الترجمة لكل لغة. عند عدم توفرها تظهر اللغة الأساسية. خيارات التصويت مشتركة بين جميع اللغات." xml:space="preserve"><value>Enter each translation. If unavailable, the primary language is shown. Voting options are shared across all languages.</value></data>
+  <data name="اختر لغة أساسية من لغات النظام." xml:space="preserve"><value>Choose a primary language supported by the system.</value></data>
+  <data name="اختر لغة متاحة وغير مكررة للترجمة." xml:space="preserve"><value>Choose an available translation language that has not been added.</value></data>
+  <data name="أكمل عنوان وسؤال وجميع خيارات كل لغة، بدون تكرار الخيارات." xml:space="preserve"><value>Complete the title, question and all options for each language, without duplicate options.</value></data>
+  <data name="لغة أخرى" xml:space="preserve"><value>Other language</value></data>
 </root>

@@ -1,0 +1,26 @@
+@model SmartAttendance.Web.Pages.Engagement.EngagementPageModel.AnnouncementRow
+@using System.Text.Json
+@using SmartAttendance.Application.Announcements.Models
+@{
+    StudioPresentation? presentation = null;
+    try { presentation = JsonSerializer.Deserialize<StudioPresentation>(Model.PresentationJson ?? "null"); }
+    catch (JsonException) { }
+    var valid = presentation != null && presentation.Fit is "contain" or "cover"
+        && presentation.Position is "center" or "top" or "bottom"
+        && presentation.TextPlacement is "above" or "below" or "overlay";
+    var src = valid && presentation!.DesignId != Guid.Empty
+        ? Url.Page("/Engagement/Index", "AnnouncementImage", new { groupId = Model.Id, designId = presentation.DesignId })
+        : valid && AnnouncementStudio.BuiltinAssets.Contains(presentation!.AssetKey)
+            ? Url.Content($"~/brand/announcement-studio/art/{presentation.AssetKey}.png") : null;
+}
+@if (src != null)
+{
+    <div class="zys-visual zys-@presentation!.Fit zys-@presentation.Position zys-@presentation.TextPlacement">
+        <div class="zys-copy"><p>@Model.Body</p></div>
+        <img src="@src" alt="@Model.Title" loading="lazy" />
+    </div>
+}
+else
+{
+    <p class="zyw-ann-body">@Model.Body</p>
+}

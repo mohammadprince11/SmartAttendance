@@ -114,7 +114,7 @@
     <link rel="stylesheet" href="~/theme/current.css" />
 </head>
 
-<body dir="@currentDirection" class="zy-app@(isLoginPage ? " zy-login-shell" : string.Empty)">
+<body dir="@currentDirection" class="zy-app@(isLoginPage ? " zy-login-shell" : string.Empty)@(ViewData["AnnouncementEmbed"] is true ? " zy-ann-embedded" : string.Empty)">
     @{
         var loginUser = Context.User.Identity?.Name;
         var displayNameCookie = Context.Request.Cookies["SA.DisplayName"] ?? Context.User.FindFirst("DisplayName")?.Value;

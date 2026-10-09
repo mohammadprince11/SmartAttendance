@@ -1,0 +1,65 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.LibraryModel
+@using System.Text.Json
+@using System.Globalization
+@using SmartAttendance.Application.Announcements.Models
+@inject SmartAttendance.Web.Infrastructure.Localization.ILocalizationDictionaryService Dictionary
+@{
+    var catalog = await Dictionary.GetCatalogAsync(CultureInfo.CurrentUICulture.Name, HttpContext.RequestAborted);
+    var languages = await Dictionary.GetLanguagesAsync(HttpContext.RequestAborted);
+    var scriptKeys = new HashSet<string> { "لا توجد قوالب فعالة. فعّل قالباً أو أنشئ قالباً جديداً.", "— اختياري", "تاريخ النهاية يجب ألا يسبق البداية.", "نص", "تاريخ", "شهر وسنة", "رقم", "إزالة الحقل", "رمز الحقل", "اسم الحقل", "نوع الحقل", "مطلوب", "إزالة اللغة", "رمز اللغة (ar / en / ku أو لغة جديدة)", "العنوان", "النص", "رمز اللغة مكرر.", "اختر المنصب الجديد", "يظهر تلقائياً بعد اختيار الموظف", "المنصب الجديد يجب أن يختلف عن المنصب الحالي." };
+    var scriptCatalog = catalog.Where(p => scriptKeys.Contains(p.Key) || Model.Templates.Any(t => t.Definition.Name == p.Key || t.Definition.Fields.Any(f => f.Label == p.Key))).ToDictionary(p => p.Key, p => p.Value);
+    string L(string key) => catalog.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : key;
+    ViewData["Title"] = L("إدارة القوالب والتصاميم");
+}
+@section Styles { <link rel="stylesheet" href="~/css/zynora-announcement-templates.css" asp-append-version="true" /> }
+<section class="zy-scope zys" id="announcement-template-studio">
+    <header class="zy-page-header"><div><h1>@L("إدارة القوالب والتصاميم")</h1></div><div class="zys-actions"><a asp-page="Studio" asp-route-CompanyId="@Model.CompanyId" class="zy-btn">@L("إنشاء الإعلان")</a><a asp-page="Index" asp-route-tab="announcements" class="zy-btn">@L("الرجوع للإعلانات")</a></div></header>
+    <div asp-validation-summary="All" role="alert"></div>
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <p role="status">@L(Model.StatusMessage)</p> }
+    @if (Model.Companies.Count > 1)
+    {
+        <form method="get" class="zy-filter-bar"><label>@L("الشركة")<select name="CompanyId" onchange="this.form.submit()">@foreach(var c in Model.Companies){<option value="@c.Id" selected="@(c.Id==Model.CompanyId)">@c.Name</option>}</select></label><button type="submit" class="zy-btn">@L("عرض")</button></form>
+    }
+    @if(Model.CanEditLibrary){
+    <details class="zy-card" open><summary>@L("إدارة القوالب — إنشاء وتعديل وتحديد الحقول واللغات والصور")</summary>
+        <form method="post" asp-page-handler="SaveTemplate" id="zys-builder">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="Revision" id="zys-revision" value="" /><input type="hidden" name="TemplateJson" id="zys-json" />
+            <label>@L("تعديل قالب محفوظ")<select id="zys-edit"><option value="">@L("قالب جديد")</option>@foreach(var t in Model.Templates){<option value="@t.Definition.Key">@L(t.Definition.Name) @(t.IsActive ? "" : L("— غير فعال"))</option>}</select></label>
+            <div class="zys-grid"><label>@L("رمز القالب")<input id="zys-key" required maxlength="80" pattern="[a-z][a-z0-9-]{0,79}" placeholder="special-occasion" /></label><label>@L("اسم القالب")<input id="zys-name" required maxlength="150" /></label></div>
+            <h3>@L("حقول الحالة")</h3><p>@L("حدد لكل حقل اسماً ورمزاً ونوعاً، وهل هو مطلوب. لفترة زمنية أضف startDate وendDate. ذكرى العمل تستخدم joiningDate وتحسب years تلقائياً.")</p>
+            <div id="zys-builder-fields"></div><button type="button" id="zys-add-field" class="zy-btn">@L("إضافة حقل")</button>
+            <h3>@L("نصوص القالب حسب اللغة")</h3><p>@L("أدخل الترجمة لكل لغة. المتغير يُكتب بهذا الشكل: {person} أو رمز الحقل الذي أضفته. لا تُترجم البيانات تلقائياً.")</p>
+            <div id="zys-builder-languages"></div><button type="button" id="zys-add-language" class="zy-btn">@L("إضافة لغة")</button>
+            <fieldset><legend>@L("الصور المتاحة لهذا القالب")</legend><p>@L("تظهر فقط الصور المرتبطة بهذا القالب، إضافة إلى تصميمه الجاهز إن وجد.")</p>@foreach(var d in Model.Designs){<label class="zys-check"><input type="checkbox" data-zys-design-id="@d.Id" />@d.Name</label>}</fieldset>
+            <button type="submit" class="zy-btn zy-btn--primary">@L("حفظ القالب")</button>
+        </form>
+        <h3>@L("تفعيل القوالب")</h3><div class="zys-library">@foreach(var t in Model.Templates){<form method="post" asp-page-handler="ToggleTemplate"><input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="key" value="@t.Definition.Key" /><span>@L(t.Definition.Name)</span><button type="submit" class="zy-btn">@(t.IsActive ? L("تعطيل") : L("تفعيل"))</button></form>}</div>
+    </details>
+    <details class="zy-card"><summary>@L("مكتبة التصاميم")</summary>
+        <div class="zys-library">@foreach(var asset in AnnouncementStudio.BuiltinAssets){<article><img src="@Url.Content($"~/brand/announcement-studio/art/{asset}.png")" alt="@L(AnnouncementStudio.AssetLabel(asset))" loading="lazy" /><p>@L(AnnouncementStudio.AssetLabel(asset))</p></article>}</div>
+        <p>@L("تُصغّر الصور الكبيرة تلقائياً إلى 2000 بكسل مع الحفاظ على التناسب وبدون قص. الملف الأصلي لا يتغير.")</p>
+        <form method="post" asp-page-handler="Upload" enctype="multipart/form-data">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+            <label>@L("اسم التصميم")<input name="DesignName" required maxlength="150" /></label>
+            <label>@L("نوع الإعلان")<select name="DesignTemplateKey" required><option value="">@L("اختر نوع الإعلان")</option>@foreach(var t in Model.Templates.Where(t=>t.IsActive)){<option value="@t.Definition.Key" selected="@(Model.DesignTemplateKey==t.Definition.Key)">@L(t.Definition.Name)</option>}</select></label>
+            <label class="zys-upload-file">@L("صورة التصميم — PNG أو JPEG، حتى 5 ميغابايت")<input name="Upload" type="file" required accept="image/png,image/jpeg" /></label>
+            <button class="zy-btn zy-btn--primary" type="submit">@L("إضافة التصميم")</button>
+        </form>
+        <div class="zys-library">@foreach(var d in Model.Designs){
+            var linked = Model.Templates.Where(t=>t.Definition.DesignIds.Contains(d.Id)).ToArray();
+            <article class="zys-design-card"><img src="@Url.Page("Studio", "Image", new { Model.CompanyId, id=d.Id })" alt="@d.Name" loading="lazy" /><p>@d.Name</p>
+                <form method="post" asp-page-handler="LinkDesign" class="zys-design-link">
+                    <input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="id" value="@d.Id" />
+                    <label>@L("نوع الإعلان")<select name="DesignTemplateKey" required aria-label="@(L("نوع الإعلان")+" · "+d.Name)"><option value="">@L("اختر نوع الإعلان")</option>@foreach(var t in Model.Templates.Where(t=>t.IsActive)){<option value="@t.Definition.Key" selected="@(linked.Length==1 && linked[0].Definition.Key==t.Definition.Key)">@L(t.Definition.Name)</option>}</select></label>
+                    <button class="zy-btn zy-btn--primary" type="submit">@L("حفظ الربط")</button>
+                </form>
+                <form method="post" asp-page-handler="DisableDesign"><input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="id" value="@d.Id" /><button class="zy-btn" data-zyconfirm="@L("تعطيل التصميم؟ الإعلانات القديمة ستحتفظ به.")" type="submit">@L("تعطيل")</button></form>
+            </article>
+        }</div>
+    </details>
+    }
+    <datalist id="zys-cultures">@foreach(var language in languages){<option value="@language.Code">@language.NativeName</option>}</datalist>
+    <script type="application/json" id="zys-data">@Html.Raw(JsonSerializer.Serialize(new { templates=Model.Templates, designs=Model.Designs, companyId=Model.CompanyId, catalog=scriptCatalog, languages, builtinAssets=AnnouncementStudio.BuiltinAssets, defaultAssets=Model.Templates.ToDictionary(t=>t.Definition.Key,t=>AnnouncementStudio.DefaultAsset(t.Definition.Key)), useDefaultDesign=HttpContext.Request.Method=="GET" && string.IsNullOrEmpty(Model.Design), today=DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3)).ToString("yyyy-MM-dd"), templateKey=Model.TemplateKey, values=Model.Values, positions=Model.Positions, subjectPosition=Model.SubjectPositionName, subjectEnglishName=Model.SubjectEmployeeEnglishName, newPositionId=Model.NewPositionId, design=Model.Design, fit=Model.Fit, position=Model.Position, placement=Model.TextPlacement }))</script>
+</section>
+@section Scripts { <script src="~/js/zynora-announcement-templates.js" asp-append-version="true"></script> }

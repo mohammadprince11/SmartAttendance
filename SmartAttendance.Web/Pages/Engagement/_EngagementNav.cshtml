@@ -4,13 +4,12 @@
     <div class="nx-approved-title-icon" aria-hidden="true">HR</div>
     <div class="nx-approved-title">
         <h1>عمليات الموارد البشرية</h1>
-        <p>مركز موحّد للتواصل وصوت الموظف والحالات والتقدير والحملات.</p>
+        <p>مركز موحّد للإعلانات وصوت الموظف والحالات.</p>
     </div>
     <nav class="nx-approved-tabs" aria-label="أقسام عمليات الموارد البشرية">
         <a class="@(Model == "overview" ? "active" : "")" asp-page="/Engagement/Index">نظرة عامة</a>
         <a class="@(Model == "announcements" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="announcements">التواصل</a>
         <a class="@(Model == "polls" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="polls">صوت الموظف</a>
         <a class="@(Model == "feedback" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="cases">الحالات</a>
-        <a class="@(Model == "recognition" ? "active" : "")" asp-page="/Engagement/Index" asp-route-tab="recognition">التقدير والحملات</a>
     </nav>
 </header>
