@@ -1,0 +1,13 @@
+@model SmartAttendance.Web.Pages.EmployeePortal.IndexModel.EmployeePortalAnnouncement
+@using System.Text.Json
+@using SmartAttendance.Application.Announcements.Models
+@{
+    StudioPresentation? p = null;
+    try { if(Model.PresentationJson != null) p=JsonSerializer.Deserialize<StudioPresentation>(Model.PresentationJson); } catch(JsonException) { }
+    var valid = p != null && p.Fit is "contain" or "cover" && p.Position is "center" or "top" or "bottom" && p.TextPlacement is "above" or "below" or "overlay";
+    var src = p?.DesignId != Guid.Empty ? Url.Page("/EmployeePortal/AnnouncementDesign", new { groupId=Model.Id, designId=p?.DesignId })
+        : AnnouncementStudio.BuiltinAssets.Contains(p?.AssetKey) ? Url.Content($"~/brand/announcement-studio/art/{p!.AssetKey}.png") : null;
+}
+@if(valid && src != null){
+<div class="zys-visual zys-@p!.Fit zys-@p.Position zys-@p.TextPlacement"><div class="zys-copy"><p>@Model.Body</p></div><img src="@src" alt="@Model.Title" loading="lazy" /></div>
+}else{<p>@Model.Body</p>}

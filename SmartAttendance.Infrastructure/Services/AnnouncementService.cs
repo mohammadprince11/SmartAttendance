@@ -100,7 +100,7 @@ public sealed class AnnouncementService : IAnnouncementService
         return groups
             .Select(group =>
             {
-                var content = SelectContent(group.Contents, "ar");
+                var content = SelectContent(group.Contents, System.Globalization.CultureInfo.CurrentUICulture.Name);
 
                 return new AnnouncementManagementItem
                 {
@@ -151,11 +151,28 @@ public sealed class AnnouncementService : IAnnouncementService
         try
         {
             var utcNow = DateTime.UtcNow;
+            if (normalized.RequestId.HasValue)
+            {
+                var existing = await _dbContext.AnnouncementGroups.AsNoTracking()
+                    .Where(x => x.TranslationGroupId == normalized.RequestId.Value && x.CreatedBy == actor.UserName && !x.IsDeleted)
+                    .Select(x => (int?)x.Id).FirstOrDefaultAsync(cancellationToken);
+                if (existing.HasValue) return AnnouncementOperationResult.Ok("تم حفظ هذا الإعلان مسبقاً.", existing);
+            }
+            if (normalized.PresentationJson != null && System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(normalized.PresentationJson)!.DesignId != Guid.Empty)
+            {
+                var presentation = System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(normalized.PresentationJson)!;
+                var company = await _dbContext.AnnouncementStudioDesigns.Where(x => x.Id == presentation.DesignId && x.IsActive)
+                    .Select(x => (int?)x.CompanyId).FirstOrDefaultAsync(cancellationToken);
+                if (!company.HasValue || normalized.AllEmployees || normalized.BranchIds.Count > 0 || normalized.DepartmentIds.Count > 0 || normalized.PositionIds.Count > 0 ||
+                    normalized.CompanyIds.Any(x => x != company.Value) ||
+                    await _dbContext.Employees.CountAsync(x => normalized.EmployeeIds.Contains(x.Id) && x.CompanyId == company.Value, cancellationToken) != normalized.EmployeeIds.Count)
+                    return AnnouncementOperationResult.Fail("تصميم الإعلان لا يطابق شركة الجمهور.");
+            }
             var baghdadDate = DateOnly.FromDateTime(GetBaghdadNow().DateTime);
 
             var group = new AnnouncementGroup
             {
-                TranslationGroupId = Guid.NewGuid(),
+                TranslationGroupId = normalized.RequestId ?? Guid.NewGuid(),
                 CreatedBySystemUserId = actorUser?.Id,
                 Status = AnnouncementStatus.Pending,
                 CommentsEnabled = normalized.CommentsEnabled,
@@ -169,11 +186,20 @@ public sealed class AnnouncementService : IAnnouncementService
                 LanguageCode = normalized.LanguageCode,
                 Title = normalized.Title,
                 Body = normalized.Body,
+                PresentationJson = normalized.PresentationJson,
                 Category = normalized.Category,
                 SignatureType = AnnouncementSignatureType.None,
                 CreatedAt = utcNow,
                 CreatedBy = actor.UserName
             });
+
+            foreach (var text in normalized.Translations.Where(x => x.LanguageCode != normalized.LanguageCode))
+                group.Contents.Add(new AnnouncementContent
+                {
+                    LanguageCode = text.LanguageCode, Title = text.Title, Body = text.Body,
+                    Category = normalized.Category, PresentationJson = normalized.PresentationJson,
+                    SignatureType = AnnouncementSignatureType.None, CreatedAt = utcNow, CreatedBy = actor.UserName
+                });
 
             AddAudienceRules(group, normalized, utcNow);
 
@@ -391,11 +417,12 @@ public sealed class AnnouncementService : IAnnouncementService
         return groups
             .Select(group =>
             {
-                var content = SelectContent(group.Contents, "ar");
+                var content = SelectContent(group.Contents, System.Globalization.CultureInfo.CurrentUICulture.Name);
                 var receipt = group.ReadReceipts.FirstOrDefault();
 
                 return new EmployeeAnnouncementItem
                 {
+                    PresentationJson = content?.PresentationJson,
                     Id = group.Id,
                     Title = content?.Title ?? string.Empty,
                     Body = content?.Body ?? string.Empty,
@@ -905,6 +932,9 @@ public sealed class AnnouncementService : IAnnouncementService
 
         return new AnnouncementCreateRequest
         {
+            RequestId = request.RequestId,
+            Translations = request.Translations.Select(x => x with { LanguageCode = x.LanguageCode.Trim().ToLowerInvariant() }).ToArray(),
+            PresentationJson = request.PresentationJson,
             LanguageCode = string.IsNullOrWhiteSpace(request.LanguageCode)
                 ? "ar"
                 : request.LanguageCode.Trim().ToLowerInvariant(),
@@ -932,9 +962,24 @@ public sealed class AnnouncementService : IAnnouncementService
 
     private static string? ValidateCreateRequest(AnnouncementCreateRequest request)
     {
-        if (request.LanguageCode is not ("ar" or "en"))
+        if (!AnnouncementStudio.ValidLanguage(request.LanguageCode))
         {
             return "لغة الإعلان غير مدعومة.";
+        }
+
+        if (request.Translations.Count > 12 || request.Translations.Select(x => x.LanguageCode).Distinct(StringComparer.OrdinalIgnoreCase).Count() != request.Translations.Count ||
+            request.Title.Length > 250 || request.Body.Length > 20000 || request.Translations.Any(x => !AnnouncementStudio.ValidLanguage(x.LanguageCode) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Length > 250 || string.IsNullOrWhiteSpace(x.Body) || x.Body.Length > 20000))
+            return "نصوص الإعلان أو اللغات غير صالحة.";
+        if (request.PresentationJson != null)
+        {
+            try
+            {
+                if (request.PresentationJson.Length > 2000) return "تصميم الإعلان غير صالح.";
+                var p = System.Text.Json.JsonSerializer.Deserialize<StudioPresentation>(request.PresentationJson);
+                if (p == null || (p.DesignId == Guid.Empty && !AnnouncementStudio.BuiltinAssets.Contains(p.AssetKey)) || p.Fit is not ("contain" or "cover") || p.Position is not ("center" or "top" or "bottom") || p.TextPlacement is not ("above" or "below" or "overlay"))
+                    return "تصميم الإعلان غير صالح.";
+            }
+            catch (System.Text.Json.JsonException) { return "تصميم الإعلان غير صالح."; }
         }
 
         if (string.IsNullOrWhiteSpace(request.Title) ||
@@ -969,6 +1014,8 @@ public sealed class AnnouncementService : IAnnouncementService
 
         return activeContents.FirstOrDefault(x =>
                    x.LanguageCode.Equals(requestedLanguage, StringComparison.OrdinalIgnoreCase))
+               ?? activeContents.FirstOrDefault(x =>
+                   x.LanguageCode.Split('-')[0].Equals(requestedLanguage.Split('-')[0], StringComparison.OrdinalIgnoreCase))
                ?? activeContents.FirstOrDefault(x =>
                    x.LanguageCode.Equals("ar", StringComparison.OrdinalIgnoreCase))
                ?? activeContents.FirstOrDefault();

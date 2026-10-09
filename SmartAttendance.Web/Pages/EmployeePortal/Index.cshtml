@@ -8,6 +8,7 @@
     var activeTab = Model.Tab;
 }
 <link rel="stylesheet" href="~/css/pages/index-da993b952e.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/zynora-announcement-templates.css" asp-append-version="true" />
 
 <section class="nxex-page" data-nxex-page data-active-tab="@activeTab">
     <header class="nxex-hero">
@@ -197,7 +198,7 @@
                                         <small>@Model.DisplayDate(item.PublishDate)</small>
                                     </div>
                                     <h3>@item.Title</h3>
-                                    <p>@item.Body</p>
+                                    <partial name="_AnnouncementVisual" model="item" />
                                     @if (item.IsRead)
                                     {
                                         <div class="nxex-ann-read-state">

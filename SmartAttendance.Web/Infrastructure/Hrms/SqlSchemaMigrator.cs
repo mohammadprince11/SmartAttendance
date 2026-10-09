@@ -3926,6 +3926,7 @@ IF OBJECT_ID('ApprovalTemplates','U') IS NOT NULL
    AND COL_LENGTH('ApprovalTemplates','ConditionsJson') IS NULL
     ALTER TABLE ApprovalTemplates ADD ConditionsJson nvarchar(max) NULL;
 """),
+        new(AnnouncementStudioSchema.MigrationId, AnnouncementStudioSchema.Sql),
     };
 
     /// <summary>

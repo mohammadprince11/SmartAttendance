@@ -1,0 +1,56 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.StudioModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "استوديو قوالب الإعلانات";
+}
+@section Styles { <link rel="stylesheet" href="~/css/zynora-announcement-templates.css" asp-append-version="true" /> }
+<section class="zy-scope zys" id="announcement-template-studio">
+    <header class="zy-page-header"><div><h1>استوديو قوالب الإعلانات</h1><p>اختر القالب والتصميم، أكمل حقول المناسبة، ثم راجع المعاينة قبل النشر.</p></div><a asp-page="Index" asp-route-tab="announcements" class="zy-btn">الرجوع للإعلانات</a></header>
+    <div asp-validation-summary="All" role="alert"></div>
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <p role="status">@Model.StatusMessage</p> }
+    <form method="get" class="zy-filter-bar"><label>الشركة<select name="CompanyId" onchange="this.form.submit()">@foreach(var c in Model.Companies){<option value="@c.Id" selected="@(c.Id==Model.CompanyId)">@c.Name</option>}</select></label><button type="submit" class="zy-btn">عرض</button></form>
+    <div class="zys-layout">
+        <form method="post" asp-page-handler="Compose" id="zys-compose" class="zy-card">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="RequestId" value="@Model.RequestId" />
+            <h2>إنشاء الإعلان</h2>
+            <label>القالب<select name="TemplateKey" id="zys-template">@foreach(var t in Model.Templates.Where(t=>t.IsActive)){<option value="@t.Definition.Key">@t.Definition.Name</option>}</select></label>
+            <div id="zys-fields"></div>
+            <label>التصميم<select name="Design" id="zys-design">@foreach(var asset in SmartAttendance.Application.Announcements.Models.AnnouncementStudio.BuiltinAssets){<option value="builtin:@asset">تصميم جاهز · @asset</option>}@foreach(var d in Model.Designs){<option value="@d.Id">@d.Name</option>}</select></label>
+            <details><summary>إعدادات التصميم والجمهور</summary>
+                <label>عرض الصورة<select name="Fit" id="zys-fit"><option value="contain">كاملة بدون قص</option><option value="cover">ملء المساحة مع القص</option></select></label>
+                <label>موضع القص<select name="Position" id="zys-position"><option value="center">الوسط</option><option value="top">الأعلى</option><option value="bottom">الأسفل</option></select></label>
+                <label>مكان النص<select name="TextPlacement" id="zys-placement"><option value="above">فوق الصورة</option><option value="below">تحت الصورة</option><option value="overlay">على الصورة</option></select></label>
+                <partial name="_EmployeePickerMulti" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel { Label = "موظفون محددون — اتركه فارغاً لكل موظفي الشركة", Name = "EmployeeIds" })" />
+                <label class="zys-check"><input type="checkbox" name="CommentsEnabled" value="true" /> السماح بالتعليقات</label>
+            </details>
+            <div class="zys-actions"><label class="zys-check"><input type="checkbox" name="PublishNow" value="true" /> نشر فوراً</label><button class="zy-btn zy-btn--primary" type="submit">حفظ الإعلان</button></div>
+            <p>بدون «نشر فوراً» يُحفظ الإعلان كمسودة. تاريخ المناسبة مستقل عن تاريخ النشر.</p>
+        </form>
+        <section class="zy-card" aria-label="المعاينة"><div class="zys-actions"><h2>المعاينة المباشرة</h2><label>اللغة<select id="zys-preview-language"></select></label></div>
+            <article id="zys-preview" class="zys-visual zys-above zys-contain zys-center" aria-live="polite"><div class="zys-copy"><h3 id="zys-title"></h3><p id="zys-body"></p></div><img id="zys-image" alt="تصميم الإعلان" /></article><p id="zys-errors" role="status"></p>
+        </section>
+    </div>
+    @if(Model.CanEditLibrary){
+    <details class="zy-card"><summary>إدارة القوالب — إنشاء وتعديل وتحديد الحقول واللغات والصور</summary>
+        <form method="post" asp-page-handler="SaveTemplate" id="zys-builder">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="Revision" id="zys-revision" value="" /><input type="hidden" name="TemplateJson" id="zys-json" />
+            <label>تعديل قالب محفوظ<select id="zys-edit"><option value="">قالب جديد</option>@foreach(var t in Model.Templates){<option value="@t.Definition.Key">@t.Definition.Name @(t.IsActive ? "" : "— غير فعال")</option>}</select></label>
+            <div class="zys-grid"><label>رمز القالب<input id="zys-key" required maxlength="80" pattern="[a-z][a-z0-9-]{0,79}" placeholder="special-occasion" /></label><label>اسم القالب<input id="zys-name" required maxlength="150" /></label></div>
+            <h3>حقول الحالة</h3><p>حدد لكل حقل اسماً ورمزاً ونوعاً، وهل هو مطلوب. لفترة زمنية أضف startDate وendDate. ذكرى العمل تستخدم joiningDate وتحسب years تلقائياً.</p>
+            <div id="zys-builder-fields"></div><button type="button" id="zys-add-field" class="zy-btn">إضافة حقل</button>
+            <h3>نصوص القالب حسب اللغة</h3><p>أدخل الترجمة لكل لغة. المتغير يُكتب بهذا الشكل: {person} أو رمز الحقل الذي أضفته. لا تُترجم البيانات تلقائياً.</p>
+            <div id="zys-builder-languages"></div><button type="button" id="zys-add-language" class="zy-btn">إضافة لغة</button>
+            <fieldset><legend>الصور المتاحة لهذا القالب</legend><p>إذا لم تحدد صوراً تكون جميع صور مكتبة الشركة متاحة.</p>@foreach(var d in Model.Designs){<label class="zys-check"><input type="checkbox" data-zys-design-id="@d.Id" />@d.Name</label>}</fieldset>
+            <button type="submit" class="zy-btn zy-btn--primary">حفظ القالب</button>
+        </form>
+        <h3>تفعيل القوالب</h3><div class="zys-library">@foreach(var t in Model.Templates){<form method="post" asp-page-handler="ToggleTemplate"><input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="key" value="@t.Definition.Key" /><span>@t.Definition.Name</span><button type="submit" class="zy-btn">@(t.IsActive ? "تعطيل" : "تفعيل")</button></form>}</div>
+    </details>
+    <details class="zy-card"><summary>مكتبة التصاميم</summary>
+        <form method="post" asp-page-handler="Upload" enctype="multipart/form-data"><input type="hidden" name="CompanyId" value="@Model.CompanyId" /><label>اسم التصميم<input name="DesignName" required maxlength="150" /></label><label>صورة التصميم — PNG أو JPEG، حتى 5 ميغابايت<input name="Upload" type="file" required accept="image/png,image/jpeg" /></label><button class="zy-btn zy-btn--primary" type="submit">إضافة التصميم</button></form>
+        <div class="zys-library">@foreach(var d in Model.Designs){<article><img src="@Url.Page("Studio", "Image", new { Model.CompanyId, id=d.Id })" alt="@d.Name" loading="lazy" /><p>@d.Name</p><form method="post" asp-page-handler="DisableDesign"><input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="id" value="@d.Id" /><button class="zy-btn" data-zyconfirm="تعطيل التصميم؟ الإعلانات القديمة ستحتفظ به." type="submit">تعطيل</button></form></article>}</div>
+    </details>
+    }
+    <script type="application/json" id="zys-data">@Html.Raw(JsonSerializer.Serialize(new { templates=Model.Templates, designs=Model.Designs, companyId=Model.CompanyId, today=DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3)).ToString("yyyy-MM-dd"), templateKey=Model.TemplateKey, values=Model.Values, design=Model.Design, fit=Model.Fit, position=Model.Position, placement=Model.TextPlacement }))</script>
+</section>
+@section Scripts { <script src="~/js/zynora-announcement-templates.js" asp-append-version="true"></script> }

@@ -23,6 +23,9 @@ public sealed class AnnouncementManagementScope
 
 public sealed class AnnouncementCreateRequest
 {
+    public Guid? RequestId { get; init; }
+    public IReadOnlyList<StudioRendered> Translations { get; init; } = Array.Empty<StudioRendered>();
+    public string? PresentationJson { get; init; }
     public string LanguageCode { get; init; } = "ar";
 
     public string Title { get; init; } = string.Empty;
@@ -87,6 +90,7 @@ public sealed class AnnouncementManagementItem
 
 public sealed class EmployeeAnnouncementItem
 {
+    public string? PresentationJson { get; init; }
     public int Id { get; init; }
 
     public string Title { get; init; } = string.Empty;

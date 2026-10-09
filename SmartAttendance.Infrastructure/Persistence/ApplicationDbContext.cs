@@ -134,6 +134,8 @@ public class ApplicationDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<AnnouncementContent> AnnouncementContents => Set<AnnouncementContent>();
 
     public DbSet<AnnouncementTemplate> AnnouncementTemplates => Set<AnnouncementTemplate>();
+    public DbSet<AnnouncementStudioProfile> AnnouncementStudioProfiles => Set<AnnouncementStudioProfile>();
+    public DbSet<AnnouncementStudioDesign> AnnouncementStudioDesigns => Set<AnnouncementStudioDesign>();
 
     public DbSet<AnnouncementSignature> AnnouncementSignatures => Set<AnnouncementSignature>();
 
