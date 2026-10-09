@@ -777,4 +777,108 @@
   <data name="· شرائح:" xml:space="preserve"><value>· پۆلەکان:</value></data>
   <data name="ظاهرة" xml:space="preserve"><value>دیارە</value></data>
   <data name="مخفية" xml:space="preserve"><value>شاراوە</value></data>
+  <data name="استوديو قوالب الإعلانات" xml:space="preserve"><value>ستۆدیۆی قاڵبەکانی ڕاگەیاندن</value></data>
+  <data name="اختر القالب والتصميم، أكمل حقول المناسبة، ثم راجع المعاينة قبل النشر." xml:space="preserve"><value>قاڵب و دیزاین هەڵبژێرە، خانەکانی بۆنەکە پڕ بکەرەوە، پاشان پێشبینینەکە پێش بڵاوکردنەوە بپشکنە.</value></data>
+  <data name="الرجوع للإعلانات" xml:space="preserve"><value>گەڕانەوە بۆ ڕاگەیاندنەکان</value></data>
+  <data name="إنشاء الإعلان" xml:space="preserve"><value>دروستکردنی ڕاگەیاندن</value></data>
+  <data name="القالب" xml:space="preserve"><value>قاڵب</value></data>
+  <data name="التصميم" xml:space="preserve"><value>دیزاین</value></data>
+  <data name="تصميم جاهز" xml:space="preserve"><value>دیزاینی ئامادە</value></data>
+  <data name="إعدادات التصميم والجمهور" xml:space="preserve"><value>ڕێکخستنەکانی دیزاین و بینەران</value></data>
+  <data name="عرض الصورة" xml:space="preserve"><value>شێوازی پیشاندانی وێنە</value></data>
+  <data name="كاملة بدون قص" xml:space="preserve"><value>تەواو بەبێ بڕین</value></data>
+  <data name="ملء المساحة مع القص" xml:space="preserve"><value>پڕکردنەوەی شوێنەکە بە بڕین</value></data>
+  <data name="موضع القص" xml:space="preserve"><value>شوێنی بڕین</value></data>
+  <data name="الوسط" xml:space="preserve"><value>ناوەڕاست</value></data>
+  <data name="الأعلى" xml:space="preserve"><value>سەرەوە</value></data>
+  <data name="الأسفل" xml:space="preserve"><value>خوارەوە</value></data>
+  <data name="مكان النص" xml:space="preserve"><value>شوێنی دەق</value></data>
+  <data name="فوق الصورة" xml:space="preserve"><value>لە سەرەوەی وێنە</value></data>
+  <data name="تحت الصورة" xml:space="preserve"><value>لە خوارەوەی وێنە</value></data>
+  <data name="على الصورة" xml:space="preserve"><value>لەسەر وێنە</value></data>
+  <data name="موظفون محددون — اتركه فارغاً لكل موظفي الشركة" xml:space="preserve"><value>کارمەندی دیاریکراو — بەتاڵی بهێڵەرەوە بۆ هەموو کارمەندانی کۆمپانیا</value></data>
+  <data name="السماح بالتعليقات" xml:space="preserve"><value>ڕێگەدان بە لێدوانەکان</value></data>
+  <data name="نشر فوراً" xml:space="preserve"><value>ئێستا بڵاوی بکەرەوە</value></data>
+  <data name="حفظ الإعلان" xml:space="preserve"><value>پاشەکەوتکردنی ڕاگەیاندن</value></data>
+  <data name="بدون «نشر فوراً» يُحفظ الإعلان كمسودة. تاريخ المناسبة مستقل عن تاريخ النشر." xml:space="preserve"><value>بەبێ «ئێستا بڵاوی بکەرەوە»، ڕاگەیاندنەکە وەک ڕەشنووس پاشەکەوت دەکرێت. بەرواری بۆنەکە جیاوازە لە بەرواری بڵاوکردنەوە.</value></data>
+  <data name="المعاينة المباشرة" xml:space="preserve"><value>پێشبینینی ڕاستەوخۆ</value></data>
+  <data name="تصميم الإعلان" xml:space="preserve"><value>دیزاینی ڕاگەیاندن</value></data>
+  <data name="إدارة القوالب — إنشاء وتعديل وتحديد الحقول واللغات والصور" xml:space="preserve"><value>بەڕێوەبردنی قاڵبەکان — دروستکردن و دەستکاریکردن و دیاریکردنی خانە و زمان و وێنەکان</value></data>
+  <data name="تعديل قالب محفوظ" xml:space="preserve"><value>دەستکاریکردنی قاڵبی پاشەکەوتکراو</value></data>
+  <data name="قالب جديد" xml:space="preserve"><value>قاڵبی نوێ</value></data>
+  <data name="رمز القالب" xml:space="preserve"><value>کۆدی قاڵب</value></data>
+  <data name="اسم القالب" xml:space="preserve"><value>ناوی قاڵب</value></data>
+  <data name="حقول الحالة" xml:space="preserve"><value>خانەکانی بۆنە</value></data>
+  <data name="حدد لكل حقل اسماً ورمزاً ونوعاً، وهل هو مطلوب. لفترة زمنية أضف startDate وendDate. ذكرى العمل تستخدم joiningDate وتحسب years تلقائياً." xml:space="preserve"><value>بۆ هەر خانەیەک ناو و کۆد و جۆر دیاری بکە و بڵێ پێویستە یان نا. بۆ ماوەیەک startDate و endDate زیاد بکە. یادەوەری کار joiningDate بەکاردەهێنێت و years خۆکارانە دەژمێرێت.</value></data>
+  <data name="إضافة حقل" xml:space="preserve"><value>زیادکردنی خانە</value></data>
+  <data name="نصوص القالب حسب اللغة" xml:space="preserve"><value>دەقەکانی قاڵب بەپێی زمان</value></data>
+  <data name="أدخل الترجمة لكل لغة. المتغير يُكتب بهذا الشكل: {person} أو رمز الحقل الذي أضفته. لا تُترجم البيانات تلقائياً." xml:space="preserve"><value>وەرگێڕان بۆ هەر زمانێک بنووسە. گۆڕاو بە شێوەی {person} یان کۆدی خانەکە دەنووسرێت. داتاکان خۆکارانە وەرناگێڕدرێن.</value></data>
+  <data name="إضافة لغة" xml:space="preserve"><value>زیادکردنی زمان</value></data>
+  <data name="الصور المتاحة لهذا القالب" xml:space="preserve"><value>وێنە بەردەستەکانی ئەم قاڵبە</value></data>
+  <data name="إذا لم تحدد صوراً تكون جميع صور مكتبة الشركة متاحة." xml:space="preserve"><value>ئەگەر وێنە دیاری نەکەیت، هەموو وێنەکانی کتێبخانەی کۆمپانیا بەردەست دەبن.</value></data>
+  <data name="حفظ القالب" xml:space="preserve"><value>پاشەکەوتکردنی قاڵب</value></data>
+  <data name="تفعيل القوالب" xml:space="preserve"><value>چالاککردنی قاڵبەکان</value></data>
+  <data name="مكتبة التصاميم" xml:space="preserve"><value>کتێبخانەی دیزاینەکان</value></data>
+  <data name="اسم التصميم" xml:space="preserve"><value>ناوی دیزاین</value></data>
+  <data name="صورة التصميم — PNG أو JPEG، حتى 5 ميغابايت" xml:space="preserve"><value>وێنەی دیزاین — PNG یان JPEG، تا ٥ میگابایت</value></data>
+  <data name="إضافة التصميم" xml:space="preserve"><value>زیادکردنی دیزاین</value></data>
+  <data name="تعطيل التصميم؟ الإعلانات القديمة ستحتفظ به." xml:space="preserve"><value>ئەم دیزاینە ناچالاک بکرێت؟ ڕاگەیاندنە کۆنەکان دەیپارێزن.</value></data>
+  <data name="— غير فعال" xml:space="preserve"><value>— ناچالاک</value></data>
+  <data name="— اختياري" xml:space="preserve"><value>— هەڵبژاردەیی</value></data>
+  <data name="لا توجد قوالب فعالة. فعّل قالباً أو أنشئ قالباً جديداً." xml:space="preserve"><value>هیچ قاڵبێکی چالاک نییە. قاڵبێک چالاک بکە یان قاڵبێکی نوێ دروست بکە.</value></data>
+  <data name="تاريخ النهاية يجب ألا يسبق البداية." xml:space="preserve"><value>بەرواری کۆتایی نابێت پێش بەرواری دەستپێک بێت.</value></data>
+  <data name="نص" xml:space="preserve"><value>دەق</value></data>
+  <data name="تاريخ" xml:space="preserve"><value>بەروار</value></data>
+  <data name="شهر وسنة" xml:space="preserve"><value>مانگ و ساڵ</value></data>
+  <data name="إزالة الحقل" xml:space="preserve"><value>لابردنی خانە</value></data>
+  <data name="رمز الحقل" xml:space="preserve"><value>کۆدی خانە</value></data>
+  <data name="اسم الحقل" xml:space="preserve"><value>ناوی خانە</value></data>
+  <data name="نوع الحقل" xml:space="preserve"><value>جۆری خانە</value></data>
+  <data name="مطلوب" xml:space="preserve"><value>پێویست</value></data>
+  <data name="إزالة اللغة" xml:space="preserve"><value>لابردنی زمان</value></data>
+  <data name="رمز اللغة (ar / en / ku أو لغة جديدة)" xml:space="preserve"><value>کۆدی زمان (ar / en / ku یان زمانێکی نوێ)</value></data>
+  <data name="رمز اللغة مكرر." xml:space="preserve"><value>کۆدی زمان دووبارەیە.</value></data>
+  <data name="عيد ميلاد" xml:space="preserve"><value>لەدایکبوون</value></data>
+  <data name="مولود جديد" xml:space="preserve"><value>کوڕی ساوا</value></data>
+  <data name="مولودة جديدة" xml:space="preserve"><value>کچی ساوا</value></data>
+  <data name="زواج موظف" xml:space="preserve"><value>هاوسەرگیریی کارمەند</value></data>
+  <data name="تعزية" xml:space="preserve"><value>سەرەخۆشی</value></data>
+  <data name="موظف الشهر" xml:space="preserve"><value>کارمەندی مانگ</value></data>
+  <data name="الترحيب بموظف جديد" xml:space="preserve"><value>پێشوازی لە کارمەندێکی نوێ</value></data>
+  <data name="وداع موظف" xml:space="preserve"><value>ماڵئاوایی لە کارمەند</value></data>
+  <data name="إعلان عطلة" xml:space="preserve"><value>ڕاگەیاندنی پشوو</value></data>
+  <data name="ذكرى عمل" xml:space="preserve"><value>یادەوەری کار</value></data>
+  <data name="تقاعد موظف" xml:space="preserve"><value>خانەنشینبوونی کارمەند</value></data>
+  <data name="اسم المولود" xml:space="preserve"><value>ناوی کوڕی ساوا</value></data>
+  <data name="اسم المولودة" xml:space="preserve"><value>ناوی کچی ساوا</value></data>
+  <data name="تاريخ الولادة" xml:space="preserve"><value>بەرواری لەدایکبوون</value></data>
+  <data name="تاريخ الزواج" xml:space="preserve"><value>بەرواری هاوسەرگیری</value></data>
+  <data name="صلة المتوفى" xml:space="preserve"><value>پەیوەندی بە کۆچکردوو</value></data>
+  <data name="تاريخ الوفاة" xml:space="preserve"><value>بەرواری کۆچی دوایی</value></data>
+  <data name="الشهر والسنة" xml:space="preserve"><value>مانگ و ساڵ</value></data>
+  <data name="آخر يوم عمل" xml:space="preserve"><value>دوایین ڕۆژی کار</value></data>
+  <data name="اسم العطلة" xml:space="preserve"><value>ناوی پشوو</value></data>
+  <data name="تاريخ التقاعد" xml:space="preserve"><value>بەرواری خانەنشینبوون</value></data>
+  <data name="عيد ميلاد سعيد {person}!" xml:space="preserve"><value>ڕۆژی لەدایکبوونت پیرۆز بێت {person}!</value></data>
+  <data name="نتمنى لك عيد ميلاد سعيداً بتاريخ {date} وسنة مليئة بالنجاح والسعادة." xml:space="preserve"><value>هیوادارین لە بەرواری {date} ڕۆژی لەدایکبوونێکی خۆش و ساڵێکی پڕ لە سەرکەوتن و بەختەوەری هەبێت.</value></data>
+  <data name="مبارك المولود يا {person}!" xml:space="preserve"><value>لەدایکبوونی کوڕەکەت پیرۆز بێت {person}!</value></data>
+  <data name="نبارك لك قدوم مولودك {child}. تاريخ الولادة: {date}." xml:space="preserve"><value>لەدایکبوونی کوڕەکەت {child} پیرۆز دەکەین. بەرواری لەدایکبوون: {date}.</value></data>
+  <data name="مبارك المولودة يا {person}!" xml:space="preserve"><value>لەدایکبوونی کچەکەت پیرۆز بێت {person}!</value></data>
+  <data name="نبارك لك قدوم مولودتك {child}. تاريخ الولادة: {date}." xml:space="preserve"><value>لەدایکبوونی کچەکەت {child} پیرۆز دەکەین. بەرواری لەدایکبوون: {date}.</value></data>
+  <data name="زواج مبارك {person}!" xml:space="preserve"><value>هاوسەرگیریت پیرۆز بێت {person}!</value></data>
+  <data name="نبارك لك الزواج بتاريخ {date} ونتمنى لك حياة سعيدة." xml:space="preserve"><value>هاوسەرگیریت لە بەرواری {date} پیرۆز دەکەین و هیواخوازین ژیانێکی بەختەوەر هەبێت.</value></data>
+  <data name="خالص التعازي إلى {person}" xml:space="preserve"><value>سەرەخۆشییەکی دڵسۆزانە بۆ {person}</value></data>
+  <data name="نتقدم إليك بخالص التعازي بوفاة {relation}. تاريخ الوفاة: {date}." xml:space="preserve"><value>بەهۆی کۆچی دوایی {relation} سەرەخۆشییەکی دڵسۆزانەت لێ دەکەین. بەرواری کۆچی دوایی: {date}.</value></data>
+  <data name="موظف الشهر: {person}" xml:space="preserve"><value>کارمەندی مانگ: {person}</value></data>
+  <data name="نبارك تكريمك موظف الشهر {month} تقديراً لجهودك المميزة." xml:space="preserve"><value>بەهۆی هەوڵە دیارەکانت، هەڵبژاردنت وەک کارمەندی مانگی {month} پیرۆز دەکەین.</value></data>
+  <data name="أهلاً بك {person}!" xml:space="preserve"><value>بەخێربێیت {person}!</value></data>
+  <data name="يسرنا انضمامك بمنصب {position} اعتباراً من {date}. نتمنى لك بداية موفقة." xml:space="preserve"><value>دڵخۆشین بە پەیوەستبوونت وەک {position} لە بەرواری {date}. هیواخوازین دەستپێکێکی سەرکەوتوو هەبێت.</value></data>
+  <data name="نتمنى لك التوفيق {person}!" xml:space="preserve"><value>هیواخوازین سەرکەوتوو بیت {person}!</value></data>
+  <data name="نشكرك على عطائك. آخر يوم عمل: {date}. نتمنى لك النجاح في مسيرتك القادمة." xml:space="preserve"><value>سوپاس بۆ بەشدارییەکانت. دوایین ڕۆژی کار: {date}. هیواخوازین لە هەنگاوی داهاتووت سەرکەوتوو بیت.</value></data>
+  <data name="إعلان عطلة: {occasion}" xml:space="preserve"><value>ڕاگەیاندنی پشوو: {occasion}</value></data>
+  <data name="تكون مكاتبنا مغلقة من {startDate} إلى {endDate} بمناسبة {occasion}." xml:space="preserve"><value>نووسینگەکانمان لە {startDate} تا {endDate} بە بۆنەی {occasion} داخراو دەبن.</value></data>
+  <data name="ذكرى عمل سعيدة {person}!" xml:space="preserve"><value>یادەوەری کارت پیرۆز بێت {person}!</value></data>
+  <data name="نحتفل بمرور {years} سنة منذ انضمامك بتاريخ {joiningDate}. شكراً لعطائك." xml:space="preserve"><value>پیرۆزبایی تێپەڕبوونی {years} ساڵ لە پەیوەستبوونت لە بەرواری {joiningDate} دەکەین. سوپاس بۆ بەشدارییەکانت.</value></data>
+  <data name="تقاعد سعيد {person}!" xml:space="preserve"><value>خانەنشینبوونت پیرۆز بێت {person}!</value></data>
+  <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {date}." xml:space="preserve"><value>سوپاس بۆ ساڵەکانی بەخشینت و هیواخوازین لە بەرواری {date} خانەنشینبوونێکی خۆش هەبێت.</value></data>
 </root>

@@ -220,6 +220,29 @@ public sealed class LocalizationDictionaryTests
             Directory.Delete(directory, recursive: true);
         }
     }
+    [Fact]
+    public async Task AnnouncementStudioKeysSupportDictionaryOverridesForNewLanguages()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "zynora-dictionary-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>
+            {
+                ["LocalizationDictionary:Path"] = Path.Combine(directory, "dictionary.json")
+            }).Build();
+            var service = new LocalizationDictionaryService(new TestEnvironment(directory), configuration);
+            var keys = new[] { "استوديو قوالب الإعلانات", "إزالة الحقل", "تاريخ النهاية يجب ألا يسبق البداية.", "اسم المولودة" };
+            var rows = await service.GetRowsAsync();
+            foreach(var key in keys) Assert.Contains(rows, r => r.Key == key && r.CultureCode == "en-US" && r.Translation != key);
+            await service.AddLanguageAsync("fr-FR", "Français", "French", "ltr");
+            foreach(var key in keys) await service.SaveTranslationAsync("fr-FR", key, "Synthetic translated studio text");
+            var catalog = await service.GetCatalogAsync("fr-FR");
+            foreach(var key in keys) Assert.Equal("Synthetic translated studio text", catalog[key]);
+            Assert.Equal("ltr", (await service.FindLanguageAsync("fr-FR"))!.Direction);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());

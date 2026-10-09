@@ -8,12 +8,13 @@ using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Domain.Entities;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Security;
+using SmartAttendance.Web.Infrastructure.Localization;
 
 namespace SmartAttendance.Web.Pages.Engagement;
 
 [Authorize]
 [RequestSizeLimit(6 * 1024 * 1024)]
-public class StudioModel(ApplicationDbContext db, IAnnouncementService service) : EngagementPageModel(db, service)
+public class StudioModel(ApplicationDbContext db, IAnnouncementService service, ILocalizationDictionaryService? dictionary = null) : EngagementPageModel(db, service)
 {
     [BindProperty(SupportsGet = true)] public int CompanyId { get; set; }
     [BindProperty] public string TemplateJson { get; set; } = "";
@@ -53,6 +54,14 @@ public class StudioModel(ApplicationDbContext db, IAnnouncementService service) 
         if (!await AuthorizedCompany()) return;
         var saved = await DbContext.AnnouncementStudioProfiles.AsNoTracking().Where(p => p.CompanyId == CompanyId).ToListAsync(Ct);
         Templates = AnnouncementStudio.Defaults().Where(d => saved.All(s => s.Key != d.Key)).Select(d => new TemplateChoice(d, Guid.Empty, true)).ToList();
+        if (dictionary != null)
+        {
+            foreach (var language in await dictionary.GetLanguagesAsync(Ct))
+            {
+                var catalog = await dictionary.GetCatalogAsync(language.Code, Ct);
+                foreach (var builtin in Templates) AnnouncementTemplateDictionary.Apply(builtin.Definition, language.Code, catalog);
+            }
+        }
         Templates.AddRange(saved.Select(p => new TemplateChoice(JsonSerializer.Deserialize<StudioTemplate>(p.DefinitionJson)!, p.Revision, p.IsActive)));
         Designs = await DbContext.AnnouncementStudioDesigns.AsNoTracking().Where(d => d.CompanyId == CompanyId && d.IsActive)
             .Select(d => new DesignChoice(d.Id, d.Name)).ToListAsync(Ct);

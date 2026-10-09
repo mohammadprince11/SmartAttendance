@@ -777,4 +777,108 @@
   <data name="· شرائح:" xml:space="preserve"><value>· Brackets:</value></data>
   <data name="ظاهرة" xml:space="preserve"><value>Visible</value></data>
   <data name="مخفية" xml:space="preserve"><value>Hidden</value></data>
+  <data name="استوديو قوالب الإعلانات" xml:space="preserve"><value>Announcement template studio</value></data>
+  <data name="اختر القالب والتصميم، أكمل حقول المناسبة، ثم راجع المعاينة قبل النشر." xml:space="preserve"><value>Choose a template and design, complete the occasion fields, then review the preview before publishing.</value></data>
+  <data name="الرجوع للإعلانات" xml:space="preserve"><value>Back to announcements</value></data>
+  <data name="إنشاء الإعلان" xml:space="preserve"><value>Create announcement</value></data>
+  <data name="القالب" xml:space="preserve"><value>Template</value></data>
+  <data name="التصميم" xml:space="preserve"><value>Design</value></data>
+  <data name="تصميم جاهز" xml:space="preserve"><value>Built-in design</value></data>
+  <data name="إعدادات التصميم والجمهور" xml:space="preserve"><value>Design and audience settings</value></data>
+  <data name="عرض الصورة" xml:space="preserve"><value>Image fit</value></data>
+  <data name="كاملة بدون قص" xml:space="preserve"><value>Show the full image</value></data>
+  <data name="ملء المساحة مع القص" xml:space="preserve"><value>Fill the area and crop</value></data>
+  <data name="موضع القص" xml:space="preserve"><value>Crop anchor</value></data>
+  <data name="الوسط" xml:space="preserve"><value>Center</value></data>
+  <data name="الأعلى" xml:space="preserve"><value>Top</value></data>
+  <data name="الأسفل" xml:space="preserve"><value>Bottom</value></data>
+  <data name="مكان النص" xml:space="preserve"><value>Text placement</value></data>
+  <data name="فوق الصورة" xml:space="preserve"><value>Above the image</value></data>
+  <data name="تحت الصورة" xml:space="preserve"><value>Below the image</value></data>
+  <data name="على الصورة" xml:space="preserve"><value>Over the image</value></data>
+  <data name="موظفون محددون — اتركه فارغاً لكل موظفي الشركة" xml:space="preserve"><value>Selected employees — leave empty for everyone in the company</value></data>
+  <data name="السماح بالتعليقات" xml:space="preserve"><value>Allow comments</value></data>
+  <data name="نشر فوراً" xml:space="preserve"><value>Publish now</value></data>
+  <data name="حفظ الإعلان" xml:space="preserve"><value>Save announcement</value></data>
+  <data name="بدون «نشر فوراً» يُحفظ الإعلان كمسودة. تاريخ المناسبة مستقل عن تاريخ النشر." xml:space="preserve"><value>Without “Publish now”, the announcement is saved as a draft. The occasion date is separate from the publication date.</value></data>
+  <data name="المعاينة المباشرة" xml:space="preserve"><value>Live preview</value></data>
+  <data name="تصميم الإعلان" xml:space="preserve"><value>Announcement design</value></data>
+  <data name="إدارة القوالب — إنشاء وتعديل وتحديد الحقول واللغات والصور" xml:space="preserve"><value>Manage templates — create and edit fields, languages and images</value></data>
+  <data name="تعديل قالب محفوظ" xml:space="preserve"><value>Edit a saved template</value></data>
+  <data name="قالب جديد" xml:space="preserve"><value>New template</value></data>
+  <data name="رمز القالب" xml:space="preserve"><value>Template key</value></data>
+  <data name="اسم القالب" xml:space="preserve"><value>Template name</value></data>
+  <data name="حقول الحالة" xml:space="preserve"><value>Occasion fields</value></data>
+  <data name="حدد لكل حقل اسماً ورمزاً ونوعاً، وهل هو مطلوب. لفترة زمنية أضف startDate وendDate. ذكرى العمل تستخدم joiningDate وتحسب years تلقائياً." xml:space="preserve"><value>Give each field a label, key and type, and specify whether it is required. For a date range, add startDate and endDate. Work anniversaries use joiningDate and calculate years automatically.</value></data>
+  <data name="إضافة حقل" xml:space="preserve"><value>Add field</value></data>
+  <data name="نصوص القالب حسب اللغة" xml:space="preserve"><value>Template text by language</value></data>
+  <data name="أدخل الترجمة لكل لغة. المتغير يُكتب بهذا الشكل: {person} أو رمز الحقل الذي أضفته. لا تُترجم البيانات تلقائياً." xml:space="preserve"><value>Enter each language translation. Use {person} or a field key as a placeholder. Values are not translated automatically.</value></data>
+  <data name="إضافة لغة" xml:space="preserve"><value>Add language</value></data>
+  <data name="الصور المتاحة لهذا القالب" xml:space="preserve"><value>Available images for this template</value></data>
+  <data name="إذا لم تحدد صوراً تكون جميع صور مكتبة الشركة متاحة." xml:space="preserve"><value>If no images are selected, all images in the company library are available.</value></data>
+  <data name="حفظ القالب" xml:space="preserve"><value>Save template</value></data>
+  <data name="تفعيل القوالب" xml:space="preserve"><value>Template activation</value></data>
+  <data name="مكتبة التصاميم" xml:space="preserve"><value>Design library</value></data>
+  <data name="اسم التصميم" xml:space="preserve"><value>Design name</value></data>
+  <data name="صورة التصميم — PNG أو JPEG، حتى 5 ميغابايت" xml:space="preserve"><value>Design image — PNG or JPEG, up to 5 MiB</value></data>
+  <data name="إضافة التصميم" xml:space="preserve"><value>Add design</value></data>
+  <data name="تعطيل التصميم؟ الإعلانات القديمة ستحتفظ به." xml:space="preserve"><value>Disable this design? Existing announcements will keep it.</value></data>
+  <data name="— غير فعال" xml:space="preserve"><value>— Inactive</value></data>
+  <data name="— اختياري" xml:space="preserve"><value>— Optional</value></data>
+  <data name="لا توجد قوالب فعالة. فعّل قالباً أو أنشئ قالباً جديداً." xml:space="preserve"><value>No active templates. Activate a template or create a new one.</value></data>
+  <data name="تاريخ النهاية يجب ألا يسبق البداية." xml:space="preserve"><value>The end date must not be before the start date.</value></data>
+  <data name="نص" xml:space="preserve"><value>Text</value></data>
+  <data name="تاريخ" xml:space="preserve"><value>Date</value></data>
+  <data name="شهر وسنة" xml:space="preserve"><value>Month and year</value></data>
+  <data name="إزالة الحقل" xml:space="preserve"><value>Remove field</value></data>
+  <data name="رمز الحقل" xml:space="preserve"><value>Field key</value></data>
+  <data name="اسم الحقل" xml:space="preserve"><value>Field label</value></data>
+  <data name="نوع الحقل" xml:space="preserve"><value>Field type</value></data>
+  <data name="مطلوب" xml:space="preserve"><value>Required</value></data>
+  <data name="إزالة اللغة" xml:space="preserve"><value>Remove language</value></data>
+  <data name="رمز اللغة (ar / en / ku أو لغة جديدة)" xml:space="preserve"><value>Language code (ar / en / ku or another language)</value></data>
+  <data name="رمز اللغة مكرر." xml:space="preserve"><value>Duplicate language code.</value></data>
+  <data name="عيد ميلاد" xml:space="preserve"><value>Birthday</value></data>
+  <data name="مولود جديد" xml:space="preserve"><value>New baby boy</value></data>
+  <data name="مولودة جديدة" xml:space="preserve"><value>New baby girl</value></data>
+  <data name="زواج موظف" xml:space="preserve"><value>Employee wedding</value></data>
+  <data name="تعزية" xml:space="preserve"><value>Condolences</value></data>
+  <data name="موظف الشهر" xml:space="preserve"><value>Employee of the month</value></data>
+  <data name="الترحيب بموظف جديد" xml:space="preserve"><value>Welcome a new employee</value></data>
+  <data name="وداع موظف" xml:space="preserve"><value>Employee farewell</value></data>
+  <data name="إعلان عطلة" xml:space="preserve"><value>Holiday announcement</value></data>
+  <data name="ذكرى عمل" xml:space="preserve"><value>Work anniversary</value></data>
+  <data name="تقاعد موظف" xml:space="preserve"><value>Employee retirement</value></data>
+  <data name="اسم المولود" xml:space="preserve"><value>Baby boy's name</value></data>
+  <data name="اسم المولودة" xml:space="preserve"><value>Baby girl's name</value></data>
+  <data name="تاريخ الولادة" xml:space="preserve"><value>Birth date</value></data>
+  <data name="تاريخ الزواج" xml:space="preserve"><value>Wedding date</value></data>
+  <data name="صلة المتوفى" xml:space="preserve"><value>Relationship to the deceased</value></data>
+  <data name="تاريخ الوفاة" xml:space="preserve"><value>Date of death</value></data>
+  <data name="الشهر والسنة" xml:space="preserve"><value>Month and year</value></data>
+  <data name="آخر يوم عمل" xml:space="preserve"><value>Last working day</value></data>
+  <data name="اسم العطلة" xml:space="preserve"><value>Holiday name</value></data>
+  <data name="تاريخ التقاعد" xml:space="preserve"><value>Retirement date</value></data>
+  <data name="عيد ميلاد سعيد {person}!" xml:space="preserve"><value>Happy birthday, {person}!</value></data>
+  <data name="نتمنى لك عيد ميلاد سعيداً بتاريخ {date} وسنة مليئة بالنجاح والسعادة." xml:space="preserve"><value>Wishing you a happy birthday on {date} and a wonderful year ahead.</value></data>
+  <data name="مبارك المولود يا {person}!" xml:space="preserve"><value>Congratulations, {person}!</value></data>
+  <data name="نبارك لك قدوم مولودك {child}. تاريخ الولادة: {date}." xml:space="preserve"><value>Congratulations on the arrival of your baby boy {child}. Birth date: {date}.</value></data>
+  <data name="مبارك المولودة يا {person}!" xml:space="preserve"><value>Congratulations, {person}!</value></data>
+  <data name="نبارك لك قدوم مولودتك {child}. تاريخ الولادة: {date}." xml:space="preserve"><value>Congratulations on the arrival of your baby girl {child}. Birth date: {date}.</value></data>
+  <data name="زواج مبارك {person}!" xml:space="preserve"><value>Congratulations on your marriage, {person}!</value></data>
+  <data name="نبارك لك الزواج بتاريخ {date} ونتمنى لك حياة سعيدة." xml:space="preserve"><value>Wishing you a happy life together. Wedding date: {date}.</value></data>
+  <data name="خالص التعازي إلى {person}" xml:space="preserve"><value>Our condolences, {person}</value></data>
+  <data name="نتقدم إليك بخالص التعازي بوفاة {relation}. تاريخ الوفاة: {date}." xml:space="preserve"><value>Our deepest condolences on the loss of your {relation}. Date: {date}.</value></data>
+  <data name="موظف الشهر: {person}" xml:space="preserve"><value>Employee of the month: {person}</value></data>
+  <data name="نبارك تكريمك موظف الشهر {month} تقديراً لجهودك المميزة." xml:space="preserve"><value>Congratulations on being our employee of the month for {month}. Thank you for your outstanding work.</value></data>
+  <data name="أهلاً بك {person}!" xml:space="preserve"><value>Welcome aboard, {person}!</value></data>
+  <data name="يسرنا انضمامك بمنصب {position} اعتباراً من {date}. نتمنى لك بداية موفقة." xml:space="preserve"><value>We welcome you as {position}, starting {date}. Wishing you a successful journey with us.</value></data>
+  <data name="نتمنى لك التوفيق {person}!" xml:space="preserve"><value>Best wishes, {person}!</value></data>
+  <data name="نشكرك على عطائك. آخر يوم عمل: {date}. نتمنى لك النجاح في مسيرتك القادمة." xml:space="preserve"><value>Thank you for your contribution. Last working day: {date}. We wish you success in your next chapter.</value></data>
+  <data name="إعلان عطلة: {occasion}" xml:space="preserve"><value>Holiday announcement: {occasion}</value></data>
+  <data name="تكون مكاتبنا مغلقة من {startDate} إلى {endDate} بمناسبة {occasion}." xml:space="preserve"><value>Our offices will be closed from {startDate} through {endDate} for {occasion}.</value></data>
+  <data name="ذكرى عمل سعيدة {person}!" xml:space="preserve"><value>Happy work anniversary, {person}!</value></data>
+  <data name="نحتفل بمرور {years} سنة منذ انضمامك بتاريخ {joiningDate}. شكراً لعطائك." xml:space="preserve"><value>Celebrating {years} years since you joined us on {joiningDate}. Thank you for your contribution.</value></data>
+  <data name="تقاعد سعيد {person}!" xml:space="preserve"><value>Happy retirement, {person}!</value></data>
+  <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {date}." xml:space="preserve"><value>Thank you for your years of dedication. Wishing you a happy retirement starting {date}.</value></data>
 </root>

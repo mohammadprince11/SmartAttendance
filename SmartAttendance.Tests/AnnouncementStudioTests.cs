@@ -79,5 +79,15 @@ public sealed class AnnouncementStudioTests
         var id=Guid.NewGuid();var json=JsonSerializer.Serialize(new StudioPresentation(id,"contain","center","above"));
         Assert.True(AnnouncementDesignModel.Matches(json,id));Assert.False(AnnouncementDesignModel.Matches(json,Guid.NewGuid()));Assert.False(AnnouncementDesignModel.Matches("broken",id));Assert.False(AnnouncementDesignModel.Matches(null,id));Assert.False(AnnouncementDesignModel.Matches(json,Guid.Empty));
     }
+    [Fact] public void BuiltinTemplatesCanUseNewDictionaryLanguagesWithoutEditingSource()
+    {
+        var t=AnnouncementStudio.Defaults().First();var source=t.Languages["ar"];
+        var catalog=new Dictionary<string,string>{{source.Title,"Joyeux anniversaire {person}!"},{source.Body,"Date : {date}."}};
+        Assert.True(SmartAttendance.Web.Infrastructure.Localization.AnnouncementTemplateDictionary.Apply(t,"fr-FR",catalog));
+        Assert.Contains("fr-FR",AnnouncementStudio.Render(t,new Dictionary<string,string>{{"person","Synthetic"},{"date","2026-10-09"}},new(2026,10,9)).Select(x=>x.LanguageCode));
+        var invalid=AnnouncementStudio.Defaults().First();catalog[source.Body]="Unknown {badField}";
+        Assert.False(SmartAttendance.Web.Infrastructure.Localization.AnnouncementTemplateDictionary.Apply(invalid,"fr-FR",catalog));
+        Assert.False(invalid.Languages.ContainsKey("fr-FR"));
+    }
     private static StudioTemplate Custom(StudioField field)=>new(){Key="example",Name="Example",Fields=[field],Languages=new(){["ar"]=new("{event}","{event}")}};
 }

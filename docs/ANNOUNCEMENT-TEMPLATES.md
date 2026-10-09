@@ -20,6 +20,11 @@ Entry: Engagement → Announcements → Templates, designs and preview (`/Engage
 - Arabic/English starter texts are included. Other languages, including Kurdish, can be added
   and maintained through the builder; there is no machine translation. Field values are supplied
   by the author and are not automatically translated.
+- UI labels, dynamic controls, messages, default occasion names and field labels use the system
+  dictionary. Built-in title/body source keys are registered in compiled resources. Add a language
+  in Settings → Dictionary and translate both texts while retaining placeholders: complete, valid
+  translations automatically become available for unsaved built-in templates. Company-authored
+  template content stays in its scoped builder, not the global dictionary. Existing posts remain immutable.
 - Per-company audience is default; optional individual selection is checked against that company.
   AnnouncementService enforces existing create/publish permissions. Template/image library writes
   are administrator-only. Duplicate publication uses the existing unique TranslationGroupId.
@@ -65,6 +70,14 @@ Dedicated SQL/browser verification is recorded separately; unit tests do not pro
   no bitmap editor or automatic translation of field values is included.
 
 ### Review handoff
+
+Dictionary follow-up: 104 matching new English/Kurdish resource keys; UI catalog lookups
+cover server markup and dynamic controls. Only relevant script keys/field labels are sent
+to the browser. User-entered values and company template texts are not globally registered.
+The new-language and placeholder tests passed: focused localization/studio run 123 passed;
+final full run 2,938 passed, 34 skipped, zero failed. Release solution build had zero warnings/errors.
+Headless DOM checks also passed translated controls/messages and dictionary-defined direction.
+These are local checks, not production verification. Deployment still awaits review/base approval.
 
 The isolated feature branch starts at the user's existing local commit `72a20565`.
 The remote source branch `feature/separate-company-onboarding-20261009` is absent and the
