@@ -795,7 +795,7 @@ app.MapGet("/EmployeeOnlinePunches", () =>
     Results.Redirect("/AttendanceRecords?Source=Mobile", permanent: false));
 
 app.MapGet("/Engagement/Recognition", () =>
-    Results.Redirect("/Engagement?tab=recognition", permanent: false));
+    Results.Redirect("/Engagement?tab=work", permanent: false));
 app.MapGet("/Violations/Actions", () =>
     Results.Redirect("/Violations?tab=actions", permanent: false));
 

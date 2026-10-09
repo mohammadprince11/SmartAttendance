@@ -439,7 +439,10 @@
         var trigger = wrapper.querySelector(".nxcs-trigger");
         var panel = buildPanel(select, wrapper, trigger);
 
-        document.body.appendChild(panel);
+        // A modal dialog is in the browser top layer; body portals sit behind it.
+        var pollDialog = select.closest("dialog.zy-poll-dialog[open]");
+        (pollDialog || document.body).appendChild(panel);
+        if (pollDialog) pollDialog.addEventListener("close", closeOpen, { once: true });
 
         openState = {
             select: select,

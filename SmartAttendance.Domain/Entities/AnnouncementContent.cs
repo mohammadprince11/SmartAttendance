@@ -19,6 +19,8 @@ public class AnnouncementContent : AuditableEntity
 
     public string Body { get; set; } = string.Empty;
 
+    public string? PresentationJson { get; set; }
+
     public string? Category { get; set; }
 
     public AnnouncementSignatureType SignatureType { get; set; } = AnnouncementSignatureType.SavedSignature;

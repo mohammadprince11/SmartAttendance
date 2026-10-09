@@ -7,6 +7,32 @@
     let dirty = false;
     let generation = 0;
     let request;
+    // Short-lived, document-local GET snapshots only. Never persist tokens or
+    // configuration in browser storage, and never cache a POST or failed GET.
+    const sections = new Map();
+    const cacheLifetime = 30000;
+    let cacheEpoch = 0;
+    function cacheKey(url) {
+        const key = new URL(url.href);
+        key.hash = '';
+        if (!key.searchParams.has('tab')) key.searchParams.set('tab', 'library');
+        if (key.searchParams.get('categoryId') === '0') key.searchParams.delete('categoryId');
+        key.searchParams.sort();
+        return key.href;
+    }
+    function invalidate() { sections.clear(); cacheEpoch++; }
+    function remember(url, html) {
+        if (html.length > 2000000) return;
+        const key = cacheKey(url);
+        sections.delete(key);
+        sections.set(key, {html, expires: Date.now() + cacheLifetime});
+        while (sections.size > 4) sections.delete(sections.keys().next().value);
+    }
+    function cached(url) {
+        const key = cacheKey(url), entry = sections.get(key);
+        if (!entry || entry.expires <= Date.now()) { sections.delete(key); return null; }
+        return entry.html;
+    }
     function signature(root) {
         return JSON.stringify(Array.from(root.querySelectorAll('form[method="post"] input, form[method="post"] select, form[method="post"] textarea'),
             field => [field.name, field.type === 'checkbox' ? field.checked : field.type === 'select-multiple'
@@ -38,6 +64,13 @@
     function status(root, message) {
         const node = root.querySelector('[data-disciplinary-status]');
         if (node) { node.hidden = !message; node.textContent = message; }
+    }
+    // The initial library/templates/articles GET is already authorized and loaded.
+    // Do not snapshot a running designer (canvas and native file controls).
+    const initialRoot = document.querySelector(selector);
+    if (!initialRoot.querySelector('[data-disciplinary-designer]')) {
+        const links = Array.from(document.querySelectorAll('link[data-disciplinary-style]'), link => link.outerHTML).join('');
+        remember(new URL(activeUrl), '<html><head>' + links + '</head><body>' + initialRoot.outerHTML + '</body></html>');
     }
     async function syncStyles(page) {
         const wanted = new Set(Array.from(page.querySelectorAll('link[data-disciplinary-style]'), link => new URL(link.getAttribute('href'), activeUrl).href));
@@ -91,22 +124,34 @@
         window.ZynoraRefreshSelectSystem?.();
     }
     async function navigate(url, fromHistory = false) {
-        if (url.href === activeUrl && !fromHistory) return;
+        if (cacheKey(url) === cacheKey(new URL(activeUrl)) && !fromHistory) return;
         const previous = document.querySelector(selector);
         if ((dirty || signature(previous) !== clean) && !window.confirm('عندك تغييرات غير محفوظة. تريد مغادرة الشاشة؟')) {
             if (fromHistory) history.pushState(null, '', activeUrl);
             return;
         }
         const ticket = ++generation;
+        const epoch = cacheEpoch;
         request?.abort(); request = new AbortController();
         previous.setAttribute('aria-busy', 'true');
         previous.querySelector('main').inert = true;
-        status(previous, 'جاري تحميل القسم…');
+        status(previous, '');
+        let waiting = false;
+        const indicator = setTimeout(() => {
+            if (ticket !== generation) return;
+            waiting = true;
+            status(document.querySelector(selector), 'جاري تحميل القسم…');
+        }, 250);
         try {
-            const response = await fetch(url.href, { credentials: 'same-origin', signal: request.signal,
-                headers: {'X-Zynora-Workspace': 'disciplinary'} });
-            if (!response.ok || !localUrl(response.url)) throw new Error('response');
-            const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+            let html = cached(url);
+            const reused = html !== null;
+            if (!reused) {
+                const response = await fetch(url.href, { credentials: 'same-origin', signal: request.signal,
+                    headers: {'X-Zynora-Workspace': 'disciplinary'} });
+                if (!response.ok || !localUrl(response.url)) { invalidate(); throw new Error('response'); }
+                html = await response.text();
+            }
+            const page = new DOMParser().parseFromString(html, 'text/html');
             const incoming = page.querySelector(selector);
             if (!incoming) throw new Error('workspace');
             if (ticket !== generation) return;
@@ -120,12 +165,13 @@
             dirty = false;
             incoming.setAttribute('aria-busy', 'true');
             incoming.querySelector('main').inert = true;
-            status(incoming, 'جاري تحميل القسم…');
+            status(incoming, waiting ? 'جاري تحميل القسم…' : '');
             await initialize(incoming, ticket);
             if (ticket !== generation) return;
             incoming.removeAttribute('aria-busy'); status(incoming, '');
             incoming.querySelector('main').inert = false;
             clean = signature(incoming);
+            if (!reused && epoch === cacheEpoch) remember(url, html);
             const focus = url.searchParams.has('openTypeId')
                 ? incoming.querySelector('.zyw-acc[open]') : incoming.querySelector('.zyw-tab[aria-selected="true"]');
             if (focus) { focus.setAttribute('tabindex', '-1'); focus.focus({preventScroll: true}); }
@@ -135,6 +181,9 @@
             root.removeAttribute('aria-busy');
             root.querySelector('main').inert = false;
             status(root, 'تعذّر تحميل القسم. حاول مرة ثانية؛ لم يتم إرسال أي تغييرات.');
+        } finally {
+            clearTimeout(indicator);
+            if (ticket === generation) request = null;
         }
     }
     document.addEventListener('input', event => {
@@ -161,6 +210,13 @@
         url.search = new URLSearchParams(new FormData(form)).toString();
         event.preventDefault(); navigate(url);
     });
+    // Capture before grid handlers/confirmation. Even a prevented write attempt
+    // invalidates snapshots conservatively; native antiforgery and POST stay intact.
+    document.addEventListener('submit', event => {
+        if (event.target.closest(selector) && event.target.method.toLowerCase() === 'post') invalidate();
+    }, true);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) invalidate(); });
+    window.addEventListener('pagehide', invalidate);
     window.addEventListener('popstate', () => {
         const url = localUrl(location.href);
         if (url) navigate(url, true);

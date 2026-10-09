@@ -320,14 +320,17 @@ VALUES
         // من استطلاعٍ آخر فأفسد نتيجتيهما.
         var votable = await HrmsDatabase.ScalarAsync<int>(
             _dbContext,
-            """
+            $"""
 SELECT COUNT(1)
 FROM EmployeePolls p
 INNER JOIN EmployeePollOptions o ON o.PollId = p.Id AND o.Id = @OptionId
 WHERE p.Id = @PollId
   AND p.IsPublished = 1
+  AND (p.StartsOn IS NULL OR p.StartsOn <= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
+  AND (p.EndsOn IS NULL OR p.EndsOn >= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
   AND (p.CompanyId IS NULL
-       OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId));
+       OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
+  AND {PollAudience.SqlPredicate};
 """,
             command =>
             {
@@ -1838,7 +1841,8 @@ ORDER BY UpdatedAt DESC, Id DESC;
                     ? item.PublishDate.Value.ToDateTime(TimeOnly.MinValue)
                     : null,
                 IsRead = item.IsRead,
-                FirstReadAtUtc = item.FirstReadAtUtc
+                FirstReadAtUtc = item.FirstReadAtUtc,
+                PresentationJson = item.PresentationJson
             })
             .ToList();
     }
@@ -1847,10 +1851,11 @@ ORDER BY UpdatedAt DESC, Id DESC;
     {
         var polls = await HrmsDatabase.QueryAsync(
             _dbContext,
-            """
+            $"""
 SELECT TOP 10
     p.Id,
     p.Title,
+    p.ContentTranslationsJson,
     ISNULL(p.Question, '') AS Question,
     ISNULL(p.Category, N'استطلاع') AS Category,
     ISNULL(p.TargetType, N'All') AS TargetType,
@@ -1859,6 +1864,8 @@ SELECT TOP 10
     CASE WHEN EXISTS (SELECT 1 FROM EmployeePollVotes v WHERE v.PollId = p.Id AND v.EmployeeId = @EmployeeId) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS HasVoted
 FROM EmployeePolls p
 WHERE p.IsPublished = 1
+  AND (p.StartsOn IS NULL OR p.StartsOn <= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
+  AND (p.EndsOn IS NULL OR p.EndsOn >= CAST(DATEADD(hour,3,SYSUTCDATETIME()) AS date))
   -- عزل الشركة (8D–8M): استطلاع شركةٍ أخرى موجَّه لـ«الكل» كان يظهر لموظفي كل
   -- الشركات ويقبل أصواتهم فيلوّث نتائجه. NULL = مشترك (السلوك القديم)، وموظفٌ
   -- بلا شركة يرى المشترك وحده — مغلق الفشل.
@@ -1866,11 +1873,7 @@ WHERE p.IsPublished = 1
        OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
   AND
   (
-      p.TargetType IS NULL
-      OR p.TargetType = 'All'
-      OR (p.TargetType = 'Employee' AND (p.TargetValue = @EmployeeIdText OR p.TargetValue = @EmployeeNo OR p.TargetValue LIKE @EmployeeIdLike))
-      OR (p.TargetType = 'Department' AND p.TargetValue = @DepartmentName)
-      OR (p.TargetType = 'Branch' AND p.TargetValue = @BranchName)
+      {PollAudience.SqlPredicate}
   )
 ORDER BY p.PublishDate DESC, p.Id DESC;
 """,
@@ -1885,6 +1888,7 @@ ORDER BY p.PublishDate DESC, p.Id DESC;
             },
             reader => new EmployeePortalPoll
             {
+                ContentTranslationsJson = HrmsDatabase.GetString(reader, "ContentTranslationsJson"),
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Title = HrmsDatabase.GetString(reader, "Title"),
                 Question = HrmsDatabase.GetString(reader, "Question"),
@@ -1898,6 +1902,13 @@ ORDER BY p.PublishDate DESC, p.Id DESC;
         foreach (var poll in polls)
         {
             poll.Options = await LoadPollOptionsAsync(poll.Id);
+            var translation = PollTranslations.Resolve(poll.ContentTranslationsJson, System.Globalization.CultureInfo.CurrentUICulture.Name, poll.Options.Count);
+            if (translation != null)
+            {
+                poll.Title = translation.Title;
+                poll.Question = translation.Question;
+                for (var i = 0; i < poll.Options.Count; i++) poll.Options[i].OptionText = translation.Options[i];
+            }
         }
 
         return polls;
@@ -2557,6 +2568,7 @@ ORDER BY CreatedAt DESC, Id DESC;
 
     public class EmployeePortalAnnouncement
     {
+        public string? PresentationJson { get; set; }
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
@@ -2570,6 +2582,7 @@ ORDER BY CreatedAt DESC, Id DESC;
 
     public class EmployeePortalPoll
     {
+        public string? ContentTranslationsJson { get; set; }
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Question { get; set; } = string.Empty;

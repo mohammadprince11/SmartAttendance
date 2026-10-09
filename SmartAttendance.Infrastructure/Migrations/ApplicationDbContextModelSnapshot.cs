@@ -333,6 +333,94 @@ namespace SmartAttendance.Infrastructure.Migrations
                     b.ToTable("AnnouncementComments", (string)null);
                 });
 
+            modelBuilder.Entity("SmartAttendance.Domain.Entities.AnnouncementStudioDesign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasMaxLength(5242880)
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "IsActive");
+
+                    b.ToTable("AnnouncementStudioDesigns");
+                });
+
+            modelBuilder.Entity("SmartAttendance.Domain.Entities.AnnouncementStudioProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasMaxLength(100000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("AnnouncementStudioProfiles");
+                });
+
+            modelBuilder.Entity("SmartAttendance.Domain.Entities.AnnouncementStudioDesign", b =>
+                {
+                    b.HasOne("SmartAttendance.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SmartAttendance.Domain.Entities.AnnouncementStudioProfile", b =>
+                {
+                    b.HasOne("SmartAttendance.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SmartAttendance.Domain.Entities.AnnouncementContent", b =>
                 {
                     b.Property<int>("Id")
@@ -369,8 +457,12 @@ namespace SmartAttendance.Infrastructure.Migrations
 
                     b.Property<string>("LanguageCode")
                         .IsRequired()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
+                        .HasMaxLength(35)
+                        .HasColumnType("nvarchar(35)");
+
+                    b.Property<string>("PresentationJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -407,10 +499,7 @@ namespace SmartAttendance.Infrastructure.Migrations
                     b.HasIndex("AnnouncementGroupId", "LanguageCode")
                         .IsUnique();
 
-                    b.ToTable("AnnouncementContents", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_AnnouncementContents_LanguageCode", "[LanguageCode] IN (N'ar', N'en')");
-                        });
+                    b.ToTable("AnnouncementContents", (string)null);
                 });
 
             modelBuilder.Entity("SmartAttendance.Domain.Entities.AnnouncementGroup", b =>

@@ -38,6 +38,16 @@ public abstract class EngagementPageModel : PageModel
     public List<EmployeeOption> Employees { get; protected set; } = new();
     public List<DepartmentOption> Departments { get; protected set; } = new();
     public List<BranchOption> Branches { get; protected set; } = new();
+    public IReadOnlyList<SmartAttendance.Web.Infrastructure.Localization.DictionaryLanguage> PollLanguages { get; private set; } = [];
+    public string PollPrimaryLanguage { get; private set; } = ZynoraSupportedCultures.DefaultCode;
+    public sealed record PollFieldLanguages(IReadOnlyList<SmartAttendance.Web.Infrastructure.Localization.DictionaryLanguage> Languages, string PrimaryLanguage, string Field, string Caption, int MaxLength);
+    protected async Task LoadPollLanguagesAsync()
+    {
+        var dictionary = HttpContext.RequestServices.GetRequiredService<SmartAttendance.Web.Infrastructure.Localization.ILocalizationDictionaryService>();
+        PollLanguages = await dictionary.GetLanguagesAsync(HttpContext.RequestAborted);
+        PollPrimaryLanguage = PollLanguages.FirstOrDefault(l => l.Code.Equals(System.Globalization.CultureInfo.CurrentUICulture.Name, StringComparison.OrdinalIgnoreCase))?.Code
+            ?? PollLanguages.FirstOrDefault(l => l.IsDefault)?.Code ?? PollLanguages.FirstOrDefault()?.Code ?? ZynoraSupportedCultures.DefaultCode;
+    }
     public IReadOnlyList<AnnouncementTemplateDefinition> AnnouncementTemplates { get; } = AnnouncementTemplateDefinition.All;
 
     public int TotalAnnouncements => Announcements.Count;
@@ -87,8 +97,11 @@ public abstract class EngagementPageModel : PageModel
             .Select(item => new AnnouncementRow
             {
                 Id = item.Id,
+                Revision = item.Revision,
+                Translations = item.Translations,
                 Title = item.Title,
                 Body = item.Body,
+                PresentationJson = item.PresentationJson,
                 Category = item.Category,
                 TargetType = item.AudienceSummary,
                 TargetValue = item.AudienceSummary,
@@ -99,6 +112,7 @@ public abstract class EngagementPageModel : PageModel
                     ? item.PublishDate.Value.ToDateTime(TimeOnly.MinValue)
                     : null,
                 CreatedBy = item.CreatedBy,
+                CreatedAt = item.CreatedAtUtc,
                 RecipientCount = item.RecipientCount,
                 IsLegacy = item.IsLegacy
             })
@@ -135,6 +149,8 @@ SELECT TOP 100
     ISNULL(p.TargetValue, '') AS TargetValue,
     p.IsPublished,
     p.PublishDate,
+    p.StartsOn, p.EndsOn, p.ConfidentialResults,
+    p.ContentTranslationsJson,
     ISNULL(p.CreatedBy, '') AS CreatedBy,
     (SELECT COUNT(1) FROM EmployeePollOptions o WHERE o.PollId = p.Id) AS OptionsCount,
     (SELECT COUNT(1) FROM EmployeePollVotes v WHERE v.PollId = p.Id) AS VotesCount
@@ -154,15 +170,41 @@ ORDER BY p.PublishDate DESC, p.Id DESC;
                 Id = HrmsDatabase.GetInt(reader, "Id"),
                 Title = HrmsDatabase.GetString(reader, "Title"),
                 Question = HrmsDatabase.GetString(reader, "Question"),
+                ContentTranslationsJson = HrmsDatabase.GetString(reader, "ContentTranslationsJson"),
                 Category = HrmsDatabase.GetString(reader, "Category"),
                 TargetType = HrmsDatabase.GetString(reader, "TargetType"),
                 TargetValue = HrmsDatabase.GetString(reader, "TargetValue"),
                 IsPublished = HrmsDatabase.GetBool(reader, "IsPublished"),
                 PublishDate = HrmsDatabase.GetDateTime(reader, "PublishDate"),
+                StartsOn = HrmsDatabase.GetDateTime(reader, "StartsOn"),
+                EndsOn = HrmsDatabase.GetDateTime(reader, "EndsOn"),
+                ConfidentialResults = HrmsDatabase.GetBool(reader, "ConfidentialResults"),
                 CreatedBy = HrmsDatabase.GetString(reader, "CreatedBy"),
                 OptionsCount = HrmsDatabase.GetInt(reader, "OptionsCount"),
                 VotesCount = HrmsDatabase.GetInt(reader, "VotesCount")
             });
+        foreach (var poll in Polls)
+        {
+            poll.Options = await HrmsDatabase.QueryAsync(DbContext,
+                $"""
+SELECT o.OptionText, CASE WHEN p.ConfidentialResults = 0 OR
+ (SELECT COUNT(1) FROM EmployeePollVotes WHERE PollId = p.Id) >= 5
+ THEN (SELECT COUNT(1) FROM EmployeePollVotes v WHERE v.PollId = p.Id AND v.OptionId = o.Id)
+ ELSE NULL END AS Votes
+FROM EmployeePollOptions o INNER JOIN EmployeePolls p ON p.Id = o.PollId
+WHERE p.Id = @PollId AND {scopeClause}
+ORDER BY o.DisplayOrder, o.Id;
+""",
+                command => HrmsDatabase.AddParameter(command, "@PollId", poll.Id),
+                reader => new PollResultOption(HrmsDatabase.GetString(reader, "OptionText"), HrmsDatabase.GetInt(reader, "Votes")));
+            var translation = PollTranslations.Resolve(poll.ContentTranslationsJson, System.Globalization.CultureInfo.CurrentUICulture.Name, poll.Options.Count);
+            if (translation != null)
+            {
+                poll.Title = translation.Title;
+                poll.Question = translation.Question;
+                poll.Options = poll.Options.Select((option, i) => option with { Text = translation.Options[i] }).ToList();
+            }
+        }
     }
 
     protected async Task LoadFeedbackAsync()
@@ -241,7 +283,7 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
 
         Branches = await HrmsDatabase.QueryAsync(
             DbContext,
-            $"SELECT Id, Name FROM Branches WHERE {branchScope} ORDER BY Name;",
+            $"SELECT Id, Name FROM Branches WHERE ISNULL(IsDeleted,0)=0 AND {branchScope} ORDER BY Name;",
             null,
             reader => new BranchOption { Id = HrmsDatabase.GetInt(reader, "Id"), Name = HrmsDatabase.GetString(reader, "Name") });
     }
@@ -274,6 +316,16 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
         int? branchId)
     {
         var scope = await GetCompanyScopeAsync();
+        // A stale/tampered selection must not target a deleted site, even for administrators.
+        if (targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase))
+        {
+            if (branchId is not > 0) return false;
+            var count = await HrmsDatabase.ScalarAsync<int>(
+                DbContext,
+                $"SELECT COUNT(*) FROM Branches WHERE Id=@Id AND ISNULL(IsDeleted,0)=0 AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")};",
+                command => HrmsDatabase.AddParameter(command, "@Id", branchId.Value));
+            return count == 1;
+        }
         if (scope.IsUnrestricted) return true;
 
         if (targetType.Equals("All", StringComparison.OrdinalIgnoreCase))
@@ -295,15 +347,6 @@ ORDER BY f.CreatedAt DESC, f.Id DESC;
                 DbContext,
                 $"SELECT COUNT(*) FROM Departments WHERE Id=@Id AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")};",
                 command => HrmsDatabase.AddParameter(command, "@Id", departmentId.Value));
-            return count == 1;
-        }
-
-        if (targetType.Equals("Branch", StringComparison.OrdinalIgnoreCase) && branchId is > 0)
-        {
-            var count = await HrmsDatabase.ScalarAsync<int>(
-                DbContext,
-                $"SELECT COUNT(*) FROM Branches WHERE Id=@Id AND {EmployeeCompanyGuard.ListFilter(scope, "CompanyId")};",
-                command => HrmsDatabase.AddParameter(command, "@Id", branchId.Value));
             return count == 1;
         }
 
@@ -341,14 +384,18 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
       LEFT JOIN HrJobPositions p ON p.Id=r.PositionId
       LEFT JOIN Employees e ON e.Id=r.EmployeeId
       WHERE r.AnnouncementGroupId=g.Id AND r.IsExcluded=0
-        AND (r.AudienceType=1 OR
+        AND (r.AudienceType=@AllAudienceType OR
              (r.CompanyId IS NOT NULL AND r.CompanyId NOT IN ({companyFilter})) OR
              (r.BranchId IS NOT NULL AND b.CompanyId NOT IN ({companyFilter})) OR
              (r.DepartmentId IS NOT NULL AND d.CompanyId NOT IN ({companyFilter})) OR
              (r.PositionId IS NOT NULL AND p.CompanyId NOT IN ({companyFilter})) OR
              (r.EmployeeId IS NOT NULL AND (e.CompanyId IS NULL OR e.CompanyId NOT IN ({companyFilter})))))
 """,
-            command => HrmsDatabase.AddParameter(command, "@Id", announcementId));
+            command =>
+            {
+                HrmsDatabase.AddParameter(command, "@Id", announcementId);
+                HrmsDatabase.AddParameter(command, "@AllAudienceType", SmartAttendance.Domain.Enums.AnnouncementAudienceType.All.ToString());
+            });
 
         return count == 1;
     }
@@ -412,6 +459,8 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
         var categoryText = category?.Trim() ?? string.Empty;
         var titleText = title?.Trim() ?? string.Empty;
 
+        // Studio saves the template name as category, not the legacy greeting category.
+        if (categoryText.Contains("ترقية", StringComparison.OrdinalIgnoreCase)) return "promotion";
         if (categoryText.Contains("عطلة", StringComparison.OrdinalIgnoreCase)) return "holiday";
         if (categoryText.Contains("تعميم", StringComparison.OrdinalIgnoreCase)) return "circular";
         if (categoryText.Contains("تعليمات", StringComparison.OrdinalIgnoreCase) ||
@@ -485,9 +534,14 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
 
     public class PollInput
     {
+        public List<PollTextTranslation> Translations { get; set; } = [];
         public string Title { get; set; } = string.Empty;
         public string Question { get; set; } = string.Empty;
         public string OptionsText { get; set; } = string.Empty;
+        public string[] Options { get; set; } = [];
+        public DateTime? StartsOn { get; set; }
+        public DateTime? EndsOn { get; set; }
+        public bool ConfidentialResults { get; set; } = true;
         public string Category { get; set; } = "استطلاع";
         public string TargetType { get; set; } = "All";
         public int[]? EmployeeIds { get; set; }
@@ -505,6 +559,9 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
 
     public class AnnouncementRow
     {
+        public string Revision { get; set; } = string.Empty;
+        public IReadOnlyList<StudioRendered> Translations { get; set; } = Array.Empty<StudioRendered>();
+        public string? PresentationJson { get; set; }
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
@@ -516,12 +573,14 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
         public bool IsPublished { get; set; }
         public DateTime? PublishDate { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
+        public DateTime? CreatedAt { get; set; }
         public int RecipientCount { get; set; }
         public bool IsLegacy { get; set; }
     }
 
     public class PollRow
     {
+        public string? ContentTranslationsJson { get; set; }
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Question { get; set; } = string.Empty;
@@ -533,7 +592,13 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
         public string CreatedBy { get; set; } = string.Empty;
         public int OptionsCount { get; set; }
         public int VotesCount { get; set; }
+        public DateTime? StartsOn { get; set; }
+        public DateTime? EndsOn { get; set; }
+        public bool ConfidentialResults { get; set; }
+        public List<PollResultOption> Options { get; set; } = [];
+        public string LifecycleStatus => PollLifecycle.Status(IsPublished, StartsOn, EndsOn, DateTime.UtcNow.AddHours(3));
     }
+    public record PollResultOption(string Text, int Votes);
 
     public class FeedbackRow
     {
@@ -573,10 +638,10 @@ WHERE g.Id=@Id AND ISNULL(g.IsDeleted,0)=0
             new() { Key = "appreciation", Name = "شكر وتقدير", Description = "تكريم إنجاز", Category = "شكر وتقدير", Icon = "🏆", CssClass = "promotion", AssetKey = "promotion" },
             new() { Key = "marriage", Name = "زواج", Description = "تهنئة رسمية", Category = "تهنئة", Icon = "💍", CssClass = "marriage", AssetKey = "marriage" },
             new() { Key = "condolence", Name = "تعزية", Description = "تعزية ومواساة", Category = "تعزية", Icon = "🕊️", CssClass = "condolence", AssetKey = "condolence" },
-            new() { Key = "newborn", Name = "مولود جديد", Description = "تهنئة مولود", Category = "تهنئة", Icon = "👶", CssClass = "newborn", AssetKey = "newborn" },
+            new() { Key = "newborn", Name = "مولود جديد", Description = "تهنئة مولود", Category = "تهنئة", Icon = "👶", CssClass = "newborn", AssetKey = "" },
             new() { Key = "farewell", Name = "وداع موظف", Description = "شكر وتقدير", Category = "وداع", Icon = "🧳", CssClass = "farewell", AssetKey = "farewell" },
             // أربعة قوالب أُضيفت لمطابقة طقم كيان الكامل (دراسة 2026-08-15).
-            new() { Key = "birthday", Name = "عيد ميلاد", Description = "تهنئة عيد ميلاد", Category = "تهنئة", Icon = "🎂", CssClass = "newborn", AssetKey = "newborn" },
+            new() { Key = "birthday", Name = "عيد ميلاد", Description = "تهنئة عيد ميلاد", Category = "تهنئة", Icon = "🎂", CssClass = "newborn", AssetKey = "" },
             new() { Key = "employee-of-month", Name = "موظف الشهر", Description = "تكريم شهري", Category = "شكر وتقدير", Icon = "🌟", CssClass = "promotion", AssetKey = "promotion" },
             new() { Key = "anniversary", Name = "ذكرى عمل", Description = "ذكرى انضمام", Category = "تهنئة", Icon = "🎖️", CssClass = "promotion", AssetKey = "promotion" },
             new() { Key = "retirement", Name = "تقاعد موظف", Description = "تكريم تقاعد", Category = "وداع", Icon = "🏅", CssClass = "farewell", AssetKey = "farewell" }

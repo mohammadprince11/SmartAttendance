@@ -32,17 +32,17 @@ public sealed class DeadUnifiedRouteCleanupContractTests
             "Engagement",
             "Index.cshtml"));
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "data-zyw-tab=\"recognition\"",
             engagement,
             StringComparison.Ordinal);
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "RecognitionAnnouncements",
             engagement,
             StringComparison.Ordinal);
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "CampaignAnnouncements",
             engagement,
             StringComparison.Ordinal);
@@ -86,7 +86,7 @@ public sealed class DeadUnifiedRouteCleanupContractTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "/Engagement?tab=recognition",
+            "/Engagement?tab=work",
             source,
             StringComparison.Ordinal);
 
@@ -116,7 +116,7 @@ public sealed class DeadUnifiedRouteCleanupContractTests
             source,
             StringComparison.Ordinal);
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "asp-route-tab=\"recognition\"",
             source,
             StringComparison.Ordinal);

@@ -1,0 +1,11 @@
+@model SmartAttendance.Web.Pages.Engagement.EngagementPageModel.PollFieldLanguages
+<div class="zy-poll-field-languages" data-poll-field-languages hidden>
+    @for (var index = 0; index < Model.Languages.Count; index++)
+    {
+        var language = Model.Languages[index];
+        <label class="zy-poll-language-row" data-poll-language-row="@language.Code" dir="@language.Direction" hidden="@(language.Code == Model.PrimaryLanguage)">
+            <span>@language.NativeName</span>
+            <input name="Poll.Translations[@index].@Model.Field" maxlength="@Model.MaxLength" aria-label="@Model.Caption — @language.NativeName" data-poll-language="@language.Code" disabled />
+        </label>
+    }
+</div>

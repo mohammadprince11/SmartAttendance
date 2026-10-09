@@ -10,13 +10,11 @@ public class AnnouncementContentConfiguration : IEntityTypeConfiguration<Announc
     {
         builder.ToTable("AnnouncementContents", table =>
         {
-            table.HasCheckConstraint(
-                "CK_AnnouncementContents_LanguageCode",
-                "[LanguageCode] IN (N'ar', N'en')");
         });
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.LanguageCode).HasMaxLength(5).IsRequired();
+        builder.Property(x => x.LanguageCode).HasMaxLength(35).IsRequired();
+        builder.Property(x => x.PresentationJson).HasMaxLength(2000);
         builder.Property(x => x.Title).HasMaxLength(250).IsRequired();
         builder.Property(x => x.Body).IsRequired();
         builder.Property(x => x.Category).HasMaxLength(100);

@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using SmartAttendance.Application.Announcements.Models;
 using SmartAttendance.Application.Announcements.Services;
 using SmartAttendance.Infrastructure.Persistence;
 using SmartAttendance.Web.Infrastructure.Hrms;
@@ -80,6 +83,7 @@ public partial class IndexModel : EngagementPageModel
         // خيارات الاستهداف إلزامية هنا: نموذجا الإعلان والاستطلاع بالشاشة نفسها،
         // وبدونها تُعرض منسدلات فارغة فيتعذّر الاستهداف بقسمٍ أو موقعٍ أو أفراد.
         await LoadAudienceOptionsAsync();
+        await LoadPollLanguagesAsync();
         await LoadAnnouncementsAsync();
         await LoadPollsAsync();
         await LoadFeedbackAsync();
@@ -92,6 +96,32 @@ public partial class IndexModel : EngagementPageModel
 
     private static readonly HashSet<string> ValidTabs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "work", "announcements", "polls", "cases", "recognition"
+        "work", "announcements", "polls", "cases"
     };
+
+    public async Task<IActionResult> OnGetAnnouncementImageAsync(int groupId, Guid designId)
+    {
+        if (groupId <= 0 || designId == Guid.Empty) return NotFound();
+        var scope = await GetCompanyScopeAsync();
+        var items = await AnnouncementService.GetManagementListAsync(null, new AnnouncementManagementScope
+        {
+            IsUnrestricted = scope.IsUnrestricted,
+            AllowedCompanyIds = scope.AllowedCompanyIds.ToArray()
+        }, HttpContext.RequestAborted);
+        var item = items.SingleOrDefault(x => x.Id == groupId);
+        if (item == null) return NotFound();
+        try
+        {
+            if (JsonSerializer.Deserialize<StudioPresentation>(item.PresentationJson ?? "null")?.DesignId != designId)
+                return NotFound();
+        }
+        catch (JsonException) { return NotFound(); }
+        var image = await DbContext.AnnouncementStudioDesigns.AsNoTracking()
+            .Where(d => d.Id == designId && (scope.IsUnrestricted || scope.AllowedCompanyIds.Contains(d.CompanyId)))
+            .SingleOrDefaultAsync(HttpContext.RequestAborted);
+        if (image == null) return NotFound();
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(image.Data, image.ContentType);
+    }
 }

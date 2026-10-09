@@ -1,0 +1,54 @@
+@page
+@model SmartAttendance.Web.Pages.Engagement.StudioModel
+@using System.Text.Json
+@using System.Globalization
+@using SmartAttendance.Application.Announcements.Models
+@inject SmartAttendance.Web.Infrastructure.Localization.ILocalizationDictionaryService Dictionary
+@{
+    var catalog = await Dictionary.GetCatalogAsync(CultureInfo.CurrentUICulture.Name, HttpContext.RequestAborted);
+    var languages = await Dictionary.GetLanguagesAsync(HttpContext.RequestAborted);
+    var scriptKeys = new HashSet<string> { "لا توجد قوالب فعالة. فعّل قالباً أو أنشئ قالباً جديداً.", "— اختياري", "تاريخ النهاية يجب ألا يسبق البداية.", "نص", "تاريخ", "شهر وسنة", "رقم", "إزالة الحقل", "رمز الحقل", "اسم الحقل", "نوع الحقل", "مطلوب", "إزالة اللغة", "رمز اللغة (ar / en / ku أو لغة جديدة)", "العنوان", "النص", "رمز اللغة مكرر.", "اختر المنصب الجديد", "يظهر تلقائياً بعد اختيار الموظف", "المنصب الجديد يجب أن يختلف عن المنصب الحالي." };
+    var scriptCatalog = catalog.Where(p => scriptKeys.Contains(p.Key) || Model.Templates.Any(t => t.Definition.Name == p.Key || t.Definition.Fields.Any(f => f.Label == p.Key))).ToDictionary(p => p.Key, p => p.Value);
+    string L(string key) => catalog.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : key;
+    ViewData["Title"] = L("إنشاء الإعلان");
+    ViewData["AnnouncementEmbed"] = Model.Embed;
+}
+@section Styles { <link rel="stylesheet" href="~/css/zynora-announcement-templates.css" asp-append-version="true" /> }
+<section class="zy-scope zys" id="announcement-template-studio">
+    <header class="zy-page-header"><div><h1>@L("إنشاء الإعلان")</h1><p>@L("اختر القالب والتصميم، أكمل حقول المناسبة، ثم راجع المعاينة قبل النشر.")</p></div><div class="zys-actions"><a asp-page="Index" asp-route-tab="work" class="zy-btn">@L("الرجوع للإعلانات")</a></div></header>
+    <div asp-validation-summary="All" role="alert"></div>
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage)) { <p role="status">@L(Model.StatusMessage)</p> }
+    @if (Model.Companies.Count > 1)
+    {
+        <form method="get" class="zy-filter-bar"><input type="hidden" name="Embed" value="@Model.Embed.ToString().ToLowerInvariant()" /><label>@L("الشركة")<select name="CompanyId" onchange="this.form.submit()">@foreach(var c in Model.Companies){<option value="@c.Id" selected="@(c.Id==Model.CompanyId)">@c.Name</option>}</select></label><button type="submit" class="zy-btn">@L("عرض")</button></form>
+    }
+    <div class="zy-card zys-template-choice"><label>@L("القالب")<select name="TemplateKey" form="zys-compose" id="zys-template">@foreach(var t in Model.Templates.Where(t=>t.IsActive)){<option value="@t.Definition.Key">@L(t.Definition.Name)</option>}<option value="__free">@L("إعلان حر")</option></select></label></div>
+    <partial name="_FreeAnnouncement" model="Model" />
+    <div class="zys-layout" id="zys-template-compose-wrap">
+        <form method="post" asp-page-handler="Compose" id="zys-compose" class="zy-card">
+            <input type="hidden" name="Embed" value="@Model.Embed.ToString().ToLowerInvariant()" />
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" /><input type="hidden" name="RequestId" value="@Model.RequestId" />
+            <h2>@L("إنشاء الإعلان")</h2>
+            <div id="zys-fields"></div>
+            <div id="zys-subject" hidden data-subject-endpoint="@Url.Page("Studio", "SubjectEmployees", new { Model.CompanyId })">
+                <partial name="_EmployeePicker" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerModel { Label = L("اسم الموظف"), Name = "SubjectEmployeeId", SelectedId = Model.SubjectEmployeeId, SelectedName = Model.SubjectEmployeeName, SelectedCode = Model.SubjectEmployeeCode, IncludeInactive = true })" />
+                <p>@L("اختر موظفاً من الشركة بالاسم أو الكود.")</p>
+            </div>
+            <label>@L("التصميم")<select name="Design" id="zys-design"><option value="">@L("بدون صورة")</option>@foreach(var asset in AnnouncementStudio.BuiltinAssets){<option value="builtin:@asset">@L("تصميم جاهز") · @L(AnnouncementStudio.AssetLabel(asset))</option>}@foreach(var d in Model.Designs){<option value="@d.Id">@d.Name</option>}</select></label>
+            <details><summary>@L("إعدادات التصميم والجمهور")</summary>
+                <label>@L("عرض الصورة")<select name="Fit" id="zys-fit"><option value="contain">@L("كاملة بدون قص")</option><option value="cover">@L("ملء المساحة مع القص")</option></select></label>
+                <label>@L("موضع القص")<select name="Position" id="zys-position"><option value="center">@L("الوسط")</option><option value="top">@L("الأعلى")</option><option value="bottom">@L("الأسفل")</option></select></label>
+                <label>@L("مكان النص")<select name="TextPlacement" id="zys-placement"><option value="above">@L("فوق الصورة")</option><option value="below">@L("تحت الصورة")</option><option value="overlay">@L("على الصورة")</option></select></label>
+                <partial name="_EmployeePickerMulti" model="@(new SmartAttendance.Web.Pages.Shared.EmployeePickerMultiModel { Label = L("موظفون محددون — اتركه فارغاً لكل موظفي الشركة"), Name = "EmployeeIds" })" />
+            </details>
+            <div class="zys-actions"><div class="zys-publish-options"><label class="zys-check"><input type="checkbox" name="CommentsEnabled" value="true" checked="@Model.CommentsEnabled" />@L("السماح بالتعليقات")</label><input type="hidden" name="CommentsEnabled" value="false" /><label class="zys-check"><input type="checkbox" name="PublishNow" value="true" checked="@Model.PublishNow" />@L("نشر فوراً")</label><input type="hidden" name="PublishNow" value="false" /></div><button class="zy-btn zy-btn--primary" type="submit">@L("حفظ الإعلان")</button></div>
+            <p>@L("بدون «نشر فوراً» يُحفظ الإعلان كمسودة. تاريخ المناسبة مستقل عن تاريخ النشر.")</p>
+        </form>
+        <section class="zy-card" aria-label="@L("المعاينة")"><div class="zys-actions"><h2>@L("المعاينة المباشرة")</h2><label>@L("اللغة")<select id="zys-preview-language"></select></label></div>
+            <article id="zys-preview" data-zy-no-localize class="zys-visual zys-above zys-contain zys-center" aria-live="polite"><div class="zys-copy"><h3 id="zys-title"></h3><p id="zys-body"></p></div><img id="zys-image" alt="@L("تصميم الإعلان")" /></article><p id="zys-errors" role="status"></p>
+        </section>
+    </div>
+    <datalist id="zys-cultures">@foreach(var language in languages){<option value="@language.Code">@language.NativeName</option>}</datalist>
+    <script type="application/json" id="zys-data">@Html.Raw(JsonSerializer.Serialize(new { templates=Model.Templates, designs=Model.Designs, companyId=Model.CompanyId, catalog=scriptCatalog, languages, builtinAssets=AnnouncementStudio.BuiltinAssets, defaultAssets=Model.Templates.ToDictionary(t=>t.Definition.Key,t=>AnnouncementStudio.DefaultAsset(t.Definition.Key)), useDefaultDesign=HttpContext.Request.Method=="GET" && string.IsNullOrEmpty(Model.Design), today=DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3)).ToString("yyyy-MM-dd"), templateKey=Model.TemplateKey, values=Model.Values, positions=Model.Positions, subjectPosition=Model.SubjectPositionName, subjectEnglishName=Model.SubjectEmployeeEnglishName, newPositionId=Model.NewPositionId, design=Model.Design, fit=Model.Fit, position=Model.Position, placement=Model.TextPlacement }))</script>
+</section>
+@section Scripts { <script src="~/js/zynora-announcement-templates.js" asp-append-version="true"></script><script src="~/js/zynora-announcement-free.js" asp-append-version="true"></script> }

@@ -57,7 +57,11 @@ public sealed class EngagementUnifiedHandlerCleanupContractTests
         Assert.DoesNotContain("asp-page=\"/Engagement/Polls\"", view, StringComparison.Ordinal);
         Assert.DoesNotContain("asp-page=\"/Engagement/Feedback\"", view, StringComparison.Ordinal);
 
-        Assert.Contains("asp-page-handler=\"AnnouncementCreate\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-page=\"Studio\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("asp-page-handler=\"AnnouncementCreate\"", view, StringComparison.Ordinal);
+        Assert.Contains("_ManagedAnnouncementVisual", view, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"AnnouncementToggle\"", view, StringComparison.Ordinal);
+        Assert.Contains("asp-page-handler=\"AnnouncementArchive\"", view, StringComparison.Ordinal);
         Assert.Contains("asp-page-handler=\"PollCreate\"", view, StringComparison.Ordinal);
         Assert.Contains("asp-page-handler=\"FeedbackReply\"", view, StringComparison.Ordinal);
     }
