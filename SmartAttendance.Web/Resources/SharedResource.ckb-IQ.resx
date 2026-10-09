@@ -955,4 +955,80 @@
   <data name="إضافة لغة أخرى" xml:space="preserve"><value>زیادکردنی زمانێکی تر</value></data>
   <data name="أدخل الترجمة لكل لغة. عند عدم توفرها تظهر اللغة الأساسية. خيارات التصويت مشتركة بين جميع اللغات." xml:space="preserve"><value>وەرگێڕانی هەر زمانێک بنووسە. ئەگەر بەردەست نەبوو، زمانی سەرەکی پیشان دەدرێت. هەڵبژاردەکانی دەنگدان لە هەموو زمانەکاندا هاوبەشن.</value></data>
   <data name="لغة أخرى" xml:space="preserve"><value>زمانێکی تر</value></data>
+  <data name="تُصغّر الصور الكبيرة تلقائياً إلى 2000 بكسل مع الحفاظ على التناسب وبدون قص. الملف الأصلي لا يتغير." xml:space="preserve"><value>وێنە گەورەکان بە خۆکار بۆ 2000 پیکسڵ بچووک دەکرێنەوە، بە پاراستنی ڕێژەکان و بەبێ بڕین. فایلە ڕەسەنەکە ناگۆڕێت.</value></data>
+  <data name="اختر صورة PNG أو JPEG بحد أقصى 5 ميغابايت." xml:space="preserve"><value>وێنەیەکی PNG یان JPEG هەڵبژێرە بە قەبارەی زۆرترین 5 مێگابایت.</value></data>
+  <data name="أبعاد الصورة أكبر من الحد الآمن (100 مليون بكسل)، أو الصورة متحركة. صغّرها وأعد رفعها." xml:space="preserve"><value>ڕەهەندەکانی وێنە لە سنووری پارێزراو گەورەترن (100 ملیۆن پیکسڵ)، یان وێنەکە جووڵاوە. بچووکی بکەرەوە و دووبارە باری بکە.</value></data>
+  <data name="تعذّر قراءة الصورة كاملة. تأكد أن الملف غير تالف وأعد رفعه." xml:space="preserve"><value>خوێندنەوەی تەواوی وێنەکە نەکرا. دڵنیابە فایلەکە تێک نەچووە و دووبارە باری بکە.</value></data>
+  <data name="تعذّر تجهيز الصورة للعرض. أعد حفظها كـ PNG أو JPEG." xml:space="preserve"><value>ئامادەکردنی وێنە بۆ پیشاندان نەکرا. دووبارە وەک PNG یان JPEG پاشەکەوتی بکە.</value></data>
+  <data name="حجم الصورة بعد المعالجة أكبر من الحد المسموح." xml:space="preserve"><value>قەبارەی وێنە دوای چارەسەرکردن لە سنووری ڕێگەپێدراو گەورەترە.</value></data>
+  <data name="اختر القالب والصورة والموظف، ثم راجع الإعلان قبل حفظه أو نشره." xml:space="preserve"><value>قاڵب و وێنە و کارمەند هەڵبژێرە، پاشان ڕاگەیاندنەکە پشکنە پێش پاشەکەوتکردن یان بڵاوکردنەوە.</value></data>
+  <data name="إنشاء إعلان من الاستوديو" xml:space="preserve"><value>دروستکردنی ڕاگەیاندن لە ستۆدیۆ</value></data>
+  <data name="إدارة القوالب والتصاميم" xml:space="preserve"><value>بەڕێوەبردنی قاڵب و دیزاینەکان</value></data>
+  <data name="ترقية موظف" xml:space="preserve"><value>بەرزکردنەوەی پلەی کارمەند</value></data>
+  <data name="المنصب الحالي" xml:space="preserve"><value>پۆستی ئێستا</value></data>
+  <data name="المنصب الجديد" xml:space="preserve"><value>پۆستی نوێ</value></data>
+  <data name="تاريخ الترقية" xml:space="preserve"><value>بەرواری بەرزکردنەوەی پلە</value></data>
+  <data name="اختر المنصب الجديد" xml:space="preserve"><value>پۆستی نوێ هەڵبژێرە</value></data>
+  <data name="يظهر تلقائياً بعد اختيار الموظف" xml:space="preserve"><value>بە خۆکار دەردەکەوێت دوای هەڵبژاردنی کارمەند</value></data>
+  <data name="لم يُسجل منصب لهذا الموظف. حدّث ملف الموظف أولاً." xml:space="preserve"><value>پۆستێک بۆ ئەم کارمەندە تۆمار نەکراوە. سەرەتا پەڕگەی کارمەند نوێ بکەرەوە.</value></data>
+  <data name="اختر المنصب الجديد من مناصب الشركة الفعالة." xml:space="preserve"><value>پۆستی نوێ لە پۆستە چالاکەکانی کۆمپانیا هەڵبژێرە.</value></data>
+  <data name="المنصب الجديد يجب أن يختلف عن المنصب الحالي." xml:space="preserve"><value>پۆستی نوێ دەبێت لە پۆستی ئێستا جیاواز بێت.</value></data>
+  <data name="مبارك الترقية {person}!" xml:space="preserve"><value>پیرۆزە بەرزکردنەوەی پلەکەت {person}!</value></data>
+  <data name="نبارك لك الترقية من منصب {oldPosition} إلى منصب {newPosition} اعتباراً من {date}. نتمنى لك مزيداً من النجاح والتقدم." xml:space="preserve"><value>بەرزکردنەوەی پلەکەت لە پۆستی {oldPosition} بۆ پۆستی {newPosition} لە بەرواری {date} پیرۆز دەکەین. هیوای سەرکەوتن و پێشکەوتنی زیاترمان بۆت هەیە.</value></data>
+  <data name="اللغة" xml:space="preserve"><value>زمان</value></data>
+  <data name="المعاينة" xml:space="preserve"><value>پێشبینین</value></data>
+  <data name="تعطيل" xml:space="preserve"><value>ناچالاککردن</value></data>
+  <data name="تفعيل" xml:space="preserve"><value>چالاککردن</value></data>
+  <data name="إعلان حر — نص وصورة وترجمات اختيارية" xml:space="preserve"><value>ڕاگەیاندنی ئازاد — دەق و وێنە و وەرگێڕانی ئارەزوومەندانە</value></data>
+  <data name="اكتب إعلان الشركة بدون قالب أو اختيار موظف. أضف الترجمة للغات النظام التي تحتاجها؛ لا تُترجم النصوص تلقائياً." xml:space="preserve"><value>ڕاگەیاندنی کۆمپانیا بەبێ قاڵب یان هەڵبژاردنی کارمەند بنووسە. وەرگێڕان بۆ زمانە پێویستەکانی سیستەم زیاد بکە؛ دەقەکان بە خۆکار وەرناگێڕدرێن.</value></data>
+  <data name="اللغة الأساسية" xml:space="preserve"><value>زمانی سەرەکی</value></data>
+  <data name="إذا لم توجد ترجمة بلغة المستخدم، يظهر نص الإعلان باللغة الأساسية." xml:space="preserve"><value>ئەگەر وەرگێڕان بە زمانی بەکارهێنەر نەبێت، دەقی ڕاگەیاندن بە زمانی سەرەکی پیشان دەدرێت.</value></data>
+  <data name="عنوان الإعلان" xml:space="preserve"><value>ناونیشانی ڕاگەیاندن</value></data>
+  <data name="نص الإعلان" xml:space="preserve"><value>دەقی ڕاگەیاندن</value></data>
+  <data name="الترجمات اختيارية. أكمل العنوان والنص لكل لغة تضيفها، حتى 12 لغة للإعلان الواحد." xml:space="preserve"><value>وەرگێڕان ئارەزوومەندانەیە. ناونیشان و دەقی هەر زمانێک کە زیاد دەکەیت تەواو بکە، تا 12 زمان بۆ هەر ڕاگەیاندنێک.</value></data>
+  <data name="صورة الإعلان — اختيارية، PNG أو JPEG حتى 5 ميغابايت" xml:space="preserve"><value>وێنەی ڕاگەیاندن — ئارەزوومەندانە، PNG یان JPEG تا 5 مێگابایت</value></data>
+  <data name="حفظ الإعلان الحر" xml:space="preserve"><value>پاشەکەوتکردنی ڕاگەیاندنی ئازاد</value></data>
+  <data name="صورة الإعلان" xml:space="preserve"><value>وێنەی ڕاگەیاندن</value></data>
+  <data name="راجع حقول الإعلان الحر." xml:space="preserve"><value>خانەکانی ڕاگەیاندنی ئازاد پشکنە.</value></data>
+  <data name="اختر اللغة الأساسية من لغات النظام." xml:space="preserve"><value>زمانی سەرەکی لە زمانەکانی سیستەم هەڵبژێرە.</value></data>
+  <data name="اختر لغة ترجمة من لغات النظام." xml:space="preserve"><value>زمانێکی وەرگێڕان لە زمانەکانی سیستەم هەڵبژێرە.</value></data>
+  <data name="أكمل عنوان ونص كل ترجمة أضفتها. العنوان حتى 250 حرفاً والنص حتى 20000 حرف." xml:space="preserve"><value>ناونیشان و دەقی هەر وەرگێڕانێک کە زیادت کردووە تەواو بکە. ناونیشان تا 250 پیت و دەق تا 20000 پیت.</value></data>
+  <data name="يمكن إضافة 12 لغة كحد أقصى للإعلان الواحد." xml:space="preserve"><value>دەکرێت زۆرترین 12 زمان بۆ هەر ڕاگەیاندنێک زیاد بکرێت.</value></data>
+  <data name="أكمل عنوان ونص الإعلان باللغة الأساسية." xml:space="preserve"><value>ناونیشان و دەقی ڕاگەیاندن بە زمانی سەرەکی تەواو بکە.</value></data>
+  <data name="إعلان حر" xml:space="preserve"><value>ڕاگەیاندنی ئازاد</value></data>
+  <data name="لغة التحرير" xml:space="preserve"><value>زمانی دەستکاریکردن</value></data>
+  <data name="حذف الإعلان وإيقاف ظهوره للموظفين؟" xml:space="preserve"><value>ڕاگەیاندن بسڕدرێتەوە و پیشاندانی بۆ کارمەندان بوەستێنرێت؟</value></data>
+  <data name="ليس لديك صلاحية حذف الإعلانات." xml:space="preserve"><value>دەسەڵاتی سڕینەوەی ڕاگەیاندنەکانت نییە.</value></data>
+  <data name="تم حذف الإعلان." xml:space="preserve"><value>ڕاگەیاندنەکە سڕایەوە.</value></data>
+  <data name="قوالب الإعلانات ولغاتها وصورها حسب نوع المناسبة." xml:space="preserve"><value>قاڵب و زمان و وێنەکانی ڕاگەیاندن بەپێی جۆری بۆنە.</value></data>
+  <data name="الإعلانات" xml:space="preserve"><value>ڕاگەیاندنەکان</value></data>
+  <data name="تفاصيل الإعلان" xml:space="preserve"><value>وردەکارییەکانی ڕاگەیاندن</value></data>
+  <data name="أنشئ بواسطة" xml:space="preserve"><value>دروستکراوە لەلایەن</value></data>
+  <data name="حفظ التعديل" xml:space="preserve"><value>پاشەکەوتکردنی گۆڕانکاری</value></data>
+  <data name="تعديل نصوص الإعلان يحافظ على الصورة والجمهور. عدّل كل ترجمة تحتاجها." xml:space="preserve"><value>دەستکاریکردنی دەقی ڕاگەیاندن وێنە و بینەران دەپارێزێت. هەر وەرگێڕانێکی پێویست دەستکاری بکە.</value></data>
+  <data name="ليس لديك صلاحية تعديل الإعلانات." xml:space="preserve"><value>دەسەڵاتی دەستکاریکردنی ڕاگەیاندنەکانت نییە.</value></data>
+  <data name="تغيّر الإعلان بواسطة مستخدم آخر. أعد فتحه قبل التعديل." xml:space="preserve"><value>بەکارهێنەرێکی تر ڕاگەیاندنەکەی گۆڕیوە. پێش دەستکاریکردن دووبارە بیکەرەوە.</value></data>
+  <data name="راجع لغات الإعلان قبل حفظ التعديل." xml:space="preserve"><value>پێش پاشەکەوتکردنی گۆڕانکاری زمانەکانی ڕاگەیاندن پشکنە.</value></data>
+  <data name="راجع نصوص الإعلان." xml:space="preserve"><value>دەقەکانی ڕاگەیاندن پشکنە.</value></data>
+  <data name="تم تعديل الإعلان." xml:space="preserve"><value>ڕاگەیاندنەکە دەستکاری کرا.</value></data>
+  <data name="إعلان جديد" xml:space="preserve"><value>ڕاگەیاندنی نوێ</value></data>
+  <data name="خيارات الإجابة" xml:space="preserve"><value>هەڵبژاردەکانی وەڵام</value></data>
+  <data name="الخيار الأول" xml:space="preserve"><value>هەڵبژاردەی یەکەم</value></data>
+  <data name="الخيار الثاني" xml:space="preserve"><value>هەڵبژاردەی دووەم</value></data>
+  <data name="إضافة خيار" xml:space="preserve"><value>زیادکردنی هەڵبژاردە</value></data>
+  <data name="حذف الخيار" xml:space="preserve"><value>سڕینەوەی هەڵبژاردە</value></data>
+  <data name="تاريخ البداية" xml:space="preserve"><value>بەرواری دەستپێک</value></data>
+  <data name="تاريخ النهاية" xml:space="preserve"><value>بەرواری کۆتایی</value></data>
+  <data name="نتائج مجمّعة بدون أسماء" xml:space="preserve"><value>ئەنجامی کۆکراوە بەبێ ناو</value></data>
+  <data name="تُخفى نتائج الخيارات حتى مشاركة 5 موظفين. يُحفظ سجل المشاركة لمنع التصويت المكرر؛ ليست مجهولة الهوية داخل قاعدة البيانات." xml:space="preserve"><value>ئەنجامی هەڵبژاردەکان دەشاردرێتەوە تا 5 کارمەند بەشدار بن. تۆماری بەشداری بۆ ڕێگری لە دەنگدانی دووبارە پارێزراوە؛ ناسنامە لە بنکەی داتادا نەشاراوەتەوە.</value></data>
+  <data name="لا استطلاعات بعد. أنشئ أول استطلاع." xml:space="preserve"><value>هێشتا ڕاپرسی نییە. یەکەم ڕاپرسی دروست بکە.</value></data>
+  <data name="المشاركون" xml:space="preserve"><value>بەشداربووان</value></data>
+  <data name="بدون نهاية" xml:space="preserve"><value>بەبێ کۆتایی</value></data>
+  <data name="مجدول" xml:space="preserve"><value>خشتەکراو</value></data>
+  <data name="مغلق" xml:space="preserve"><value>داخراو</value></data>
+  <data name="تفاصيل الاستطلاع" xml:space="preserve"><value>وردەکارییەکانی ڕاپرسی</value></data>
+  <data name="النتائج مخفية لحماية الخصوصية حتى مشاركة 5 موظفين." xml:space="preserve"><value>ئەنجامەکان بۆ پاراستنی تایبەتمەندی شاراون تا 5 کارمەند بەشدار بن.</value></data>
+  <data name="اختر لغة أساسية من لغات النظام." xml:space="preserve"><value>زمانێکی سەرەکی لە زمانەکانی سیستەم هەڵبژێرە.</value></data>
+  <data name="اختر لغة متاحة وغير مكررة للترجمة." xml:space="preserve"><value>زمانێکی بەردەست و دووبارە نەکراوە بۆ وەرگێڕان هەڵبژێرە.</value></data>
+  <data name="أكمل عنوان وسؤال وجميع خيارات كل لغة، بدون تكرار الخيارات." xml:space="preserve"><value>ناونیشان و پرسیار و هەموو هەڵبژاردەکانی هەر زمانێک تەواو بکە، بەبێ دووبارەکردنەوەی هەڵبژاردەکان.</value></data>
 </root>

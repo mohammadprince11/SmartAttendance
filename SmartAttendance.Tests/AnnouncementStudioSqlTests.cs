@@ -62,7 +62,7 @@ public sealed class AnnouncementStudioSqlTests : IAsyncLifetime
     {
         Skip.IfNot(enabled,"Dedicated LocalDB tests disabled.");
         var service=new AnnouncementService(db);var requestId=Guid.NewGuid();
-        var request=new AnnouncementCreateRequest{RequestId=requestId,Title="Synthetic title",Body="Synthetic body",LanguageCode="ar",CompanyIds=[companyA],Translations=[new("en","Synthetic English","Synthetic body"),new("ckb-IQ","Synthetic Kurdish","Synthetic body")],PresentationJson=JsonSerializer.Serialize(new StudioPresentation(Guid.Empty,"cover","top","below","welcome"))};
+        var request=new AnnouncementCreateRequest{RequestId=requestId,Title="Synthetic title",Body="Synthetic body",LanguageCode="ar",CompanyIds=[companyA],Translations=[new("en","Synthetic English","Synthetic body"),new("ckb-IQ","Synthetic Kurdish","Synthetic body")],PresentationJson=JsonSerializer.Serialize(new StudioPresentation(Guid.Empty,"cover","top","below",AnnouncementStudio.DefaultAsset("welcome")))};
         var actor=new AnnouncementActorContext{UserName="synthetic-admin",Role="Admin"};
         var first=await service.CreateAsync(request,actor);Assert.True(first.Success,first.Message);
         var second=await service.CreateAsync(request,actor);Assert.True(second.Success,second.Message);Assert.Equal(first.AnnouncementId,second.AnnouncementId);

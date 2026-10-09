@@ -1872,7 +1872,7 @@ WHERE e.Id = @EmployeeId
 
         var polls = await HrmsDatabase.QueryAsync(
             _db,
-            """
+            $"""
 SELECT TOP 10
        p.Id, p.Title, ISNULL(p.Question, N'') AS Question, p.ContentTranslationsJson,
        ISNULL(p.Category, N'استطلاع') AS Category, p.PublishDate,
@@ -1890,14 +1890,7 @@ WHERE p.IsPublished = 1
        OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
   AND
   (
-      p.TargetType IS NULL
-      OR p.TargetType = 'All'
-      OR (p.TargetType = 'Employee'
-          AND (p.TargetValue = @EmployeeIdText
-               OR p.TargetValue = @EmployeeNo
-               OR p.TargetValue LIKE @EmployeeIdLike))
-      OR (p.TargetType = 'Department' AND p.TargetValue = @DepartmentName)
-      OR (p.TargetType = 'Branch' AND p.TargetValue = @BranchName)
+      {PollAudience.SqlPredicate}
   )
 ORDER BY p.PublishDate DESC, p.Id DESC;
 """,
@@ -1964,7 +1957,7 @@ ORDER BY DisplayOrder, Id;
 
         var votable = await HrmsDatabase.ScalarAsync<int>(
             _db,
-            """
+            $"""
 SELECT COUNT(1)
 FROM EmployeePolls p
 INNER JOIN EmployeePollOptions o
@@ -1978,14 +1971,7 @@ WHERE p.Id = @PollId
        OR p.CompanyId = (SELECT e.CompanyId FROM Employees e WHERE e.Id = @EmployeeId))
   AND
   (
-      p.TargetType IS NULL
-      OR p.TargetType = 'All'
-      OR (p.TargetType = 'Employee'
-          AND (p.TargetValue = @EmployeeIdText
-               OR p.TargetValue = @EmployeeNo
-               OR p.TargetValue LIKE @EmployeeIdLike))
-      OR (p.TargetType = 'Department' AND p.TargetValue = @DepartmentName)
-      OR (p.TargetType = 'Branch' AND p.TargetValue = @BranchName)
+      {PollAudience.SqlPredicate}
   );
 """,
             command =>
