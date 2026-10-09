@@ -1031,4 +1031,11 @@
   <data name="اختر لغة متاحة وغير مكررة للترجمة." xml:space="preserve"><value>Choose an available translation language that has not been added.</value></data>
   <data name="أكمل عنوان وسؤال وجميع خيارات كل لغة، بدون تكرار الخيارات." xml:space="preserve"><value>Complete the title, question and all options for each language, without duplicate options.</value></data>
   <data name="لغة أخرى" xml:space="preserve"><value>Other language</value></data>
+  <data name="الإعلانات وصوت الموظف والحالات — بشاشة واحدة." xml:space="preserve"><value>Announcements, employee voice and cases — on one screen.</value></data>
+  <data name="الخيار" xml:space="preserve"><value>Option</value></data>
+  <data name="قيمة الحقل طويلة: اسم الموظف" xml:space="preserve"><value>The field value is too long: employee name.</value></data>
+  <data name="مبارك الترقية {0}!" xml:space="preserve"><value>Congratulations on your promotion, {0}!</value></data>
+  <data name="مركز موحّد للإعلانات وصوت الموظف والحالات." xml:space="preserve"><value>A unified hub for announcements, employee voice and cases.</value></data>
+  <data name="مستلم" xml:space="preserve"><value>Recipient</value></data>
+  <data name="نبارك لك الترقية من منصب {0} إلى منصب {1} اعتباراً من {2}. نتمنى لك مزيداً من النجاح والتقدم." xml:space="preserve"><value>Congratulations on your promotion from {0} to {1}, effective {2}. Wishing you continued success and progress.</value></data>
 </root>
