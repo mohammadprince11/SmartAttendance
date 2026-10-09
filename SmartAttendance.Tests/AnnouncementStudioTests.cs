@@ -89,5 +89,16 @@ public sealed class AnnouncementStudioTests
         Assert.False(SmartAttendance.Web.Infrastructure.Localization.AnnouncementTemplateDictionary.Apply(invalid,"fr-FR",catalog));
         Assert.False(invalid.Languages.ContainsKey("fr-FR"));
     }
+    [Fact] public void DictionaryOverridesExistingEnglishAndRestoresInvalidTranslation()
+    {
+        var t=AnnouncementStudio.Defaults().First();var source=t.Languages["ar"];
+        var catalog=new Dictionary<string,string>{{source.Title,"Celebrate {person}!"},{source.Body,"On {date}."}};
+        Assert.True(SmartAttendance.Web.Infrastructure.Localization.AnnouncementTemplateDictionary.Apply(t,"en-US",catalog));
+        Assert.Equal("Celebrate {person}!",t.Languages["en"].Title);
+        Assert.False(t.Languages.ContainsKey("en-US"));
+        catalog[source.Body]="Invalid {unknown}";
+        Assert.False(SmartAttendance.Web.Infrastructure.Localization.AnnouncementTemplateDictionary.Apply(t,"en-US",catalog));
+        Assert.Equal("On {date}.",t.Languages["en"].Body);
+    }
     private static StudioTemplate Custom(StudioField field)=>new(){Key="example",Name="Example",Fields=[field],Languages=new(){["ar"]=new("{event}","{event}")}};
 }

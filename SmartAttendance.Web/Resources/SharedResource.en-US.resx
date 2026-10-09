@@ -881,4 +881,59 @@
   <data name="نحتفل بمرور {years} سنة منذ انضمامك بتاريخ {joiningDate}. شكراً لعطائك." xml:space="preserve"><value>Celebrating {years} years since you joined us on {joiningDate}. Thank you for your contribution.</value></data>
   <data name="تقاعد سعيد {person}!" xml:space="preserve"><value>Happy retirement, {person}!</value></data>
   <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {date}." xml:space="preserve"><value>Thank you for your years of dedication. Wishing you a happy retirement starting {date}.</value></data>
+  <data name="أحد الموظفين المستهدفين خارج الشركة." xml:space="preserve"><value>A selected employee is outside this company.</value></data>
+  <data name="أضف لغة واحدة على الأقل، وبحد أقصى 12 لغة و30 تصميماً." xml:space="preserve"><value>Add at least one language, up to 12 languages and 30 designs.</value></data>
+  <data name="إحدى الصور خارج نطاق الشركة أو غير فعالة." xml:space="preserve"><value>An image is outside the company scope or inactive.</value></data>
+  <data name="اختر صورة PNG أو JPEG بحد أقصى 5 ميغابايت وأدخل اسم التصميم." xml:space="preserve"><value>Choose a PNG or JPEG image up to 5 MB and enter a design name.</value></data>
+  <data name="التصميم غير متاح لهذا القالب." xml:space="preserve"><value>This design is not available for this template.</value></data>
+  <data name="الحقل مطلوب: {0}" xml:space="preserve"><value>Required field: {0}</value></data>
+  <data name="الصورة غير صالحة. المسموح PNG أو JPEG فقط." xml:space="preserve"><value>Invalid image. Only PNG or JPEG is allowed.</value></data>
+  <data name="القالب تغيّر بواسطة مستخدم آخر. أعد تحميله قبل الحفظ." xml:space="preserve"><value>Another user changed the template. Reload it before saving.</value></data>
+  <data name="القالب غير موجود أو غير فعال." xml:space="preserve"><value>The template does not exist or is inactive.</value></data>
+  <data name="القوالب والتصاميم والمعاينة" xml:space="preserve"><value>Templates, designs and preview</value></data>
+  <data name="النص يحتوي متغيراً غير معرّف ضمن حقول القالب." xml:space="preserve"><value>The text contains a variable not defined in the template fields.</value></data>
+  <data name="بيانات القالب غير صالحة." xml:space="preserve"><value>Invalid template data.</value></data>
+  <data name="بيانات القالب غير مكتملة." xml:space="preserve"><value>Template data is incomplete.</value></data>
+  <data name="تاريخ المباشرة لا يجوز أن يكون مستقبلياً لحساب ذكرى العمل." xml:space="preserve"><value>The joining date cannot be in the future when calculating a work anniversary.</value></data>
+  <data name="تاريخ غير صالح: {0}" xml:space="preserve"><value>Invalid date: {0}</value></data>
+  <data name="تصميم الإعلان غير صالح." xml:space="preserve"><value>Invalid announcement design.</value></data>
+  <data name="تصميم الإعلان لا يطابق شركة الجمهور." xml:space="preserve"><value>The announcement design does not belong to the audience's company.</value></data>
+  <data name="تم حفظ القالب. الإعلانات السابقة لا تتغير." xml:space="preserve"><value>Template saved. Previous announcements are unchanged.</value></data>
+  <data name="تم حفظ هذا الإعلان مسبقاً." xml:space="preserve"><value>This announcement has already been saved.</value></data>
+  <data name="تمت إضافة التصميم إلى مكتبة الشركة." xml:space="preserve"><value>Design added to the company library.</value></data>
+  <data name="حقول القالب مكررة أو أكثر من 16 حقلاً." xml:space="preserve"><value>Template fields are duplicated or exceed 16 fields.</value></data>
+  <data name="رقم غير صالح: {0}" xml:space="preserve"><value>Invalid number: {0}</value></data>
+  <data name="شهر غير صالح: {0}" xml:space="preserve"><value>Invalid month: {0}</value></data>
+  <data name="عنوان الإعلان الناتج أكثر من 250 حرفاً." xml:space="preserve"><value>The resulting announcement title exceeds 250 characters.</value></data>
+  <data name="قالب مخصص" xml:space="preserve"><value>Custom template</value></data>
+  <data name="قيمة الحقل طويلة: {0}" xml:space="preserve"><value>Field value is too long: {0}</value></data>
+  <data name="لم يُحفظ القالب بسبب تعارض. أعد تحميل الصفحة." xml:space="preserve"><value>Template was not saved due to a conflict. Reload the page.</value></data>
+  <data name="متغير years يحتاج حقل joiningDate من نوع تاريخ." xml:space="preserve"><value>The years variable requires a date field named joiningDate.</value></data>
+  <data name="نصوص الإعلان أو اللغات غير صالحة." xml:space="preserve"><value>Announcement texts or languages are invalid.</value></data>
+  <data name="نوع أو اسم حقل القالب غير صالح." xml:space="preserve"><value>Invalid template field type or name.</value></data>
+  <data name="يرجى إدخال اسم ورمز صحيحين للقالب." xml:space="preserve"><value>Enter a valid template name and key.</value></data>
+  <data name="يرجى إكمال عنوان ونص كل لغة ضمن الحدود المسموحة." xml:space="preserve"><value>Complete the title and body for each language within the allowed limits.</value></data>
+  <data name="أدخل الترجمة لكل لغة. المتغير يُكتب بهذا الشكل: {0} أو رمز الحقل الذي أضفته. لا تُترجم البيانات تلقائياً." xml:space="preserve"><value>Enter each language translation. Use {0} or a field key as a placeholder. Values are not translated automatically.</value></data>
+  <data name="أهلاً بك {0}!" xml:space="preserve"><value>Welcome aboard, {0}!</value></data>
+  <data name="إعلان عطلة: {0}" xml:space="preserve"><value>Holiday announcement: {0}</value></data>
+  <data name="تقاعد سعيد {0}!" xml:space="preserve"><value>Happy retirement, {0}!</value></data>
+  <data name="تكون مكاتبنا مغلقة من {0} إلى {1} بمناسبة {2}." xml:space="preserve"><value>Our offices will be closed from {0} through {1} for {2}.</value></data>
+  <data name="خالص التعازي إلى {0}" xml:space="preserve"><value>Our condolences, {0}</value></data>
+  <data name="ذكرى عمل سعيدة {0}!" xml:space="preserve"><value>Happy work anniversary, {0}!</value></data>
+  <data name="زواج مبارك {0}!" xml:space="preserve"><value>Congratulations on your marriage, {0}!</value></data>
+  <data name="عيد ميلاد سعيد {0}!" xml:space="preserve"><value>Happy birthday, {0}!</value></data>
+  <data name="مبارك المولود يا {0}!" xml:space="preserve"><value>Congratulations, {0}!</value></data>
+  <data name="مبارك المولودة يا {0}!" xml:space="preserve"><value>Congratulations, {0}!</value></data>
+  <data name="موظف الشهر: {0}" xml:space="preserve"><value>Employee of the month: {0}</value></data>
+  <data name="نبارك تكريمك موظف الشهر {0} تقديراً لجهودك المميزة." xml:space="preserve"><value>Congratulations on being our employee of the month for {0}. Thank you for your outstanding work.</value></data>
+  <data name="نبارك لك الزواج بتاريخ {0} ونتمنى لك حياة سعيدة." xml:space="preserve"><value>Wishing you a happy life together. Wedding date: {0}.</value></data>
+  <data name="نبارك لك قدوم مولودتك {0}. تاريخ الولادة: {1}." xml:space="preserve"><value>Congratulations on the arrival of your baby girl {0}. Birth date: {1}.</value></data>
+  <data name="نبارك لك قدوم مولودك {0}. تاريخ الولادة: {1}." xml:space="preserve"><value>Congratulations on the arrival of your baby boy {0}. Birth date: {1}.</value></data>
+  <data name="نتقدم إليك بخالص التعازي بوفاة {0}. تاريخ الوفاة: {1}." xml:space="preserve"><value>Our deepest condolences on the loss of your {0}. Date: {1}.</value></data>
+  <data name="نتمنى لك التوفيق {0}!" xml:space="preserve"><value>Best wishes, {0}!</value></data>
+  <data name="نتمنى لك عيد ميلاد سعيداً بتاريخ {0} وسنة مليئة بالنجاح والسعادة." xml:space="preserve"><value>Wishing you a happy birthday on {0} and a wonderful year ahead.</value></data>
+  <data name="نحتفل بمرور {0} سنة منذ انضمامك بتاريخ {1}. شكراً لعطائك." xml:space="preserve"><value>Celebrating {0} years since you joined us on {1}. Thank you for your contribution.</value></data>
+  <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {0}." xml:space="preserve"><value>Thank you for your years of dedication. Wishing you a happy retirement starting {0}.</value></data>
+  <data name="نشكرك على عطائك. آخر يوم عمل: {0}. نتمنى لك النجاح في مسيرتك القادمة." xml:space="preserve"><value>Thank you for your contribution. Last working day: {0}. We wish you success in your next chapter.</value></data>
+  <data name="يسرنا انضمامك بمنصب {0} اعتباراً من {1}. نتمنى لك بداية موفقة." xml:space="preserve"><value>We welcome you as {0}, starting {1}. Wishing you a successful journey with us.</value></data>
 </root>

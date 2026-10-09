@@ -881,4 +881,59 @@
   <data name="نحتفل بمرور {years} سنة منذ انضمامك بتاريخ {joiningDate}. شكراً لعطائك." xml:space="preserve"><value>پیرۆزبایی تێپەڕبوونی {years} ساڵ لە پەیوەستبوونت لە بەرواری {joiningDate} دەکەین. سوپاس بۆ بەشدارییەکانت.</value></data>
   <data name="تقاعد سعيد {person}!" xml:space="preserve"><value>خانەنشینبوونت پیرۆز بێت {person}!</value></data>
   <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {date}." xml:space="preserve"><value>سوپاس بۆ ساڵەکانی بەخشینت و هیواخوازین لە بەرواری {date} خانەنشینبوونێکی خۆش هەبێت.</value></data>
+  <data name="أحد الموظفين المستهدفين خارج الشركة." xml:space="preserve"><value>یەکێک لە کارمەندە دیاریکراوەکان لە دەرەوەی ئەم کۆمپانیایەیە.</value></data>
+  <data name="أضف لغة واحدة على الأقل، وبحد أقصى 12 لغة و30 تصميماً." xml:space="preserve"><value>لانیکەم یەک زمان زیاد بکە؛ زۆرترین 12 زمان و30 دیزاین.</value></data>
+  <data name="إحدى الصور خارج نطاق الشركة أو غير فعالة." xml:space="preserve"><value>یەکێک لە وێنەکان لە دەرەوەی سنووری کۆمپانیایە یان ناچالاکە.</value></data>
+  <data name="اختر صورة PNG أو JPEG بحد أقصى 5 ميغابايت وأدخل اسم التصميم." xml:space="preserve"><value>وێنەی PNG یان JPEG هەڵبژێرە تا 5 مێگابایت و ناوی دیزاین بنووسە.</value></data>
+  <data name="التصميم غير متاح لهذا القالب." xml:space="preserve"><value>ئەم دیزاینە بۆ ئەم داڕێژەیە بەردەست نییە.</value></data>
+  <data name="الحقل مطلوب: {0}" xml:space="preserve"><value>خانەکە پێویستە: {0}</value></data>
+  <data name="الصورة غير صالحة. المسموح PNG أو JPEG فقط." xml:space="preserve"><value>وێنەکە دروست نییە. تەنها PNG یان JPEG ڕێگەپێدراوە.</value></data>
+  <data name="القالب تغيّر بواسطة مستخدم آخر. أعد تحميله قبل الحفظ." xml:space="preserve"><value>بەکارهێنەرێکی تر داڕێژەکەی گۆڕیوە. پێش پاشەکەوتکردن دووبارە باری بکەوە.</value></data>
+  <data name="القالب غير موجود أو غير فعال." xml:space="preserve"><value>داڕێژەکە بوونی نییە یان ناچالاکە.</value></data>
+  <data name="القوالب والتصاميم والمعاينة" xml:space="preserve"><value>داڕێژەکان، دیزاینەکان و پێشبینین</value></data>
+  <data name="النص يحتوي متغيراً غير معرّف ضمن حقول القالب." xml:space="preserve"><value>دەقەکە گۆڕاوێکی تێدایە کە لە خانەکانی داڕێژەکە پێناسە نەکراوە.</value></data>
+  <data name="بيانات القالب غير صالحة." xml:space="preserve"><value>داتای داڕێژەکە دروست نییە.</value></data>
+  <data name="بيانات القالب غير مكتملة." xml:space="preserve"><value>داتای داڕێژەکە تەواو نییە.</value></data>
+  <data name="تاريخ المباشرة لا يجوز أن يكون مستقبلياً لحساب ذكرى العمل." xml:space="preserve"><value>بەرواری دەستبەکاربوون نابێت لە داهاتوودا بێت بۆ ژماردنی ساڵیادی کار.</value></data>
+  <data name="تاريخ غير صالح: {0}" xml:space="preserve"><value>بەرواری نادروست: {0}</value></data>
+  <data name="تصميم الإعلان غير صالح." xml:space="preserve"><value>دیزاینی ڕاگەیاندنەکە دروست نییە.</value></data>
+  <data name="تصميم الإعلان لا يطابق شركة الجمهور." xml:space="preserve"><value>دیزاینی ڕاگەیاندنەکە هی کۆمپانیای بینەران نییە.</value></data>
+  <data name="تم حفظ القالب. الإعلانات السابقة لا تتغير." xml:space="preserve"><value>داڕێژەکە پاشەکەوت کرا. ڕاگەیاندنە پێشووترەکان ناگۆڕدرێن.</value></data>
+  <data name="تم حفظ هذا الإعلان مسبقاً." xml:space="preserve"><value>ئەم ڕاگەیاندنە پێشتر پاشەکەوت کراوە.</value></data>
+  <data name="تمت إضافة التصميم إلى مكتبة الشركة." xml:space="preserve"><value>دیزاینەکە زیاد کرا بۆ کتێبخانەی کۆمپانیا.</value></data>
+  <data name="حقول القالب مكررة أو أكثر من 16 حقلاً." xml:space="preserve"><value>خانەکانی داڕێژەکە دووبارەن یان لە16 خانە زیاترە.</value></data>
+  <data name="رقم غير صالح: {0}" xml:space="preserve"><value>ژمارەی نادروست: {0}</value></data>
+  <data name="شهر غير صالح: {0}" xml:space="preserve"><value>مانگی نادروست: {0}</value></data>
+  <data name="عنوان الإعلان الناتج أكثر من 250 حرفاً." xml:space="preserve"><value>ناونیشانی ڕاگەیاندنەکە لە250 پیت زیاترە.</value></data>
+  <data name="قالب مخصص" xml:space="preserve"><value>داڕێژەی تایبەت</value></data>
+  <data name="قيمة الحقل طويلة: {0}" xml:space="preserve"><value>بەهای خانەکە زۆر درێژە: {0}</value></data>
+  <data name="لم يُحفظ القالب بسبب تعارض. أعد تحميل الصفحة." xml:space="preserve"><value>داڕێژەکە بەهۆی ناکۆکی پاشەکەوت نەکرا. پەڕەکە دووبارە بار بکەوە.</value></data>
+  <data name="متغير years يحتاج حقل joiningDate من نوع تاريخ." xml:space="preserve"><value>گۆڕاوی years پێویستی بە خانەی joiningDate لە جۆری بەروار هەیە.</value></data>
+  <data name="نصوص الإعلان أو اللغات غير صالحة." xml:space="preserve"><value>دەقەکان یان زمانەکانی ڕاگەیاندنەکە دروست نین.</value></data>
+  <data name="نوع أو اسم حقل القالب غير صالح." xml:space="preserve"><value>جۆر یان ناوی خانەی داڕێژەکە دروست نییە.</value></data>
+  <data name="يرجى إدخال اسم ورمز صحيحين للقالب." xml:space="preserve"><value>ناو و کۆدێکی دروست بۆ داڕێژەکە بنووسە.</value></data>
+  <data name="يرجى إكمال عنوان ونص كل لغة ضمن الحدود المسموحة." xml:space="preserve"><value>ناونیشان و دەقی هەر زمانێک لە سنووری ڕێگەپێدراودا تەواو بکە.</value></data>
+  <data name="أدخل الترجمة لكل لغة. المتغير يُكتب بهذا الشكل: {0} أو رمز الحقل الذي أضفته. لا تُترجم البيانات تلقائياً." xml:space="preserve"><value>وەرگێڕان بۆ هەر زمانێک بنووسە. گۆڕاو بە شێوەی {0} یان کۆدی خانەکە دەنووسرێت. داتاکان خۆکارانە وەرناگێڕدرێن.</value></data>
+  <data name="أهلاً بك {0}!" xml:space="preserve"><value>بەخێربێیت {0}!</value></data>
+  <data name="إعلان عطلة: {0}" xml:space="preserve"><value>ڕاگەیاندنی پشوو: {0}</value></data>
+  <data name="تقاعد سعيد {0}!" xml:space="preserve"><value>خانەنشینبوونت پیرۆز بێت {0}!</value></data>
+  <data name="تكون مكاتبنا مغلقة من {0} إلى {1} بمناسبة {2}." xml:space="preserve"><value>نووسینگەکانمان لە {0} تا {1} بە بۆنەی {2} داخراو دەبن.</value></data>
+  <data name="خالص التعازي إلى {0}" xml:space="preserve"><value>سەرەخۆشییەکی دڵسۆزانە بۆ {0}</value></data>
+  <data name="ذكرى عمل سعيدة {0}!" xml:space="preserve"><value>یادەوەری کارت پیرۆز بێت {0}!</value></data>
+  <data name="زواج مبارك {0}!" xml:space="preserve"><value>هاوسەرگیریت پیرۆز بێت {0}!</value></data>
+  <data name="عيد ميلاد سعيد {0}!" xml:space="preserve"><value>ڕۆژی لەدایکبوونت پیرۆز بێت {0}!</value></data>
+  <data name="مبارك المولود يا {0}!" xml:space="preserve"><value>لەدایکبوونی کوڕەکەت پیرۆز بێت {0}!</value></data>
+  <data name="مبارك المولودة يا {0}!" xml:space="preserve"><value>لەدایکبوونی کچەکەت پیرۆز بێت {0}!</value></data>
+  <data name="موظف الشهر: {0}" xml:space="preserve"><value>کارمەندی مانگ: {0}</value></data>
+  <data name="نبارك تكريمك موظف الشهر {0} تقديراً لجهودك المميزة." xml:space="preserve"><value>بەهۆی هەوڵە دیارەکانت، هەڵبژاردنت وەک کارمەندی مانگی {0} پیرۆز دەکەین.</value></data>
+  <data name="نبارك لك الزواج بتاريخ {0} ونتمنى لك حياة سعيدة." xml:space="preserve"><value>هاوسەرگیریت لە بەرواری {0} پیرۆز دەکەین و هیواخوازین ژیانێکی بەختەوەر هەبێت.</value></data>
+  <data name="نبارك لك قدوم مولودتك {0}. تاريخ الولادة: {1}." xml:space="preserve"><value>لەدایکبوونی کچەکەت {0} پیرۆز دەکەین. بەرواری لەدایکبوون: {1}.</value></data>
+  <data name="نبارك لك قدوم مولودك {0}. تاريخ الولادة: {1}." xml:space="preserve"><value>لەدایکبوونی کوڕەکەت {0} پیرۆز دەکەین. بەرواری لەدایکبوون: {1}.</value></data>
+  <data name="نتقدم إليك بخالص التعازي بوفاة {0}. تاريخ الوفاة: {1}." xml:space="preserve"><value>بەهۆی کۆچی دوایی {0} سەرەخۆشییەکی دڵسۆزانەت لێ دەکەین. بەرواری کۆچی دوایی: {1}.</value></data>
+  <data name="نتمنى لك التوفيق {0}!" xml:space="preserve"><value>هیواخوازین سەرکەوتوو بیت {0}!</value></data>
+  <data name="نتمنى لك عيد ميلاد سعيداً بتاريخ {0} وسنة مليئة بالنجاح والسعادة." xml:space="preserve"><value>هیوادارین لە بەرواری {0} ڕۆژی لەدایکبوونێکی خۆش و ساڵێکی پڕ لە سەرکەوتن و بەختەوەری هەبێت.</value></data>
+  <data name="نحتفل بمرور {0} سنة منذ انضمامك بتاريخ {1}. شكراً لعطائك." xml:space="preserve"><value>پیرۆزبایی تێپەڕبوونی {0} ساڵ لە پەیوەستبوونت لە بەرواری {1} دەکەین. سوپاس بۆ بەشدارییەکانت.</value></data>
+  <data name="نشكرك على سنوات العطاء ونتمنى لك تقاعداً سعيداً اعتباراً من {0}." xml:space="preserve"><value>سوپاس بۆ ساڵەکانی بەخشینت و هیواخوازین لە بەرواری {0} خانەنشینبوونێکی خۆش هەبێت.</value></data>
+  <data name="نشكرك على عطائك. آخر يوم عمل: {0}. نتمنى لك النجاح في مسيرتك القادمة." xml:space="preserve"><value>سوپاس بۆ بەشدارییەکانت. دوایین ڕۆژی کار: {0}. هیواخوازین لە هەنگاوی داهاتووت سەرکەوتوو بیت.</value></data>
+  <data name="يسرنا انضمامك بمنصب {0} اعتباراً من {1}. نتمنى لك بداية موفقة." xml:space="preserve"><value>دڵخۆشین بە پەیوەستبوونت وەک {0} لە بەرواری {1}. هیواخوازین دەستپێکێکی سەرکەوتوو هەبێت.</value></data>
 </root>
